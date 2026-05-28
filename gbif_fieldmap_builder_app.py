@@ -3,15 +3,14 @@ GBIF FieldMap Builder
 
 Interactive field survey planning app from GBIF or coordinate CSV data.
 
-Main design:
-- Candidate survey areas are shown as ranges/circles, not exact stars.
-- Background and prediction points are land-only.
-- Candidate range centers can be filtered so the whole survey radius stays on land.
-- Raster extraction uses fast raster-window sampling instead of point-by-point disk reads.
-- SDM evaluation supports random k-fold, block, checkerboard1, checkerboard2,
-  jackknife, and user-defined fold columns.
-- AUC is treated as a diagnostic metric; suspiciously high AUC is flagged.
-- Java MaxEnt is not run inside this app. Export SDM training table for ENMeval/maxnet.
+Main ideas:
+- Occurrence-supported candidates are survey ranges, not exact point recommendations.
+- SDM prediction is shown as a raster-like prediction map using grid cells.
+- Prediction cells are restricted to the occurrence-range polygon.
+- Background and prediction centers are restricted to land.
+- Environmental variables are separated into climate and topography groups.
+- AUC is treated as a diagnostic; suspiciously high AUC is flagged.
+- Java MaxEnt is not run in this app. Export the SDM training table for ENMeval/maxnet.
 """
 
 from __future__ import annotations
@@ -35,7 +34,7 @@ from folium import FeatureGroup, LayerControl, Map
 from folium.plugins import MarkerCluster
 from geopy.distance import geodesic
 from rasterio.windows import Window
-from shapely.geometry import MultiPoint, Point, shape
+from shapely.geometry import MultiPoint, Point, box, shape
 from shapely.ops import unary_union
 from sklearn.cluster import DBSCAN
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
@@ -65,8 +64,9 @@ MEDIA_CANDIDATES = ["mediaurl", "media_url", "imageurl", "image_url", "identifie
 GBIF_ID_CANDIDATES = ["gbifid", "gbif_id", "key", "occurrenceid", "occurrence_id"]
 LOCALITY_CANDIDATES = ["locality", "municipality", "county", "stateprovince", "location", "place", "site", "場所", "地点"]
 
-BIO_VARS = [f"bio{i}" for i in range(1, 20)]
-ENV_VARS = ["elevation", "slope", "roughness"] + BIO_VARS
+TOPOGRAPHY_VARS = ["elevation", "slope", "roughness"]
+CLIMATE_VARS = [f"bio{i}" for i in range(1, 20)]
+ENV_VARS = TOPOGRAPHY_VARS + CLIMATE_VARS
 RESOLUTIONS = ["10m", "5m", "2.5m", "30s"]
 ALGORITHMS = ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting"]
 PARTITION_METHODS = ["random k-fold", "block", "checkerboard1", "checkerboard2", "jackknife", "user-defined fold column"]
@@ -336,6 +336,16 @@ def haversine_dbscan(df: pd.DataFrame, lat_col: str, lon_col: str, threshold_m: 
     return pd.Series(labels, index=df.index, name="cluster_id")
 
 
+def occurrence_range_polygon(occ: pd.DataFrame, buffer_deg: float):
+    points = [Point(float(row["_longitude"]), float(row["_latitude"])) for _, row in occ.iterrows()]
+    if not points:
+        return None
+    if len(points) == 1:
+        return points[0].buffer(max(buffer_deg, 0.01))
+    hull = MultiPoint(points).convex_hull
+    return hull.buffer(float(buffer_deg))
+
+
 def representative_medoid(group: pd.DataFrame) -> pd.Series:
     if len(group) == 1:
         return group.iloc[0]
@@ -374,8 +384,7 @@ def make_candidate_sites(df: pd.DataFrame, method: str, thinning_m: float) -> pd
         year_max = int(years.max()) if not years.empty else None
         rep = representative_medoid(group)
         if method == "Centroid":
-            points = [Point(float(row["_longitude"]), float(row["_latitude"])) for _, row in group.iterrows()]
-            centroid = MultiPoint(points).centroid
+            centroid = MultiPoint([Point(float(row["_longitude"]), float(row["_latitude"])) for _, row in group.iterrows()]).centroid
             lat, lon = float(centroid.y), float(centroid.x)
             reason = f"Geometric centroid of occurrence cluster {cluster_id}."
         else:
@@ -615,7 +624,7 @@ def generate_land_points(occ: pd.DataFrame, n_points: int, expansion_deg: float,
         if status is not None:
             status.write(f"Generating land-only random points: {len(rows):,}/{int(n_points):,}")
     if len(rows) < int(n_points):
-        raise RuntimeError(f"Could only generate {len(rows)} land points out of {int(n_points)}. For small islands, reduce point count, reduce survey radius, or increase bounding-box expansion slightly.")
+        raise RuntimeError(f"Could only generate {len(rows)} land points out of {int(n_points)}. Reduce point count, reduce survey radius, or increase bounding-box expansion slightly.")
     return pd.DataFrame(rows)
 
 
@@ -625,6 +634,32 @@ def build_presence_background_from_occurrences(occ: pd.DataFrame, n_background: 
     bg = generate_land_points(occ, n_background, expansion_deg, random_state=42, status=status, range_radius_m=0)
     bg["presence"] = 0
     return pd.concat([pres, bg], ignore_index=True)
+
+
+def generate_prediction_grid_in_occurrence_range(occ: pd.DataFrame, cell_size_deg: float, buffer_deg: float, survey_range_radius_m: float, status=None) -> pd.DataFrame:
+    poly = occurrence_range_polygon(occ, buffer_deg)
+    if poly is None:
+        return pd.DataFrame(columns=["latitude", "longitude", "cell_min_lat", "cell_min_lon", "cell_max_lat", "cell_max_lon"])
+    land = load_land_geometry()
+    minx, miny, maxx, maxy = poly.bounds
+    xs = np.arange(minx, maxx + cell_size_deg, cell_size_deg)
+    ys = np.arange(miny, maxy + cell_size_deg, cell_size_deg)
+    rows = []
+    total = max(1, len(xs) * len(ys))
+    count = 0
+    for x in xs:
+        for y in ys:
+            count += 1
+            cx, cy = x + cell_size_deg / 2, y + cell_size_deg / 2
+            p = Point(cx, cy)
+            if not poly.covers(p):
+                continue
+            if not range_fits_land(cy, cx, survey_range_radius_m, land):
+                continue
+            rows.append({"latitude": float(cy), "longitude": float(cx), "cell_min_lat": float(y), "cell_min_lon": float(x), "cell_max_lat": float(y + cell_size_deg), "cell_max_lon": float(x + cell_size_deg)})
+        if status is not None and count % 1000 == 0:
+            status.write(f"Generating occurrence-range prediction cells: {len(rows):,} cells kept")
+    return pd.DataFrame(rows)
 
 
 def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
@@ -727,9 +762,7 @@ def make_spatial_folds(data: pd.DataFrame, method: str, k: int, checkerboard_deg
         pres = data[data["presence"].astype(int) == 1].copy()
         if pres.empty:
             return pd.Series(np.ones(n, dtype=int), index=data.index)
-        # Cluster presences first to avoid thousands of folds from dense GBIF data.
-        eps_m = 2000.0
-        pres["jk_group"] = haversine_dbscan(pres, "latitude", "longitude", eps_m, 1).values + 1
+        pres["jk_group"] = haversine_dbscan(pres, "latitude", "longitude", 2000.0, 1).values + 1
         pres_coords = pres[["latitude", "longitude", "jk_group"]].reset_index(drop=True)
         folds = []
         for _, row in data.iterrows():
@@ -754,14 +787,13 @@ def fit_ensemble_sdm(train_df: pd.DataFrame, variables: list[str], algorithms: l
     data["presence"] = y.loc[mask].astype(int)
     if data["presence"].nunique() < 2:
         raise ValueError("SDM training data must contain both presence=1 and background=0 rows.")
-    folds = make_spatial_folds(data, partition_method, k_folds, checkerboard_deg, user_fold_col)
-    data["cv_fold"] = folds.values
+    data["cv_fold"] = make_spatial_folds(data, partition_method, k_folds, checkerboard_deg, user_fold_col).values
     X_all = data[variables].apply(pd.to_numeric, errors="coerce")
     y_all = data["presence"].astype(int)
     models = {}
     metrics = []
-    total = max(len(algorithms), 1)
     unique_folds = sorted([f for f in data["cv_fold"].dropna().unique()])
+    total = max(len(algorithms), 1)
     valid_fold_count = 0
     for alg_i, alg in enumerate(algorithms, start=1):
         if status is not None:
@@ -789,7 +821,6 @@ def fit_ensemble_sdm(train_df: pd.DataFrame, variables: list[str], algorithms: l
         if progress is not None:
             progress.progress(min(1.0, start + span * alg_i / total))
     if valid_fold_count < 2:
-        # Fallback random holdout only as diagnostic.
         X_train, X_test, y_train, y_test = train_test_split(X_all, y_all, test_size=0.25, random_state=42, stratify=y_all)
         for alg in algorithms:
             model = make_model(alg)
@@ -839,9 +870,11 @@ def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: O
     if not sdm_result or prediction_grid is None or prediction_grid.empty:
         return pd.DataFrame(columns=columns)
     if status is not None:
-        status.write("Predicting SDM suitability across land-only exploration grid...")
+        status.write("Selecting exploration ranges from occurrence-range prediction map...")
     pred = filter_to_land(prediction_grid.copy(), "latitude", "longitude", range_radius_m=survey_range_radius_m)
-    pred = predict_ensemble_suitability(pred, sdm_result).dropna(subset=["sdm_suitability"]).copy()
+    if "sdm_suitability" not in pred.columns:
+        pred = predict_ensemble_suitability(pred, sdm_result)
+    pred = pred.dropna(subset=["sdm_suitability"]).copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
     q = pred["sdm_suitability"].quantile(float(quantile_cutoff))
@@ -866,7 +899,7 @@ def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: O
     for i, (_, group) in enumerate(pred.groupby("exploration_cluster", sort=True), start=0):
         best = group.sort_values("sdm_suitability", ascending=False).iloc[0]
         site_id = start_site_id + i
-        rows.append({"site_id": site_id, "candidate_type": "SDM-high exploration survey range", "cluster_id": int(best["exploration_cluster"]), "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "species_summary": "", "year_min": None, "year_max": None, "representative_gbif_id": "", "representative_media_url": "", "representative_locality": "", "candidate_method": "Land-only SDM exploration grid maximum", "selection_reason": f"Selected from land-only exploration grid because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.", "bias_warning": "Exploratory island/coastal SDM candidate. High suitability does not guarantee presence; field validation is required because island SDMs are sensitive to background extent, GBIF bias, and environmental extrapolation.", "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"])})
+        rows.append({"site_id": site_id, "candidate_type": "SDM-high exploration survey range", "cluster_id": int(best["exploration_cluster"]), "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "species_summary": "", "year_min": None, "year_max": None, "representative_gbif_id": "", "representative_media_url": "", "representative_locality": "", "candidate_method": "Occurrence-range SDM prediction-map maximum", "selection_reason": f"Selected from occurrence-range prediction map because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.", "bias_warning": "Exploratory island/coastal SDM candidate. High suitability does not guarantee presence; field validation is required because island SDMs are sensitive to background extent, GBIF bias, and environmental extrapolation.", "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"])})
     out = pd.DataFrame(rows).sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
     for col in columns:
         if col not in out.columns:
@@ -952,13 +985,21 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, prediction_grid: O
     fmap = Map(location=center, zoom_start=zoom, tiles="OpenStreetMap", control_scale=True)
     colors = ["red", "orange", "green", "purple", "cadetblue", "darkred", "darkgreen", "darkblue", "pink", "gray"]
     if show_prediction_layer and prediction_grid is not None and "sdm_suitability" in prediction_grid.columns and not prediction_grid.empty:
-        group = FeatureGroup(name="SDM suitability prediction", show=True)
-        # Decimate if huge to keep browser usable.
+        group = FeatureGroup(name="SDM prediction map", show=True)
         pg = prediction_grid.dropna(subset=["sdm_suitability"]).copy()
         if len(pg) > 5000:
-            pg = pg.sample(5000, random_state=42)
+            pg = pg.nlargest(5000, "sdm_suitability")
         for _, row in pg.iterrows():
-            folium.CircleMarker(location=(row["latitude"], row["longitude"]), radius=3, color=suitability_color(row["sdm_suitability"]), fill=True, fill_color=suitability_color(row["sdm_suitability"]), fill_opacity=0.55, weight=0, popup=f"SDM suitability: {row['sdm_suitability']:.3f}").add_to(group)
+            color = suitability_color(row["sdm_suitability"])
+            folium.Rectangle(
+                bounds=[[row["cell_min_lat"], row["cell_min_lon"]], [row["cell_max_lat"], row["cell_max_lon"]]],
+                color=color,
+                weight=0,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.48,
+                popup=f"SDM suitability: {row['sdm_suitability']:.3f}",
+            ).add_to(group)
         group.add_to(fmap)
     if show_buffers:
         group = FeatureGroup(name="Occurrence buffers", show=True)
@@ -1050,18 +1091,22 @@ def load_input_controls() -> None:
 
 def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, raw_columns: list[str], survey_range_radius_m: float) -> tuple[pd.DataFrame, Optional[dict[str, Any]], Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     st.subheader("Environment variables and ensemble SDM")
-    st.caption("Loaded occurrences are presences. Background/exploration points are land-only. AUC is diagnostic and depends on partition design.")
+    st.caption("Prediction map cells are generated only inside the occurrence-range polygon. AUC is diagnostic and depends on partition design.")
     with st.expander("Island/coastal SDM limitations", expanded=False):
         st.markdown("""
         - Land-only masking prevents ocean background points, but it does not solve all island-SDM problems.
-        - Small island area can make background sampling and AUC unstable.
-        - GBIF points often follow roads, ports, towns, and trails.
+        - The prediction map is restricted to the occurrence range polygon to avoid over-interpreting far outside the sampled region.
+        - GBIF records often follow roads, ports, towns, and trails.
         - Random split AUC can be overly optimistic; prefer block, checkerboard, or jackknife diagnostics.
         - Treat SDM-high ranges as exploration targets. Use field validation to estimate hit rate and abundance.
         """)
     with st.expander("SDM settings", expanded=True):
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=0)
-        selected_web_vars = st.multiselect("Environmental variables", ENV_VARS, default=[])
+        st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
+        selected_topo_vars = st.multiselect("Topography variables", TOPOGRAPHY_VARS, default=[])
+        st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
+        selected_climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[])
+        selected_web_vars = selected_topo_vars + selected_climate_vars
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
         partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=1)
         k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
@@ -1072,8 +1117,9 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
         vif_threshold = st.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0)
         use_vif = st.checkbox("Apply VIF stepwise filtering", value=True)
         n_background = st.number_input("Number of land-only background points", min_value=100, max_value=20000, value=500, step=100)
-        pred_n = st.number_input("Land-only prediction/exploration grid random points", min_value=100, max_value=50000, value=1000, step=500)
-        bbox_expansion = st.number_input("Background/grid bounding-box expansion in degrees", min_value=0.0, max_value=5.0, value=0.10, step=0.05)
+        prediction_cell_deg = st.number_input("Prediction map cell size (degrees)", min_value=0.001, max_value=1.0, value=0.01, step=0.005, format="%.3f")
+        occurrence_range_buffer_deg = st.number_input("Occurrence-range polygon buffer (degrees)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f")
+        bbox_expansion = st.number_input("Background bounding-box expansion in degrees", min_value=0.0, max_value=5.0, value=0.10, step=0.05)
     if not selected_web_vars:
         st.info("Select environmental variables before running SDM. First island trial: elevation and bio19. Add slope/roughness later.")
         return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table"), st.session_state.get("prediction_grid")
@@ -1089,10 +1135,12 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
             pb = build_presence_background_from_occurrences(occ, int(n_background), float(bbox_expansion), status=status)
             status.write("Step 2/7: extracting raster values for training data...")
             env_train = extract_web_environment(pb, selected_web_vars, "latitude", "longitude", resolution, status=status, progress=progress, start=0.10, span=0.30)
-            status.write("Step 3/7: generating land-only exploration grid...")
+            status.write("Step 3/7: generating occurrence-range prediction map cells...")
             progress.progress(0.42)
-            pred_grid = generate_land_points(occ, int(pred_n), float(bbox_expansion), random_state=123, status=status, range_radius_m=float(survey_range_radius_m))
-            status.write("Step 4/7: extracting raster values for exploration grid...")
+            pred_grid = generate_prediction_grid_in_occurrence_range(occ, float(prediction_cell_deg), float(occurrence_range_buffer_deg), float(survey_range_radius_m), status=status)
+            if pred_grid.empty:
+                raise RuntimeError("No prediction cells were generated. Try increasing occurrence-range buffer or cell size, or reducing survey range radius.")
+            status.write("Step 4/7: extracting raster values for prediction map cells...")
             pred_grid = extract_web_environment(pred_grid, selected_web_vars, "latitude", "longitude", resolution, status=status, progress=progress, start=0.45, span=0.20)
             status.write(f"Step 5/7: running VIF stepwise filtering; threshold = {vif_threshold}...")
             if use_vif and len(selected_web_vars) > 1:
@@ -1107,7 +1155,7 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
             st.session_state.prediction_grid = pred_grid
             st.session_state.sdm_result = sdm_result
             st.session_state.vif_table = vif_table
-            status.write("Step 7/7: SDM complete.")
+            status.write("Step 7/7: SDM prediction map complete.")
             progress.progress(1.0)
         except Exception as exc:
             status.write("SDM failed.")
@@ -1121,7 +1169,7 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
         st.dataframe(vif_table, width="stretch", hide_index=True)
     if sdm_result is None:
         return occurrence_candidates.copy(), None, env_train, vif_table, pred_grid
-    st.success("Ensemble SDM is available.")
+    st.success("Ensemble SDM prediction map is available.")
     st.write("AUC diagnostics")
     st.dataframe(sdm_result["metrics"], width="stretch", hide_index=True)
     candidates_env = occurrence_candidates.copy()
@@ -1139,7 +1187,7 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
     with c1:
         min_suitability = st.number_input("Minimum suitability", min_value=0.0, max_value=1.0, value=0.60, step=0.05)
     with c2:
-        quantile_cutoff = st.number_input("Grid suitability quantile", min_value=0.0, max_value=0.99, value=0.90, step=0.01)
+        quantile_cutoff = st.number_input("Prediction-map suitability quantile", min_value=0.0, max_value=0.99, value=0.90, step=0.01)
     with c3:
         min_dist_known = st.number_input("Minimum distance from known records/ranges (m)", min_value=0, max_value=200_000, value=3000, step=500)
     with c4:
@@ -1170,7 +1218,7 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
     st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Survey planning from GBIF/coordinate occurrences, land-only SDM sampling, spatial partition diagnostics, prediction map layer, and survey-range outputs.")
+    st.caption("Survey planning from GBIF/coordinate occurrences, occurrence-range SDM prediction map, spatial partition diagnostics, and survey-range outputs.")
     st.sidebar.header("Data source")
     load_input_controls()
     st.sidebar.divider()
@@ -1185,7 +1233,7 @@ def main() -> None:
     priority_top_n = st.sidebar.number_input("Show top N priority ranges", min_value=1, max_value=100, value=10, step=1)
     st.sidebar.divider()
     st.sidebar.subheader("Layers")
-    show_prediction_layer = st.sidebar.checkbox("SDM suitability prediction", value=True)
+    show_prediction_layer = st.sidebar.checkbox("SDM prediction map", value=True)
     show_occurrences = st.sidebar.checkbox("Occurrences", value=True)
     show_buffers = st.sidebar.checkbox("Occurrence buffers", value=False)
     show_clusters = st.sidebar.checkbox("Occurrence clusters", value=False)
@@ -1196,7 +1244,7 @@ def main() -> None:
     raw_df = st.session_state.raw_df
     if raw_df is None:
         st.info(st.session_state.source_message)
-        st.markdown("Start by searching GBIF by scientific name, or upload any coordinate CSV. Then run SDM to generate occurrence-supported and SDM-high / occurrence-low survey ranges.")
+        st.markdown("Start by searching GBIF by scientific name, or upload any coordinate CSV. Then run SDM to generate an occurrence-range prediction map and survey ranges.")
         return
     st.success(st.session_state.source_message)
     try:
@@ -1269,7 +1317,7 @@ def main() -> None:
     with dl6:
         st.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
     with dl7:
-        st.download_button("Download prediction grid", pred_csv, "sdm_prediction_grid.csv", "text/csv", width="stretch")
+        st.download_button("Download prediction map grid", pred_csv, "sdm_prediction_map_grid.csv", "text/csv", width="stretch")
 
 
 if __name__ == "__main__":
