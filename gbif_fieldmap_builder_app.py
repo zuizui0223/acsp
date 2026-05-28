@@ -11,9 +11,9 @@ Workflow:
    - background points are generated automatically,
    - WorldClim rasters are downloaded from the web,
    - raster resolution is user-selectable: 2.5m, 5m, 10m, 30s,
-   - default variables: elevation, slope, roughness, bio19,
    - VIF threshold is user-editable, default 10,
-   - ensemble algorithms are user-selectable,
+   - environmental variables start empty; users choose them,
+   - ensemble algorithms start empty; users choose them,
    - optional Java MaxEnt is supported by uploading maxent.jar.
 4. Suggest occurrence-supported sites and SDM-high / occurrence-low exploration sites.
 5. Export map, candidate CSV, validation template, SDM metrics, VIF table, and SDM training table.
@@ -77,10 +77,9 @@ LOCALITY_CANDIDATES = ["locality", "municipality", "county", "stateprovince", "l
 
 BIO_VARS = [f"bio{i}" for i in range(1, 20)]
 ENV_VARS = ["elevation", "slope", "roughness"] + BIO_VARS
-DEFAULT_VARS = ["elevation", "slope", "roughness", "bio19"]
+DEFAULT_VARS: list[str] = []
 RESOLUTIONS = ["2.5m", "5m", "10m", "30s"]
 ALGORITHMS = ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting", "MaxEnt (java maxent.jar)"]
-SKLEARN_ALGORITHMS = ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting"]
 MAXENT_ALGORITHM = "MaxEnt (java maxent.jar)"
 
 
@@ -112,7 +111,6 @@ class JavaMaxEntModel:
     workdir: str
     species_name: str
     variables: list[str]
-    feature_names: list[str]
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         probs = predict_java_maxent(self, X)
@@ -146,7 +144,6 @@ def init_session_state() -> None:
         "sdm_train_table": None,
         "prediction_grid": None,
         "vif_table": None,
-        "maxent_message": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -157,7 +154,6 @@ def clear_loaded_data() -> None:
     for key in ["raw_df", "source_key", "sdm_result", "sdm_train_table", "prediction_grid", "vif_table"]:
         st.session_state[key] = None
     st.session_state.source_message = "No occurrence data loaded yet."
-    st.session_state.maxent_message = ""
 
 
 def detect_occurrence_columns(df: pd.DataFrame) -> ColumnDetection:
@@ -353,11 +349,8 @@ def summarize_species(values: pd.Series, max_items: int = 3) -> str:
 
 
 def make_candidate_sites(df: pd.DataFrame, method: str, thinning_m: float) -> pd.DataFrame:
-    columns = ["site_id", "candidate_type", "cluster_id", "latitude", "longitude", "n_occurrences", "species_summary", "year_min", "year_max", "representative_gbif_id", "representative_media_url", "representative_locality", "candidate_method", "selection_reason", "bias_warning", "priority_score"]
     clustered = df[df["cluster_id"] >= 0].copy()
-    if clustered.empty:
-        return pd.DataFrame(columns=columns)
-    sites = []
+    rows = []
     for site_id, (cluster_id, group) in enumerate(clustered.groupby("cluster_id", sort=True), start=1):
         years = pd.to_numeric(group.get("_year"), errors="coerce").dropna()
         year_min = int(years.min()) if not years.empty else None
@@ -378,8 +371,8 @@ def make_candidate_sites(df: pd.DataFrame, method: str, thinning_m: float) -> pd
         photo_bonus = 0.15 if str(rep.get("_media_url", "")) else 0
         priority = round(min(1.0, 0.35 + min(math.log1p(n) / math.log1p(30), 1) * 0.35 + recent_bonus * 0.15 + photo_bonus), 3)
         warning = "High occurrence density: high-confidence area, but may reflect access/observer bias." if n >= 20 else "Low occurrence support: useful supplementary site, but field confirmation risk is higher." if n <= 2 else "Moderate occurrence support. Check road/trail access and habitat manually."
-        sites.append({"site_id": site_id, "candidate_type": "Occurrence-supported site", "cluster_id": int(cluster_id), "latitude": lat, "longitude": lon, "n_occurrences": n, "species_summary": summarize_species(group.get("_species", pd.Series(dtype=str))), "year_min": year_min, "year_max": year_max, "representative_gbif_id": str(rep.get("_gbif_id", "")), "representative_media_url": str(rep.get("_media_url", "")), "representative_locality": str(rep.get("_locality", "")), "candidate_method": method, "selection_reason": reason, "bias_warning": warning, "priority_score": priority})
-    return pd.DataFrame(sites, columns=columns)
+        rows.append({"site_id": site_id, "candidate_type": "Occurrence-supported site", "cluster_id": int(cluster_id), "latitude": lat, "longitude": lon, "n_occurrences": n, "species_summary": summarize_species(group.get("_species", pd.Series(dtype=str))), "year_min": year_min, "year_max": year_max, "representative_gbif_id": str(rep.get("_gbif_id", "")), "representative_media_url": str(rep.get("_media_url", "")), "representative_locality": str(rep.get("_locality", "")), "candidate_method": method, "selection_reason": reason, "bias_warning": warning, "priority_score": priority})
+    return pd.DataFrame(rows)
 
 
 def add_priority_rank(sites: pd.DataFrame) -> pd.DataFrame:
@@ -592,18 +585,6 @@ def build_presence_background_from_occurrences(occ: pd.DataFrame, n_background: 
     return pd.concat([pres, bg], ignore_index=True)
 
 
-def numeric_columns(df: pd.DataFrame, exclude: Optional[list[str]] = None) -> list[str]:
-    exclude_norm = {normalize_name(x) for x in (exclude or [])}
-    cols = []
-    for col in df.columns:
-        if normalize_name(col) in exclude_norm:
-            continue
-        s = pd.to_numeric(df[col], errors="coerce")
-        if s.notna().sum() >= max(5, int(len(df) * 0.2)):
-            cols.append(col)
-    return cols
-
-
 def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
     rows = []
     X = df[variables].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
@@ -671,7 +652,7 @@ def save_uploaded_maxent_jar(uploaded_jar: Any) -> Optional[str]:
     return str(jar_path)
 
 
-def write_maxent_swd(path: Path, df: pd.DataFrame, variables: list[str], species_name: str, presence_only: bool = False) -> None:
+def write_maxent_swd(path: Path, df: pd.DataFrame, variables: list[str], species_name: str) -> None:
     out = df.copy()
     if "longitude" not in out.columns or "latitude" not in out.columns:
         raise ValueError("MaxEnt SWD table requires longitude and latitude columns.")
@@ -683,20 +664,15 @@ def write_maxent_swd(path: Path, df: pd.DataFrame, variables: list[str], species
 def parse_maxent_prediction(output_dir: Path, n_rows: int) -> Optional[np.ndarray]:
     csv_files = list(output_dir.rglob("*.csv"))
     preferred = [p for p in csv_files if "prediction" in p.name.lower() or "projection" in p.name.lower()]
-    candidates = preferred + csv_files
-    for path in candidates:
+    for path in preferred + csv_files:
         try:
             df = pd.read_csv(path)
         except Exception:
             continue
         numeric = df.select_dtypes(include=[np.number])
-        if numeric.empty:
-            continue
-        # Prefer columns commonly used by MaxEnt for logistic/cloglog output.
         for col in numeric.columns:
             if col.lower() in {"logistic", "cloglog", "prediction", "suitability"} and len(numeric[col]) == n_rows:
-                arr = numeric[col].to_numpy(dtype=float)
-                return np.clip(arr, 0, 1)
+                return np.clip(numeric[col].to_numpy(dtype=float), 0, 1)
         for col in reversed(list(numeric.columns)):
             if len(numeric[col]) == n_rows:
                 arr = numeric[col].to_numpy(dtype=float)
@@ -705,7 +681,7 @@ def parse_maxent_prediction(output_dir: Path, n_rows: int) -> Optional[np.ndarra
     return None
 
 
-def fit_java_maxent(train_df: pd.DataFrame, variables: list[str], jar_path: str, species_name: str, status=None) -> tuple[Optional[JavaMaxEntModel], dict[str, Any]]:
+def fit_java_maxent(train_df: pd.DataFrame, variables: list[str], jar_path: Optional[str], species_name: str, status=None) -> tuple[Optional[JavaMaxEntModel], dict[str, Any]]:
     if not java_available():
         return None, {"algorithm": MAXENT_ALGORITHM, "test_auc": np.nan, "note": "Java executable was not found."}
     if jar_path is None or not Path(jar_path).exists():
@@ -721,19 +697,7 @@ def fit_java_maxent(train_df: pd.DataFrame, variables: list[str], jar_path: str,
         return None, {"algorithm": MAXENT_ALGORITHM, "test_auc": np.nan, "note": "Presence/background rows were missing."}
     write_maxent_swd(samples_path, pres, variables, species_name)
     write_maxent_swd(background_path, bg, variables, species_name)
-    cmd = [
-        "java", "-mx1024m", "-jar", jar_path,
-        f"samplesfile={samples_path}",
-        f"environmentallayers={background_path}",
-        f"outputdirectory={output_dir}",
-        "outputformat=logistic",
-        "autorun",
-        "nowarnings",
-        "noaskoverwrite",
-        "nopictures",
-        "responsecurves=false",
-        "jackknife=false",
-    ]
+    cmd = ["java", "-mx1024m", "-jar", jar_path, f"samplesfile={samples_path}", f"environmentallayers={background_path}", f"outputdirectory={output_dir}", "outputformat=logistic", "autorun", "nowarnings", "noaskoverwrite", "nopictures", "responsecurves=false", "jackknife=false"]
     if status is not None:
         status.write("Fitting Java MaxEnt from uploaded maxent.jar...")
     try:
@@ -742,7 +706,7 @@ def fit_java_maxent(train_df: pd.DataFrame, variables: list[str], jar_path: str,
             return None, {"algorithm": MAXENT_ALGORITHM, "test_auc": np.nan, "note": (result.stderr or result.stdout)[-500:]}
     except Exception as exc:
         return None, {"algorithm": MAXENT_ALGORITHM, "test_auc": np.nan, "note": str(exc)}
-    model = JavaMaxEntModel(jar_path=jar_path, workdir=str(workdir), species_name=species_name, variables=variables, feature_names=variables)
+    model = JavaMaxEntModel(jar_path=jar_path, workdir=str(workdir), species_name=species_name, variables=variables)
     return model, {"algorithm": MAXENT_ALGORITHM, "test_auc": np.nan, "note": "Fitted; AUC not parsed from MaxEnt output in this lightweight wrapper."}
 
 
@@ -755,20 +719,7 @@ def predict_java_maxent(model: JavaMaxEntModel, X: pd.DataFrame) -> np.ndarray:
     proj.insert(0, "latitude", np.arange(len(proj), dtype=float))
     proj.insert(0, "longitude", np.arange(len(proj), dtype=float))
     write_maxent_swd(projection_path, proj, model.variables, model.species_name)
-    cmd = [
-        "java", "-mx1024m", "-jar", model.jar_path,
-        f"samplesfile={workdir / 'samples_swd.csv'}",
-        f"environmentallayers={workdir / 'background_swd.csv'}",
-        f"projectionlayers={projection_path}",
-        f"outputdirectory={pred_dir}",
-        "outputformat=logistic",
-        "autorun",
-        "nowarnings",
-        "noaskoverwrite",
-        "nopictures",
-        "responsecurves=false",
-        "jackknife=false",
-    ]
+    cmd = ["java", "-mx1024m", "-jar", model.jar_path, f"samplesfile={workdir / 'samples_swd.csv'}", f"environmentallayers={workdir / 'background_swd.csv'}", f"projectionlayers={projection_path}", f"outputdirectory={pred_dir}", "outputformat=logistic", "autorun", "nowarnings", "noaskoverwrite", "nopictures", "responsecurves=false", "jackknife=false"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         if result.returncode == 0:
@@ -777,13 +728,12 @@ def predict_java_maxent(model: JavaMaxEntModel, X: pd.DataFrame) -> np.ndarray:
                 return parsed
     except Exception:
         pass
-    # Conservative fallback if projection parsing fails: do not dominate ensemble.
     return np.full(len(X), 0.5, dtype=float)
 
 
-def fit_ensemble_sdm(train_df: pd.DataFrame, variables: list[str], presence_col: str, algorithms: list[str], test_size: float, maxent_jar_path: Optional[str], species_name: str, status=None, progress=None, start: float = 0.0, span: float = 0.2) -> dict[str, Any]:
+def fit_ensemble_sdm(train_df: pd.DataFrame, variables: list[str], algorithms: list[str], test_size: float, maxent_jar_path: Optional[str], species_name: str, status=None, progress=None, start: float = 0.0, span: float = 0.2) -> dict[str, Any]:
     data = train_df.copy()
-    y = pd.to_numeric(data[presence_col], errors="coerce")
+    y = pd.to_numeric(data["presence"], errors="coerce")
     mask = y.isin([0, 1])
     data = data.loc[mask].copy()
     y = y.loc[mask].astype(int)
@@ -801,7 +751,7 @@ def fit_ensemble_sdm(train_df: pd.DataFrame, variables: list[str], presence_col:
         if progress is not None:
             progress.progress(min(1.0, start + span * (i - 1) / total))
         if alg == MAXENT_ALGORITHM:
-            train_for_maxent = data[["latitude", "longitude", presence_col] + variables].rename(columns={presence_col: "presence"})
+            train_for_maxent = data[["latitude", "longitude", "presence"] + variables].copy()
             model, metric = fit_java_maxent(train_for_maxent, variables, maxent_jar_path, species_name=species_name, status=status)
             if model is not None:
                 models[alg] = model
@@ -817,7 +767,7 @@ def fit_ensemble_sdm(train_df: pd.DataFrame, variables: list[str], presence_col:
         progress.progress(min(1.0, start + span))
     if not models:
         raise ValueError("No SDM algorithms were successfully fitted.")
-    return {"models": models, "metrics": pd.DataFrame(metrics), "variables": variables, "presence_col": presence_col}
+    return {"models": models, "metrics": pd.DataFrame(metrics), "variables": variables}
 
 
 def predict_ensemble_suitability(table: pd.DataFrame, sdm_result: Optional[dict[str, Any]]) -> pd.DataFrame:
@@ -833,7 +783,7 @@ def predict_ensemble_suitability(table: pd.DataFrame, sdm_result: Optional[dict[
         return out
     X = out[variables].apply(pd.to_numeric, errors="coerce")
     preds = []
-    for name, model in sdm_result["models"].items():
+    for _, model in sdm_result["models"].items():
         try:
             preds.append(model.predict_proba(X)[:, 1])
         except Exception:
@@ -860,14 +810,12 @@ def min_distance_to_points(coord: tuple[float, float], point_df: pd.DataFrame, l
     return min(geodesic(coord, (float(r[lat_col]), float(r[lon_col]))).m for _, r in point_df.iterrows())
 
 
-def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: Optional[dict[str, Any]], known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int, status=None, progress=None, start: float = 0.9, span: float = 0.08) -> pd.DataFrame:
+def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: Optional[dict[str, Any]], known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int, status=None, progress=None) -> pd.DataFrame:
     columns = list(occurrence_candidates.columns)
     if not sdm_result or prediction_grid is None or prediction_grid.empty:
         return pd.DataFrame(columns=columns)
     if status is not None:
         status.write("Predicting SDM suitability across exploration grid...")
-    if progress is not None:
-        progress.progress(start)
     pred = predict_ensemble_suitability(prediction_grid.copy(), sdm_result).dropna(subset=["sdm_suitability"]).copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
@@ -888,39 +836,18 @@ def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: O
     pred = pred[pd.Series(keep, index=pred.index)].copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
-    if status is not None:
-        status.write("Clustering high-suitability exploration grid points...")
     pred["exploration_cluster"] = haversine_dbscan(pred, "latitude", "longitude", cluster_distance_m, 1)
     rows = []
     for i, (_, group) in enumerate(pred.groupby("exploration_cluster", sort=True), start=0):
         best = group.sort_values("sdm_suitability", ascending=False).iloc[0]
         site_id = start_site_id + i
-        rows.append({
-            "site_id": site_id,
-            "candidate_type": "SDM-high / occurrence-low exploration site",
-            "cluster_id": int(best["exploration_cluster"]),
-            "latitude": float(best["latitude"]),
-            "longitude": float(best["longitude"]),
-            "n_occurrences": 0,
-            "species_summary": "",
-            "year_min": None,
-            "year_max": None,
-            "representative_gbif_id": "",
-            "representative_media_url": "",
-            "representative_locality": "",
-            "candidate_method": "SDM exploration grid maximum",
-            "selection_reason": f"Selected because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.",
-            "bias_warning": "New exploration candidate: high SDM suitability but no nearby occurrence evidence. Important for validation/discovery, but field confirmation risk is higher.",
-            "priority_score": round(float(best["sdm_suitability"]), 3),
-            "sdm_suitability": round(float(best["sdm_suitability"]), 3),
-            "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"]),
-        })
+        rows.append({"site_id": site_id, "candidate_type": "SDM-high / occurrence-low exploration site", "cluster_id": int(best["exploration_cluster"]), "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "species_summary": "", "year_min": None, "year_max": None, "representative_gbif_id": "", "representative_media_url": "", "representative_locality": "", "candidate_method": "SDM exploration grid maximum", "selection_reason": f"Selected because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.", "bias_warning": "New exploration candidate: high SDM suitability but no nearby occurrence evidence. Important for validation/discovery, but field confirmation risk is higher.", "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"])})
     out = pd.DataFrame(rows).sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
     for col in columns:
         if col not in out.columns:
             out[col] = np.nan
     if progress is not None:
-        progress.progress(min(1.0, start + span))
+        progress.progress(0.98)
     return out
 
 
@@ -1016,14 +943,16 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
         group.add_to(fmap)
     if show_occurrence_candidate_sites:
         group = FeatureGroup(name="Occurrence-supported candidate sites", show=True)
-        for _, row in sites[~sites.get("candidate_type", pd.Series(dtype=str)).astype(str).str.startswith("SDM-high")].iterrows():
+        subset = sites[~sites.get("candidate_type", pd.Series(dtype=str)).astype(str).str.startswith("SDM-high")]
+        for _, row in subset.iterrows():
             order = int(row.get("route_order", row["site_id"]))
             folium.Marker(location=(row["latitude"], row["longitude"]), popup=folium.Popup(popup_html_site(row), max_width=420), tooltip=f"Site {int(row['site_id'])} / occurrence-supported", icon=folium.DivIcon(html="<div style='font-size:22px;line-height:22px;color:red;text-shadow:0 0 2px white,0 0 4px white;'>★</div>")).add_to(group)
             folium.Marker(location=(row["latitude"], row["longitude"]), icon=folium.DivIcon(html=f"<div style='font-size:11px;font-weight:700;background:white;border:1px solid #c00;border-radius:10px;padding:1px 5px;margin-left:14px;'>{order}</div>")).add_to(group)
         group.add_to(fmap)
     if show_sdm_candidate_sites:
         group = FeatureGroup(name="SDM-high exploration candidate sites", show=True)
-        for _, row in sites[sites.get("candidate_type", pd.Series(dtype=str)).astype(str).str.startswith("SDM-high")].iterrows():
+        subset = sites[sites.get("candidate_type", pd.Series(dtype=str)).astype(str).str.startswith("SDM-high")]
+        for _, row in subset.iterrows():
             order = int(row.get("route_order", row["site_id"]))
             folium.Marker(location=(row["latitude"], row["longitude"]), popup=folium.Popup(popup_html_site(row), max_width=420), tooltip=f"Site {int(row['site_id'])} / SDM exploration", icon=folium.DivIcon(html="<div style='font-size:22px;line-height:22px;color:green;text-shadow:0 0 2px white,0 0 4px white;'>★</div>")).add_to(group)
             folium.Marker(location=(row["latitude"], row["longitude"]), icon=folium.DivIcon(html=f"<div style='font-size:11px;font-weight:700;background:white;border:1px solid #080;border-radius:10px;padding:1px 5px;margin-left:14px;'>{order}</div>")).add_to(group)
@@ -1077,8 +1006,8 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
     st.caption("Loaded occurrences are used directly as presences. Background points and exploration grid are generated automatically.")
     with st.expander("SDM settings", expanded=True):
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=0, help="30s is finest but slowest. 2.5m is the default balance for app use.")
-        selected_web_vars = st.multiselect("Environmental variables", ENV_VARS, default=DEFAULT_VARS)
-        algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=["Logistic regression", "Random forest", "ExtraTrees"])
+        selected_web_vars = st.multiselect("Environmental variables", ENV_VARS, default=[])
+        algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
         maxent_jar = None
         if MAXENT_ALGORITHM in algorithms:
             st.info("Java MaxEnt requires a local maxent.jar upload. If Java or the jar is unavailable, MaxEnt will be skipped and the other algorithms will continue.")
@@ -1090,11 +1019,11 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
         bbox_expansion = st.number_input("Background/grid bounding-box expansion in degrees", min_value=0.0, max_value=5.0, value=0.2, step=0.1)
         test_size = st.slider("Test split proportion", min_value=0.1, max_value=0.5, value=0.25, step=0.05)
     if not selected_web_vars:
-        st.warning("Select at least one environmental variable.")
-        return occurrence_candidates.copy(), None, None, None
+        st.info("Select environmental variables before running SDM. Suggested first trial: elevation, slope, roughness, bio19.")
+        return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table")
     if not algorithms:
-        st.warning("Select at least one SDM algorithm.")
-        return occurrence_candidates.copy(), None, None, None
+        st.info("Select at least one SDM algorithm before running SDM.")
+        return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table")
     progress = st.progress(0.0)
     status = st.empty()
     if st.button("Build environment table and run ensemble SDM", type="primary"):
@@ -1118,7 +1047,7 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
                 vif_table = compute_vif_table(env_train, selected_web_vars) if len(selected_web_vars) > 1 else pd.DataFrame({"variable": selected_web_vars, "vif": [1.0], "status": ["kept"]})
             status.write("Step 6/7: fitting selected ensemble SDM algorithms...")
             species_name = str(occ.get("_species", pd.Series(["species"])).dropna().astype(str).iloc[0]) if "_species" in occ.columns and occ["_species"].notna().any() else "species"
-            sdm_result = fit_ensemble_sdm(env_train, kept_vars, "presence", algorithms, float(test_size), jar_path, species_name, status=status, progress=progress, start=0.76, span=0.16)
+            sdm_result = fit_ensemble_sdm(env_train, kept_vars, algorithms, float(test_size), jar_path, species_name, status=status, progress=progress, start=0.76, span=0.16)
             st.session_state.sdm_train_table = env_train
             st.session_state.prediction_grid = pred_grid
             st.session_state.sdm_result = sdm_result
@@ -1136,7 +1065,6 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
         st.write("VIF table")
         st.dataframe(vif_table, width="stretch", hide_index=True)
     if sdm_result is None:
-        st.info("Run the SDM to re-rank occurrence-supported sites and generate SDM-high / occurrence-low exploration sites.")
         return occurrence_candidates.copy(), None, env_train, vif_table
     st.success("Ensemble SDM is available.")
     st.dataframe(sdm_result["metrics"], width="stretch", hide_index=True)
@@ -1163,7 +1091,7 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
     cluster_m = st.number_input("Exploration clustering distance (m)", min_value=100, max_value=200_000, value=3000, step=500)
     exploration = pd.DataFrame()
     if pred_grid is not None:
-        exploration = make_sdm_exploration_candidates(pred_grid, sdm_result, occ, candidates_env, float(min_suitability), float(quantile_cutoff), float(min_dist_known), float(cluster_m), int(max_new), int(candidates_env["site_id"].max()) + 1 if not candidates_env.empty else 1, status=status, progress=progress, start=0.88, span=0.10)
+        exploration = make_sdm_exploration_candidates(pred_grid, sdm_result, occ, candidates_env, float(min_suitability), float(quantile_cutoff), float(min_dist_known), float(cluster_m), int(max_new), int(candidates_env["site_id"].max()) + 1 if not candidates_env.empty else 1, status=status, progress=progress)
     if exploration.empty:
         st.info("No new exploration candidates were generated with current thresholds.")
     else:
