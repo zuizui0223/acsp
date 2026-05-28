@@ -1,39 +1,48 @@
 """
 GBIF FieldMap Builder
 
-Bias-aware Streamlit app for field-survey planning from either:
-1) any coordinate CSV with latitude/longitude columns, or
-2) direct scientific-name searches via the GBIF API.
+Interactive field-survey planning app.
 
-Main workflow:
-- Load occurrence records.
-- Reduce sampling bias with spatial thinning.
-- Generate occurrence-supported candidate sites using DBSCAN + medoid/centroid.
-- Optionally fit an ensemble SDM from an environmental training table.
-- Optionally upload a prediction-grid/background environmental table and propose
-  SDM-high / occurrence-low exploration candidates.
-- Export candidate sites, field-validation template, VIF table, and SDM metrics.
+Workflow:
+1. Load occurrence records from any coordinate CSV or GBIF scientific-name search.
+2. Build occurrence-supported candidate sites by spatial thinning + DBSCAN + medoid/centroid.
+3. Optionally run an ensemble SDM directly from loaded occurrences:
+   - loaded occurrences are used as presence points,
+   - background points are generated automatically,
+   - default web environmental variables are elevation, slope, roughness, and bio19,
+   - variables can be selected interactively,
+   - VIF filtering removes strongly collinear variables,
+   - selected algorithms are ensembled.
+4. Propose two candidate types:
+   - occurrence-supported sites: high-confidence recollection/sampling targets,
+   - SDM-high / occurrence-low exploration sites: new survey targets away from known records.
+5. Export HTML map, candidate CSV, field-validation template, SDM metrics, and VIF table.
 
-Note: this app expects environmental values to be pre-extracted from rasters
-(e.g., 30 arc-sec elevation/slope/roughness/bio1-bio19) into CSV tables.
+Web environmental layers use WorldClim 2.1 30 arc-sec downloads. These files can be large;
+Streamlit caches downloaded rasters, and CSV fallback is available if web download is slow.
 """
 
 from __future__ import annotations
 
 import math
+import os
 import re
 import urllib.parse
+import zipfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
 
 import folium
 import numpy as np
 import pandas as pd
+import rasterio
 import requests
 import streamlit as st
 from folium import FeatureGroup, LayerControl, Map
 from folium.plugins import MarkerCluster
 from geopy.distance import geodesic
+from rasterio.windows import Window
 from shapely.geometry import MultiPoint, Point
 from sklearn.cluster import DBSCAN
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
@@ -45,11 +54,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
 
-
 APP_TITLE = "GBIF FieldMap Builder"
 EARTH_RADIUS_M = 6_371_008.8
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
 GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
+WC_BASE = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base"
+CACHE_DIR = Path(os.environ.get("GBIF_FIELDMAP_CACHE", "/tmp/gbif_fieldmap_builder"))
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 LAT_CANDIDATES = ["decimallatitude", "decimal_latitude", "decimal latitude", "latitude", "lat", "y", "緯度"]
 LON_CANDIDATES = ["decimallongitude", "decimal_longitude", "decimal longitude", "longitude", "lon", "lng", "long", "x", "経度"]
@@ -62,12 +73,10 @@ LOCALITY_CANDIDATES = ["locality", "municipality", "county", "stateprovince", "l
 PRESENCE_CANDIDATES = ["presence", "pa", "occurrence", "target_species_found", "found", "label"]
 SITE_ID_CANDIDATES = ["site_id", "site", "id", "candidate_id"]
 
-SUGGESTED_ENV_VARS = [
-    "elevation", "slope", "roughness",
-    "bio1", "bio2", "bio3", "bio4", "bio5", "bio6", "bio7", "bio8", "bio9", "bio10",
-    "bio11", "bio12", "bio13", "bio14", "bio15", "bio16", "bio17", "bio18", "bio19",
-]
-DEFAULT_ENV_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bio12", "bio15", "bio19"]
+BIO_VARS = [f"bio{i}" for i in range(1, 20)]
+SUGGESTED_ENV_VARS = ["elevation", "slope", "roughness"] + BIO_VARS
+DEFAULT_WEB_VARS = ["elevation", "slope", "roughness", "bio19"]
+DEFAULT_MODEL_VARS = ["elevation", "slope", "roughness", "bio19"]
 
 
 @dataclass(frozen=True)
@@ -117,6 +126,8 @@ def init_session_state() -> None:
         "source_kind": None,
         "source_key": None,
         "sdm_result": None,
+        "sdm_train_table": None,
+        "vif_table": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -124,11 +135,9 @@ def init_session_state() -> None:
 
 
 def clear_loaded_data() -> None:
-    st.session_state.raw_df = None
+    for key in ["raw_df", "source_kind", "source_key", "sdm_result", "sdm_train_table", "vif_table"]:
+        st.session_state[key] = None
     st.session_state.source_message = "No occurrence data loaded yet."
-    st.session_state.source_kind = None
-    st.session_state.source_key = None
-    st.session_state.sdm_result = None
 
 
 def detect_occurrence_columns(df: pd.DataFrame) -> ColumnDetection:
@@ -296,19 +305,6 @@ def haversine_dbscan(df: pd.DataFrame, lat_col: str, lon_col: str, threshold_m: 
     return pd.Series(labels, index=df.index, name="cluster_id")
 
 
-def summarize_species(values: pd.Series, max_items: int = 3) -> str:
-    cleaned = values.dropna().astype(str).str.strip()
-    cleaned = cleaned[cleaned.ne("") & cleaned.ne("nan")]
-    if cleaned.empty:
-        return ""
-    counts = cleaned.value_counts().head(max_items)
-    parts = [f"{name} ({count})" for name, count in counts.items()]
-    more = cleaned.nunique() - len(counts)
-    if more > 0:
-        parts.append(f"+{more} more")
-    return "; ".join(parts)
-
-
 def representative_medoid(group: pd.DataFrame) -> pd.Series:
     if len(group) == 1:
         return group.iloc[0]
@@ -325,13 +321,21 @@ def representative_medoid(group: pd.DataFrame) -> pd.Series:
     return group.iloc[best_i]
 
 
+def summarize_species(values: pd.Series, max_items: int = 3) -> str:
+    cleaned = values.dropna().astype(str).str.strip()
+    cleaned = cleaned[cleaned.ne("") & cleaned.ne("nan")]
+    if cleaned.empty:
+        return ""
+    counts = cleaned.value_counts().head(max_items)
+    parts = [f"{name} ({count})" for name, count in counts.items()]
+    more = cleaned.nunique() - len(counts)
+    if more > 0:
+        parts.append(f"+{more} more")
+    return "; ".join(parts)
+
+
 def make_candidate_sites(df: pd.DataFrame, method: str, thinning_m: float) -> pd.DataFrame:
-    columns = [
-        "site_id", "candidate_type", "cluster_id", "latitude", "longitude", "n_occurrences",
-        "species_summary", "year_min", "year_max", "representative_gbif_id",
-        "representative_media_url", "representative_locality", "candidate_method",
-        "selection_reason", "bias_warning", "priority_score",
-    ]
+    columns = ["site_id", "candidate_type", "cluster_id", "latitude", "longitude", "n_occurrences", "species_summary", "year_min", "year_max", "representative_gbif_id", "representative_media_url", "representative_locality", "candidate_method", "selection_reason", "bias_warning", "priority_score"]
     clustered = df[df["cluster_id"] >= 0].copy()
     if clustered.empty:
         return pd.DataFrame(columns=columns)
@@ -356,24 +360,7 @@ def make_candidate_sites(df: pd.DataFrame, method: str, thinning_m: float) -> pd
         photo_bonus = 0.15 if str(rep.get("_media_url", "")) else 0
         priority = round(min(1.0, 0.35 + min(math.log1p(n) / math.log1p(30), 1) * 0.35 + recent_bonus * 0.15 + photo_bonus), 3)
         warning = "High occurrence density: high-confidence area, but may reflect access/observer bias." if n >= 20 else "Low occurrence support: useful supplementary site, but field confirmation risk is higher." if n <= 2 else "Moderate occurrence support. Check road/trail access and habitat manually."
-        sites.append({
-            "site_id": site_id,
-            "candidate_type": "Occurrence-supported site",
-            "cluster_id": int(cluster_id),
-            "latitude": lat,
-            "longitude": lon,
-            "n_occurrences": n,
-            "species_summary": summarize_species(group.get("_species", pd.Series(dtype=str))),
-            "year_min": year_min,
-            "year_max": year_max,
-            "representative_gbif_id": str(rep.get("_gbif_id", "")),
-            "representative_media_url": str(rep.get("_media_url", "")),
-            "representative_locality": str(rep.get("_locality", "")),
-            "candidate_method": method,
-            "selection_reason": reason,
-            "bias_warning": warning,
-            "priority_score": priority,
-        })
+        sites.append({"site_id": site_id, "candidate_type": "Occurrence-supported site", "cluster_id": int(cluster_id), "latitude": lat, "longitude": lon, "n_occurrences": n, "species_summary": summarize_species(group.get("_species", pd.Series(dtype=str))), "year_min": year_min, "year_max": year_max, "representative_gbif_id": str(rep.get("_gbif_id", "")), "representative_media_url": str(rep.get("_media_url", "")), "representative_locality": str(rep.get("_locality", "")), "candidate_method": method, "selection_reason": reason, "bias_warning": warning, "priority_score": priority})
     return pd.DataFrame(sites, columns=columns)
 
 
@@ -382,7 +369,12 @@ def add_priority_rank(sites: pd.DataFrame) -> pd.DataFrame:
     if out.empty:
         out["priority_rank"] = []
         return out
-    rank = out.sort_values(["priority_score", "sdm_suitability" if "sdm_suitability" in out.columns else "n_occurrences", "n_occurrences"], ascending=False).reset_index(drop=True)
+    sort_cols = ["priority_score"]
+    if "sdm_suitability" in out.columns:
+        sort_cols.append("sdm_suitability")
+    if "n_occurrences" in out.columns:
+        sort_cols.append("n_occurrences")
+    rank = out.sort_values(sort_cols, ascending=False).reset_index(drop=True)
     rank["priority_rank"] = range(1, len(rank) + 1)
     out = out.drop(columns=["priority_rank"], errors="ignore")
     return out.merge(rank[["site_id", "priority_rank"]], on="site_id", how="left")
@@ -410,10 +402,11 @@ def order_sites(sites: pd.DataFrame, mode: str) -> pd.DataFrame:
         out = sites.copy()
         out["route_order"] = []
         return out
-    if mode == "Cluster ID":
-        ordered = sites.sort_values(["candidate_type", "cluster_id", "site_id"])
-    elif mode == "Priority score":
-        ordered = sites.sort_values(["priority_score", "sdm_suitability" if "sdm_suitability" in sites.columns else "n_occurrences"], ascending=False)
+    if mode == "Priority score":
+        sort_cols = ["priority_score"]
+        if "sdm_suitability" in sites.columns:
+            sort_cols.append("sdm_suitability")
+        ordered = sites.sort_values(sort_cols, ascending=False)
     elif mode == "Nearest-neighbor route":
         ordered = nearest_neighbor_order(sites)
     elif mode == "North → South":
@@ -422,8 +415,10 @@ def order_sites(sites: pd.DataFrame, mode: str) -> pd.DataFrame:
         ordered = sites.sort_values(["latitude", "longitude"], ascending=[True, True])
     elif mode == "West → East":
         ordered = sites.sort_values(["longitude", "latitude"], ascending=[True, False])
-    else:
+    elif mode == "East → West":
         ordered = sites.sort_values(["longitude", "latitude"], ascending=[False, False])
+    else:
+        ordered = sites.sort_values(["candidate_type", "cluster_id", "site_id"])
     ordered = ordered.reset_index(drop=True)
     ordered["route_order"] = range(1, len(ordered) + 1)
     return ordered
@@ -468,6 +463,120 @@ def add_navigation_columns(sites: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def download_file(url: str, dest: Path) -> Path:
+    if dest.exists() and dest.stat().st_size > 0:
+        return dest
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    with requests.get(url, stream=True, timeout=120) as response:
+        response.raise_for_status()
+        with open(tmp, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+    tmp.replace(dest)
+    return dest
+
+
+@st.cache_data(show_spinner=False)
+def get_worldclim_raster_path(var: str) -> str:
+    var = var.lower()
+    if var in {"elevation", "slope", "roughness"}:
+        zip_name = "wc2.1_30s_elev.zip"
+        tif_name = "wc2.1_30s_elev.tif"
+    elif var.startswith("bio"):
+        n = int(var.replace("bio", ""))
+        zip_name = "wc2.1_30s_bio.zip"
+        tif_name = f"wc2.1_30s_bio_{n}.tif"
+    else:
+        raise ValueError(f"Unsupported web variable: {var}")
+    zip_path = CACHE_DIR / zip_name
+    extract_dir = CACHE_DIR / zip_name.replace(".zip", "")
+    raster_path = extract_dir / tif_name
+    if raster_path.exists():
+        return str(raster_path)
+    extract_dir.mkdir(parents=True, exist_ok=True)
+    download_file(f"{WC_BASE}/{zip_name}", zip_path)
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        members = [m for m in zf.namelist() if m.endswith(tif_name)]
+        if not members:
+            zf.extractall(extract_dir)
+        else:
+            zf.extract(members[0], extract_dir)
+            extracted = extract_dir / members[0]
+            if extracted != raster_path:
+                raster_path.parent.mkdir(parents=True, exist_ok=True)
+                extracted.replace(raster_path)
+    if not raster_path.exists():
+        matches = list(extract_dir.rglob(tif_name))
+        if matches:
+            return str(matches[0])
+        raise FileNotFoundError(f"Could not find {tif_name} after extracting {zip_name}")
+    return str(raster_path)
+
+
+def sample_raster_values(points: pd.DataFrame, raster_path: str, lat_col: str, lon_col: str, derived: Optional[str] = None) -> np.ndarray:
+    values = []
+    with rasterio.open(raster_path) as src:
+        nodata = src.nodata
+        for _, row in points.iterrows():
+            lon = float(row[lon_col])
+            lat = float(row[lat_col])
+            if derived is None:
+                val = next(src.sample([(lon, lat)]))[0]
+                if nodata is not None and val == nodata:
+                    val = np.nan
+                values.append(float(val) if np.isfinite(val) else np.nan)
+            else:
+                try:
+                    r, c = src.index(lon, lat)
+                    window = Window(c - 1, r - 1, 3, 3)
+                    arr = src.read(1, window=window, boundless=True, fill_value=np.nan).astype(float)
+                    if nodata is not None:
+                        arr[arr == nodata] = np.nan
+                    if derived == "roughness":
+                        val = np.nanmax(arr) - np.nanmin(arr)
+                    elif derived == "slope":
+                        gy, gx = np.gradient(arr)
+                        val = np.nanmean(np.sqrt(gx**2 + gy**2))
+                    else:
+                        val = np.nan
+                    values.append(float(val) if np.isfinite(val) else np.nan)
+                except Exception:
+                    values.append(np.nan)
+    return np.array(values, dtype=float)
+
+
+def extract_web_environment(points: pd.DataFrame, variables: list[str], lat_col: str, lon_col: str) -> pd.DataFrame:
+    out = points.copy()
+    for var in variables:
+        if var == "slope":
+            elev_path = get_worldclim_raster_path("elevation")
+            out[var] = sample_raster_values(out, elev_path, lat_col, lon_col, derived="slope")
+        elif var == "roughness":
+            elev_path = get_worldclim_raster_path("elevation")
+            out[var] = sample_raster_values(out, elev_path, lat_col, lon_col, derived="roughness")
+        else:
+            raster_path = get_worldclim_raster_path(var)
+            out[var] = sample_raster_values(out, raster_path, lat_col, lon_col)
+    return out
+
+
+def generate_background_points(occ: pd.DataFrame, n_background: int, expansion_deg: float, random_state: int = 42) -> pd.DataFrame:
+    rng = np.random.default_rng(random_state)
+    min_lat, max_lat = occ["_latitude"].min() - expansion_deg, occ["_latitude"].max() + expansion_deg
+    min_lon, max_lon = occ["_longitude"].min() - expansion_deg, occ["_longitude"].max() + expansion_deg
+    lat = rng.uniform(max(-90, min_lat), min(90, max_lat), int(n_background))
+    lon = rng.uniform(max(-180, min_lon), min(180, max_lon), int(n_background))
+    return pd.DataFrame({"latitude": lat, "longitude": lon, "presence": 0})
+
+
+def build_presence_background_from_occurrences(occ: pd.DataFrame, n_background: int, expansion_deg: float) -> pd.DataFrame:
+    pres = occ[["_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude"}).copy()
+    pres["presence"] = 1
+    bg = generate_background_points(occ, n_background, expansion_deg)
+    return pd.concat([pres, bg], ignore_index=True)
+
+
 def numeric_columns(df: pd.DataFrame, exclude: Optional[list[str]] = None) -> list[str]:
     exclude_norm = {normalize_name(x) for x in (exclude or [])}
     cols = []
@@ -482,48 +591,6 @@ def numeric_columns(df: pd.DataFrame, exclude: Optional[list[str]] = None) -> li
 
 def detect_presence_column(df: pd.DataFrame) -> Optional[str]:
     return detect_column(list(df.columns), PRESENCE_CANDIDATES)
-
-
-def detect_site_id_column(df: pd.DataFrame) -> Optional[str]:
-    return detect_column(list(df.columns), SITE_ID_CANDIDATES)
-
-
-def prepare_env_table(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-    for col in out.columns:
-        converted = pd.to_numeric(out[col], errors="coerce")
-        if converted.notna().sum() >= max(5, int(len(out) * 0.2)):
-            out[col] = converted
-    return out
-
-
-def merge_candidate_environment(candidates: pd.DataFrame, env_df: Optional[pd.DataFrame], max_nearest_m: float = 1000) -> pd.DataFrame:
-    if env_df is None or env_df.empty or candidates.empty:
-        return candidates.copy()
-    env = prepare_env_table(env_df)
-    out = candidates.copy()
-    site_col = detect_site_id_column(env)
-    if site_col and "site_id" in out.columns:
-        env2 = env.rename(columns={site_col: "site_id"})
-        return out.merge(env2, on="site_id", how="left", suffixes=("", "_env"))
-    lat_col = detect_column(list(env.columns), LAT_CANDIDATES)
-    lon_col = detect_column(list(env.columns), LON_CANDIDATES)
-    if not lat_col or not lon_col:
-        return out
-    env = env.dropna(subset=[lat_col, lon_col]).copy()
-    env[lat_col] = pd.to_numeric(env[lat_col], errors="coerce")
-    env[lon_col] = pd.to_numeric(env[lon_col], errors="coerce")
-    rows = []
-    env_coords = list(zip(env[lat_col], env[lon_col]))
-    for _, cand in out.iterrows():
-        c = (float(cand["latitude"]), float(cand["longitude"]))
-        dists = [geodesic(c, (float(lat), float(lon))).m for lat, lon in env_coords]
-        idx = int(np.argmin(dists)) if dists else None
-        if idx is not None and dists[idx] <= max_nearest_m:
-            rows.append(env.iloc[idx].drop(labels=[lat_col, lon_col], errors="ignore"))
-        else:
-            rows.append(pd.Series(dtype=object))
-    return pd.concat([out.reset_index(drop=True), pd.DataFrame(rows).reset_index(drop=True)], axis=1)
 
 
 def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
@@ -622,7 +689,6 @@ def update_priority_with_sdm(sites: pd.DataFrame) -> pd.DataFrame:
     base = pd.to_numeric(out["priority_score"], errors="coerce").fillna(0.5)
     sdm = pd.to_numeric(out["sdm_suitability"], errors="coerce").fillna(base)
     out["priority_score_pre_sdm"] = base
-    # Occurrence-supported sites retain high priority from evidence, but SDM can adjust them.
     out["priority_score"] = (0.65 * base + 0.35 * sdm).clip(0, 1).round(3)
     return out
 
@@ -633,56 +699,35 @@ def min_distance_to_points(coord: tuple[float, float], point_df: pd.DataFrame, l
     return min(geodesic(coord, (float(r[lat_col]), float(r[lon_col]))).m for _, r in point_df.iterrows())
 
 
-def make_sdm_exploration_candidates(
-    prediction_grid: pd.DataFrame,
-    sdm_result: Optional[dict[str, Any]],
-    known_occ: pd.DataFrame,
-    occurrence_candidates: pd.DataFrame,
-    min_suitability: float,
-    quantile_cutoff: float,
-    min_distance_known_m: float,
-    cluster_distance_m: float,
-    max_candidates: int,
-    start_site_id: int,
-) -> pd.DataFrame:
+def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: Optional[dict[str, Any]], known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int) -> pd.DataFrame:
     columns = list(occurrence_candidates.columns)
     if not sdm_result or prediction_grid is None or prediction_grid.empty:
         return pd.DataFrame(columns=columns)
-    grid = prepare_env_table(prediction_grid)
+    grid = prediction_grid.copy()
     lat_col = detect_column(list(grid.columns), LAT_CANDIDATES)
     lon_col = detect_column(list(grid.columns), LON_CANDIDATES)
     if lat_col is None or lon_col is None:
-        st.warning("Prediction grid needs latitude/longitude columns to generate new exploration candidates.")
         return pd.DataFrame(columns=columns)
-    grid[lat_col] = pd.to_numeric(grid[lat_col], errors="coerce")
-    grid[lon_col] = pd.to_numeric(grid[lon_col], errors="coerce")
-    grid = grid.dropna(subset=[lat_col, lon_col]).copy()
-    pred = predict_ensemble_suitability(grid, sdm_result)
-    pred = pred.dropna(subset=["sdm_suitability"]).copy()
+    pred = predict_ensemble_suitability(grid, sdm_result).dropna(subset=["sdm_suitability"]).copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
     q = pred["sdm_suitability"].quantile(float(quantile_cutoff))
-    threshold = max(float(min_suitability), float(q))
-    pred = pred[pred["sdm_suitability"] >= threshold].copy()
+    pred = pred[pred["sdm_suitability"] >= max(float(min_suitability), float(q))].copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
-
     occ_points = known_occ[["_latitude", "_longitude"]].dropna().copy() if known_occ is not None and not known_occ.empty else pd.DataFrame(columns=["_latitude", "_longitude"])
     cand_points = occurrence_candidates[["latitude", "longitude"]].dropna().copy() if occurrence_candidates is not None and not occurrence_candidates.empty else pd.DataFrame(columns=["latitude", "longitude"])
     keep = []
     min_dists = []
     for _, row in pred.iterrows():
         coord = (float(row[lat_col]), float(row[lon_col]))
-        d_occ = min_distance_to_points(coord, occ_points, "_latitude", "_longitude")
-        d_cand = min_distance_to_points(coord, cand_points, "latitude", "longitude")
-        d = min(d_occ, d_cand)
+        d = min(min_distance_to_points(coord, occ_points, "_latitude", "_longitude"), min_distance_to_points(coord, cand_points, "latitude", "longitude"))
         keep.append(d >= float(min_distance_known_m))
         min_dists.append(round(d))
     pred["distance_to_nearest_known_m"] = min_dists
     pred = pred[pd.Series(keep, index=pred.index)].copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
-
     pred["exploration_cluster"] = haversine_dbscan(pred, lat_col, lon_col, cluster_distance_m, 1)
     rows = []
     for i, (cluster_id, group) in enumerate(pred.groupby("exploration_cluster", sort=True), start=0):
@@ -702,14 +747,13 @@ def make_sdm_exploration_candidates(
             "representative_media_url": "",
             "representative_locality": "",
             "candidate_method": "SDM exploration grid maximum",
-            "selection_reason": f"Selected from prediction grid because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.",
+            "selection_reason": f"Selected from prediction/background grid because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.",
             "bias_warning": "New exploration candidate: high SDM suitability but no nearby occurrence evidence. Important for model validation and discovery, but field confirmation risk is higher.",
             "priority_score": round(float(best["sdm_suitability"]), 3),
             "sdm_suitability": round(float(best["sdm_suitability"]), 3),
             "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"]),
         })
-    out = pd.DataFrame(rows)
-    out = out.sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
+    out = pd.DataFrame(rows).sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
     for col in columns:
         if col not in out.columns:
             out[col] = np.nan
@@ -717,12 +761,7 @@ def make_sdm_exploration_candidates(
 
 
 def make_field_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
-    cols = [
-        "site_id", "candidate_type", "priority_rank", "route_order", "latitude", "longitude", "priority_score", "sdm_suitability",
-        "visited", "survey_date", "observer", "access_success", "target_species_found",
-        "abundance_count", "abundance_class", "flowering_status", "population_area_m2",
-        "habitat_note", "photo_file", "comments",
-    ]
+    cols = ["site_id", "candidate_type", "priority_rank", "route_order", "latitude", "longitude", "priority_score", "sdm_suitability", "visited", "survey_date", "observer", "access_success", "target_species_found", "abundance_count", "abundance_class", "flowering_status", "population_area_m2", "habitat_note", "photo_file", "comments"]
     base = sites.copy()
     for col in cols:
         if col not in base.columns:
@@ -756,9 +795,6 @@ def popup_html_occurrence(row: pd.Series) -> str:
 def popup_html_site(row: pd.Series) -> str:
     point_url = row.get("google_maps_point_url", "")
     nav = f"<br><a href='{point_url}' target='_blank'>Open this site in Google Maps</a>" if point_url else ""
-    years = ""
-    if pd.notna(row.get("year_min")) and pd.notna(row.get("year_max")):
-        years = f"<br>Years: {int(row['year_min'])}–{int(row['year_max'])}"
     sdm_line = f"<br>SDM suitability: {row.get('sdm_suitability', '')}" if "sdm_suitability" in row.index else ""
     return f"""
     <b>Candidate site {int(row['site_id'])}</b><br>
@@ -772,7 +808,6 @@ def popup_html_site(row: pd.Series) -> str:
     Longitude: {row['longitude']:.6f}<br>
     Bias note: {row.get('bias_warning', '')}<br>
     Reason: {row.get('selection_reason', '')}
-    {years}
     {nav}
     {image_html(row.get('representative_media_url', ''))}
     """
@@ -794,13 +829,11 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
     bounds, center, zoom = fit_bounds_or_default(occurrences)
     fmap = Map(location=center, zoom_start=zoom, tiles="OpenStreetMap", control_scale=True)
     cluster_colors = ["red", "orange", "green", "purple", "cadetblue", "darkred", "darkgreen", "darkblue", "pink", "gray"]
-
     if show_buffers:
         group = FeatureGroup(name="Buffers", show=True)
         for _, row in occurrences.iterrows():
             folium.Circle(location=(row["_latitude"], row["_longitude"]), radius=float(buffer_radius_m), color="#7aa6ff", weight=1, fill=True, fill_opacity=0.08, opacity=0.35).add_to(group)
         group.add_to(fmap)
-
     if show_occurrences:
         group = FeatureGroup(name="Occurrences", show=True)
         marker_cluster = MarkerCluster(name="Occurrence marker cluster")
@@ -808,7 +841,6 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
             folium.CircleMarker(location=(row["_latitude"], row["_longitude"]), radius=4, color="#1f77b4", fill=True, fill_color="#1f77b4", fill_opacity=0.75, weight=1, popup=folium.Popup(popup_html_occurrence(row), max_width=330)).add_to(marker_cluster)
         marker_cluster.add_to(group)
         group.add_to(fmap)
-
     if show_clusters:
         group = FeatureGroup(name="Occurrence clusters", show=True)
         for _, row in occurrences.iterrows():
@@ -816,13 +848,11 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
             color = "black" if label < 0 else cluster_colors[label % len(cluster_colors)]
             folium.CircleMarker(location=(row["_latitude"], row["_longitude"]), radius=6, color=color, fill=True, fill_color=color, fill_opacity=0.45, weight=2, popup=f"Cluster: {label}").add_to(group)
         group.add_to(fmap)
-
     if show_routes and len(sites) >= 2:
         group = FeatureGroup(name="Routes", show=True)
         route_coords = list(zip(sites["latitude"], sites["longitude"]))
         folium.PolyLine(route_coords, color="red", weight=3, opacity=0.8).add_to(group)
         group.add_to(fmap)
-
     if show_distance_labels and len(sites) >= 2:
         group = FeatureGroup(name="Straight-line distance labels", show=True)
         route_coords = list(zip(sites["latitude"], sites["longitude"]))
@@ -833,7 +863,6 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
             mid = midpoint(a, b)
             folium.Marker(location=mid, icon=folium.DivIcon(html=f"<div style='font-size:12px;font-weight:700;background:white;border:1px solid #999;border-radius:4px;padding:2px 5px;white-space:nowrap;'>{dist_km:.1f} km</div>")).add_to(group)
         group.add_to(fmap)
-
     if show_candidate_sites:
         group = FeatureGroup(name="Candidate survey sites", show=True)
         for _, row in sites.iterrows():
@@ -844,7 +873,6 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
             folium.Marker(location=(row["latitude"], row["longitude"]), popup=folium.Popup(popup_html_site(row), max_width=420), tooltip=f"Site {int(row['site_id'])} / {row.get('candidate_type', '')}", icon=folium.DivIcon(html=f"<div style='font-size:22px;line-height:22px;color:{star_color};text-shadow:0 0 2px white,0 0 4px white;'>★</div>")).add_to(group)
             folium.Marker(location=(row["latitude"], row["longitude"]), icon=folium.DivIcon(html=f"<div style='font-size:11px;font-weight:700;background:white;border:1px solid {border_color};border-radius:10px;padding:1px 5px;margin-left:14px;'>{order}</div>")).add_to(group)
         group.add_to(fmap)
-
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds(bounds, padding=(30, 30))
@@ -854,11 +882,11 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, buffer_radius_m: f
 
 
 def load_input_controls() -> None:
-    mode = st.sidebar.radio("Input source", ["Upload coordinate CSV", "Search GBIF by scientific name"], index=0, key="input_source_mode")
+    mode = st.sidebar.radio("Input source", ["Upload coordinate CSV", "Search GBIF by scientific name"], index=1, key="input_source_mode")
     if st.sidebar.button("Clear loaded data"):
         clear_loaded_data()
     if mode == "Upload coordinate CSV":
-        uploaded = st.sidebar.file_uploader("Upload CSV with latitude/longitude columns", type=["csv"], key="csv_upload", help="GBIF format is not required. Species/date/photo columns are optional.")
+        uploaded = st.sidebar.file_uploader("Upload CSV with latitude/longitude columns", type=["csv"], key="csv_upload")
         if uploaded is not None:
             file_key = f"upload::{uploaded.name}::{uploaded.size}"
             if st.session_state.source_key != file_key:
@@ -891,51 +919,56 @@ def load_input_controls() -> None:
         st.session_state.source_key = f"gbif::{scientific_name.strip()}::{country_code.strip().upper()}::{int(max_records)}::{year_from}::{year_to}"
 
 
-def environment_sdm_panel(candidates: pd.DataFrame, occ_raw: pd.DataFrame) -> tuple[pd.DataFrame, Optional[dict[str, Any]], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame) -> tuple[pd.DataFrame, Optional[dict[str, Any]], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     st.subheader("Environment variables and ensemble SDM")
-    st.caption("Upload tables with 30 arc-sec raster-derived variables such as elevation, slope, roughness, and bio1–bio19. The SDM can both re-rank occurrence-supported sites and propose new occurrence-low exploration sites from a prediction grid.")
-    with st.expander("Suggested 30 arc-sec variables", expanded=False):
+    st.caption("Default mode: use loaded GBIF/occurrence records directly as presence data, generate background points, and extract selected WorldClim 30 arc-sec variables from the web.")
+    with st.expander("Suggested environmental variables", expanded=False):
         st.write(SUGGESTED_ENV_VARS)
-        st.markdown("**SDM training CSV:** one row per presence/background point, `presence` column with 1/0, and environmental variables.")
-        st.markdown("**Candidate environment CSV:** values for existing candidate sites, joined by `site_id` or nearest latitude/longitude.")
-        st.markdown("**Prediction grid CSV:** background/grid points with latitude/longitude and the same environmental variables. Used to find SDM-high / occurrence-low new survey candidates.")
+        st.markdown("Default: elevation, slope, roughness, bio19. You can also select bio1–bio19 and upload additional prepared environmental tables if web raster download is slow.")
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        sdm_file = st.file_uploader("SDM training table CSV", type=["csv"], key="sdm_training_csv")
-    with c2:
-        cand_env_file = st.file_uploader("Candidate environment CSV optional", type=["csv"], key="candidate_env_csv")
-    with c3:
-        pred_grid_file = st.file_uploader("Prediction grid CSV optional", type=["csv"], key="prediction_grid_csv")
+    use_web_env = st.checkbox("Use web WorldClim 30 arc-sec layers", value=True)
+    selected_web_vars = st.multiselect("Web environmental variables", SUGGESTED_ENV_VARS, default=DEFAULT_WEB_VARS)
+    n_background = st.number_input("Number of background points", min_value=100, max_value=20000, value=min(5000, max(500, len(occ) * 3)), step=100)
+    bbox_expansion = st.number_input("Background bounding-box expansion in degrees", min_value=0.0, max_value=5.0, value=0.2, step=0.1)
+    pred_n = st.number_input("Prediction/exploration grid random points", min_value=100, max_value=50000, value=5000, step=500)
 
-    env_train = read_uploaded_csv(sdm_file) if sdm_file is not None else None
-    cand_env = read_uploaded_csv(cand_env_file) if cand_env_file is not None else None
-    pred_grid = read_uploaded_csv(pred_grid_file) if pred_grid_file is not None else None
-
-    max_match_m = st.number_input("Nearest coordinate match distance for candidate env table (m)", min_value=10, max_value=100_000, value=1000, step=100)
-    candidates_env = merge_candidate_environment(candidates, cand_env, max_nearest_m=float(max_match_m)) if cand_env is not None else candidates.copy()
+    env_train = None
+    pred_grid = None
+    if use_web_env:
+        if st.button("Build web-environment training table from loaded occurrences", type="primary"):
+            if not selected_web_vars:
+                st.warning("Select at least one environmental variable.")
+            else:
+                with st.spinner("Generating background points and extracting web environmental values. This may take several minutes the first time."):
+                    pb = build_presence_background_from_occurrences(occ, int(n_background), float(bbox_expansion))
+                    env_train = extract_web_environment(pb, selected_web_vars, "latitude", "longitude")
+                    pred_grid = generate_background_points(occ, int(pred_n), float(bbox_expansion)).drop(columns=["presence"], errors="ignore")
+                    pred_grid = extract_web_environment(pred_grid, selected_web_vars, "latitude", "longitude")
+                    st.session_state.sdm_train_table = env_train
+                    st.session_state.prediction_grid = pred_grid
+        env_train = st.session_state.get("sdm_train_table")
+        pred_grid = st.session_state.get("prediction_grid")
+    else:
+        c1, c2 = st.columns(2)
+        with c1:
+            sdm_file = st.file_uploader("Upload SDM training table CSV", type=["csv"], key="sdm_training_csv")
+        with c2:
+            pred_file = st.file_uploader("Upload prediction grid CSV optional", type=["csv"], key="prediction_grid_csv")
+        env_train = read_uploaded_csv(sdm_file) if sdm_file is not None else None
+        pred_grid = read_uploaded_csv(pred_file) if pred_file is not None else None
 
     if env_train is None:
-        st.info("Upload an SDM training table to run VIF, ensemble SDM, and exploration-site proposal. Candidate selection still works without SDM.")
-        return candidates_env, None, None, None
+        st.info("Build web-environment training table or upload an SDM training CSV to run VIF and ensemble SDM.")
+        return occurrence_candidates.copy(), None, None, None
 
-    env_train = prepare_env_table(env_train)
-    presence_col = detect_presence_column(env_train)
-    if presence_col is None:
-        st.warning("Could not detect a presence column. Add a column named presence, pa, found, or label with 1/0.")
-        return candidates_env, None, env_train, None
-
-    excluded = [presence_col] + LAT_CANDIDATES + LON_CANDIDATES + SITE_ID_CANDIDATES
-    available_vars = numeric_columns(env_train, exclude=excluded)
-    if not available_vars:
-        st.warning("No numeric environmental variables were detected in the SDM training table.")
-        return candidates_env, None, env_train, None
-
-    default_vars = [v for v in DEFAULT_ENV_VARS if v in available_vars] or available_vars[: min(8, len(available_vars))]
-    selected_vars = st.multiselect("Select environmental variables for SDM", options=available_vars, default=default_vars)
+    env_train = env_train.replace([np.inf, -np.inf], np.nan).dropna(subset=["presence"]).copy()
+    presence_col = detect_presence_column(env_train) or "presence"
+    available_vars = numeric_columns(env_train, exclude=[presence_col, "latitude", "longitude"])
+    default_vars = [v for v in DEFAULT_MODEL_VARS if v in available_vars] or available_vars[: min(8, len(available_vars))]
+    selected_vars = st.multiselect("Select variables for SDM", available_vars, default=default_vars)
     if not selected_vars:
-        st.warning("Select at least one environmental variable.")
-        return candidates_env, None, env_train, None
+        st.warning("Select at least one model variable.")
+        return occurrence_candidates.copy(), None, env_train, None
 
     use_vif = st.checkbox("Apply VIF filtering", value=True)
     vif_threshold = st.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0)
@@ -949,67 +982,51 @@ def environment_sdm_panel(candidates: pd.DataFrame, occ_raw: pd.DataFrame) -> tu
 
     algorithms = st.multiselect("Select SDM algorithms for ensemble", ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting"], default=["Logistic regression", "Random forest", "ExtraTrees"])
     test_size = st.slider("Test split proportion", min_value=0.1, max_value=0.5, value=0.25, step=0.05)
-    if st.button("Run ensemble SDM", type="primary"):
+    if st.button("Run ensemble SDM"):
         if not algorithms:
             st.warning("Select at least one algorithm.")
         else:
             with st.spinner("Fitting ensemble SDM..."):
                 st.session_state.sdm_result = fit_ensemble_sdm(env_train, kept_vars, presence_col, algorithms, float(test_size))
+                st.session_state.vif_table = vif_table
 
-    sdm_result = st.session_state.sdm_result
+    sdm_result = st.session_state.get("sdm_result")
     if not sdm_result:
-        candidates_env = predict_ensemble_suitability(candidates_env, None)
-        return candidates_env, None, env_train, vif_table
+        return occurrence_candidates.copy(), None, env_train, vif_table
 
     st.success("Ensemble SDM is available.")
     st.dataframe(sdm_result["metrics"], width="stretch", hide_index=True)
+
+    candidates_env = occurrence_candidates.copy()
+    try:
+        candidates_env = extract_web_environment(candidates_env.rename(columns={"latitude": "_tmp_lat", "longitude": "_tmp_lon"}), sdm_result["variables"], "_tmp_lat", "_tmp_lon").rename(columns={"_tmp_lat": "latitude", "_tmp_lon": "longitude"})
+    except Exception as exc:
+        st.warning(f"Could not extract web environment for candidate sites: {exc}")
     candidates_env = predict_ensemble_suitability(candidates_env, sdm_result)
     candidates_env = update_priority_with_sdm(candidates_env)
 
-    st.markdown("### New exploration candidates from SDM-high / occurrence-low areas")
-    st.caption("These are not near known occurrences. They are designed for discovery/model validation, not as high-confidence recollection sites.")
+    st.markdown("### SDM-high / occurrence-low exploration candidates")
+    min_suitability = st.number_input("Minimum suitability", min_value=0.0, max_value=1.0, value=0.60, step=0.05)
+    quantile_cutoff = st.number_input("Prediction-grid suitability quantile", min_value=0.0, max_value=0.99, value=0.90, step=0.01)
+    min_dist_known = st.number_input("Minimum distance from known records/sites (m)", min_value=0, max_value=200_000, value=3000, step=500)
+    max_new = st.number_input("Max new exploration candidates", min_value=1, max_value=200, value=20, step=1)
+    cluster_m = st.number_input("Exploration clustering distance (m)", min_value=100, max_value=200_000, value=3000, step=500)
+
+    exploration = pd.DataFrame()
     if pred_grid is not None:
-        e1, e2, e3, e4 = st.columns(4)
-        with e1:
-            min_suitability = st.number_input("Minimum suitability", min_value=0.0, max_value=1.0, value=0.60, step=0.05)
-        with e2:
-            quantile_cutoff = st.number_input("Grid suitability quantile", min_value=0.0, max_value=0.99, value=0.90, step=0.01)
-        with e3:
-            min_dist_known = st.number_input("Minimum distance from known records/sites (m)", min_value=0, max_value=200_000, value=3000, step=500)
-        with e4:
-            max_new = st.number_input("Max new exploration candidates", min_value=1, max_value=200, value=20, step=1)
-        cluster_m = st.number_input("Exploration-grid clustering distance (m)", min_value=100, max_value=200_000, value=3000, step=500)
-        exploration = make_sdm_exploration_candidates(
-            prediction_grid=pred_grid,
-            sdm_result=sdm_result,
-            known_occ=occ_raw,
-            occurrence_candidates=candidates_env,
-            min_suitability=float(min_suitability),
-            quantile_cutoff=float(quantile_cutoff),
-            min_distance_known_m=float(min_dist_known),
-            cluster_distance_m=float(cluster_m),
-            max_candidates=int(max_new),
-            start_site_id=int(candidates_env["site_id"].max()) + 1 if not candidates_env.empty else 1,
-        )
-        if exploration.empty:
-            st.info("No SDM-high / occurrence-low exploration candidates were generated with the current thresholds.")
-        else:
-            st.success(f"Generated {len(exploration)} new exploration candidates.")
-            st.dataframe(exploration.sort_values("sdm_suitability", ascending=False), width="stretch", hide_index=True)
-            candidates_env = pd.concat([candidates_env, exploration], ignore_index=True, sort=False)
+        exploration = make_sdm_exploration_candidates(pred_grid, sdm_result, occ, candidates_env, float(min_suitability), float(quantile_cutoff), float(min_dist_known), float(cluster_m), int(max_new), int(candidates_env["site_id"].max()) + 1 if not candidates_env.empty else 1)
+    if exploration.empty:
+        st.info("No new exploration candidates were generated with the current SDM/threshold settings.")
     else:
-        st.info("Upload a prediction grid CSV to generate new SDM-high / occurrence-low exploration candidates.")
+        st.success(f"Generated {len(exploration)} SDM-high / occurrence-low exploration candidates.")
+        st.dataframe(exploration.sort_values("sdm_suitability", ascending=False), width="stretch", hide_index=True)
+        candidates_env = pd.concat([candidates_env, exploration], ignore_index=True, sort=False)
 
     return candidates_env, sdm_result, env_train, vif_table
 
 
 def make_field_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
-    cols = [
-        "site_id", "candidate_type", "priority_rank", "route_order", "latitude", "longitude", "priority_score", "sdm_suitability",
-        "visited", "survey_date", "observer", "access_success", "target_species_found",
-        "abundance_count", "abundance_class", "flowering_status", "population_area_m2",
-        "habitat_note", "photo_file", "comments",
-    ]
+    cols = ["site_id", "candidate_type", "priority_rank", "route_order", "latitude", "longitude", "priority_score", "sdm_suitability", "visited", "survey_date", "observer", "access_success", "target_species_found", "abundance_count", "abundance_class", "flowering_status", "population_area_m2", "habitat_note", "photo_file", "comments"]
     base = sites.copy()
     for col in cols:
         if col not in base.columns:
@@ -1021,14 +1038,14 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
     st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Bias-aware field survey planning from coordinate data, environmental variables, ensemble SDM, SDM exploration candidates, and field validation.")
+    st.caption("Survey planning from GBIF/coordinate occurrences, web environmental rasters, ensemble SDM, and validation templates.")
 
     st.sidebar.header("Data source")
     load_input_controls()
     st.sidebar.divider()
     st.sidebar.subheader("Sampling design")
     thinning_m = st.sidebar.number_input("Spatial thinning distance before clustering (m)", min_value=0, max_value=50_000, value=1000, step=500)
-    candidate_method = st.sidebar.selectbox("Candidate site method", ["Medoid", "Centroid"], index=0, help="Medoid is recommended: it selects an actual occurrence point.")
+    candidate_method = st.sidebar.selectbox("Candidate site method", ["Medoid", "Centroid"], index=0)
     buffer_radius_m = st.sidebar.number_input("Buffer radius around occurrences (m)", 0, 100_000, 500, 100)
     dbscan_threshold_m = st.sidebar.number_input("DBSCAN cluster distance threshold (m)", 1, 500_000, 2000, 500)
     min_samples = st.sidebar.number_input("Minimum occurrences per cluster", 1, 50, 1, 1)
@@ -1047,13 +1064,10 @@ def main() -> None:
     if raw_df is None:
         st.info(st.session_state.source_message)
         st.markdown("""
-        **Two ways to start:**
-        1. Upload any CSV with latitude/longitude columns. GBIF format is not required.
-        2. Enter a scientific name and fetch occurrences directly from GBIF.
-
-        To generate new SDM-high / occurrence-low exploration candidates, also upload:
-        - an SDM training table with `presence` 1/0 and environmental variables,
-        - a prediction grid CSV with latitude/longitude and the same environmental variables.
+        Start by searching GBIF by scientific name, or upload any coordinate CSV.
+        The app can then use the loaded occurrence points directly as SDM presences,
+        generate background points, extract web environmental layers, and suggest both
+        occurrence-supported sites and SDM-high / occurrence-low exploration sites.
         """)
         return
 
@@ -1069,25 +1083,19 @@ def main() -> None:
         return
 
     occ = spatial_thin(occ_raw, float(thinning_m))
-    try:
-        occ["cluster_id"] = haversine_dbscan(occ, "_latitude", "_longitude", float(dbscan_threshold_m), int(min_samples))
-    except Exception as exc:
-        st.error(f"Clustering failed: {exc}")
-        return
-
+    occ["cluster_id"] = haversine_dbscan(occ, "_latitude", "_longitude", float(dbscan_threshold_m), int(min_samples))
     occurrence_candidates = make_candidate_sites(occ, candidate_method, float(thinning_m))
     occurrence_candidates = add_priority_rank(occurrence_candidates)
     occurrence_candidates = add_navigation_columns(order_sites(occurrence_candidates, route_order_mode))
 
-    all_candidates, sdm_result, env_train, vif_table = environment_sdm_panel(occurrence_candidates, occ_raw)
+    all_candidates, sdm_result, env_train, vif_table = environment_sdm_panel(occ, occurrence_candidates)
     all_candidates = add_priority_rank(all_candidates)
     all_candidates = add_navigation_columns(order_sites(all_candidates, route_order_mode))
 
     route_url = make_google_maps_route_url(all_candidates, travelmode="driving")
     transit_route_url = make_google_maps_route_url(all_candidates, travelmode="transit")
-    clustered_mask = occ["cluster_id"] >= 0
-    total_clusters = int(occ.loc[clustered_mask, "cluster_id"].nunique()) if clustered_mask.any() else 0
-    noise_points = int((occ["cluster_id"] < 0).sum())
+    total_clusters = int(occ.loc[occ["cluster_id"] >= 0, "cluster_id"].nunique()) if not occ.empty else 0
+    noise_points = int((occ["cluster_id"] < 0).sum()) if not occ.empty else 0
     n_explore = int(all_candidates.get("candidate_type", pd.Series(dtype=str)).astype(str).str.startswith("SDM-high").sum()) if not all_candidates.empty else 0
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -1115,16 +1123,11 @@ def main() -> None:
     priority_cols = ["priority_rank", "site_id", "candidate_type", "route_order", "priority_score", "sdm_suitability", "distance_to_nearest_known_m", "n_occurrences", "latitude", "longitude", "bias_warning", "selection_reason"]
     priority_cols = [c for c in priority_cols if c in all_candidates.columns]
     priority_sites = all_candidates.sort_values(["priority_rank"]).head(int(priority_top_n)) if not all_candidates.empty else all_candidates
-    if priority_sites.empty:
-        st.warning("No priority candidates were generated. Try changing DBSCAN or SDM settings.")
-    else:
+    if not priority_sites.empty:
         st.dataframe(priority_sites[priority_cols], width="stretch", hide_index=True)
 
     st.subheader("All candidate survey sites")
-    if all_candidates.empty:
-        st.warning("No candidate sites were generated. Try changing DBSCAN settings.")
-    else:
-        st.dataframe(all_candidates, width="stretch", hide_index=True)
+    st.dataframe(all_candidates, width="stretch", hide_index=True)
 
     validation_template = make_field_validation_template(all_candidates)
     html_bytes = fmap.get_root().render().encode("utf-8")
@@ -1132,8 +1135,9 @@ def main() -> None:
     validation_csv = validation_template.to_csv(index=False).encode("utf-8-sig")
     sdm_metrics_csv = sdm_result["metrics"].to_csv(index=False).encode("utf-8-sig") if sdm_result else b"algorithm,test_auc\n"
     vif_csv = vif_table.to_csv(index=False).encode("utf-8-sig") if vif_table is not None else b"variable,vif,status\n"
+    train_csv = env_train.to_csv(index=False).encode("utf-8-sig") if env_train is not None else b""
 
-    dl1, dl2, dl3, dl4, dl5 = st.columns(5)
+    dl1, dl2, dl3, dl4, dl5, dl6 = st.columns(6)
     with dl1:
         st.download_button("Download HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
     with dl2:
@@ -1144,6 +1148,8 @@ def main() -> None:
         st.download_button("Download SDM metrics", sdm_metrics_csv, "sdm_metrics.csv", "text/csv", width="stretch")
     with dl5:
         st.download_button("Download VIF table", vif_csv, "vif_table.csv", "text/csv", width="stretch")
+    with dl6:
+        st.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
 
 
 if __name__ == "__main__":
