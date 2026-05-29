@@ -122,6 +122,7 @@ def init_session_state() -> None:
         "vif_table": None,
         "excluded_row_ids": set(),
         "last_exclude_click_signature": "",
+        "manual_excluded_row_ids": [],
         "sdm_occurrence_row_ids": None,
         "selected_route_site_ids": [],
         "last_route_click_signature": "",
@@ -136,6 +137,7 @@ def clear_loaded_data() -> None:
         st.session_state[key] = None
     st.session_state.excluded_row_ids = set()
     st.session_state.last_exclude_click_signature = ""
+    st.session_state.manual_excluded_row_ids = []
     st.session_state.selected_route_site_ids = []
     st.session_state.last_route_click_signature = ""
     st.session_state.source_message = "No occurrence data loaded yet."
@@ -378,6 +380,7 @@ def coordinate_exclusion_panel(occ_raw: pd.DataFrame) -> pd.DataFrame:
         st.caption("Blue = included, red = excluded. Click a blue occurrence point to exclude it. Use the row-ID box below to restore/delete manually.")
         if st.button("Clear excluded coordinates"):
             st.session_state.excluded_row_ids = set()
+            st.session_state.manual_excluded_row_ids = []
             st.session_state.last_exclude_click_signature = ""
             reset_model_outputs()
             st.rerun()
@@ -396,10 +399,13 @@ def coordinate_exclusion_panel(occ_raw: pd.DataFrame) -> pd.DataFrame:
                     else:
                         st.session_state.excluded_row_ids = set(st.session_state.excluded_row_ids) | {rid}
                         st.success(f"Excluded row {rid}.")
+                    st.session_state.manual_excluded_row_ids = [x for x in sorted(st.session_state.excluded_row_ids) if x in set(occ_raw["_row_id"].astype(int))]
                     reset_model_outputs()
                     st.rerun()
         options = occ_raw["_row_id"].astype(int).tolist()
-        manual_ids = st.multiselect("Excluded row IDs", options=options, default=[x for x in sorted(st.session_state.excluded_row_ids) if x in options])
+        if "manual_excluded_row_ids" not in st.session_state:
+            st.session_state.manual_excluded_row_ids = [x for x in sorted(st.session_state.excluded_row_ids) if x in options]
+        manual_ids = st.multiselect("Excluded row IDs", options=options, key="manual_excluded_row_ids")
         new_ids = set(map(int, manual_ids))
         if new_ids != set(st.session_state.excluded_row_ids):
             st.session_state.excluded_row_ids = new_ids
@@ -1043,6 +1049,7 @@ def load_input_controls() -> None:
                 st.session_state.source_key = key
                 st.session_state.source_message = f"Loaded coordinate CSV: {uploaded.name} ({len(st.session_state.raw_df):,} raw rows)."
                 st.session_state.excluded_row_ids = set()
+                st.session_state.manual_excluded_row_ids = []
                 reset_model_outputs()
         return
     name = st.sidebar.text_input("Taxon scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_taxon_scientific_name_input")
@@ -1067,6 +1074,7 @@ def load_input_controls() -> None:
         st.session_state.source_key = f"gbif::{name}::{country}::{max_records}::{year_from}::{year_to}"
         st.session_state.source_message = msg
         st.session_state.excluded_row_ids = set()
+        st.session_state.manual_excluded_row_ids = []
         reset_model_outputs()
 
 
@@ -1222,6 +1230,8 @@ def main() -> None:
         return
 
     occ_checked = coordinate_exclusion_panel(occ_raw)
+    active_excluded_ids = set(map(int, st.session_state.excluded_row_ids))
+    occ_checked = occ_raw[~occ_raw["_row_id"].astype(int).isin(active_excluded_ids)].copy().reset_index(drop=True)
     if occ_checked.empty:
         st.error("All occurrence records were excluded. Clear excluded coordinates.")
         return
@@ -1247,6 +1257,7 @@ def main() -> None:
         variables = topo_vars + climate_vars
         use_vif = st.checkbox("Apply VIF stepwise filtering", value=True)
         vif_threshold = st.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0)
+        st.caption("VIF filtering is vifstep-like: repeatedly calculate VIF, remove the variable with the highest VIF above the threshold, and refit until all remaining variables pass.")
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
         partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
         k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
@@ -1265,6 +1276,8 @@ def main() -> None:
             st.warning("Select at least one environmental variable.")
         elif not algorithms:
             st.warning("Select at least one algorithm.")
+        elif set(occ["_row_id"].astype(int)).intersection(active_excluded_ids):
+            st.error("Excluded row IDs are still present in the SDM input. SDM was stopped to prevent using excluded occurrences.")
         else:
             try:
                 progress = st.progress(0.0)
@@ -1363,29 +1376,10 @@ def main() -> None:
     if not all_candidates.empty:
         st.dataframe(all_candidates[[c for c in cols if c in all_candidates.columns]].sort_values("priority_rank"), width="stretch", hide_index=True)
 
-    validation_template = make_validation_template(all_candidates)
     html_bytes = fmap.get_root().render().encode("utf-8")
-    candidates_csv = all_candidates.to_csv(index=False).encode("utf-8-sig")
-    route_plan_csv = route_plan.to_csv(index=False).encode("utf-8-sig") if route_plan is not None and not route_plan.empty else b"survey_day,day_route_order,site_id,latitude,longitude\n"
-    validation_csv = validation_template.to_csv(index=False).encode("utf-8-sig")
-    sdm_metrics_csv = sdm_result["metrics"].to_csv(index=False).encode("utf-8-sig") if sdm_result else b"algorithm,partition_method,fold,auc,warning\n"
-    vif_csv = vif_table.to_csv(index=False).encode("utf-8-sig") if vif_table is not None else b"variable,vif,vif_warning,status\n"
-    train_csv = env_train.to_csv(index=False).encode("utf-8-sig") if env_train is not None else b""
-    pred_csv = pred_table.to_csv(index=False).encode("utf-8-sig") if pred_table is not None else b""
-    excluded_csv = occ_raw.loc[~occ_raw["_row_id"].isin(occ_checked["_row_id"])].to_csv(index=False).encode("utf-8-sig")
 
     st.subheader("Downloads")
-    dl1, dl2, dl3, dl4 = st.columns(4)
-    dl1.download_button("Download HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
-    dl2.download_button("Download survey range CSV", candidates_csv, "candidate_survey_ranges.csv", "text/csv", width="stretch")
-    dl3.download_button("Download sampling route plan", route_plan_csv, "sampling_route_plan.csv", "text/csv", width="stretch")
-    dl4.download_button("Download validation template", validation_csv, "field_validation_template.csv", "text/csv", width="stretch")
-    dl5, dl6, dl7, dl8 = st.columns(4)
-    dl5.download_button("Download SDM metrics", sdm_metrics_csv, "sdm_metrics.csv", "text/csv", width="stretch")
-    dl6.download_button("Download VIF table", vif_csv, "vif_table.csv", "text/csv", width="stretch")
-    dl7.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
-    dl8.download_button("Download predict-map table", pred_csv, "sdm_predict_map_table.csv", "text/csv", width="stretch")
-    st.download_button("Download excluded coordinates", excluded_csv, "excluded_coordinates.csv", "text/csv", width="stretch")
+    st.download_button("Download sampling HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
 
 
 if __name__ == "__main__":
