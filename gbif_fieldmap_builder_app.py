@@ -12,6 +12,7 @@ Current design:
 - Environmental variables are separated into topography and climate groups.
 - Occurrence record count is explicitly used as occurrence_support_score and can be weighted.
 - AUC is a diagnostic only; spatial partitions are provided because island SDM validation is difficult.
+- Survey-day route planner splits candidate ranges into practical daily sampling routes.
 - Java MaxEnt is not run inside this app. Export the SDM training table for ENMeval/maxnet.
 """
 
@@ -82,6 +83,15 @@ PRED_EXTENT_MODES = [
     "Island-wide land within occurrence bounding box",
     "Occurrence convex hull + buffer",
     "Occurrence buffer union",
+]
+ROUTE_ORDER_METHODS = [
+    "Priority then nearest-neighbor",
+    "Nearest-neighbor from westernmost",
+    "Priority score only",
+    "North → South",
+    "South → North",
+    "West → East",
+    "East → West",
 ]
 
 
@@ -524,6 +534,169 @@ def add_navigation_columns(sites: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def nearest_neighbor_from_start(sites: pd.DataFrame, start_idx: int) -> pd.DataFrame:
+    if sites.empty:
+        return sites.copy()
+    remaining = sites.copy().reset_index(drop=True)
+    start_idx = int(max(0, min(start_idx, len(remaining) - 1)))
+    rows = [remaining.loc[start_idx]]
+    remaining = remaining.drop(index=start_idx).reset_index(drop=True)
+    while not remaining.empty:
+        current = rows[-1]
+        current_xy = (float(current["latitude"]), float(current["longitude"]))
+        distances = remaining.apply(lambda row: geodesic(current_xy, (float(row["latitude"]), float(row["longitude"]))).km, axis=1)
+        next_idx = int(distances.idxmin())
+        rows.append(remaining.loc[next_idx])
+        remaining = remaining.drop(index=next_idx).reset_index(drop=True)
+    return pd.DataFrame(rows).reset_index(drop=True)
+
+
+def order_sites_for_sampling_plan(sites: pd.DataFrame, method: str) -> pd.DataFrame:
+    if sites.empty:
+        return sites.copy()
+    work = sites.copy().reset_index(drop=True)
+    if method == "Priority score only":
+        return work.sort_values(["priority_score", "sdm_suitability", "occurrence_support_score"], ascending=False, na_position="last").reset_index(drop=True)
+    if method == "Priority then nearest-neighbor":
+        ranked = work.sort_values(["priority_score", "sdm_suitability", "occurrence_support_score"], ascending=False, na_position="last").reset_index(drop=True)
+        return nearest_neighbor_from_start(ranked, 0)
+    if method == "Nearest-neighbor from westernmost":
+        return nearest_neighbor_from_start(work, int(work["longitude"].idxmin()))
+    if method == "North → South":
+        return work.sort_values(["latitude", "longitude"], ascending=[False, True]).reset_index(drop=True)
+    if method == "South → North":
+        return work.sort_values(["latitude", "longitude"], ascending=[True, True]).reset_index(drop=True)
+    if method == "West → East":
+        return work.sort_values(["longitude", "latitude"], ascending=[True, False]).reset_index(drop=True)
+    if method == "East → West":
+        return work.sort_values(["longitude", "latitude"], ascending=[False, False]).reset_index(drop=True)
+    return work.reset_index(drop=True)
+
+
+def split_ordered_sites_into_days(ordered: pd.DataFrame, survey_days: int, max_sites_per_day: int, max_day_distance_km: float) -> pd.DataFrame:
+    if ordered.empty:
+        return ordered.copy()
+    rows = []
+    current_day = 1
+    day_count = 0
+    day_distance = 0.0
+    prev_coord: Optional[tuple[float, float]] = None
+    for _, row in ordered.iterrows():
+        coord = (float(row["latitude"]), float(row["longitude"]))
+        leg = 0.0 if prev_coord is None or day_count == 0 else float(geodesic(prev_coord, coord).km)
+        would_exceed_sites = day_count >= int(max_sites_per_day)
+        would_exceed_dist = day_count > 0 and max_day_distance_km > 0 and (day_distance + leg) > float(max_day_distance_km)
+        if (would_exceed_sites or would_exceed_dist) and current_day < int(survey_days):
+            current_day += 1
+            day_count = 0
+            day_distance = 0.0
+            prev_coord = None
+            leg = 0.0
+        if current_day > int(survey_days) or day_count >= int(max_sites_per_day):
+            continue
+        day_count += 1
+        day_distance += leg
+        new = row.to_dict()
+        new["survey_day"] = current_day
+        new["day_route_order"] = day_count
+        new["distance_from_previous_km"] = round(leg, 3)
+        new["cumulative_day_distance_km"] = round(day_distance, 3)
+        rows.append(new)
+        prev_coord = coord
+    plan = pd.DataFrame(rows)
+    if plan.empty:
+        return plan
+    urls = {}
+    for day, group in plan.groupby("survey_day"):
+        tmp = group.sort_values("day_route_order").copy()
+        tmp["route_order"] = range(1, len(tmp) + 1)
+        urls[int(day)] = make_google_maps_route_url(tmp, travelmode="driving")
+    plan["day_google_maps_route_url"] = plan["survey_day"].map(urls)
+    plan["google_maps_point_url"] = plan.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
+    return plan.reset_index(drop=True)
+
+
+def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
+    st.subheader("Survey route planner")
+    st.caption("Create a day-by-day sampling route from candidate survey ranges. Distances are straight-line distances; use Google Maps links for real roads/transit.")
+    if sites is None or sites.empty:
+        st.info("No candidate survey ranges are available yet.")
+        return pd.DataFrame()
+    with st.expander("Route planner settings", expanded=True):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            survey_days = st.number_input("Survey days", min_value=1, max_value=30, value=2, step=1)
+        with c2:
+            max_sites_per_day = st.number_input("Max sites per day", min_value=1, max_value=50, value=8, step=1)
+        with c3:
+            max_day_distance_km = st.number_input("Max straight-line distance per day (km)", min_value=0.0, max_value=500.0, value=40.0, step=5.0)
+        with c4:
+            max_total_sites = st.number_input("Max total sites in route", min_value=1, max_value=500, value=min(30, max(1, len(sites))), step=1)
+        route_order_method = st.selectbox("Route ordering method", ROUTE_ORDER_METHODS, index=0)
+        include_occ = st.checkbox("Include occurrence-supported ranges", value=True)
+        include_sdm = st.checkbox("Include SDM-high exploration ranges", value=True)
+        use_manual_bbox = st.checkbox("Limit to manual survey bounding box", value=False)
+        bbox_vals = None
+        if use_manual_bbox:
+            min_lat0 = float(sites["latitude"].min())
+            max_lat0 = float(sites["latitude"].max())
+            min_lon0 = float(sites["longitude"].min())
+            max_lon0 = float(sites["longitude"].max())
+            b1, b2, b3, b4 = st.columns(4)
+            with b1:
+                min_lat = st.number_input("Min latitude", value=min_lat0, format="%.6f")
+            with b2:
+                max_lat = st.number_input("Max latitude", value=max_lat0, format="%.6f")
+            with b3:
+                min_lon = st.number_input("Min longitude", value=min_lon0, format="%.6f")
+            with b4:
+                max_lon = st.number_input("Max longitude", value=max_lon0, format="%.6f")
+            bbox_vals = (min_lat, max_lat, min_lon, max_lon)
+    work = sites.copy()
+    ctype = work.get("candidate_type", pd.Series("", index=work.index)).astype(str)
+    mask = pd.Series(False, index=work.index)
+    if include_occ:
+        mask = mask | ~ctype.str.startswith("SDM-high")
+    if include_sdm:
+        mask = mask | ctype.str.startswith("SDM-high")
+    work = work.loc[mask].copy()
+    if bbox_vals is not None:
+        min_lat, max_lat, min_lon, max_lon = bbox_vals
+        work = work[work["latitude"].between(min_lat, max_lat) & work["longitude"].between(min_lon, max_lon)].copy()
+    if work.empty:
+        st.info("No candidates match the current route-planner filters.")
+        return pd.DataFrame()
+    work = work.sort_values(["priority_score", "sdm_suitability", "occurrence_support_score"], ascending=False, na_position="last").head(int(max_total_sites)).copy()
+    ordered = order_sites_for_sampling_plan(work, route_order_method)
+    plan = split_ordered_sites_into_days(ordered, int(survey_days), int(max_sites_per_day), float(max_day_distance_km))
+    if plan.empty:
+        st.info("Route plan is empty under the current constraints.")
+        return pd.DataFrame()
+    used_n = len(plan)
+    candidate_n = len(work)
+    if used_n < candidate_n:
+        st.warning(f"Route capacity used {used_n} of {candidate_n} filtered candidates. Increase days, max sites per day, or daily distance to include more.")
+    summary = plan.groupby("survey_day").agg(
+        sites=("site_id", "count"),
+        straight_distance_km=("distance_from_previous_km", "sum"),
+        mean_priority=("priority_score", "mean"),
+    ).reset_index()
+    summary["straight_distance_km"] = summary["straight_distance_km"].round(2)
+    summary["mean_priority"] = summary["mean_priority"].round(3)
+    st.write("Daily route summary")
+    st.dataframe(summary, width="stretch", hide_index=True)
+    link_cols = st.columns(min(int(survey_days), 4))
+    for i, (day, group) in enumerate(plan.groupby("survey_day")):
+        url = str(group["day_google_maps_route_url"].iloc[0])
+        with link_cols[(int(day) - 1) % len(link_cols)]:
+            st.link_button(f"Open Day {int(day)} route", url, width="stretch")
+    display_cols = ["survey_day", "day_route_order", "site_id", "candidate_type", "priority_score", "occurrence_support_score", "sdm_suitability", "n_occurrences", "distance_from_previous_km", "cumulative_day_distance_km", "latitude", "longitude", "google_maps_point_url"]
+    display_cols = [c for c in display_cols if c in plan.columns]
+    st.write("Sampling route plan")
+    st.dataframe(plan[display_cols], width="stretch", hide_index=True)
+    return plan
+
+
 def download_file(url: str, dest: Path) -> Path:
     if dest.exists() and dest.stat().st_size > 0:
         return dest
@@ -663,7 +836,6 @@ def rgba_from_prediction(pred: np.ndarray, alpha: int = 170) -> np.ndarray:
     rgba = np.zeros((pred.shape[0], pred.shape[1], 4), dtype=np.uint8)
     valid = np.isfinite(pred)
     v = np.clip(pred, 0, 1)
-    # Blue -> cyan -> yellow -> orange -> red, handmade colormap to avoid matplotlib dependency.
     breaks = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
     colors = np.array([
         [44, 123, 182],
@@ -729,7 +901,6 @@ def build_sdm_predict_raster(
     out_width = max(1, int(math.ceil(raw_width / stride)))
     if status is not None:
         status.write(f"Predicting raster map on {out_width:,} × {out_height:,} cells; stride={stride} from source raster.")
-
     arrays: dict[str, np.ndarray] = {}
     actual_bounds = None
     elev_cache = None
@@ -757,7 +928,6 @@ def build_sdm_predict_raster(
     lon_centers = np.linspace(west2 + (east2 - west2) / (2 * out_width), east2 - (east2 - west2) / (2 * out_width), out_width)
     lat_centers = np.linspace(north2 - (north2 - south2) / (2 * out_height), south2 + (north2 - south2) / (2 * out_height), out_height)
     lon_grid, lat_grid = np.meshgrid(lon_centers, lat_centers)
-
     flat = {var: arrays[var].ravel() for var in variables}
     X = pd.DataFrame(flat)
     finite_mask = np.isfinite(X.to_numpy()).all(axis=1)
@@ -1081,7 +1251,7 @@ def fit_bounds_or_default(df: pd.DataFrame) -> tuple[list[list[float]], tuple[fl
     return [[min_lat, min_lon], [max_lat, max_lon]], ((min_lat + max_lat) / 2, (min_lon + max_lon) / 2), 8
 
 
-def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, prediction_overlay: Optional[dict[str, Any]], buffer_radius_m: float, survey_range_radius_m: float, show_occurrences: bool, show_buffers: bool, show_clusters: bool, show_occurrence_candidate_sites: bool, show_sdm_candidate_sites: bool, show_routes: bool, show_distance_labels: bool, show_prediction_layer: bool) -> folium.Map:
+def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, prediction_overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], buffer_radius_m: float, survey_range_radius_m: float, show_occurrences: bool, show_buffers: bool, show_clusters: bool, show_occurrence_candidate_sites: bool, show_sdm_candidate_sites: bool, show_routes: bool, show_distance_labels: bool, show_prediction_layer: bool, show_daily_route_layers: bool) -> folium.Map:
     bounds, center, zoom = fit_bounds_or_default(occurrences)
     fmap = Map(location=center, zoom_start=zoom, tiles="OpenStreetMap", control_scale=True)
     colors = ["red", "orange", "green", "purple", "cadetblue", "darkred", "darkgreen", "darkblue", "pink", "gray"]
@@ -1118,6 +1288,18 @@ def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, prediction_overlay
         group = FeatureGroup(name="Route between survey-range centers", show=True)
         folium.PolyLine(list(zip(sites["latitude"], sites["longitude"])), color="red", weight=3, opacity=0.7).add_to(group)
         group.add_to(fmap)
+    if show_daily_route_layers and route_plan is not None and not route_plan.empty:
+        day_colors = ["blue", "green", "purple", "orange", "darkred", "cadetblue", "darkgreen", "pink"]
+        for day, day_df in route_plan.groupby("survey_day"):
+            day_df = day_df.sort_values("day_route_order")
+            color = day_colors[(int(day) - 1) % len(day_colors)]
+            group = FeatureGroup(name=f"Sampling route Day {int(day)}", show=True)
+            coords = list(zip(day_df["latitude"], day_df["longitude"]))
+            if len(coords) >= 2:
+                folium.PolyLine(coords, color=color, weight=4, opacity=0.75).add_to(group)
+            for _, row in day_df.iterrows():
+                folium.CircleMarker(location=(row["latitude"], row["longitude"]), radius=7, color=color, fill=True, fill_color=color, fill_opacity=0.85, popup=folium.Popup(popup_html_site(row), max_width=460), tooltip=f"Day {int(day)} - stop {int(row['day_route_order'])}").add_to(group)
+            group.add_to(fmap)
     if show_distance_labels and len(sites) >= 2:
         group = FeatureGroup(name="Straight-line distance labels", show=True)
         route_coords = list(zip(sites["latitude"], sites["longitude"]))
@@ -1312,7 +1494,7 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
     st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Island-aware survey planning from GBIF/coordinate occurrences, raster-style SDM predict maps, spatial diagnostics, and survey-range outputs.")
+    st.caption("Island-aware survey planning from GBIF/coordinate occurrences, raster-style SDM predict maps, spatial diagnostics, and survey-day route plans.")
     st.sidebar.header("Data source")
     load_input_controls()
     st.sidebar.divider()
@@ -1335,12 +1517,13 @@ def main() -> None:
     show_clusters = st.sidebar.checkbox("Occurrence clusters", value=False)
     show_occurrence_candidate_sites = st.sidebar.checkbox("Occurrence-supported survey ranges", value=True)
     show_sdm_candidate_sites = st.sidebar.checkbox("SDM-high exploration survey ranges", value=True)
-    show_routes = st.sidebar.checkbox("Routes between range centers", value=True)
+    show_routes = st.sidebar.checkbox("Routes between range centers", value=False)
+    show_daily_route_layers = st.sidebar.checkbox("Daily sampling route layers", value=True)
     show_distance_labels = st.sidebar.checkbox("Straight-line distance labels", value=True)
     raw_df = st.session_state.raw_df
     if raw_df is None:
         st.info(st.session_state.source_message)
-        st.markdown("Start by searching GBIF by scientific name, or upload any coordinate CSV. Then run SDM to generate a raster-style predict map and survey ranges.")
+        st.markdown("Start by searching GBIF by scientific name, or upload any coordinate CSV. Then run SDM to generate a raster-style predict map, survey ranges, and day-by-day route plans.")
         return
     st.success(st.session_state.source_message)
     try:
@@ -1361,6 +1544,7 @@ def main() -> None:
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_radius_m)) if not all_candidates.empty else all_candidates
     all_candidates = add_priority_rank(all_candidates)
     all_candidates = add_navigation_columns(order_sites(all_candidates, route_order_mode))
+    route_plan = route_planner_panel(all_candidates)
     route_url = make_google_maps_route_url(all_candidates, travelmode="driving")
     transit_route_url = make_google_maps_route_url(all_candidates, travelmode="transit")
     total_clusters = int(occ.loc[occ["cluster_id"] >= 0, "cluster_id"].nunique()) if not occ.empty else 0
@@ -1376,12 +1560,12 @@ def main() -> None:
     if route_url:
         c1, c2 = st.columns(2)
         with c1:
-            st.link_button("Open driving route in Google Maps", route_url, width="stretch")
+            st.link_button("Open all-candidate driving route in Google Maps", route_url, width="stretch")
         with c2:
-            st.link_button("Open public-transit route in Google Maps", transit_route_url, width="stretch")
+            st.link_button("Open all-candidate public-transit route in Google Maps", transit_route_url, width="stretch")
     with st.expander("Detected input columns", expanded=False):
         st.write(detected.__dict__)
-    fmap = build_map(occ, all_candidates, overlay, float(buffer_radius_m), float(survey_range_radius_m), show_occurrences, show_buffers, show_clusters, show_occurrence_candidate_sites, show_sdm_candidate_sites, show_routes, show_distance_labels, show_prediction_layer)
+    fmap = build_map(occ, all_candidates, overlay, route_plan, float(buffer_radius_m), float(survey_range_radius_m), show_occurrences, show_buffers, show_clusters, show_occurrence_candidate_sites, show_sdm_candidate_sites, show_routes, show_distance_labels, show_prediction_layer, show_daily_route_layers)
     st_folium(fmap, width=None, height=720, returned_objects=[])
     st.subheader("Priority survey ranges")
     priority_cols = ["priority_rank", "site_id", "candidate_type", "route_order", "priority_score", "occurrence_support_score", "sdm_suitability", "distance_to_nearest_known_m", "n_occurrences", "latitude", "longitude", "bias_warning", "selection_reason"]
@@ -1394,25 +1578,29 @@ def main() -> None:
     validation_template = make_field_validation_template(all_candidates)
     html_bytes = fmap.get_root().render().encode("utf-8")
     candidates_csv = all_candidates.to_csv(index=False).encode("utf-8-sig")
+    route_plan_csv = route_plan.to_csv(index=False).encode("utf-8-sig") if route_plan is not None and not route_plan.empty else b"survey_day,day_route_order,site_id,latitude,longitude\n"
     validation_csv = validation_template.to_csv(index=False).encode("utf-8-sig")
     sdm_metrics_csv = sdm_result["metrics"].to_csv(index=False).encode("utf-8-sig") if sdm_result else b"algorithm,partition_method,fold,auc,warning\n"
     vif_csv = vif_table.to_csv(index=False).encode("utf-8-sig") if vif_table is not None else b"variable,vif,vif_warning,status\n"
     train_csv = env_train.to_csv(index=False).encode("utf-8-sig") if env_train is not None else b""
     pred_csv = pred_table.to_csv(index=False).encode("utf-8-sig") if pred_table is not None else b""
-    dl1, dl2, dl3, dl4, dl5, dl6, dl7 = st.columns(7)
+    dl1, dl2, dl3, dl4 = st.columns(4)
     with dl1:
         st.download_button("Download HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
     with dl2:
         st.download_button("Download survey range CSV", candidates_csv, "candidate_survey_ranges.csv", "text/csv", width="stretch")
     with dl3:
-        st.download_button("Download validation template", validation_csv, "field_validation_template.csv", "text/csv", width="stretch")
+        st.download_button("Download sampling route plan", route_plan_csv, "sampling_route_plan.csv", "text/csv", width="stretch")
     with dl4:
-        st.download_button("Download SDM metrics", sdm_metrics_csv, "sdm_metrics.csv", "text/csv", width="stretch")
+        st.download_button("Download validation template", validation_csv, "field_validation_template.csv", "text/csv", width="stretch")
+    dl5, dl6, dl7, dl8 = st.columns(4)
     with dl5:
-        st.download_button("Download VIF table", vif_csv, "vif_table.csv", "text/csv", width="stretch")
+        st.download_button("Download SDM metrics", sdm_metrics_csv, "sdm_metrics.csv", "text/csv", width="stretch")
     with dl6:
-        st.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
+        st.download_button("Download VIF table", vif_csv, "vif_table.csv", "text/csv", width="stretch")
     with dl7:
+        st.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
+    with dl8:
         st.download_button("Download predict-map table", pred_csv, "sdm_predict_map_table.csv", "text/csv", width="stretch")
 
 
