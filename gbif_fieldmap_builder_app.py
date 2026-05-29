@@ -1,23 +1,18 @@
 """
 GBIF FieldMap Builder
 
-A Streamlit app for field-survey planning from GBIF records or a coordinate CSV.
+Streamlit app for field-survey planning from GBIF records or coordinate CSV data.
 
-Main workflow:
-1. Load occurrence data from GBIF or CSV.
-2. Generate candidate survey ranges from occurrence clusters.
-3. Optionally build a simple ensemble SDM from WorldClim variables.
-4. Predict suitability on land inside one of three user-selected areas:
-   - buffer
-   - convex hull
-   - bounding box
-5. Generate SDM-high exploration ranges.
-6. Split selected ranges into a day-by-day sampling route plan.
-
-Notes:
-- All prediction-area modes are land-only.
-- WorldClim "10m" means 10 arc-minutes, not 10 meters.
-- AUC is diagnostic only. Spatial validation on islands and narrow coastal systems is hard.
+Features:
+- GBIF scientific-name search or flexible coordinate CSV upload.
+- Suspect-coordinate review: auto-detect isolated records and exclude them before SDM.
+- Candidate survey ranges from occurrence clusters.
+- Optional ensemble SDM using WorldClim variables.
+- VIF stepwise filtering with user-defined threshold.
+- Spatial partition diagnostics for AUC: random holdout, random k-fold, block, checkerboard1/2, jackknife.
+- Prediction areas are land-only: buffer, convex hull, bounding box.
+- Raster-style SDM predict map with Folium ImageOverlay.
+- Day-by-day sampling route planning and CSV/HTML exports.
 """
 
 from __future__ import annotations
@@ -47,9 +42,9 @@ from shapely.ops import unary_union
 from sklearn.cluster import DBSCAN
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
@@ -83,6 +78,7 @@ RESOLUTION_NOTE = {
 }
 ALGORITHMS = ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting"]
 AREA_MODES = ["buffer", "convex hull", "bounding box"]
+PARTITION_METHODS = ["random holdout", "random k-fold", "block", "checkerboard1", "checkerboard2", "jackknife"]
 ROUTE_ORDER_METHODS = ["priority then nearest", "nearest from west", "priority only", "north to south", "south to north", "west to east", "east to west"]
 
 
@@ -138,6 +134,13 @@ def clear_loaded_data() -> None:
     st.session_state.source_message = "No occurrence data loaded yet."
 
 
+def first_url(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return ""
+    match = re.search(r"https?://[^\s,;|]+", str(value).strip())
+    return match.group(0) if match else ""
+
+
 def detect_occurrence_columns(df: pd.DataFrame) -> ColumnDetection:
     cols = list(df.columns)
     lat = detect_column(cols, LAT_CANDIDATES)
@@ -156,24 +159,6 @@ def detect_occurrence_columns(df: pd.DataFrame) -> ColumnDetection:
     )
 
 
-def first_url(value: Any) -> str:
-    if value is None or pd.isna(value):
-        return ""
-    match = re.search(r"https?://[^\s,;|]+", str(value).strip())
-    return match.group(0) if match else ""
-
-
-def extract_media_url_from_gbif_record(rec: dict[str, Any]) -> str:
-    media = rec.get("media") or []
-    if isinstance(media, list):
-        for item in media:
-            if isinstance(item, dict):
-                url = first_url(item.get("identifier") or item.get("references") or item.get("source"))
-                if url:
-                    return url
-    return first_url(rec.get("associatedMedia"))
-
-
 def clean_occurrences(df: pd.DataFrame, cols: ColumnDetection) -> pd.DataFrame:
     out = df.copy()
     out[cols.latitude] = pd.to_numeric(out[cols.latitude], errors="coerce")
@@ -190,6 +175,7 @@ def clean_occurrences(df: pd.DataFrame, cols: ColumnDetection) -> pd.DataFrame:
         out["_year"] = pd.to_numeric(out[cols.year], errors="coerce")
     else:
         out["_year"] = pd.to_datetime(out["_event_date"], errors="coerce").dt.year
+    out["_row_id"] = np.arange(len(out), dtype=int)
     return out.reset_index(drop=True)
 
 
@@ -199,6 +185,17 @@ def read_uploaded_csv(uploaded: Any) -> pd.DataFrame:
     except UnicodeDecodeError:
         uploaded.seek(0)
         return pd.read_csv(uploaded, encoding="latin1")
+
+
+def extract_media_url_from_gbif_record(rec: dict[str, Any]) -> str:
+    media = rec.get("media") or []
+    if isinstance(media, list):
+        for item in media:
+            if isinstance(item, dict):
+                url = first_url(item.get("identifier") or item.get("references") or item.get("source"))
+                if url:
+                    return url
+    return first_url(rec.get("associatedMedia"))
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -218,7 +215,6 @@ def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, countr
         params_base["year"] = f"{int(year_from)},"
     elif year_to is not None:
         params_base["year"] = f",{int(year_to)}"
-
     records: list[dict[str, Any]] = []
     offset = 0
     while len(records) < max_records:
@@ -235,7 +231,6 @@ def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, countr
         offset += len(batch)
         if page.get("endOfRecords"):
             break
-
     rows = []
     for rec in records:
         rows.append({
@@ -299,6 +294,63 @@ def filter_to_land(df: pd.DataFrame, lat_col: str = "latitude", lon_col: str = "
     land = load_land_geometry()
     mask = [range_fits_land(row[lat_col], row[lon_col], range_radius_m, land) for _, row in df.iterrows()]
     return df.loc[mask].reset_index(drop=True)
+
+
+def add_outlier_scores(occ: pd.DataFrame) -> pd.DataFrame:
+    out = occ.copy()
+    if len(out) <= 1:
+        out["nearest_neighbor_km"] = np.nan
+        out["distance_from_centroid_km"] = np.nan
+        return out
+    coords = list(zip(out["_latitude"].astype(float), out["_longitude"].astype(float)))
+    nn = []
+    for i, coord in enumerate(coords):
+        dists = [geodesic(coord, other).km for j, other in enumerate(coords) if i != j]
+        nn.append(min(dists) if dists else np.nan)
+    cen = (float(out["_latitude"].mean()), float(out["_longitude"].mean()))
+    out["nearest_neighbor_km"] = nn
+    out["distance_from_centroid_km"] = [geodesic(cen, coord).km for coord in coords]
+    return out
+
+
+def outlier_review_panel(occ_raw: pd.DataFrame) -> pd.DataFrame:
+    st.subheader("Coordinate quality check")
+    with st.expander("Review and exclude suspect coordinates", expanded=True):
+        st.caption("Use this before SDM. A single far-away record can make the bounding box and background area much too large.")
+        c1, c2 = st.columns(2)
+        nn_threshold = c1.number_input("Flag records with nearest neighbor distance over (km)", min_value=1.0, max_value=2000.0, value=80.0, step=10.0)
+        show_table_n = c2.number_input("Show top N most isolated records", min_value=5, max_value=200, value=30, step=5)
+        scored = add_outlier_scores(occ_raw)
+        scored["suspect"] = pd.to_numeric(scored["nearest_neighbor_km"], errors="coerce") >= float(nn_threshold)
+        view_cols = ["_row_id", "_latitude", "_longitude", "nearest_neighbor_km", "distance_from_centroid_km", "_species", "_locality", "_event_date", "_gbif_id", "_media_url"]
+        view_cols = [c for c in view_cols if c in scored.columns]
+        isolated = scored.sort_values("nearest_neighbor_km", ascending=False).head(int(show_table_n))[view_cols].copy()
+        st.dataframe(isolated, width="stretch", hide_index=True)
+        options = []
+        labels = {}
+        for _, row in scored.sort_values("nearest_neighbor_km", ascending=False).iterrows():
+            label = f"row {int(row['_row_id'])} | nn={row['nearest_neighbor_km']:.1f} km | {row['_latitude']:.5f}, {row['_longitude']:.5f} | {row.get('_locality','')} | GBIF {row.get('_gbif_id','')}"
+            options.append(int(row["_row_id"]))
+            labels[int(row["_row_id"])] = label
+        default_ids = scored.loc[scored["suspect"], "_row_id"].astype(int).tolist()
+        exclude_ids = st.multiselect(
+            "Exclude records from analysis",
+            options=options,
+            default=default_ids,
+            format_func=lambda x: labels.get(int(x), str(x)),
+            help="Excluded records are removed from clustering, SDM training, prediction area, and route planning. They are not deleted from the original file."
+        )
+        gbif_text = st.text_area("Also exclude GBIF IDs, optional comma/space separated", value="", height=70)
+        extra_ids = set(re.findall(r"\d+", gbif_text))
+        filtered = scored[~scored["_row_id"].astype(int).isin(set(map(int, exclude_ids)))].copy()
+        if extra_ids and "_gbif_id" in filtered.columns:
+            filtered = filtered[~filtered["_gbif_id"].astype(str).isin(extra_ids)].copy()
+        removed_n = len(scored) - len(filtered)
+        if removed_n > 0:
+            st.warning(f"Excluded {removed_n} suspect coordinate records from analysis. Remaining records: {len(filtered)}.")
+        else:
+            st.info("No records excluded.")
+    return filtered.reset_index(drop=True)
 
 
 def spatial_thin(df: pd.DataFrame, thinning_m: float) -> pd.DataFrame:
@@ -452,11 +504,10 @@ def order_sites(sites: pd.DataFrame, mode: str) -> pd.DataFrame:
         out = sites.copy(); out["route_order"] = []; return out
     work = sites.copy().reset_index(drop=True)
     if mode in ["Nearest-neighbor route", "nearest from west"]:
-        start = int(work["longitude"].idxmin())
-        ordered = nearest_neighbor_order(work, start)
+        ordered = nearest_neighbor_order(work, int(work["longitude"].idxmin()))
     elif mode in ["Priority score", "priority only"]:
         ordered = work.sort_values(["priority_score", "sdm_suitability", "occurrence_support_score"], ascending=False, na_position="last")
-    elif mode in ["priority then nearest"]:
+    elif mode == "priority then nearest":
         ranked = work.sort_values(["priority_score", "sdm_suitability", "occurrence_support_score"], ascending=False, na_position="last").reset_index(drop=True)
         ordered = nearest_neighbor_order(ranked, 0)
     elif mode in ["North → South", "north to south"]:
@@ -511,15 +562,6 @@ def split_route_into_days(ordered: pd.DataFrame, survey_days: int, max_sites_per
         urls[int(day)] = make_google_maps_route_url(tmp)
     plan["day_google_maps_route_url"] = plan["survey_day"].map(urls)
     return plan.reset_index(drop=True)
-
-
-def add_navigation_columns(sites: pd.DataFrame) -> pd.DataFrame:
-    out = sites.copy()
-    if out.empty:
-        out["google_maps_point_url"] = []
-        return out
-    out["google_maps_point_url"] = out.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
-    return out
 
 
 def download_file(url: str, dest: Path) -> Path:
@@ -606,6 +648,52 @@ def extract_environment(points: pd.DataFrame, variables: list[str], lat_col: str
     return out
 
 
+def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
+    if len(variables) == 0:
+        return pd.DataFrame(columns=["variable", "vif", "vif_warning"])
+    if len(variables) == 1:
+        return pd.DataFrame({"variable": variables, "vif": [1.0], "vif_warning": [""], "status": ["kept"]})
+    X = df[variables].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    X = pd.DataFrame(SimpleImputer(strategy="median").fit_transform(X), columns=variables)
+    rows = []
+    for var in variables:
+        others = [v for v in variables if v != var]
+        try:
+            r2 = LinearRegression().fit(X[others].values, X[var].values).score(X[others].values, X[var].values)
+            vif = 1.0 / max(1e-12, 1.0 - r2)
+        except Exception:
+            vif = np.inf
+        if not np.isfinite(vif) or vif >= 1e6:
+            warning = "unstable / near-perfect collinearity"
+        elif vif >= 100:
+            warning = "very high collinearity"
+        elif vif >= 10:
+            warning = "high collinearity"
+        else:
+            warning = ""
+        rows.append({"variable": var, "vif": round(float(vif), 3) if np.isfinite(vif) else np.inf, "vif_warning": warning})
+    return pd.DataFrame(rows).sort_values("vif", ascending=False).reset_index(drop=True)
+
+
+def vif_step(df: pd.DataFrame, variables: list[str], threshold: float) -> tuple[list[str], pd.DataFrame]:
+    kept = list(dict.fromkeys(variables))
+    removed = []
+    while len(kept) > 1:
+        tbl = compute_vif_table(df, kept)
+        top = tbl.iloc[0]
+        top_vif = float(top["vif"])
+        if np.isfinite(top_vif) and top_vif <= threshold:
+            break
+        var = str(top["variable"])
+        removed.append({"variable": var, "vif": top["vif"], "vif_warning": top.get("vif_warning", ""), "status": "removed"})
+        kept.remove(var)
+    final = compute_vif_table(df, kept) if kept else pd.DataFrame(columns=["variable", "vif", "vif_warning"])
+    final["status"] = "kept"
+    if removed:
+        final = pd.concat([final, pd.DataFrame(removed)], ignore_index=True)
+    return kept, final
+
+
 def generate_land_points(occ: pd.DataFrame, n_points: int, area_mode: str, buffer_km: float, rectangle_margin_km: float, random_state: int = 42, status=None) -> pd.DataFrame:
     rng = np.random.default_rng(random_state)
     geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km)
@@ -648,25 +736,95 @@ def make_model(name: str):
     raise ValueError(name)
 
 
-def fit_sdm(train_df: pd.DataFrame, variables: list[str], algorithms: list[str]) -> dict[str, Any]:
+def assign_spatial_folds(data: pd.DataFrame, method: str, k: int, checkerboard_deg: float) -> pd.Series:
+    y = data["presence"].astype(int)
+    if method == "random k-fold":
+        k_eff = max(2, min(int(k), int(y.value_counts().min()) if y.nunique() == 2 else int(k)))
+        folds = pd.Series(index=data.index, dtype=int)
+        splitter = StratifiedKFold(n_splits=k_eff, shuffle=True, random_state=42)
+        for fold_id, (_, test_idx) in enumerate(splitter.split(data, y), start=1):
+            folds.iloc[test_idx] = fold_id
+        return folds.astype(int)
+    if method == "block":
+        lat_med = data["latitude"].median()
+        lon_med = data["longitude"].median()
+        return ((data["latitude"] >= lat_med).astype(int) * 2 + (data["longitude"] >= lon_med).astype(int) + 1).astype(int)
+    if method in ["checkerboard1", "checkerboard2"]:
+        cell = max(float(checkerboard_deg) * (2.0 if method == "checkerboard2" else 1.0), 1e-6)
+        ix = np.floor((data["longitude"] - data["longitude"].min()) / cell).astype(int)
+        iy = np.floor((data["latitude"] - data["latitude"].min()) / cell).astype(int)
+        if method == "checkerboard1":
+            return ((ix + iy) % 2 + 1).astype(int)
+        return ((ix % 2) * 2 + (iy % 2) + 1).astype(int)
+    if method == "jackknife":
+        pres = data[data["presence"].astype(int) == 1].copy()
+        if pres.empty:
+            return pd.Series(np.ones(len(data), dtype=int), index=data.index)
+        pres["jk_group"] = haversine_dbscan(pres, "latitude", "longitude", 2000.0, 1).values + 1
+        pres_coords = pres[["latitude", "longitude", "jk_group"]].reset_index(drop=True)
+        folds = []
+        for _, row in data.iterrows():
+            coord = (float(row["latitude"]), float(row["longitude"]))
+            d = pres_coords.apply(lambda r: geodesic(coord, (float(r["latitude"]), float(r["longitude"]))).m, axis=1)
+            folds.append(int(pres_coords.loc[d.idxmin(), "jk_group"]))
+        return pd.Series(folds, index=data.index).astype(int)
+    return pd.Series(np.ones(len(data), dtype=int), index=data.index)
+
+
+def auc_warning(auc: float, method: str) -> str:
+    if not np.isfinite(auc):
+        return "not available"
+    if auc >= 0.98:
+        return "suspiciously high; likely easy background or leakage"
+    if auc >= 0.95:
+        return "very high; inspect spatial partition and background"
+    if method in ["random holdout", "random k-fold"] and auc >= 0.90:
+        return "random split may be optimistic"
+    return ""
+
+
+def fit_sdm(train_df: pd.DataFrame, variables: list[str], algorithms: list[str], partition_method: str, k_folds: int, checkerboard_deg: float) -> dict[str, Any]:
     data = train_df.copy()
     X = data[variables].apply(pd.to_numeric, errors="coerce")
     y = data["presence"].astype(int)
-    metrics = []
-    models = {}
     if y.nunique() < 2:
         raise ValueError("Need both presence and background points for SDM.")
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)
-    for alg in algorithms:
-        model = make_model(alg)
-        model.fit(X_train, y_train)
-        pred = model.predict_proba(X_test)[:, 1]
-        auc = float(roc_auc_score(y_test, pred))
-        model.fit(X, y)
-        models[alg] = model
-        warn = "very high; inspect background/partition" if auc >= 0.95 else ""
-        metrics.append({"algorithm": alg, "partition_method": "random holdout", "fold": "diagnostic", "auc": round(auc, 3), "warning": warn})
-    return {"models": models, "metrics": pd.DataFrame(metrics), "variables": variables, "training_table": data}
+    metrics = []
+    models = {}
+    if partition_method == "random holdout":
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)
+        for alg in algorithms:
+            model = make_model(alg)
+            model.fit(X_train, y_train)
+            auc = float(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]))
+            metrics.append({"algorithm": alg, "partition_method": partition_method, "fold": "diagnostic", "auc": round(auc, 3), "warning": auc_warning(auc, partition_method)})
+            model.fit(X, y)
+            models[alg] = model
+    else:
+        data["cv_fold"] = assign_spatial_folds(data, partition_method, k_folds, checkerboard_deg).values
+        X_all = data[variables].apply(pd.to_numeric, errors="coerce")
+        y_all = data["presence"].astype(int)
+        unique_folds = sorted(data["cv_fold"].dropna().unique())
+        for alg in algorithms:
+            fold_aucs = []
+            for fold in unique_folds:
+                test_mask = data["cv_fold"].eq(fold)
+                train_mask = ~test_mask
+                if test_mask.sum() < 2 or train_mask.sum() < 2:
+                    continue
+                if data.loc[test_mask, "presence"].nunique() < 2 or data.loc[train_mask, "presence"].nunique() < 2:
+                    continue
+                model = make_model(alg)
+                model.fit(X_all.loc[train_mask], y_all.loc[train_mask])
+                auc = float(roc_auc_score(y_all.loc[test_mask], model.predict_proba(X_all.loc[test_mask])[:, 1]))
+                fold_aucs.append(auc)
+                metrics.append({"algorithm": alg, "partition_method": partition_method, "fold": int(fold), "auc": round(auc, 3), "warning": auc_warning(auc, partition_method)})
+            mean_auc = float(np.mean(fold_aucs)) if fold_aucs else np.nan
+            metrics.append({"algorithm": alg, "partition_method": partition_method, "fold": "mean", "auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "warning": auc_warning(mean_auc, partition_method) if np.isfinite(mean_auc) else "no valid folds"})
+            final_model = make_model(alg)
+            final_model.fit(X_all, y_all)
+            models[alg] = final_model
+    return {"models": models, "metrics": pd.DataFrame(metrics), "variables": variables, "training_table": data if "cv_fold" in data.columns else train_df}
 
 
 def predict_suitability(table: pd.DataFrame, sdm_result: Optional[dict[str, Any]]) -> pd.DataFrame:
@@ -830,10 +988,10 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
             folium.Circle((row["_latitude"], row["_longitude"]), radius=occurrence_buffer_m, color="#6699ff", fill=True, fill_opacity=0.08, weight=1).add_to(fg)
         fg.add_to(fmap)
     if layers.get("occ"):
-        fg = FeatureGroup(name="occurrences", show=True)
+        fg = FeatureGroup(name="occurrences after exclusion", show=True)
         mc = MarkerCluster()
         for _, row in occ.iterrows():
-            html = f"Occurrence<br>{row['_latitude']:.6f}, {row['_longitude']:.6f}<br>{row.get('_species','')}<br>{image_html(row.get('_media_url',''))}"
+            html = f"Occurrence<br>{row['_latitude']:.6f}, {row['_longitude']:.6f}<br>{row.get('_species','')}<br>GBIF {row.get('_gbif_id','')}<br>{image_html(row.get('_media_url',''))}"
             folium.CircleMarker((row["_latitude"], row["_longitude"]), radius=4, color="#1f77b4", fill=True, popup=folium.Popup(html, max_width=330)).add_to(mc)
         mc.add_to(fg); fg.add_to(fmap)
     if layers.get("candidates") and sites is not None and not sites.empty:
@@ -935,7 +1093,7 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
     st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Occurrence-based survey ranges, raster-style SDM predict maps, and day-by-day route planning.")
+    st.caption("Occurrence-based survey ranges, suspect-coordinate exclusion, raster-style SDM predict maps, VIF filtering, spatial partition diagnostics, and route planning.")
 
     st.sidebar.header("Data source")
     load_input_controls()
@@ -972,7 +1130,12 @@ def main() -> None:
         st.error("No valid coordinate records found.")
         return
 
-    occ = spatial_thin(occ_raw, float(thinning_m))
+    occ_checked = outlier_review_panel(occ_raw)
+    if occ_checked.empty:
+        st.error("All occurrence records were excluded. Relax the coordinate filter.")
+        return
+
+    occ = spatial_thin(occ_checked, float(thinning_m))
     occ["cluster_id"] = haversine_dbscan(occ, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occurrence_candidates = make_candidate_sites(occ, center_method, float(occurrence_weight))
     occurrence_candidates = add_priority_rank(occurrence_candidates)
@@ -987,7 +1150,12 @@ def main() -> None:
         st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
         climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[])
         variables = topo_vars + climate_vars
+        use_vif = st.checkbox("Apply VIF stepwise filtering", value=True)
+        vif_threshold = st.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0)
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
+        partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
+        k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
+        checkerboard_deg = st.number_input("Checkerboard cell size (degrees)", min_value=0.001, max_value=5.0, value=0.05, step=0.01, format="%.3f")
         area_mode = st.selectbox("Area to predict", AREA_MODES, index=2, help="All three modes are land-only: buffer, convex hull, or bounding box.")
         buffer_km = st.number_input("Buffer radius for buffer / convex hull (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0)
         rectangle_margin_km = st.number_input("Margin around bounding box (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0)
@@ -1010,16 +1178,28 @@ def main() -> None:
                 progress.progress(0.15)
                 status.write("Extracting environmental variables for training data...")
                 train = extract_environment(pb, variables, "latitude", "longitude", resolution, status)
-                progress.progress(0.45)
-                status.write("Fitting ensemble SDM...")
-                sdm_result = fit_sdm(train, variables, algorithms)
-                progress.progress(0.65)
+                progress.progress(0.35)
+                if use_vif:
+                    status.write(f"Running VIF stepwise filtering with threshold {vif_threshold}...")
+                    kept_vars, vif_tbl = vif_step(train, variables, float(vif_threshold))
+                else:
+                    kept_vars = variables
+                    vif_tbl = compute_vif_table(train, variables)
+                    if "status" not in vif_tbl.columns:
+                        vif_tbl["status"] = "kept"
+                if not kept_vars:
+                    raise RuntimeError("No environmental variables remained after VIF filtering.")
+                progress.progress(0.50)
+                status.write(f"Fitting ensemble SDM with {partition_method} partition...")
+                sdm_result = fit_sdm(train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg))
+                progress.progress(0.70)
                 status.write("Predicting raster-style suitability map...")
-                overlay, pred_table = build_predict_map(occ, variables, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), status)
+                overlay, pred_table = build_predict_map(occ, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), status)
                 st.session_state.sdm_result = sdm_result
-                st.session_state.sdm_train_table = train
+                st.session_state.sdm_train_table = sdm_result.get("training_table", train)
                 st.session_state.prediction_overlay = overlay
                 st.session_state.prediction_table = pred_table
+                st.session_state.vif_table = vif_tbl
                 progress.progress(1.0)
                 status.write("SDM complete.")
             except Exception as exc:
@@ -1030,6 +1210,12 @@ def main() -> None:
     pred_table = st.session_state.prediction_table
     overlay = st.session_state.prediction_overlay
     env_train = st.session_state.sdm_train_table
+    vif_table = st.session_state.vif_table
+
+    if vif_table is not None:
+        st.write("VIF table")
+        st.dataframe(vif_table, width="stretch", hide_index=True)
+
     if sdm_result is not None:
         st.success("SDM predict map is available.")
         if overlay is not None:
@@ -1057,15 +1243,15 @@ def main() -> None:
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_m)) if not all_candidates.empty else all_candidates
     all_candidates = add_priority_rank(all_candidates)
     all_candidates = order_sites(all_candidates, "Nearest-neighbor route")
-
     route_plan = route_planner_panel(all_candidates)
 
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Raw valid records", f"{len(occ_raw):,}")
-    c2.metric("After thinning", f"{len(occ):,}")
-    c3.metric("Occurrence clusters", f"{int((occ['cluster_id'] >= 0).sum()):,}")
-    c4.metric("Survey ranges", f"{len(all_candidates):,}")
-    c5.metric("Route stops", f"{len(route_plan):,}" if route_plan is not None else "0")
+    c2.metric("After exclusion", f"{len(occ_checked):,}")
+    c3.metric("After thinning", f"{len(occ):,}")
+    c4.metric("Occurrence clusters", f"{int((occ['cluster_id'] >= 0).sum()):,}")
+    c5.metric("Survey ranges", f"{len(all_candidates):,}")
+    c6.metric("Route stops", f"{len(route_plan):,}" if route_plan is not None else "0")
 
     fmap = build_map(occ, all_candidates, overlay, route_plan, float(occurrence_buffer_m), float(survey_range_m), layers)
     st_folium(fmap, width=None, height=720, returned_objects=[])
@@ -1080,8 +1266,10 @@ def main() -> None:
     route_plan_csv = route_plan.to_csv(index=False).encode("utf-8-sig") if route_plan is not None and not route_plan.empty else b"survey_day,day_route_order,site_id,latitude,longitude\n"
     validation_csv = validation_template.to_csv(index=False).encode("utf-8-sig")
     sdm_metrics_csv = sdm_result["metrics"].to_csv(index=False).encode("utf-8-sig") if sdm_result else b"algorithm,partition_method,fold,auc,warning\n"
+    vif_csv = vif_table.to_csv(index=False).encode("utf-8-sig") if vif_table is not None else b"variable,vif,vif_warning,status\n"
     train_csv = env_train.to_csv(index=False).encode("utf-8-sig") if env_train is not None else b""
     pred_csv = pred_table.to_csv(index=False).encode("utf-8-sig") if pred_table is not None else b""
+    excluded_csv = occ_raw.loc[~occ_raw["_row_id"].isin(occ_checked["_row_id"])].to_csv(index=False).encode("utf-8-sig")
 
     st.subheader("Downloads")
     dl1, dl2, dl3, dl4 = st.columns(4)
@@ -1089,10 +1277,12 @@ def main() -> None:
     dl2.download_button("Download survey range CSV", candidates_csv, "candidate_survey_ranges.csv", "text/csv", width="stretch")
     dl3.download_button("Download sampling route plan", route_plan_csv, "sampling_route_plan.csv", "text/csv", width="stretch")
     dl4.download_button("Download validation template", validation_csv, "field_validation_template.csv", "text/csv", width="stretch")
-    dl5, dl6, dl7 = st.columns(3)
+    dl5, dl6, dl7, dl8 = st.columns(4)
     dl5.download_button("Download SDM metrics", sdm_metrics_csv, "sdm_metrics.csv", "text/csv", width="stretch")
-    dl6.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
-    dl7.download_button("Download predict-map table", pred_csv, "sdm_predict_map_table.csv", "text/csv", width="stretch")
+    dl6.download_button("Download VIF table", vif_csv, "vif_table.csv", "text/csv", width="stretch")
+    dl7.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
+    dl8.download_button("Download predict-map table", pred_csv, "sdm_predict_map_table.csv", "text/csv", width="stretch")
+    st.download_button("Download excluded coordinates", excluded_csv, "excluded_coordinates.csv", "text/csv", width="stretch")
 
 
 if __name__ == "__main__":
