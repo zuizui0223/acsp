@@ -48,6 +48,7 @@ from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
 
 APP_TITLE = "GBIF FieldMap Builder"
+APP_BUILD_ID = "physical-exclusion-cutout-20260529"
 EARTH_RADIUS_M = 6_371_008.8
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
 GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
@@ -1269,6 +1270,7 @@ def main() -> None:
     st.title("🗺️ GBIF FieldMap Builder")
     st.caption("Occurrence-based survey ranges, map-click coordinate exclusion, raster-style SDM predict maps, VIF filtering, spatial partition diagnostics, and route planning.")
 
+    st.sidebar.caption(f"Build: {APP_BUILD_ID}")
     st.sidebar.header("Data source")
     load_input_controls()
     st.sidebar.divider()
