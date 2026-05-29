@@ -3,10 +3,13 @@ GBIF FieldMap Builder
 
 Interactive field-survey planning app from GBIF or coordinate CSV data.
 
-Core design for island/coastal survey planning:
-- Default SDM prediction extent is land within the occurrence-region bounding box.
-- Prediction map is rendered as raster-like grid cells, not random points.
-- Candidate survey ranges are circles around selected centers, not exact-point recommendations.
+Current design:
+- GBIF scientific-name search or coordinate CSV upload.
+- Occurrence-supported survey ranges from DBSCAN clusters.
+- Land-only background and prediction extent for island/coastal planning.
+- SDM prediction map is generated as a raster-like 2D array and displayed with Folium ImageOverlay.
+- Prediction raster uses the selected WorldClim raster grid/window rather than user-entered degree cells.
+- Environmental variables are separated into topography and climate groups.
 - Occurrence record count is explicitly used as occurrence_support_score and can be weighted.
 - AUC is a diagnostic only; spatial partitions are provided because island SDM validation is difficult.
 - Java MaxEnt is not run inside this app. Export the SDM training table for ENMeval/maxnet.
@@ -32,7 +35,8 @@ import streamlit as st
 from folium import FeatureGroup, LayerControl, Map
 from folium.plugins import MarkerCluster
 from geopy.distance import geodesic
-from rasterio.windows import Window
+from rasterio.enums import Resampling
+from rasterio.windows import Window, from_bounds
 from shapely.geometry import MultiPoint, Point, box, shape
 from shapely.ops import unary_union
 from sklearn.cluster import DBSCAN
@@ -128,7 +132,8 @@ def init_session_state() -> None:
         "source_key": None,
         "sdm_result": None,
         "sdm_train_table": None,
-        "prediction_grid": None,
+        "prediction_table": None,
+        "prediction_overlay": None,
         "vif_table": None,
     }
     for key, value in defaults.items():
@@ -137,7 +142,7 @@ def init_session_state() -> None:
 
 
 def clear_loaded_data() -> None:
-    for key in ["raw_df", "source_key", "sdm_result", "sdm_train_table", "prediction_grid", "vif_table"]:
+    for key in ["raw_df", "source_key", "sdm_result", "sdm_train_table", "prediction_table", "prediction_overlay", "vif_table"]:
         st.session_state[key] = None
     st.session_state.source_message = "No occurrence data loaded yet."
 
@@ -654,29 +659,128 @@ def build_presence_background_from_occurrences(occ: pd.DataFrame, n_background: 
     return pd.concat([pres, bg], ignore_index=True)
 
 
-def generate_prediction_grid(occ: pd.DataFrame, mode: str, cell_size_deg: float, bbox_expansion_km: float, occurrence_buffer_km: float, survey_range_radius_m: float, status=None) -> pd.DataFrame:
+def rgba_from_prediction(pred: np.ndarray, alpha: int = 170) -> np.ndarray:
+    rgba = np.zeros((pred.shape[0], pred.shape[1], 4), dtype=np.uint8)
+    valid = np.isfinite(pred)
+    v = np.clip(pred, 0, 1)
+    # Blue -> cyan -> yellow -> orange -> red, handmade colormap to avoid matplotlib dependency.
+    breaks = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
+    colors = np.array([
+        [44, 123, 182],
+        [171, 217, 233],
+        [255, 255, 191],
+        [253, 174, 97],
+        [215, 25, 28],
+    ], dtype=float)
+    flat = v[valid]
+    out = np.zeros((flat.size, 3), dtype=float)
+    for i in range(len(breaks) - 1):
+        m = (flat >= breaks[i]) & (flat <= breaks[i + 1])
+        if not np.any(m):
+            continue
+        t = (flat[m] - breaks[i]) / max(1e-12, breaks[i + 1] - breaks[i])
+        out[m] = colors[i] * (1 - t[:, None]) + colors[i + 1] * t[:, None]
+    rgba[..., :3][valid] = out.astype(np.uint8)
+    rgba[..., 3][valid] = alpha
+    return rgba
+
+
+def read_window_array(path: str, bounds: tuple[float, float, float, float], out_shape: tuple[int, int]) -> tuple[np.ndarray, tuple[float, float, float, float]]:
+    west, south, east, north = bounds
+    with rasterio.open(path) as src:
+        window = from_bounds(west, south, east, north, transform=src.transform)
+        window = window.round_offsets().round_lengths()
+        window = Window(
+            max(0, window.col_off),
+            max(0, window.row_off),
+            min(src.width - max(0, window.col_off), window.width),
+            min(src.height - max(0, window.row_off), window.height),
+        )
+        actual_bounds = src.window_bounds(window)
+        arr = src.read(1, window=window, out_shape=out_shape, resampling=Resampling.bilinear, boundless=True, fill_value=np.nan).astype(float)
+        if src.nodata is not None:
+            arr[arr == src.nodata] = np.nan
+    return arr, actual_bounds
+
+
+def build_sdm_predict_raster(
+    occ: pd.DataFrame,
+    variables: list[str],
+    resolution: str,
+    sdm_result: dict[str, Any],
+    mode: str,
+    bbox_expansion_km: float,
+    occurrence_buffer_km: float,
+    max_pixels: int,
+    status=None,
+) -> tuple[dict[str, Any], pd.DataFrame]:
     geom = extent_geometry(occ, mode, bbox_expansion_km, occurrence_buffer_km)
     if geom is None:
-        return pd.DataFrame(columns=["latitude", "longitude", "cell_min_lat", "cell_min_lon", "cell_max_lat", "cell_max_lon"])
+        raise RuntimeError("Prediction extent could not be generated.")
     land = load_land_geometry()
-    minx, miny, maxx, maxy = geom.bounds
-    xs = np.arange(minx, maxx + cell_size_deg, cell_size_deg)
-    ys = np.arange(miny, maxy + cell_size_deg, cell_size_deg)
-    rows = []
-    checked = 0
-    for x in xs:
-        for y in ys:
-            checked += 1
-            cx, cy = x + cell_size_deg / 2, y + cell_size_deg / 2
-            p = Point(cx, cy)
-            if not geom.covers(p):
-                continue
-            if not range_fits_land(cy, cx, survey_range_radius_m, land):
-                continue
-            rows.append({"latitude": float(cy), "longitude": float(cx), "cell_min_lat": float(y), "cell_min_lon": float(x), "cell_max_lat": float(y + cell_size_deg), "cell_max_lon": float(x + cell_size_deg)})
-        if status is not None and checked % 2000 == 0:
-            status.write(f"Generating prediction map cells: {len(rows):,} cells kept")
-    return pd.DataFrame(rows)
+    west, south, east, north = geom.bounds
+    ref_path = get_worldclim_raster_path("elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0], resolution)
+    with rasterio.open(ref_path) as src:
+        window = from_bounds(west, south, east, north, transform=src.transform).round_offsets().round_lengths()
+        raw_height = max(1, int(window.height))
+        raw_width = max(1, int(window.width))
+    stride = max(1, int(math.ceil(math.sqrt((raw_height * raw_width) / max(1, max_pixels)))))
+    out_height = max(1, int(math.ceil(raw_height / stride)))
+    out_width = max(1, int(math.ceil(raw_width / stride)))
+    if status is not None:
+        status.write(f"Predicting raster map on {out_width:,} × {out_height:,} cells; stride={stride} from source raster.")
+
+    arrays: dict[str, np.ndarray] = {}
+    actual_bounds = None
+    elev_cache = None
+    for var in variables:
+        if var in {"slope", "roughness"}:
+            if elev_cache is None:
+                elev_cache, actual_bounds = read_window_array(get_worldclim_raster_path("elevation", resolution), (west, south, east, north), (out_height, out_width))
+            gy, gx = np.gradient(elev_cache)
+            if var == "slope":
+                arrays[var] = np.sqrt(gx**2 + gy**2)
+            else:
+                pad = np.pad(elev_cache, 1, mode="edge")
+                rough = np.full_like(elev_cache, np.nan, dtype=float)
+                for r in range(elev_cache.shape[0]):
+                    for c in range(elev_cache.shape[1]):
+                        sub = pad[r:r + 3, c:c + 3]
+                        rough[r, c] = np.nanmax(sub) - np.nanmin(sub) if not np.all(np.isnan(sub)) else np.nan
+                arrays[var] = rough
+        else:
+            path = get_worldclim_raster_path(var, resolution)
+            arrays[var], actual_bounds = read_window_array(path, (west, south, east, north), (out_height, out_width))
+    if actual_bounds is None:
+        raise RuntimeError("Could not read raster window for prediction.")
+    west2, south2, east2, north2 = actual_bounds
+    lon_centers = np.linspace(west2 + (east2 - west2) / (2 * out_width), east2 - (east2 - west2) / (2 * out_width), out_width)
+    lat_centers = np.linspace(north2 - (north2 - south2) / (2 * out_height), south2 + (north2 - south2) / (2 * out_height), out_height)
+    lon_grid, lat_grid = np.meshgrid(lon_centers, lat_centers)
+
+    flat = {var: arrays[var].ravel() for var in variables}
+    X = pd.DataFrame(flat)
+    finite_mask = np.isfinite(X.to_numpy()).all(axis=1)
+    spatial_mask = []
+    for lat, lon in zip(lat_grid.ravel(), lon_grid.ravel()):
+        p = Point(float(lon), float(lat))
+        spatial_mask.append(bool(geom.covers(p) and land.covers(p)))
+    spatial_mask = np.array(spatial_mask, dtype=bool)
+    valid = finite_mask & spatial_mask
+    pred_flat = np.full(X.shape[0], np.nan, dtype=float)
+    if valid.sum() == 0:
+        raise RuntimeError("No valid land raster cells were available for prediction.")
+    preds = [model.predict_proba(X.loc[valid, variables])[:, 1] for model in sdm_result["models"].values()]
+    pred_flat[valid] = np.mean(np.vstack(preds), axis=0)
+    pred = pred_flat.reshape(out_height, out_width)
+    rgba = rgba_from_prediction(pred)
+    overlay = {"image": rgba, "bounds": [[south2, west2], [north2, east2]], "shape": pred.shape, "source_stride": stride}
+    pred_table = pd.DataFrame({
+        "latitude": lat_grid.ravel()[valid],
+        "longitude": lon_grid.ravel()[valid],
+        "sdm_suitability": pred_flat[valid],
+    })
+    return overlay, pred_table
 
 
 def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
@@ -879,15 +983,13 @@ def min_distance_to_points(coord: tuple[float, float], point_df: pd.DataFrame, l
     return min(geodesic(coord, (float(r[lat_col]), float(r[lon_col]))).m for _, r in point_df.iterrows())
 
 
-def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: Optional[dict[str, Any]], known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int, survey_range_radius_m: float, status=None, progress=None) -> pd.DataFrame:
+def make_sdm_exploration_candidates(prediction_table: pd.DataFrame, known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int, survey_range_radius_m: float, status=None, progress=None) -> pd.DataFrame:
     columns = list(occurrence_candidates.columns)
-    if not sdm_result or prediction_grid is None or prediction_grid.empty:
+    if prediction_table is None or prediction_table.empty or "sdm_suitability" not in prediction_table.columns:
         return pd.DataFrame(columns=columns)
     if status is not None:
-        status.write("Selecting exploration ranges from prediction map...")
-    pred = filter_to_land(prediction_grid.copy(), "latitude", "longitude", range_radius_m=survey_range_radius_m)
-    if "sdm_suitability" not in pred.columns:
-        pred = predict_ensemble_suitability(pred, sdm_result)
+        status.write("Selecting exploration ranges from raster prediction map...")
+    pred = filter_to_land(prediction_table.copy(), "latitude", "longitude", range_radius_m=survey_range_radius_m)
     pred = pred.dropna(subset=["sdm_suitability"]).copy()
     if pred.empty:
         return pd.DataFrame(columns=columns)
@@ -913,7 +1015,7 @@ def make_sdm_exploration_candidates(prediction_grid: pd.DataFrame, sdm_result: O
     for i, (_, group) in enumerate(pred.groupby("exploration_cluster", sort=True), start=0):
         best = group.sort_values("sdm_suitability", ascending=False).iloc[0]
         site_id = start_site_id + i
-        rows.append({"site_id": site_id, "candidate_type": "SDM-high exploration survey range", "cluster_id": int(best["exploration_cluster"]), "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "occurrence_support_score": 0.0, "species_summary": "", "year_min": None, "year_max": None, "representative_gbif_id": "", "representative_media_url": "", "representative_locality": "", "candidate_method": "Prediction-map suitability maximum", "selection_reason": f"Selected from prediction map because ensemble SDM suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.", "bias_warning": "Exploratory island/coastal SDM candidate. High suitability does not guarantee presence; field validation is required.", "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"])})
+        rows.append({"site_id": site_id, "candidate_type": "SDM-high exploration survey range", "cluster_id": int(best["exploration_cluster"]), "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "occurrence_support_score": 0.0, "species_summary": "", "year_min": None, "year_max": None, "representative_gbif_id": "", "representative_media_url": "", "representative_locality": "", "candidate_method": "Raster predict-map suitability maximum", "selection_reason": f"Selected from raster SDM predict map because ensemble suitability is high ({float(best['sdm_suitability']):.3f}) and no known occurrence/candidate exists within {int(min_distance_known_m)} m.", "bias_warning": "Exploratory island/coastal SDM candidate. High suitability does not guarantee presence; field validation is required.", "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"])})
     out = pd.DataFrame(rows).sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
     for col in columns:
         if col not in out.columns:
@@ -979,42 +1081,20 @@ def fit_bounds_or_default(df: pd.DataFrame) -> tuple[list[list[float]], tuple[fl
     return [[min_lat, min_lon], [max_lat, max_lon]], ((min_lat + max_lat) / 2, (min_lon + max_lon) / 2), 8
 
 
-def suitability_color(value: float) -> str:
-    if pd.isna(value):
-        return "#cccccc"
-    v = max(0.0, min(1.0, float(value)))
-    if v < 0.2:
-        return "#2c7bb6"
-    if v < 0.4:
-        return "#abd9e9"
-    if v < 0.6:
-        return "#ffffbf"
-    if v < 0.8:
-        return "#fdae61"
-    return "#d7191c"
-
-
-def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, prediction_grid: Optional[pd.DataFrame], buffer_radius_m: float, survey_range_radius_m: float, show_occurrences: bool, show_buffers: bool, show_clusters: bool, show_occurrence_candidate_sites: bool, show_sdm_candidate_sites: bool, show_routes: bool, show_distance_labels: bool, show_prediction_layer: bool) -> folium.Map:
+def build_map(occurrences: pd.DataFrame, sites: pd.DataFrame, prediction_overlay: Optional[dict[str, Any]], buffer_radius_m: float, survey_range_radius_m: float, show_occurrences: bool, show_buffers: bool, show_clusters: bool, show_occurrence_candidate_sites: bool, show_sdm_candidate_sites: bool, show_routes: bool, show_distance_labels: bool, show_prediction_layer: bool) -> folium.Map:
     bounds, center, zoom = fit_bounds_or_default(occurrences)
     fmap = Map(location=center, zoom_start=zoom, tiles="OpenStreetMap", control_scale=True)
     colors = ["red", "orange", "green", "purple", "cadetblue", "darkred", "darkgreen", "darkblue", "pink", "gray"]
-    if show_prediction_layer and prediction_grid is not None and "sdm_suitability" in prediction_grid.columns and not prediction_grid.empty:
-        group = FeatureGroup(name="SDM prediction map", show=True)
-        pg = prediction_grid.dropna(subset=["sdm_suitability"]).copy()
-        if len(pg) > 8000:
-            pg = pg.nlargest(8000, "sdm_suitability")
-        for _, row in pg.iterrows():
-            color = suitability_color(row["sdm_suitability"])
-            folium.Rectangle(
-                bounds=[[row["cell_min_lat"], row["cell_min_lon"]], [row["cell_max_lat"], row["cell_max_lon"]]],
-                color=color,
-                weight=0,
-                fill=True,
-                fill_color=color,
-                fill_opacity=0.48,
-                popup=f"SDM suitability: {row['sdm_suitability']:.3f}",
-            ).add_to(group)
-        group.add_to(fmap)
+    if show_prediction_layer and prediction_overlay is not None:
+        folium.raster_layers.ImageOverlay(
+            image=prediction_overlay["image"],
+            bounds=prediction_overlay["bounds"],
+            opacity=0.68,
+            name="SDM predict map",
+            interactive=True,
+            cross_origin=False,
+            zindex=1,
+        ).add_to(fmap)
     if show_buffers:
         group = FeatureGroup(name="Occurrence buffers", show=True)
         for _, row in occurrences.iterrows():
@@ -1103,15 +1183,15 @@ def load_input_controls() -> None:
         st.session_state.source_key = f"gbif::{scientific_name.strip()}::{country_code.strip().upper()}::{int(max_records)}::{year_from}::{year_to}"
 
 
-def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, raw_columns: list[str], survey_range_radius_m: float, occurrence_weight_final: float) -> tuple[pd.DataFrame, Optional[dict[str, Any]], Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, raw_columns: list[str], survey_range_radius_m: float, occurrence_weight_final: float) -> tuple[pd.DataFrame, Optional[dict[str, Any]], Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[dict[str, Any]]]:
     st.subheader("Environment variables and ensemble SDM")
-    st.caption("Default prediction extent is island-wide land within the occurrence bounding box. AUC is diagnostic and depends on partition design.")
+    st.caption("The predict map now uses a raster-like 2D array matched to the selected WorldClim raster window, then displays it as an ImageOverlay.")
     with st.expander("Island SDM and GBIF-bias notes", expanded=False):
         st.markdown("""
-        - For island survey planning, predicting all land inside the occurrence-region bounding box is often more practical than small buffers around records.
+        - For island survey planning, predicting all land inside the occurrence-region bounding box is often more practical than tiny buffers around records.
         - GBIF record density is useful for prioritizing known/accessible survey areas, but it also contains observer/access bias.
-        - Therefore this app separates `occurrence_support_score`, `sdm_suitability`, and final `priority_score`.
         - Random split AUC can be optimistic; block/checkerboard/jackknife diagnostics are shown because island SDM validation is itself a methodological gap.
+        - The map is a Python equivalent of an R `predict()`-style raster prediction, but simplified for Streamlit/Folium.
         """)
     with st.expander("SDM settings", expanded=True):
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2, help="WorldClim 10m means 10 arc-minutes, not 10 meters.")
@@ -1134,58 +1214,57 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
         pred_mode = st.selectbox("Prediction extent mode", PRED_EXTENT_MODES, index=0)
         bbox_expansion_km = st.number_input("Bounding-box expansion for prediction/background (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0)
         occurrence_buffer_km = st.number_input("Occurrence buffer for buffer/hull modes (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0)
-        prediction_cell_deg = st.number_input("Prediction map cell size (degrees)", min_value=0.001, max_value=1.0, value=0.01, step=0.005, format="%.3f")
+        max_prediction_pixels = st.number_input("Maximum predict-map pixels", min_value=2_000, max_value=500_000, value=80_000, step=10_000, help="Large values look smoother but can be slow. The app automatically downsamples the raster window if needed.")
         sdm_weight = st.slider("SDM weight in final priority", 0.0, 1.0, 0.35, 0.05)
     if not selected_web_vars:
         st.info("Select environmental variables before running SDM. Island first trial: elevation + bio19, then add more variables carefully.")
-        return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table"), st.session_state.get("prediction_grid")
+        return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table"), st.session_state.get("prediction_table"), st.session_state.get("prediction_overlay")
     if not algorithms:
         st.info("Select at least one SDM algorithm before running SDM.")
-        return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table"), st.session_state.get("prediction_grid")
+        return occurrence_candidates.copy(), None, st.session_state.get("sdm_train_table"), st.session_state.get("vif_table"), st.session_state.get("prediction_table"), st.session_state.get("prediction_overlay")
     progress = st.progress(0.0)
     status = st.empty()
     if st.button("Build environment table and run ensemble SDM", type="primary"):
         try:
-            status.write("Step 1/7: generating land-only presence/background table...")
+            status.write("Step 1/6: generating land-only presence/background table...")
             progress.progress(0.05)
             pb = build_presence_background_from_occurrences(occ, int(n_background), float(bbox_expansion_km), status=status)
-            status.write("Step 2/7: extracting raster values for training data...")
+            status.write("Step 2/6: extracting raster values for training data...")
             env_train = extract_web_environment(pb, selected_web_vars, "latitude", "longitude", resolution, status=status, progress=progress, start=0.10, span=0.30)
-            status.write("Step 3/7: generating land-only prediction map cells...")
-            progress.progress(0.42)
-            pred_grid = generate_prediction_grid(occ, pred_mode, float(prediction_cell_deg), float(bbox_expansion_km), float(occurrence_buffer_km), float(survey_range_radius_m), status=status)
-            if pred_grid.empty:
-                raise RuntimeError("No prediction cells were generated. Try increasing bounding-box expansion, increasing cell size, or reducing survey range radius.")
-            status.write("Step 4/7: extracting raster values for prediction map cells...")
-            pred_grid = extract_web_environment(pred_grid, selected_web_vars, "latitude", "longitude", resolution, status=status, progress=progress, start=0.45, span=0.20)
-            status.write(f"Step 5/7: running VIF stepwise filtering; threshold = {vif_threshold}...")
+            status.write(f"Step 3/6: running VIF stepwise filtering; threshold = {vif_threshold}...")
             if use_vif and len(selected_web_vars) > 1:
-                kept_vars, vif_table = vif_step(env_train, selected_web_vars, threshold=float(vif_threshold), status=status, progress=progress, start=0.67, span=0.08)
+                kept_vars, vif_table = vif_step(env_train, selected_web_vars, threshold=float(vif_threshold), status=status, progress=progress, start=0.42, span=0.10)
             else:
                 kept_vars = selected_web_vars
                 vif_table = compute_vif_table(env_train, selected_web_vars) if len(selected_web_vars) > 1 else pd.DataFrame({"variable": selected_web_vars, "vif": [1.0], "vif_warning": [""], "status": ["kept"]})
-            status.write("Step 6/7: fitting selected ensemble SDM algorithms and spatial partition diagnostics...")
-            sdm_result = fit_ensemble_sdm(env_train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg), user_fold_col, status=status, progress=progress, start=0.76, span=0.16)
-            pred_grid = predict_ensemble_suitability(pred_grid, sdm_result)
+            status.write("Step 4/6: fitting selected ensemble SDM algorithms and spatial partition diagnostics...")
+            sdm_result = fit_ensemble_sdm(env_train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg), user_fold_col, status=status, progress=progress, start=0.54, span=0.18)
+            status.write("Step 5/6: predicting a raster-style SDM map from raster windows...")
+            overlay, pred_table = build_sdm_predict_raster(occ, kept_vars, resolution, sdm_result, pred_mode, float(bbox_expansion_km), float(occurrence_buffer_km), int(max_prediction_pixels), status=status)
+            progress.progress(0.92)
             st.session_state.sdm_train_table = sdm_result.get("training_table", env_train)
-            st.session_state.prediction_grid = pred_grid
+            st.session_state.prediction_table = pred_table
+            st.session_state.prediction_overlay = overlay
             st.session_state.sdm_result = sdm_result
             st.session_state.vif_table = vif_table
-            status.write("Step 7/7: SDM prediction map complete.")
+            status.write("Step 6/6: SDM predict map complete.")
             progress.progress(1.0)
         except Exception as exc:
             status.write("SDM failed.")
             st.error(f"SDM failed: {exc}")
     env_train = st.session_state.get("sdm_train_table")
-    pred_grid = st.session_state.get("prediction_grid")
+    pred_table = st.session_state.get("prediction_table")
+    overlay = st.session_state.get("prediction_overlay")
     sdm_result = st.session_state.get("sdm_result")
     vif_table = st.session_state.get("vif_table")
     if vif_table is not None:
         st.write("VIF table")
         st.dataframe(vif_table, width="stretch", hide_index=True)
     if sdm_result is None:
-        return occurrence_candidates.copy(), None, env_train, vif_table, pred_grid
-    st.success("Ensemble SDM prediction map is available.")
+        return occurrence_candidates.copy(), None, env_train, vif_table, pred_table, overlay
+    st.success("Ensemble SDM predict map is available.")
+    if overlay is not None:
+        st.caption(f"Predict map array: {overlay.get('shape')} cells, source raster stride={overlay.get('source_stride')}")
     st.write("AUC diagnostics")
     st.dataframe(sdm_result["metrics"], width="stretch", hide_index=True)
     candidates_env = occurrence_candidates.copy()
@@ -1202,22 +1281,22 @@ def environment_sdm_panel(occ: pd.DataFrame, occurrence_candidates: pd.DataFrame
     with c1:
         min_suitability = st.number_input("Minimum suitability", min_value=0.0, max_value=1.0, value=0.60, step=0.05)
     with c2:
-        quantile_cutoff = st.number_input("Prediction-map suitability quantile", min_value=0.0, max_value=0.99, value=0.90, step=0.01)
+        quantile_cutoff = st.number_input("Predict-map suitability quantile", min_value=0.0, max_value=0.99, value=0.90, step=0.01)
     with c3:
         min_dist_known = st.number_input("Minimum distance from known records/ranges (m)", min_value=0, max_value=200_000, value=3000, step=500)
     with c4:
         max_new = st.number_input("Max new exploration ranges", min_value=1, max_value=200, value=20, step=1)
     cluster_m = st.number_input("Exploration clustering distance (m)", min_value=100, max_value=200_000, value=3000, step=500)
     exploration = pd.DataFrame()
-    if pred_grid is not None:
-        exploration = make_sdm_exploration_candidates(pred_grid, sdm_result, occ, candidates_env, float(min_suitability), float(quantile_cutoff), float(min_dist_known), float(cluster_m), int(max_new), int(candidates_env["site_id"].max()) + 1 if not candidates_env.empty else 1, float(survey_range_radius_m), status=status, progress=progress)
+    if pred_table is not None:
+        exploration = make_sdm_exploration_candidates(pred_table, occ, candidates_env, float(min_suitability), float(quantile_cutoff), float(min_dist_known), float(cluster_m), int(max_new), int(candidates_env["site_id"].max()) + 1 if not candidates_env.empty else 1, float(survey_range_radius_m), status=status, progress=progress)
     if not exploration.empty:
         st.success(f"Generated {len(exploration)} SDM-high / occurrence-low exploration survey ranges.")
         st.dataframe(exploration.sort_values("sdm_suitability", ascending=False), width="stretch", hide_index=True)
         candidates_env = pd.concat([candidates_env, exploration], ignore_index=True, sort=False)
     else:
         st.info("No new exploration ranges were generated with current thresholds.")
-    return candidates_env, sdm_result, env_train, vif_table, pred_grid
+    return candidates_env, sdm_result, env_train, vif_table, pred_table, overlay
 
 
 def make_field_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
@@ -1233,7 +1312,7 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
     st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Island-aware survey planning from GBIF/coordinate occurrences, land-only prediction maps, spatial SDM diagnostics, and survey-range outputs.")
+    st.caption("Island-aware survey planning from GBIF/coordinate occurrences, raster-style SDM predict maps, spatial diagnostics, and survey-range outputs.")
     st.sidebar.header("Data source")
     load_input_controls()
     st.sidebar.divider()
@@ -1250,7 +1329,7 @@ def main() -> None:
     priority_top_n = st.sidebar.number_input("Show top N priority ranges", min_value=1, max_value=100, value=10, step=1)
     st.sidebar.divider()
     st.sidebar.subheader("Layers")
-    show_prediction_layer = st.sidebar.checkbox("SDM prediction map", value=True)
+    show_prediction_layer = st.sidebar.checkbox("SDM predict map", value=True)
     show_occurrences = st.sidebar.checkbox("Occurrences", value=True)
     show_buffers = st.sidebar.checkbox("Occurrence buffers", value=False)
     show_clusters = st.sidebar.checkbox("Occurrence clusters", value=False)
@@ -1261,7 +1340,7 @@ def main() -> None:
     raw_df = st.session_state.raw_df
     if raw_df is None:
         st.info(st.session_state.source_message)
-        st.markdown("Start by searching GBIF by scientific name, or upload any coordinate CSV. Then run SDM to generate an island-aware land prediction map and survey ranges.")
+        st.markdown("Start by searching GBIF by scientific name, or upload any coordinate CSV. Then run SDM to generate a raster-style predict map and survey ranges.")
         return
     st.success(st.session_state.source_message)
     try:
@@ -1278,7 +1357,7 @@ def main() -> None:
     occurrence_candidates = make_candidate_sites(occ, candidate_method, float(thinning_m), float(occurrence_weight))
     occurrence_candidates = add_priority_rank(occurrence_candidates)
     occurrence_candidates = add_navigation_columns(order_sites(occurrence_candidates, route_order_mode))
-    all_candidates, sdm_result, env_train, vif_table, pred_grid = environment_sdm_panel(occ, occurrence_candidates, list(raw_df.columns), float(survey_range_radius_m), float(occurrence_weight_final))
+    all_candidates, sdm_result, env_train, vif_table, pred_table, overlay = environment_sdm_panel(occ, occurrence_candidates, list(raw_df.columns), float(survey_range_radius_m), float(occurrence_weight_final))
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_radius_m)) if not all_candidates.empty else all_candidates
     all_candidates = add_priority_rank(all_candidates)
     all_candidates = add_navigation_columns(order_sites(all_candidates, route_order_mode))
@@ -1302,7 +1381,7 @@ def main() -> None:
             st.link_button("Open public-transit route in Google Maps", transit_route_url, width="stretch")
     with st.expander("Detected input columns", expanded=False):
         st.write(detected.__dict__)
-    fmap = build_map(occ, all_candidates, pred_grid, float(buffer_radius_m), float(survey_range_radius_m), show_occurrences, show_buffers, show_clusters, show_occurrence_candidate_sites, show_sdm_candidate_sites, show_routes, show_distance_labels, show_prediction_layer)
+    fmap = build_map(occ, all_candidates, overlay, float(buffer_radius_m), float(survey_range_radius_m), show_occurrences, show_buffers, show_clusters, show_occurrence_candidate_sites, show_sdm_candidate_sites, show_routes, show_distance_labels, show_prediction_layer)
     st_folium(fmap, width=None, height=720, returned_objects=[])
     st.subheader("Priority survey ranges")
     priority_cols = ["priority_rank", "site_id", "candidate_type", "route_order", "priority_score", "occurrence_support_score", "sdm_suitability", "distance_to_nearest_known_m", "n_occurrences", "latitude", "longitude", "bias_warning", "selection_reason"]
@@ -1319,7 +1398,7 @@ def main() -> None:
     sdm_metrics_csv = sdm_result["metrics"].to_csv(index=False).encode("utf-8-sig") if sdm_result else b"algorithm,partition_method,fold,auc,warning\n"
     vif_csv = vif_table.to_csv(index=False).encode("utf-8-sig") if vif_table is not None else b"variable,vif,vif_warning,status\n"
     train_csv = env_train.to_csv(index=False).encode("utf-8-sig") if env_train is not None else b""
-    pred_csv = pred_grid.to_csv(index=False).encode("utf-8-sig") if pred_grid is not None else b""
+    pred_csv = pred_table.to_csv(index=False).encode("utf-8-sig") if pred_table is not None else b""
     dl1, dl2, dl3, dl4, dl5, dl6, dl7 = st.columns(7)
     with dl1:
         st.download_button("Download HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
@@ -1334,7 +1413,7 @@ def main() -> None:
     with dl6:
         st.download_button("Download SDM training table", train_csv, "sdm_training_table.csv", "text/csv", width="stretch")
     with dl7:
-        st.download_button("Download prediction map grid", pred_csv, "sdm_prediction_map_grid.csv", "text/csv", width="stretch")
+        st.download_button("Download predict-map table", pred_csv, "sdm_predict_map_table.csv", "text/csv", width="stretch")
 
 
 if __name__ == "__main__":
