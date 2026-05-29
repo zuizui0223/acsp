@@ -442,17 +442,29 @@ def haversine_dbscan(df: pd.DataFrame, lat_col: str, lon_col: str, threshold_m: 
     return pd.Series(labels, index=df.index, name="cluster_id")
 
 
-def prediction_area_geometry(occ: pd.DataFrame, mode: str, buffer_km: float, rectangle_margin_km: float):
+def prediction_area_geometry(occ: pd.DataFrame, mode: str, buffer_km: float, rectangle_margin_km: float, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0):
     points = [Point(float(row["_longitude"]), float(row["_latitude"])) for _, row in occ.iterrows()]
     if not points:
         return None
     buffer_deg = max(km_to_deg(buffer_km), 0.0001)
     if mode == "buffer":
-        return unary_union([p.buffer(buffer_deg) for p in points])
-    if mode == "convex hull":
-        return points[0].buffer(buffer_deg) if len(points) == 1 else MultiPoint(points).convex_hull.buffer(buffer_deg)
-    margin = km_to_deg(rectangle_margin_km)
-    return box(float(occ["_longitude"].min()) - margin, float(occ["_latitude"].min()) - margin, float(occ["_longitude"].max()) + margin, float(occ["_latitude"].max()) + margin)
+        geom = unary_union([p.buffer(buffer_deg) for p in points])
+    elif mode == "convex hull":
+        geom = points[0].buffer(buffer_deg) if len(points) == 1 else MultiPoint(points).convex_hull.buffer(buffer_deg)
+    else:
+        margin = km_to_deg(rectangle_margin_km)
+        geom = box(float(occ["_longitude"].min()) - margin, float(occ["_latitude"].min()) - margin, float(occ["_longitude"].max()) + margin, float(occ["_latitude"].max()) + margin)
+    if excluded_occ is not None and not excluded_occ.empty and exclusion_buffer_km > 0:
+        cutout_deg = max(km_to_deg(exclusion_buffer_km), 0.0001)
+        cutouts = unary_union([Point(float(row["_longitude"]), float(row["_latitude"])).buffer(cutout_deg) for _, row in excluded_occ.iterrows()])
+        geom = geom.difference(cutouts)
+    return geom
+
+
+def excluded_occurrences_from_ids(occ_raw: pd.DataFrame, excluded_ids: set[int]) -> pd.DataFrame:
+    if occ_raw.empty or not excluded_ids:
+        return occ_raw.iloc[0:0].copy()
+    return occ_raw[occ_raw["_row_id"].astype(int).isin(set(map(int, excluded_ids)))].copy()
 
 
 def make_sdm_extent_preview_map(occ_raw: pd.DataFrame, occ: pd.DataFrame, excluded_ids: set[int], extent_geom, area_mode: str) -> folium.Map:
@@ -793,10 +805,10 @@ def vif_step(df: pd.DataFrame, variables: list[str], threshold: float) -> tuple[
     return kept, final
 
 
-def generate_land_points(occ: pd.DataFrame, n_points: int, area_mode: str, buffer_km: float, rectangle_margin_km: float, random_state: int = 42, status=None) -> pd.DataFrame:
+def generate_land_points(occ: pd.DataFrame, n_points: int, area_mode: str, buffer_km: float, rectangle_margin_km: float, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, random_state: int = 42, status=None) -> pd.DataFrame:
     rng = np.random.default_rng(random_state)
-    geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km)
-    if geom is None:
+    geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km)
+    if geom is None or geom.is_empty:
         return pd.DataFrame(columns=["latitude", "longitude"])
     land = load_land_geometry()
     minx, miny, maxx, maxy = geom.bounds
@@ -813,10 +825,10 @@ def generate_land_points(occ: pd.DataFrame, n_points: int, area_mode: str, buffe
     return pd.DataFrame(rows)
 
 
-def build_presence_background(occ: pd.DataFrame, n_background: int, area_mode: str, buffer_km: float, rectangle_margin_km: float, status=None) -> pd.DataFrame:
+def build_presence_background(occ: pd.DataFrame, n_background: int, area_mode: str, buffer_km: float, rectangle_margin_km: float, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> pd.DataFrame:
     pres = occ[["_row_id", "_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude", "_row_id": "occurrence_row_id"}).copy()
     pres["presence"] = 1
-    bg = generate_land_points(occ, n_background, area_mode, buffer_km, rectangle_margin_km, status=status)
+    bg = generate_land_points(occ, n_background, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km, status=status)
     bg["occurrence_row_id"] = np.nan
     bg["presence"] = 0
     return pd.concat([pres, bg[pres.columns]], ignore_index=True)
@@ -964,9 +976,9 @@ def read_window_array(path: str, bounds: tuple[float, float, float, float], out_
     return arr, actual_bounds
 
 
-def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, sdm_result: dict[str, Any], area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, status=None) -> tuple[dict[str, Any], pd.DataFrame]:
-    geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km)
-    if geom is None:
+def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, sdm_result: dict[str, Any], area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[dict[str, Any], pd.DataFrame]:
+    geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km)
+    if geom is None or geom.is_empty:
         raise RuntimeError("Prediction area could not be generated.")
     land = load_land_geometry(); west, south, east, north = geom.bounds
     ref_var = "elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0]
@@ -1314,11 +1326,13 @@ def main() -> None:
     st.subheader("SDM prediction extent")
     st.caption("Choose the prediction area before building SDM. The extent is calculated from included blue points only; red excluded points are ignored.")
     area_mode = st.selectbox("Area to predict", AREA_MODES, index=2, help="All three modes are land-only: buffer, convex hull, or bounding box.", key="sdm_area_mode")
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     buffer_km = c1.number_input("Buffer radius for buffer / convex hull (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="sdm_buffer_km")
     rectangle_margin_km = c2.number_input("Margin around bounding box (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="sdm_rectangle_margin_km")
-    extent_geom = prediction_area_geometry(occ, area_mode, float(buffer_km), float(rectangle_margin_km))
-    if extent_geom is not None:
+    exclusion_buffer_km = c3.number_input("Red-point cutout radius (km)", min_value=0.1, max_value=100.0, value=1.0, step=0.5, key="sdm_exclusion_cutout_km", help="Red excluded records are physically cut out of the prediction extent by this radius.")
+    excluded_occ = excluded_occurrences_from_ids(occ_raw, active_excluded_ids)
+    extent_geom = prediction_area_geometry(occ, area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km))
+    if extent_geom is not None and not extent_geom.is_empty:
         minx, miny, maxx, maxy = extent_geom.bounds
         st.caption(f"Current SDM input: {len(occ):,} blue included records after thinning; {len(active_excluded_ids):,} red excluded records. Extent bounds: lon {minx:.4f} to {maxx:.4f}, lat {miny:.4f} to {maxy:.4f}.")
         st_folium(
@@ -1356,13 +1370,15 @@ def main() -> None:
             st.warning("Select at least one environmental variable.")
         elif not algorithms:
             st.warning("Select at least one algorithm.")
+        elif extent_geom is None or extent_geom.is_empty:
+            st.error("The SDM prediction extent is empty after red-point cutouts. SDM was stopped.")
         elif set(occ["_row_id"].astype(int)).intersection(active_excluded_ids):
             st.error("Excluded row IDs are still present in the SDM input. SDM was stopped to prevent using excluded occurrences.")
         else:
             try:
                 progress = st.progress(0.0)
                 status.write("Generating presence/background data...")
-                pb = build_presence_background(occ, int(n_background), area_mode, float(buffer_km), float(rectangle_margin_km), status)
+                pb = build_presence_background(occ, int(n_background), area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km), status)
                 progress.progress(0.15)
                 status.write("Extracting environmental variables for training data...")
                 train = extract_environment(pb, variables, "latitude", "longitude", resolution, status)
@@ -1387,7 +1403,7 @@ def main() -> None:
                 sdm_result = fit_sdm(train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg))
                 progress.progress(0.70)
                 status.write("Predicting raster-style suitability map...")
-                overlay, pred_table = build_predict_map(occ, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), status)
+                overlay, pred_table = build_predict_map(occ, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), excluded_occ, float(exclusion_buffer_km), status)
                 st.session_state.sdm_result = sdm_result
                 st.session_state.sdm_train_table = sdm_result.get("training_table", train)
                 st.session_state.prediction_overlay = overlay
