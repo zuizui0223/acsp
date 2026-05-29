@@ -48,7 +48,7 @@ from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
 
 APP_TITLE = "GBIF FieldMap Builder"
-APP_BUILD_ID = "physical-exclusion-cutout-20260529"
+APP_BUILD_ID = "hard-exclusion-v2-20260529"
 EARTH_RADIUS_M = 6_371_008.8
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
 GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
@@ -348,7 +348,6 @@ def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int]) -> 
             tooltip=("excluded" if excluded else "click to exclude") + f" | row {rid}",
         ).add_to(fg_ex if excluded else fg_in)
     fg_in.add_to(fmap)
-    fg_ex.add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds([[occ_raw["_latitude"].min(), occ_raw["_longitude"].min()], [occ_raw["_latitude"].max(), occ_raw["_longitude"].max()]], padding=(30, 30))
@@ -468,8 +467,8 @@ def excluded_occurrences_from_ids(occ_raw: pd.DataFrame, excluded_ids: set[int])
     return occ_raw[occ_raw["_row_id"].astype(int).isin(set(map(int, excluded_ids)))].copy()
 
 
-def make_sdm_extent_preview_map(occ_raw: pd.DataFrame, occ: pd.DataFrame, excluded_ids: set[int], extent_geom, area_mode: str) -> folium.Map:
-    center_df = occ if not occ.empty else occ_raw
+def make_sdm_extent_preview_map(occ: pd.DataFrame, extent_geom, area_mode: str) -> folium.Map:
+    center_df = occ
     center = (float(center_df["_latitude"].mean()), float(center_df["_longitude"].mean())) if not center_df.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
     if extent_geom is not None and not extent_geom.is_empty:
@@ -497,22 +496,7 @@ def make_sdm_extent_preview_map(occ_raw: pd.DataFrame, occ: pd.DataFrame, exclud
             weight=2,
             tooltip=f"SDM input | row {rid}",
         ).add_to(fg_used)
-    fg_ex = FeatureGroup(name="red excluded points", show=True)
-    excluded = occ_raw[occ_raw["_row_id"].astype(int).isin(excluded_ids)]
-    for _, row in excluded.iterrows():
-        rid = int(row["_row_id"])
-        folium.CircleMarker(
-            (row["_latitude"], row["_longitude"]),
-            radius=8,
-            color="#d62728",
-            fill=True,
-            fill_color="#d62728",
-            fill_opacity=0.88,
-            weight=2,
-            tooltip=f"excluded from SDM | row {rid}",
-        ).add_to(fg_ex)
     fg_used.add_to(fmap)
-    fg_ex.add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
         if extent_geom is not None and not extent_geom.is_empty:
@@ -1326,19 +1310,19 @@ def main() -> None:
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
 
     st.subheader("SDM prediction extent")
-    st.caption("Choose the prediction area before building SDM. The extent is calculated from included blue points only; red excluded points are ignored.")
+    st.caption("Choose the prediction area before building SDM. Only blue included points are used below; excluded rows are removed from the analysis view and hard-masked from prediction.")
     area_mode = st.selectbox("Area to predict", AREA_MODES, index=2, help="All three modes are land-only: buffer, convex hull, or bounding box.", key="sdm_area_mode")
     c1, c2, c3 = st.columns(3)
     buffer_km = c1.number_input("Buffer radius for buffer / convex hull (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="sdm_buffer_km")
     rectangle_margin_km = c2.number_input("Margin around bounding box (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="sdm_rectangle_margin_km")
-    exclusion_buffer_km = c3.number_input("Red-point cutout radius (km)", min_value=0.1, max_value=100.0, value=1.0, step=0.5, key="sdm_exclusion_cutout_km", help="Red excluded records are physically cut out of the prediction extent by this radius.")
+    exclusion_buffer_km = c3.number_input("Hard exclusion radius (km)", min_value=0.1, max_value=100.0, value=10.0, step=1.0, key="sdm_exclusion_cutout_km", help="Excluded records are removed from training and their surrounding area is physically cut out of the prediction extent.")
     excluded_occ = excluded_occurrences_from_ids(occ_raw, active_excluded_ids)
     extent_geom = prediction_area_geometry(occ, area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km))
     if extent_geom is not None and not extent_geom.is_empty:
         minx, miny, maxx, maxy = extent_geom.bounds
-        st.caption(f"Current SDM input: {len(occ):,} blue included records after thinning; {len(active_excluded_ids):,} red excluded records. Extent bounds: lon {minx:.4f} to {maxx:.4f}, lat {miny:.4f} to {maxy:.4f}.")
+        st.caption(f"Current SDM input: {len(occ):,} blue included records after thinning; {len(active_excluded_ids):,} excluded records removed and hard-masked. Extent bounds: lon {minx:.4f} to {maxx:.4f}, lat {miny:.4f} to {maxy:.4f}.")
         st_folium(
-            make_sdm_extent_preview_map(occ_raw, occ, active_excluded_ids, extent_geom, area_mode),
+            make_sdm_extent_preview_map(occ, extent_geom, area_mode),
             width=None,
             height=460,
             returned_objects=[],
