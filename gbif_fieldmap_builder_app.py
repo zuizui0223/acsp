@@ -1032,9 +1032,11 @@ def load_input_controls() -> None:
                 st.session_state.excluded_row_ids = set()
                 reset_model_outputs()
         return
-    st.sidebar.markdown("Scientific name")
-    name = st.sidebar.text_input("Scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_scientific_name_no_autofill", label_visibility="collapsed")
-    country = st.sidebar.text_input("Country code optional", value="JP", max_chars=2, key="gbif_country_code_filter")
+    name = st.sidebar.text_input("Taxon scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_taxon_scientific_name_input")
+    country_options = ["", "JP", "US", "GB", "CN", "KR", "TW", "DE", "FR", "IT", "ES", "AU", "NZ", "CA", "BR", "IN", "ID", "TH", "VN"]
+    selected_country = st.sidebar.selectbox("Country code filter optional", country_options, index=1, key="gbif_country_code_filter_select")
+    custom_country = st.sidebar.text_input("Custom country code optional", value="", max_chars=2, key="gbif_country_code_filter_custom", help="Two-letter ISO country code. Overrides the dropdown when set.")
+    country = custom_country.strip().upper() or selected_country
     max_records = st.sidebar.number_input("Maximum GBIF records to fetch", 100, 200_000, 10_000, 1000, help="GBIF returns at most 300 records per request. The app fetches repeated pages until this cap or GBIF endOfRecords.")
     use_year = st.sidebar.checkbox("Filter by year", value=False)
     year_from = year_to = None
