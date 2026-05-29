@@ -122,6 +122,9 @@ def init_session_state() -> None:
         "vif_table": None,
         "excluded_row_ids": set(),
         "last_exclude_click_signature": "",
+        "sdm_occurrence_row_ids": None,
+        "selected_route_site_ids": [],
+        "last_route_click_signature": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -129,15 +132,17 @@ def init_session_state() -> None:
 
 
 def clear_loaded_data() -> None:
-    for key in ["raw_df", "source_key", "sdm_result", "sdm_train_table", "prediction_table", "prediction_overlay", "vif_table"]:
+    for key in ["raw_df", "source_key", "sdm_result", "sdm_train_table", "prediction_table", "prediction_overlay", "vif_table", "sdm_occurrence_row_ids"]:
         st.session_state[key] = None
     st.session_state.excluded_row_ids = set()
     st.session_state.last_exclude_click_signature = ""
+    st.session_state.selected_route_site_ids = []
+    st.session_state.last_route_click_signature = ""
     st.session_state.source_message = "No occurrence data loaded yet."
 
 
 def reset_model_outputs() -> None:
-    for key in ["sdm_result", "sdm_train_table", "prediction_table", "prediction_overlay", "vif_table"]:
+    for key in ["sdm_result", "sdm_train_table", "prediction_table", "prediction_overlay", "vif_table", "sdm_occurrence_row_ids"]:
         st.session_state[key] = None
 
 
@@ -361,13 +366,9 @@ def coordinate_exclusion_panel(occ_raw: pd.DataFrame) -> pd.DataFrame:
     st.subheader("Coordinate quality check")
     with st.expander("Click occurrence points on the map to exclude them", expanded=True):
         st.caption("Blue = included, red = excluded. Click a blue occurrence point to exclude it. Use the row-ID box below to restore/delete manually.")
-        b1, b2 = st.columns(2)
-        if b1.button("Clear excluded coordinates"):
+        if st.button("Clear excluded coordinates"):
             st.session_state.excluded_row_ids = set()
             st.session_state.last_exclude_click_signature = ""
-            reset_model_outputs()
-            st.rerun()
-        if b2.button("Reset SDM after coordinate edits"):
             reset_model_outputs()
             st.rerun()
         click_data = st_folium(make_exclusion_review_map(occ_raw, set(st.session_state.excluded_row_ids)), width=None, height=520, returned_objects=["last_object_clicked"], key="coordinate_exclusion_map")
@@ -491,16 +492,25 @@ def make_google_maps_point_url(latitude: float, longitude: float) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={latitude:.6f}%2C{longitude:.6f}"
 
 
-def make_google_maps_route_url(sites: pd.DataFrame, travelmode: str = "driving", max_waypoints: int = 8) -> str:
+def make_google_maps_route_url(sites: pd.DataFrame, travelmode: str = "driving", max_waypoints: int = 8, start_location: str = "") -> str:
     if sites.empty:
         return ""
     ordered = sites.sort_values("route_order") if "route_order" in sites.columns else sites.copy()
     coords = [(float(row["latitude"]), float(row["longitude"])) for _, row in ordered.iterrows()]
-    if len(coords) == 1:
+    start_location = str(start_location or "").strip()
+    if len(coords) == 1 and not start_location:
         return make_google_maps_point_url(coords[0][0], coords[0][1])
-    params = {"api": "1", "origin": f"{coords[0][0]:.6f},{coords[0][1]:.6f}", "destination": f"{coords[-1][0]:.6f},{coords[-1][1]:.6f}", "travelmode": travelmode}
+    if start_location:
+        origin = start_location
+        destination = f"{coords[-1][0]:.6f},{coords[-1][1]:.6f}"
+        waypoint_coords = coords[:-1]
+    else:
+        origin = f"{coords[0][0]:.6f},{coords[0][1]:.6f}"
+        destination = f"{coords[-1][0]:.6f},{coords[-1][1]:.6f}"
+        waypoint_coords = coords[1:-1]
+    params = {"api": "1", "origin": origin, "destination": destination, "travelmode": travelmode, "dir_action": "navigate"}
     if travelmode != "transit":
-        waypoints = coords[1:-1][:max_waypoints]
+        waypoints = waypoint_coords[:max_waypoints]
         if waypoints:
             params["waypoints"] = "|".join(f"{lat:.6f},{lon:.6f}" for lat, lon in waypoints)
     return "https://www.google.com/maps/dir/?" + urllib.parse.urlencode(params, safe=",|")
@@ -552,7 +562,7 @@ def order_sites(sites: pd.DataFrame, mode: str) -> pd.DataFrame:
     return ordered
 
 
-def split_route_into_days(ordered: pd.DataFrame, survey_days: int, max_sites_per_day: int, max_day_distance_km: float) -> pd.DataFrame:
+def split_route_into_days(ordered: pd.DataFrame, survey_days: int, max_sites_per_day: int, max_day_distance_km: float, travelmode: str = "driving", start_location: str = "") -> pd.DataFrame:
     rows = []
     current_day = 1
     day_count = 0
@@ -585,7 +595,7 @@ def split_route_into_days(ordered: pd.DataFrame, survey_days: int, max_sites_per
     for day, group in plan.groupby("survey_day"):
         tmp = group.sort_values("day_route_order").copy()
         tmp["route_order"] = range(1, len(tmp) + 1)
-        urls[int(day)] = make_google_maps_route_url(tmp)
+        urls[int(day)] = make_google_maps_route_url(tmp, travelmode=travelmode, start_location=start_location)
     plan["day_google_maps_route_url"] = plan["survey_day"].map(urls)
     return plan.reset_index(drop=True)
 
@@ -856,6 +866,17 @@ def rgba_from_prediction(pred: np.ndarray, alpha: int = 170) -> np.ndarray:
     return rgba
 
 
+def add_sdm_predict_legend(fmap: folium.Map) -> None:
+    legend = """
+    <div style="position: fixed; bottom: 28px; left: 28px; z-index: 9999; background: rgba(255,255,255,0.92); padding: 10px 12px; border: 1px solid #999; border-radius: 4px; font-size: 12px; color: #222;">
+      <div style="font-weight: 700; margin-bottom: 6px;">SDM predicted suitability</div>
+      <div style="width: 180px; height: 12px; background: linear-gradient(90deg, #2c7bb6, #abd9e9, #ffffbf, #fdae61, #d7191c);"></div>
+      <div style="display: flex; justify-content: space-between; width: 180px;"><span>0</span><span>0.5</span><span>1</span></div>
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(legend))
+
+
 def read_window_array(path: str, bounds: tuple[float, float, float, float], out_shape: tuple[int, int]) -> tuple[np.ndarray, tuple[float, float, float, float]]:
     west, south, east, north = bounds
     with rasterio.open(path) as src:
@@ -904,7 +925,7 @@ def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, 
     preds = [model.predict_proba(X.loc[valid, variables])[:, 1] for model in sdm_result["models"].values()]
     pred_flat[valid] = np.mean(np.vstack(preds), axis=0)
     pred = pred_flat.reshape(out_h, out_w)
-    overlay = {"image": rgba_from_prediction(pred), "bounds": [[south2, west2], [north2, east2]], "shape": pred.shape, "source_stride": stride}
+    overlay = {"image": rgba_from_prediction(pred), "bounds": [[south2, west2], [north2, east2]], "shape": pred.shape, "source_stride": stride, "min": round(float(np.nanmin(pred)), 4), "max": round(float(np.nanmax(pred)), 4), "mean": round(float(np.nanmean(pred)), 4), "method": "Ensemble predict_proba over environmental raster grid"}
     pred_table = pd.DataFrame({"latitude": lat_grid.ravel()[valid], "longitude": lon_grid.ravel()[valid], "sdm_suitability": pred_flat[valid]})
     return overlay, pred_table
 
@@ -957,6 +978,7 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
     fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True)
     if layers.get("predict") and overlay is not None:
         folium.raster_layers.ImageOverlay(image=overlay["image"], bounds=overlay["bounds"], opacity=0.68, name="SDM predict map", interactive=True).add_to(fmap)
+        add_sdm_predict_legend(fmap)
     if layers.get("occ_buffers"):
         fg = FeatureGroup(name="occurrence buffers", show=False)
         for _, row in occ.iterrows():
@@ -1033,21 +1055,100 @@ def load_input_controls() -> None:
         reset_model_outputs()
 
 
+def make_route_selection_map(sites: pd.DataFrame, selected_ids: list[int]) -> folium.Map:
+    selected = set(map(int, selected_ids))
+    center = (float(sites["latitude"].mean()), float(sites["longitude"].mean())) if not sites.empty else (35.5, 135.5)
+    fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True)
+    fg = FeatureGroup(name="candidate survey ranges", show=True)
+    for _, row in sites.iterrows():
+        sid = int(row["site_id"])
+        picked = sid in selected
+        color = "#2ca02c" if picked else "#1f77b4"
+        html = f"""
+        <b>{'Selected' if picked else 'Candidate'} survey site {sid}</b><br>
+        type: {row.get('candidate_type', '')}<br>
+        priority: {row.get('priority_score', '')}<br>
+        SDM: {row.get('sdm_suitability', '')}<br>
+        lat/lon: {float(row['latitude']):.6f}, {float(row['longitude']):.6f}<br>
+        <a href='{make_google_maps_point_url(float(row['latitude']), float(row['longitude']))}' target='_blank'>Open point in Google Maps</a>
+        """
+        folium.CircleMarker((row["latitude"], row["longitude"]), radius=9 if picked else 6, color=color, fill=True, fill_color=color, fill_opacity=0.9 if picked else 0.65, weight=3 if picked else 1, popup=folium.Popup(html, max_width=360), tooltip=f"{'selected' if picked else 'click to select'} | site {sid}").add_to(fg)
+    fg.add_to(fmap)
+    LayerControl(collapsed=True).add_to(fmap)
+    try:
+        fmap.fit_bounds([[sites["latitude"].min(), sites["longitude"].min()], [sites["latitude"].max(), sites["longitude"].max()]], padding=(30, 30))
+    except Exception:
+        pass
+    return fmap
+
+
+def nearest_site_id_from_click(sites: pd.DataFrame, click: dict[str, Any]) -> Optional[int]:
+    if not click or "lat" not in click or "lng" not in click or sites.empty:
+        return None
+    coord = (float(click["lat"]), float(click["lng"]))
+    dists = sites.apply(lambda r: geodesic(coord, (float(r["latitude"]), float(r["longitude"]))).km, axis=1)
+    return int(sites.loc[int(dists.idxmin()), "site_id"])
+
+
 def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
     st.subheader("Survey route planner")
     if sites.empty:
         return pd.DataFrame()
+    options = sites["site_id"].astype(int).tolist()
+    st.caption("Click candidate sites on the map, then generate Google Maps routes only from the selected sites.")
+    st.session_state.selected_route_site_ids = [int(x) for x in st.session_state.selected_route_site_ids if int(x) in options]
+    click_data = st_folium(make_route_selection_map(sites, st.session_state.selected_route_site_ids), width=None, height=460, returned_objects=["last_object_clicked"], key="route_selection_map")
+    clicked = (click_data or {}).get("last_object_clicked")
+    if clicked:
+        sig = f"{clicked.get('lat'):.6f},{clicked.get('lng'):.6f}"
+        if sig != st.session_state.last_route_click_signature:
+            sid = nearest_site_id_from_click(sites, clicked)
+            st.session_state.last_route_click_signature = sig
+            if sid is not None:
+                selected = list(st.session_state.selected_route_site_ids)
+                if sid in selected:
+                    selected.remove(sid)
+                else:
+                    selected.append(sid)
+                st.session_state.selected_route_site_ids = selected
+                st.rerun()
+    manual_ids = st.multiselect("Selected survey site IDs", options=options, default=st.session_state.selected_route_site_ids)
+    st.session_state.selected_route_site_ids = [int(x) for x in manual_ids]
+    b1, b2 = st.columns(2)
+    sort_cols = available_sort_cols(sites, ["priority_score", "sdm_suitability", "occurrence_support_score"])
+    ranked_sites = sites.sort_values(sort_cols, ascending=False, na_position="last") if sort_cols else sites
+    if b1.button("Use top ranked candidates"):
+        st.session_state.selected_route_site_ids = ranked_sites["site_id"].astype(int).head(min(10, len(ranked_sites))).tolist()
+        st.rerun()
+    if b2.button("Clear selected survey sites"):
+        st.session_state.selected_route_site_ids = []
+        st.session_state.last_route_click_signature = ""
+        st.rerun()
+    selected_sites = sites[sites["site_id"].astype(int).isin(st.session_state.selected_route_site_ids)].copy()
+    if selected_sites.empty:
+        st.info("Select candidate survey sites on the map before generating a route.")
+        return pd.DataFrame()
     with st.expander("Route planner settings", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
         days = c1.number_input("Survey days", 1, 30, 2)
-        max_sites = c2.number_input("Max sites per day", 1, 50, 8)
+        max_sites = c2.number_input("Max sites per day", 1, 10, min(8, max(1, len(selected_sites))))
         max_dist = c3.number_input("Max straight-line distance per day (km)", 0.0, 500.0, 40.0, 5.0)
-        max_total = c4.number_input("Max total sites", 1, 500, min(30, max(1, len(sites))))
-        method = st.selectbox("Route ordering method", ROUTE_ORDER_METHODS, index=0)
-    sort_cols = available_sort_cols(sites, ["priority_score", "sdm_suitability", "occurrence_support_score"])
-    work = sites.sort_values(sort_cols, ascending=False, na_position="last").head(int(max_total)) if sort_cols else sites.head(int(max_total))
-    ordered = order_sites(work, method)
-    plan = split_route_into_days(ordered, int(days), int(max_sites), float(max_dist))
+        max_total = c4.number_input("Max selected sites to route", 1, 500, min(30, max(1, len(selected_sites))))
+        method_options = ["selected order"] + ROUTE_ORDER_METHODS
+        method = st.selectbox("Route ordering method", method_options, index=0)
+        travelmode = st.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0)
+        start_location = st.text_input("Optional Google Maps start location", value="", placeholder="address, station, or lat,lng")
+    if method == "selected order":
+        order_index = {sid: i for i, sid in enumerate(st.session_state.selected_route_site_ids)}
+        work = selected_sites.assign(_selected_order=selected_sites["site_id"].astype(int).map(order_index)).sort_values("_selected_order").drop(columns=["_selected_order"])
+        work = work.head(int(max_total)).reset_index(drop=True)
+        work["route_order"] = range(1, len(work) + 1)
+        work["google_maps_point_url"] = work.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
+        ordered = work
+    else:
+        work = selected_sites.head(int(max_total))
+        ordered = order_sites(work, method)
+    plan = split_route_into_days(ordered, int(days), int(max_sites), float(max_dist), travelmode=travelmode, start_location=start_location)
     if plan.empty:
         return plan
     summary = plan.groupby("survey_day").agg(sites=("site_id", "count"), straight_distance_km=("distance_from_previous_km", "sum"), mean_priority=("priority_score", "mean")).reset_index()
@@ -1112,6 +1213,10 @@ def main() -> None:
 
     occ = spatial_thin(occ_checked, float(thinning_m))
     occ["cluster_id"] = haversine_dbscan(occ, "_latitude", "_longitude", float(cluster_m), int(min_samples))
+    current_sdm_occurrence_row_ids = tuple(sorted(occ["_row_id"].astype(int).tolist()))
+    if st.session_state.sdm_occurrence_row_ids is not None and st.session_state.sdm_occurrence_row_ids != current_sdm_occurrence_row_ids:
+        reset_model_outputs()
+        st.info("Coordinate exclusions or thinning changed. Previous SDM and predict map were cleared; rebuild SDM to use the current occurrence set.")
     occurrence_candidates = make_candidate_sites(occ, center_method, float(occurrence_weight))
     occurrence_candidates = add_priority_rank(occurrence_candidates)
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
@@ -1175,6 +1280,7 @@ def main() -> None:
                 st.session_state.prediction_overlay = overlay
                 st.session_state.prediction_table = pred_table
                 st.session_state.vif_table = vif_tbl
+                st.session_state.sdm_occurrence_row_ids = current_sdm_occurrence_row_ids
                 progress.progress(1.0)
                 status.write("SDM complete.")
             except Exception as exc:
@@ -1194,7 +1300,7 @@ def main() -> None:
     if sdm_result is not None:
         st.success("SDM predict map is available.")
         if overlay is not None:
-            st.caption(f"Predict map array: {overlay.get('shape')} cells, source raster stride={overlay.get('source_stride')}")
+            st.caption(f"Predict map: {overlay.get('method', 'ensemble raster prediction')}; array={overlay.get('shape')} cells; stride={overlay.get('source_stride')}; suitability min/mean/max={overlay.get('min')}/{overlay.get('mean')}/{overlay.get('max')}")
         st.write("SDM metrics")
         st.dataframe(sdm_result["metrics"], width="stretch", hide_index=True)
         try:
