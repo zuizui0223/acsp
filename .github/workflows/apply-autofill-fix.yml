@@ -45,3 +45,4 @@ jobs:
           git add gbif_fieldmap_builder_app.py .github/workflows/apply-autofill-fix.yml
           git commit -m "Fix scientific name autofill mixup" || exit 0
           git push
+# trigger
