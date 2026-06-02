@@ -4,6 +4,33 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-02 - Claude (Anthropic) — survey site list
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Renamed section to "Survey site list".
+- Two modes: 1. Auto (top-ranked with top_n, min_priority, min_suit, type filters); 2. Manual (map-click toggle, order preserved).
+- Site list table shows: site_id, priority_rank, priority_score, sdm_suitability, occurrence_support_score, n_occurrences, latitude, longitude, candidate_type, and a clickable "📍 Open" Google Maps link per site (via st.column_config.LinkColumn).
+- Action buttons: "🗺️ Open all sites as Google Maps route", "⬇ Download shareable HTML", "📋 Copy shareable text list" (popover with st.code block).
+- CSV download demoted to optional collapsed expander.
+- Shareable HTML (make_shareable_html) generates a self-contained page with table and per-site Google Maps links.
+- Shareable text list (_make_shareable_text) shown in st.code block with built-in copy button.
+- Warning text added as caption below the subheader.
+- Advanced day splitting expander retained (AGENTS.md compliance).
+
+Features preserved:
+- GBIF pagination, CSV upload, map-click occurrence exclusion, red QC excluded points
+- Ensemble SDM, VIF, spatial partition, predict map, SDM-high exploration candidates
+- Day-by-day route planner (Advanced expander)
+- HTML/CSV downloads
+
+Known risks / TODO:
+- st.popover requires Streamlit >= 1.31; older deployments should upgrade.
+- Google Maps route URL caps at 8 waypoints; longer lists drop excess silently.
+
 ## 2026-06-02 - Claude (Anthropic) — export redesign
 
 Changed files:

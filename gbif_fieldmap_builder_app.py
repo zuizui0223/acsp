@@ -1196,6 +1196,56 @@ def make_export_kml(sites: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+def make_shareable_html(sites: pd.DataFrame) -> str:
+    rows = ""
+    for i, (_, r) in enumerate(sites.iterrows(), start=1):
+        gmaps = make_google_maps_point_url(float(r["latitude"]), float(r["longitude"]))
+        suit = f'{r["sdm_suitability"]:.3f}' if pd.notna(r.get("sdm_suitability")) and str(r.get("sdm_suitability", "")) not in ("", "nan") else "—"
+        rows += (
+            f"<tr><td>{int(r.get('site_id', i))}</td>"
+            f"<td>{r.get('priority_rank', '')}</td>"
+            f"<td>{r.get('priority_score', '')}</td>"
+            f"<td>{suit}</td>"
+            f"<td>{r.get('occurrence_support_score', '')}</td>"
+            f"<td>{r.get('n_occurrences', '')}</td>"
+            f"<td>{float(r['latitude']):.5f}</td>"
+            f"<td>{float(r['longitude']):.5f}</td>"
+            f"<td>{r.get('candidate_type', '')}</td>"
+            f"<td><a href='{gmaps}' target='_blank'>Google Maps</a></td></tr>\n"
+        )
+    return (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<title>Survey Site List</title>"
+        "<style>body{font-family:sans-serif;margin:24px;color:#222}"
+        "h2{margin-bottom:4px}p.warn{color:#b94a00;font-size:.9em;margin-bottom:16px}"
+        "table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}"
+        "th{background:#f0f0f0}tr:nth-child(even){background:#fafafa}"
+        "a{color:#1a73e8;text-decoration:none}a:hover{text-decoration:underline}</style></head><body>"
+        "<h2>Survey Site List</h2>"
+        "<p class='warn'>⚠️ This list does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility. "
+        "Please verify each site in Google Maps before fieldwork.</p>"
+        "<table><thead><tr>"
+        "<th>Site ID</th><th>Priority rank</th><th>Priority score</th><th>SDM suitability</th>"
+        "<th>Occ. support</th><th>N occ.</th><th>Latitude</th><th>Longitude</th>"
+        "<th>Type</th><th>Google Maps</th></tr></thead>"
+        f"<tbody>{rows}</tbody></table></body></html>"
+    )
+
+
+def _make_shareable_text(sites: pd.DataFrame) -> str:
+    lines = ["Survey Site List", "=" * 60]
+    for _, r in sites.iterrows():
+        gmaps = make_google_maps_point_url(float(r["latitude"]), float(r["longitude"]))
+        suit = f'{r["sdm_suitability"]:.3f}' if pd.notna(r.get("sdm_suitability")) and str(r.get("sdm_suitability", "")) not in ("", "nan") else "—"
+        lines.append(
+            f"Site {int(r.get('site_id', '?'))} | Rank {r.get('priority_rank', '?')} | "
+            f"Priority {r.get('priority_score', '?')} | SDM {suit} | "
+            f"{float(r['latitude']):.5f}, {float(r['longitude']):.5f} | {gmaps}"
+        )
+    lines += ["", "⚠️ Verify each site in Google Maps before fieldwork."]
+    return "\n".join(lines)
+
+
 def _make_gmaps_url_with_end(ordered: pd.DataFrame, travelmode: str, start_location: str, end_location: str) -> str:
     """Build a Google Maps directions URL with an explicit end_location destination."""
     if ordered.empty:
@@ -1213,10 +1263,10 @@ def _make_gmaps_url_with_end(ordered: pd.DataFrame, travelmode: str, start_locat
 
 
 def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
-    st.subheader("Export survey sites for Google Maps")
-    st.warning(
-        "⚠️ **This export does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility.** "
-        "Please verify the exported sites in Google Maps or Google My Maps before fieldwork."
+    st.subheader("Survey site list")
+    st.caption(
+        "⚠️ This list does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility. "
+        "Please verify each site in Google Maps before fieldwork."
     )
     if sites.empty:
         return pd.DataFrame()
@@ -1227,26 +1277,26 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
     has_suit = "sdm_suitability" in sites.columns and sites["sdm_suitability"].notna().any()
     has_sdm_high = "candidate_type" in sites.columns and sites["candidate_type"].str.startswith("SDM-high").any()
 
-    export_mode = st.radio(
-        "Export mode",
-        ["1. Auto: top-ranked sites", "2. Manual: selected sites"],
+    list_mode = st.radio(
+        "Mode",
+        ["1. Auto: top-ranked sites", "2. Manual: select on map"],
         index=0,
         horizontal=True,
-        key="export_mode",
+        key="site_list_mode",
     )
 
     ordered = pd.DataFrame()
 
-    if export_mode.startswith("1."):
-        # ── Auto export ───────────────────────────────────────────────────────
+    if list_mode.startswith("1."):
+        # ── Auto list ─────────────────────────────────────────────────────────
         ac1, ac2, ac3 = st.columns(3)
-        top_n = ac1.number_input("Top N sites", min_value=1, max_value=max(1, len(sites)), value=min(10, len(sites)), step=1, key="export_top_n")
-        min_priority = ac2.number_input("Min priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="export_min_priority")
-        min_suit = ac3.number_input("Min SDM suitability", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="export_min_suit",
-                                    help="SDM not built yet — set to 0 to include all." if not has_suit else "Filter by SDM suitability score.")
+        top_n = ac1.number_input("Top N sites", min_value=1, max_value=max(1, len(sites)), value=min(10, len(sites)), step=1, key="sl_top_n")
+        min_priority = ac2.number_input("Min priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_priority")
+        min_suit = ac3.number_input("Min SDM suitability", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_suit",
+                                    help="SDM not built yet." if not has_suit else "Filter by SDM suitability.")
         ic1, ic2 = st.columns(2)
-        incl_occ = ic1.checkbox("Include occurrence-supported sites", value=True, key="export_incl_occ")
-        incl_sdm = ic2.checkbox("Include SDM-high exploration sites", value=True, key="export_incl_sdm", disabled=not has_sdm_high)
+        incl_occ = ic1.checkbox("Occurrence-supported sites", value=True, key="sl_incl_occ")
+        incl_sdm = ic2.checkbox("SDM-high exploration sites", value=True, key="sl_incl_sdm", disabled=not has_sdm_high)
 
         filtered = ranked_sites.copy()
         type_mask = pd.Series(False, index=filtered.index)
@@ -1261,28 +1311,21 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
         if has_suit:
             filtered = filtered[pd.to_numeric(filtered["sdm_suitability"], errors="coerce").fillna(0.0) >= float(min_suit)]
 
-        selected_sites = filtered.head(int(top_n)).copy()
-        dropped_sites = filtered.iloc[int(top_n):].copy()
+        ordered = filtered.head(int(top_n)).copy()
+        dropped = filtered.iloc[int(top_n):].copy()
 
-        if selected_sites.empty:
-            st.info("No candidate sites meet the filter criteria. Lower the minimum scores or include more site types.")
+        if ordered.empty:
+            st.info("No sites meet the filter criteria. Lower the minimum scores or include more site types.")
             return pd.DataFrame()
-
-        st.caption(f"Auto-selected **{len(selected_sites)}** site(s) from {len(ranked_sites)} candidates.")
-        show_cols = [c for c in ["site_id", "candidate_type", "priority_rank", "priority_score", "sdm_suitability", "occurrence_support_score", "n_occurrences", "latitude", "longitude"] if c in selected_sites.columns]
-        st.dataframe(selected_sites[show_cols], width="stretch", hide_index=True)
-
-        if not dropped_sites.empty:
-            with st.expander(f"Lower-priority sites not included ({len(dropped_sites)})", expanded=False):
-                st.dataframe(dropped_sites[show_cols], width="stretch", hide_index=True)
-
-        ordered = order_sites(selected_sites, "priority then nearest")
-        csv_filename = "google_maps_auto_sites.csv"
-        kml_filename = "google_maps_auto_sites.kml"
+        st.caption(f"**{len(ordered)}** site(s) selected from {len(ranked_sites)} candidates.")
+        if not dropped.empty:
+            with st.expander(f"Lower-priority sites not in list ({len(dropped)})", expanded=False):
+                _d_cols = [c for c in ["site_id", "priority_rank", "priority_score", "sdm_suitability", "candidate_type"] if c in dropped.columns]
+                st.dataframe(dropped[_d_cols], width="stretch", hide_index=True)
 
     else:
-        # ── Manual export ─────────────────────────────────────────────────────
-        st.caption("Click candidate sites on the map to toggle selection. 🟢 green = selected, 🔵 blue = not selected.")
+        # ── Manual list ───────────────────────────────────────────────────────
+        st.caption("Click candidate sites on the map to toggle. 🟢 green = selected, 🔵 blue = not selected.")
         st.session_state.selected_route_site_ids = [int(x) for x in st.session_state.selected_route_site_ids if int(x) in options]
         click_data = st_folium(
             make_route_selection_map(sites, st.session_state.selected_route_site_ids),
@@ -1304,56 +1347,61 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
                         sel.append(sid)
                     st.session_state.selected_route_site_ids = sel
                     st.rerun()
-        manual_ids = st.multiselect("Selected survey site IDs", options=options, default=st.session_state.selected_route_site_ids)
+        manual_ids = st.multiselect("Selected site IDs", options=options, default=st.session_state.selected_route_site_ids)
         st.session_state.selected_route_site_ids = [int(x) for x in manual_ids]
         b1, b2 = st.columns(2)
-        if b1.button("Use top ranked candidates"):
+        if b1.button("Use top ranked"):
             st.session_state.selected_route_site_ids = ranked_sites["site_id"].astype(int).head(min(10, len(ranked_sites))).tolist()
             st.rerun()
-        if b2.button("Clear selected sites"):
+        if b2.button("Clear selection"):
             st.session_state.selected_route_site_ids = []
             st.session_state.last_route_click_signature = ""
             st.rerun()
 
         selected_sites = sites[sites["site_id"].astype(int).isin(st.session_state.selected_route_site_ids)].copy()
         if selected_sites.empty:
-            st.info("Select candidate survey sites on the map before exporting.")
+            st.info("Select candidate sites on the map.")
             return pd.DataFrame()
 
-        # Preserve selected order
         order_index = {sid: i for i, sid in enumerate(st.session_state.selected_route_site_ids)}
         ordered = selected_sites.assign(
             _sel_order=selected_sites["site_id"].astype(int).map(order_index)
         ).sort_values("_sel_order").drop(columns=["_sel_order"]).reset_index(drop=True)
-        ordered["route_order"] = range(1, len(ordered) + 1)
-        ordered["google_maps_point_url"] = ordered.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
-        csv_filename = "google_maps_selected_sites.csv"
-        kml_filename = "google_maps_selected_sites.kml"
 
-    # ── Export outputs ────────────────────────────────────────────────────────
+    # ── Site list table ───────────────────────────────────────────────────────
+    if not ordered.empty:
+        ordered["google_maps_point_url"] = ordered.apply(
+            lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
+        )
+        ordered["route_order"] = range(1, len(ordered) + 1)
+        table_cols = [c for c in ["site_id", "priority_rank", "priority_score", "sdm_suitability", "occurrence_support_score", "n_occurrences", "latitude", "longitude", "candidate_type", "google_maps_point_url"] if c in ordered.columns]
+        col_cfg: dict[str, Any] = {}
+        if "google_maps_point_url" in table_cols:
+            col_cfg["google_maps_point_url"] = st.column_config.LinkColumn("Open in Google Maps", display_text="📍 Open")
+        st.dataframe(ordered[table_cols], column_config=col_cfg, width="stretch", hide_index=True)
+
+    # ── Action buttons ────────────────────────────────────────────────────────
     if not ordered.empty:
         gmaps_url = make_google_maps_route_url(ordered, travelmode="driving", max_waypoints=8)
-        st.link_button("🗺️ Open selected sites in Google Maps", gmaps_url, use_container_width=True)
-
-        dl1, dl2 = st.columns(2)
-        dl1.download_button(
-            f"⬇ Download {csv_filename}",
-            make_export_csv(ordered),
-            csv_filename,
-            "text/csv",
+        ab1, ab2, ab3 = st.columns(3)
+        ab1.link_button("🗺️ Open all sites as Google Maps route", gmaps_url, use_container_width=True)
+        ab2.download_button(
+            "⬇ Download shareable HTML",
+            make_shareable_html(ordered),
+            "survey_site_list.html",
+            "text/html",
             use_container_width=True,
         )
-        dl2.download_button(
-            f"⬇ Download {kml_filename}",
-            make_export_kml(ordered),
-            kml_filename,
-            "application/vnd.google-earth.kml+xml",
-            use_container_width=True,
-        )
+        with ab3.popover("📋 Copy shareable text list", use_container_width=True):
+            st.code(_make_shareable_text(ordered), language=None)
 
-    # ── Advanced: day splitting (preserved per AGENTS.md, collapsed) ──────────
+        with st.expander("Optional: CSV download", expanded=False):
+            fname = "survey_sites_auto.csv" if list_mode.startswith("1.") else "survey_sites_selected.csv"
+            st.download_button(f"⬇ Download {fname}", make_export_csv(ordered), fname, "text/csv", use_container_width=True)
+
+    # ── Advanced: day splitting (preserved per AGENTS.md) ────────────────────
     with st.expander("Advanced: preliminary day splitting (straight-line, reference only)", expanded=False):
-        st.caption("⚠️ Straight-line day splitting does not account for roads, ferries, mountains, cliffs, or restricted access. Use as a rough reference only.")
+        st.caption("⚠️ Straight-line day splitting does not account for roads, ferries, mountains, or restricted access.")
         if ordered.empty:
             st.info("No sites selected yet.")
         else:
@@ -1366,21 +1414,17 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
             max_total = dc4.number_input("Max sites to route", 1, 500, min(30, max(1, len(ordered))), key="adv_max_total")
             plan = split_route_into_days(ordered.head(int(max_total)), int(days), int(max_sites_day), float(max_dist), travelmode=travelmode_adv, start_location=start_loc_adv)
             if not plan.empty:
-                summary = plan.groupby("survey_day").agg(
-                    sites=("site_id", "count"),
-                    straight_distance_km=("distance_from_previous_km", "sum"),
-                    mean_priority=("priority_score", "mean"),
-                ).reset_index()
+                summary = plan.groupby("survey_day").agg(sites=("site_id", "count"), straight_distance_km=("distance_from_previous_km", "sum"), mean_priority=("priority_score", "mean")).reset_index()
                 summary["straight_distance_km"] = summary["straight_distance_km"].round(2)
                 summary["mean_priority"] = summary["mean_priority"].round(3)
                 st.dataframe(summary, width="stretch", hide_index=True)
                 for day, group in plan.groupby("survey_day"):
                     st.link_button(f"Open Day {int(day)} route in Google Maps", str(group["day_google_maps_route_url"].iloc[0]), width="stretch")
-                day_cols = ["survey_day", "day_route_order", "site_id", "candidate_type", "priority_score", "sdm_suitability", "latitude", "longitude", "distance_from_previous_km", "cumulative_day_distance_km"]
+                day_cols = ["survey_day", "day_route_order", "site_id", "candidate_type", "priority_score", "sdm_suitability", "latitude", "longitude", "distance_from_previous_km"]
                 st.dataframe(plan[[c for c in day_cols if c in plan.columns]], width="stretch", hide_index=True)
                 return plan
 
-    # Return ordered with survey_day=1 so the map route layer still renders
+    # Return ordered with survey_day=1 so map route layer renders
     if not ordered.empty:
         result = ordered.copy()
         result["survey_day"] = 1
