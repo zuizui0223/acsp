@@ -4,6 +4,28 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-02 - Claude (Anthropic) — ROUTE_QC_PATCH_NOTES: rectangle selection fixes
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed "Blue = included, red = excluded..." caption from coordinate_exclusion_panel (per patch note §1). Existing click-based exclusion/restore behavior unchanged.
+- Added extract_drawn_features() helper: normalises all_drawings / last_active_drawing from streamlit-folium regardless of dict or list format.
+- Added ids_inside_drawn_rectangles() helper: returns IDs inside any drawn Polygon/Rectangle feature.
+- coordinate_exclusion_panel: added Draw plugin (add_draw=True), added "all_drawings" and "last_active_drawing" to returned_objects, added rectangle batch QC actions — Exclude / Restore / Clear rectangle-selected occurrence points. Red QC points remain visible and excluded from SDM/extent/candidates/routes.
+- make_exclusion_review_map: restored add_draw parameter and fg_ex.add_to(fmap) so excluded red points are visible on the map.
+- route_planner_panel manual mode: replaced ad-hoc dict-only feature parsing with extract_drawn_features() + ids_inside_drawn_rectangles(); added "last_active_drawing" to returned_objects so rectangle selection works even when all_drawings returns a list.
+
+Features preserved:
+- GBIF pagination, CSV upload, existing map-click exclusion/restore, red QC excluded points
+- Ensemble SDM, VIF, spatial partition, predict map, SDM-high exploration candidates
+- Survey day site lists, HTML/CSV downloads
+
+Known risks / TODO:
+- streamlit-folium < 0.13 may not return all_drawings; last_active_drawing fallback mitigates this.
+
 ## 2026-06-02 - Claude (Anthropic) — Issue #1: survey day site lists + rectangle selection
 
 Changed files:

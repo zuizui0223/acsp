@@ -331,7 +331,38 @@ def image_html(url: str, width: int = 220) -> str:
     return f"<br><img src='{url}' style='max-width:{width}px; max-height:180px; border-radius:6px; margin-top:6px;'>"
 
 
-def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int]) -> folium.Map:
+def extract_drawn_features(draw_data: Any) -> list[dict[str, Any]]:
+    """Normalise streamlit-folium all_drawings / last_active_drawing into a flat feature list."""
+    if not draw_data:
+        return []
+    if isinstance(draw_data, dict):
+        if draw_data.get("type") == "Feature":
+            return [draw_data]
+        return [f for f in (draw_data.get("features") or []) if isinstance(f, dict)]
+    if isinstance(draw_data, list):
+        return [x for x in draw_data if isinstance(x, dict)]
+    return []
+
+
+def ids_inside_drawn_rectangles(df: pd.DataFrame, id_col: str, lat_col: str, lon_col: str, features: list[dict[str, Any]]) -> list[int]:
+    """Return sorted list of integer IDs whose lat/lon fall inside any drawn rectangle/polygon."""
+    ids: set[int] = set()
+    for feat in features:
+        geom = feat.get("geometry", {})
+        if geom.get("type") not in ("Polygon", "Rectangle"):
+            continue
+        coords = geom.get("coordinates", [])
+        if not coords:
+            continue
+        ring = coords[0]
+        lats = [float(c[1]) for c in ring]
+        lngs = [float(c[0]) for c in ring]
+        picked = df[df[lat_col].between(min(lats), max(lats)) & df[lon_col].between(min(lngs), max(lngs))][id_col]
+        ids.update(map(int, picked.tolist()))
+    return sorted(ids)
+
+
+def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int], add_draw: bool = False) -> folium.Map:
     center = (float(occ_raw["_latitude"].mean()), float(occ_raw["_longitude"].mean())) if not occ_raw.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
     fg_in = FeatureGroup(name="included occurrences", show=True)
@@ -360,6 +391,9 @@ def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int]) -> 
             tooltip=("excluded" if excluded else "click to exclude") + f" | row {rid}",
         ).add_to(fg_ex if excluded else fg_in)
     fg_in.add_to(fmap)
+    fg_ex.add_to(fmap)
+    if add_draw:
+        Draw(export=False, draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False}, edit_options={"edit": False, "remove": True}).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds([[occ_raw["_latitude"].min(), occ_raw["_longitude"].min()], [occ_raw["_latitude"].max(), occ_raw["_longitude"].max()]], padding=(30, 30))
@@ -389,14 +423,21 @@ def nearest_row_id_from_click(occ_raw: pd.DataFrame, click: dict[str, Any], tool
 def coordinate_exclusion_panel(occ_raw: pd.DataFrame) -> pd.DataFrame:
     st.subheader("Coordinate quality check")
     with st.expander("Click occurrence points on the map to exclude them", expanded=True):
-        st.caption("Blue = included, red = excluded. Click an occurrence point to toggle it. Use the row-ID box below only to recover excluded records.")
         if st.button("Clear excluded coordinates"):
             st.session_state.excluded_row_ids = set()
             st.session_state.restore_excluded_row_ids = []
             st.session_state.last_exclude_click_signature = ""
+            st.session_state.qc_rect_selected_ids = []
+            st.session_state.qc_last_draw_sig = ""
             reset_model_outputs()
             st.rerun()
-        click_data = st_folium(make_exclusion_review_map(occ_raw, set(st.session_state.excluded_row_ids)), width=None, height=520, returned_objects=["last_object_clicked", "last_object_clicked_tooltip"], key="coordinate_exclusion_map")
+        click_data = st_folium(
+            make_exclusion_review_map(occ_raw, set(st.session_state.excluded_row_ids), add_draw=True),
+            width=None, height=520,
+            returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],
+            key="coordinate_exclusion_map",
+        )
+        # ── existing point-click behavior (unchanged) ────────────────────────
         clicked = (click_data or {}).get("last_object_clicked")
         clicked_tooltip = (click_data or {}).get("last_object_clicked_tooltip")
         if clicked:
@@ -414,6 +455,38 @@ def coordinate_exclusion_panel(occ_raw: pd.DataFrame) -> pd.DataFrame:
                     st.session_state.restore_excluded_row_ids = []
                     reset_model_outputs()
                     st.rerun()
+        # ── rectangle batch selection (new) ──────────────────────────────────
+        raw_drawings = (click_data or {}).get("all_drawings") or (click_data or {}).get("last_active_drawing")
+        qc_features = extract_drawn_features(raw_drawings)
+        if qc_features:
+            draw_sig = str(qc_features)[:400]
+            if draw_sig != st.session_state.get("qc_last_draw_sig", ""):
+                st.session_state.qc_last_draw_sig = draw_sig
+                rect_ids = ids_inside_drawn_rectangles(occ_raw, "_row_id", "_latitude", "_longitude", qc_features)
+                if rect_ids:
+                    st.session_state.qc_rect_selected_ids = rect_ids
+                    st.rerun()
+        qc_rect_ids = [r for r in st.session_state.get("qc_rect_selected_ids", []) if r in set(occ_raw["_row_id"].astype(int))]
+        if qc_rect_ids:
+            st.info(f"Rectangle selection: **{len(qc_rect_ids)}** occurrence point(s).")
+            qb1, qb2, qb3 = st.columns(3)
+            if qb1.button("Exclude rectangle-selected occurrence points"):
+                st.session_state.excluded_row_ids = set(st.session_state.excluded_row_ids) | set(qc_rect_ids)
+                st.session_state.qc_rect_selected_ids = []
+                st.session_state.qc_last_draw_sig = ""
+                reset_model_outputs()
+                st.rerun()
+            if qb2.button("Restore rectangle-selected occurrence points"):
+                st.session_state.excluded_row_ids = set(st.session_state.excluded_row_ids) - set(qc_rect_ids)
+                st.session_state.qc_rect_selected_ids = []
+                st.session_state.qc_last_draw_sig = ""
+                reset_model_outputs()
+                st.rerun()
+            if qb3.button("Clear rectangle selection"):
+                st.session_state.qc_rect_selected_ids = []
+                st.session_state.qc_last_draw_sig = ""
+                st.rerun()
+        # ── recover by ID (unchanged) ────────────────────────────────────────
         excluded_options = [x for x in sorted(set(st.session_state.excluded_row_ids)) if x in set(occ_raw["_row_id"].astype(int))]
         if any(x not in excluded_options for x in st.session_state.get("restore_excluded_row_ids", [])):
             st.session_state.restore_excluded_row_ids = []
@@ -1403,10 +1476,10 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
         click_data = st_folium(
             make_route_selection_map(sites, st.session_state.sl_selected_site_ids, add_draw=True),
             width=None, height=480,
-            returned_objects=["last_object_clicked", "all_drawings"],
+            returned_objects=["last_object_clicked", "all_drawings", "last_active_drawing"],
             key="sl_manual_map",
         )
-        # Click toggle
+        # Click toggle (unchanged)
         clicked = (click_data or {}).get("last_object_clicked")
         if clicked:
             sig = f"{clicked.get('lat'):.6f},{clicked.get('lng'):.6f}"
@@ -1421,21 +1494,14 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
                         sel.append(sid)
                     st.session_state.sl_selected_site_ids = sel
                     st.rerun()
-        # Rectangle selection
-        drawings = (click_data or {}).get("all_drawings") or {}
-        features = drawings.get("features", []) if isinstance(drawings, dict) else []
-        if features:
-            draw_sig = str(features)[:400]
+        # Rectangle selection — handles both dict and list formats from streamlit-folium
+        raw_sl_drawings = (click_data or {}).get("all_drawings") or (click_data or {}).get("last_active_drawing")
+        sl_features = extract_drawn_features(raw_sl_drawings)
+        if sl_features:
+            draw_sig = str(sl_features)[:400]
             if draw_sig != st.session_state.get("sl_last_draw_sig", ""):
                 st.session_state.sl_last_draw_sig = draw_sig
-                rect_ids: list[int] = []
-                for feat in features:
-                    geom = feat.get("geometry", {})
-                    if geom.get("type") in ("Polygon", "Rectangle"):
-                        coords = geom["coordinates"][0]
-                        lats = [c[1] for c in coords]; lngs = [c[0] for c in coords]
-                        in_rect = sites[(sites["latitude"].between(min(lats), max(lats))) & (sites["longitude"].between(min(lngs), max(lngs)))]["site_id"].astype(int).tolist()
-                        rect_ids.extend(in_rect)
+                rect_ids = ids_inside_drawn_rectangles(sites, "site_id", "latitude", "longitude", sl_features)
                 if rect_ids:
                     existing = set(st.session_state.sl_selected_site_ids)
                     st.session_state.sl_selected_site_ids = list(existing | set(rect_ids))
