@@ -331,7 +331,7 @@ def image_html(url: str, width: int = 220) -> str:
     return f"<br><img src='{url}' style='max-width:{width}px; max-height:180px; border-radius:6px; margin-top:6px;'>"
 
 
-def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int], add_draw: bool = False) -> folium.Map:
+def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int]) -> folium.Map:
     center = (float(occ_raw["_latitude"].mean()), float(occ_raw["_longitude"].mean())) if not occ_raw.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
     fg_in = FeatureGroup(name="included occurrences", show=True)
@@ -360,9 +360,6 @@ def make_exclusion_review_map(occ_raw: pd.DataFrame, excluded_ids: set[int], add
             tooltip=("excluded" if excluded else "click to exclude") + f" | row {rid}",
         ).add_to(fg_ex if excluded else fg_in)
     fg_in.add_to(fmap)
-    fg_ex.add_to(fmap)
-    if add_draw:
-        Draw(export=False, draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False}, edit_options={"edit": False, "remove": True}).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds([[occ_raw["_latitude"].min(), occ_raw["_longitude"].min()], [occ_raw["_latitude"].max(), occ_raw["_longitude"].max()]], padding=(30, 30))
