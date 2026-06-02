@@ -4,6 +4,21 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-02 - Claude (Anthropic) — Issue #1 follow-up: fix clear-selected and simplify day split
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Fix 1: "Clear selected sites" now fully clears the Selected site IDs multiselect widget. Added sl_reset_token to session state; each Clear action increments the token, which changes the multiselect widget key (key=f"sl_manual_ids_{token}"), forcing Streamlit to create a fresh widget instance. Token also incremented in clear_loaded_data.
+- Fix 2: Replaced the "Optional: split selected sites by survey day" expander contents with a st.data_editor approach. Selected sites are shown in an editable table with a survey_day SelectboxColumn (options: Day 1, Day 2, ..., Unassigned). User edits the survey_day column directly, then clicks "Apply day assignments" to write back to survey_day_lists. Removed all staging "Copy to Day X" buttons. Add day / Remove last day controls remain. Per-day Google Maps links and CSV/HTML downloads still shown after assignment.
+
+Features preserved:
+- All selection logic (auto, manual map click, rectangle Draw) unchanged.
+- All SDM/VIF/spatial partition/predict map features unchanged.
+- survey_day_lists session state and day-list downloads preserved.
+
 ## 2026-06-02 - Claude (Anthropic) — Issue #1 follow-up: Survey site list UI simplification
 
 Changed files:

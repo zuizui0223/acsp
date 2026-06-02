@@ -131,6 +131,7 @@ def init_session_state() -> None:
         "survey_day_count": 2,
         "sl_selected_site_ids": [],
         "sl_last_draw_sig": "",
+        "sl_reset_token": 0,
         "qc_rect_selected_ids": [],
         "qc_last_draw_sig": "",
     }
@@ -151,6 +152,7 @@ def clear_loaded_data() -> None:
     st.session_state.survey_day_count = 2
     st.session_state.sl_selected_site_ids = []
     st.session_state.sl_last_draw_sig = ""
+    st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
     st.session_state.qc_rect_selected_ids = []
     st.session_state.qc_last_draw_sig = ""
     st.session_state.source_message = "No occurrence data loaded yet."
@@ -1483,7 +1485,8 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
                     existing = set(st.session_state.sl_selected_site_ids)
                     st.session_state.sl_selected_site_ids = list(existing | set(rect_ids))
                     st.rerun()
-        manual_ids = st.multiselect("Selected site IDs", options=options, default=st.session_state.sl_selected_site_ids, key="sl_manual_ids")
+        _tok = st.session_state.get("sl_reset_token", 0)
+        manual_ids = st.multiselect("Selected site IDs", options=options, default=st.session_state.sl_selected_site_ids, key=f"sl_manual_ids_{_tok}")
         st.session_state.sl_selected_site_ids = [int(x) for x in manual_ids]
         b1, b2 = st.columns(2)
         if b1.button("Use top ranked", key="sl_top_btn"):
@@ -1491,6 +1494,7 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
             st.rerun()
         if b2.button("Clear selected sites", key="sl_clear_btn"):
             st.session_state.sl_selected_site_ids = []
+            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
             st.session_state.last_route_click_signature = ""
             st.session_state.sl_last_draw_sig = ""
             st.rerun()
@@ -1524,6 +1528,7 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
         ab3.download_button("⬇ HTML", make_shareable_html(sel_df), "survey_site_list.html", "text/html", use_container_width=True)
         if ab4.button("Clear selected sites", key="sl_clear_main"):
             st.session_state.sl_selected_site_ids = []
+            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
             st.session_state.last_route_click_signature = ""
             st.session_state.sl_last_draw_sig = ""
             st.rerun()
@@ -1533,59 +1538,73 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
         if sel_df.empty:
             st.info("Select survey sites above first.")
         else:
-            # Assign selected sites to a day
-            st.markdown("**Assign selected sites to a day:**")
-            day_nums = sorted(st.session_state.survey_day_lists.keys())
-            add_cols = st.columns(max(1, len(day_nums)))
-            for i, day_num in enumerate(day_nums):
-                if add_cols[i].button(f"➕ Copy to Day {day_num}", key=f"sl_add_{day_num}"):
-                    existing = st.session_state.survey_day_lists[day_num]
-                    new_ids = [s for s in selected_ids if s not in existing]
-                    st.session_state.survey_day_lists[day_num] = existing + new_ids
-                    st.rerun()
+            day_lists = st.session_state.survey_day_lists
+            max_day = max(day_lists.keys()) if day_lists else 2
+            day_options = [f"Day {i}" for i in range(1, max_day + 1)] + ["Unassigned"]
 
-            # Add / remove days
+            # Add / remove day controls
             dm1, dm2 = st.columns(2)
             if dm1.button("➕ Add day", key="sl_add_day"):
-                new_day = (max(st.session_state.survey_day_lists.keys()) + 1) if st.session_state.survey_day_lists else 1
-                st.session_state.survey_day_lists[new_day] = []
+                new_day = max(day_lists.keys()) + 1 if day_lists else 1
+                day_lists[new_day] = []
                 st.rerun()
-            if dm2.button("🗑 Remove last day", key="sl_rm_last_day") and st.session_state.survey_day_lists:
-                last = max(st.session_state.survey_day_lists.keys())
-                del st.session_state.survey_day_lists[last]
+            if dm2.button("🗑 Remove last day", key="sl_rm_last_day") and len(day_lists) > 1:
+                del day_lists[max(day_lists.keys())]
                 st.rerun()
 
-            # Day lists
-            for day_num in sorted(st.session_state.survey_day_lists.keys()):
-                day_sids = st.session_state.survey_day_lists[day_num]
-                day_sites = sites[sites["site_id"].astype(int).isin(day_sids)].copy()
-                if not day_sites.empty and day_sids:
-                    dord = {sid: i for i, sid in enumerate(day_sids)}
-                    day_sites = day_sites.assign(_ord=day_sites["site_id"].astype(int).map(dord)).sort_values("_ord").drop(columns=["_ord"])
-                with st.expander(f"Day {day_num} — {len(day_sids)} site(s)", expanded=bool(day_sids)):
-                    if day_sites.empty:
-                        st.caption("No sites assigned yet.")
-                    else:
-                        day_sites["google_maps_point_url"] = day_sites.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
-                        show_dcols = [c for c in ["site_id", "priority_rank", "priority_score", "sdm_suitability", "candidate_type", "latitude", "longitude", "google_maps_point_url"] if c in day_sites.columns]
-                        dcol_cfg: dict[str, Any] = {}
-                        if "google_maps_point_url" in show_dcols:
-                            dcol_cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="📍")
-                        st.dataframe(day_sites[show_dcols], column_config=dcol_cfg, width="stretch", hide_index=True)
-                        remove_ids = st.multiselect(f"Remove from Day {day_num}", options=day_sids, default=[], key=f"sl_rm_{day_num}", format_func=lambda x: f"Site {x}")
-                        if remove_ids and st.button("Remove selected", key=f"sl_do_rm_{day_num}"):
-                            st.session_state.survey_day_lists[day_num] = [s for s in day_sids if s not in remove_ids]
-                            st.rerun()
-                        urls = _make_day_gmaps_urls(day_sites, travelmode)
+            # Build editable table: lookup existing assignment for each site
+            def _assigned_day(sid: int) -> str:
+                for dn, sids in day_lists.items():
+                    if sid in sids:
+                        return f"Day {dn}"
+                return "Day 1"
+
+            edit_cols = [c for c in ["site_id", "priority_score", "sdm_suitability", "candidate_type", "latitude", "longitude"] if c in sel_df.columns]
+            edit_df = sel_df[edit_cols].copy()
+            edit_df["survey_day"] = edit_df["site_id"].astype(int).apply(_assigned_day)
+
+            edited = st.data_editor(
+                edit_df,
+                column_config={
+                    "survey_day": st.column_config.SelectboxColumn("Survey day", options=day_options, required=True),
+                    **{c: st.column_config.Column(disabled=True) for c in edit_cols},
+                },
+                hide_index=True,
+                use_container_width=True,
+                key="sl_day_editor",
+            )
+
+            if st.button("Apply day assignments", type="primary", key="sl_apply_days"):
+                new_lists: dict[int, list[int]] = {k: [] for k in day_lists}
+                for _, row in edited.iterrows():
+                    dv = str(row.get("survey_day", "Day 1"))
+                    if dv.startswith("Day "):
+                        try:
+                            dn = int(dv.replace("Day ", "").strip())
+                            if dn not in new_lists:
+                                new_lists[dn] = []
+                            new_lists[dn].append(int(row["site_id"]))
+                        except ValueError:
+                            pass
+                st.session_state.survey_day_lists = new_lists
+                st.rerun()
+
+            # Per-day Google Maps links
+            if any(day_lists.values()):
+                for day_num in sorted(day_lists.keys()):
+                    day_sids = day_lists[day_num]
+                    if not day_sids:
+                        continue
+                    day_sites_r = sites[sites["site_id"].astype(int).isin(day_sids)].copy()
+                    if not day_sites_r.empty:
+                        urls = _make_day_gmaps_urls(day_sites_r, travelmode)
                         for part_i, url in enumerate(urls, start=1):
                             label = f"🗺️ Open Day {day_num} in Google Maps" if len(urls) == 1 else f"🗺️ Open Day {day_num} Part {part_i} in Google Maps"
                             st.link_button(label, url, use_container_width=True)
 
-            # Day list downloads
-            if any(st.session_state.survey_day_lists.values()):
                 ddl1, ddl2 = st.columns(2)
-                ddl1.download_button("⬇ Download survey_day_site_lists.csv", make_survey_day_csv(st.session_state.survey_day_lists, sites), "survey_day_site_lists.csv", "text/csv", use_container_width=True)
-                ddl2.download_button("⬇ Download survey_day_site_lists.html", make_survey_day_html(st.session_state.survey_day_lists, sites), "survey_day_site_lists.html", "text/html", use_container_width=True)
+                ddl1.download_button("⬇ survey_day_site_lists.csv", make_survey_day_csv(day_lists, sites), "survey_day_site_lists.csv", "text/csv", use_container_width=True)
+                ddl2.download_button("⬇ survey_day_site_lists.html", make_survey_day_html(day_lists, sites), "survey_day_site_lists.html", "text/html", use_container_width=True)
 
     # ── Return DataFrame for map route layer ─────────────────────────────────
     # Prefer day lists when populated; fall back to selected sites as survey_day=1
