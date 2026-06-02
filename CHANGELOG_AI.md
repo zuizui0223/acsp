@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-02 - Claude (Anthropic) — Issue #1 follow-up: hide day-split, unified selected list only
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed "Optional: split selected sites by survey day" expander entirely from the UI. Day 1 / Day 2 / survey_day_lists UI is no longer shown.
+- Main output is now a single unified "Selected survey sites" list only.
+- Return value always uses survey_day=1 for selected sites so the map route layer still renders.
+- Clear selected sites uses sl_reset_token (from previous commit) to fully clear the multiselect widget.
+- Auto, Manual map click, and rectangle selection all unchanged.
+- survey_day_lists session state key and helper functions (_make_day_gmaps_urls, make_survey_day_csv, make_survey_day_html) kept in code for future re-use but not exposed in UI.
+
+Features preserved:
+- All SDM/VIF/spatial partition/predict map features unchanged.
+- All selection logic unchanged.
+
 ## 2026-06-02 - Claude (Anthropic) — Issue #1 follow-up: fix clear-selected and simplify day split
 
 Changed files:
