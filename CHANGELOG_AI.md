@@ -4,6 +4,39 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-02 - Claude (Anthropic) — Issue #1: survey day site lists + rectangle selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Implements Issue #1: Replace route splitting with manual day lists and box selection.
+- Renamed section to "Survey day site lists".
+- Added manual day-based site grouping: Day 1 / Day 2 / ... expanders with per-day site tables, remove-site controls, and Google Maps route buttons per day (split into Part 1 / Part 2 for >10 sites, i.e. >8 waypoints).
+- Added staging area workflow: select sites → assign to survey day.
+- Auto mode: filter by top_n, min_priority, min_suitability, site type → confirm to staging.
+- Manual mode: map click toggle + rectangle Draw selection (folium.plugins.Draw) → adds sites inside drawn rectangle to staging.
+- Added rectangle batch QC selection in coordinate_exclusion_panel: draw rectangle → Exclude / Restore / Clear rectangle points.
+- Fixed bug: fg_ex (excluded red points) was not added to make_exclusion_review_map; now correctly added so red QC points are visible.
+- Added Draw plugin to make_exclusion_review_map (add_draw=True) and make_route_selection_map (add_draw=True).
+- New helpers: _make_day_gmaps_urls, make_survey_day_csv, make_survey_day_html, SURVEY_DAY_CSV_COLS.
+- CSV columns: survey_day, order_within_day, site_id, candidate_type, priority_rank, priority_score, sdm_suitability, occurrence_support_score, n_occurrences, latitude, longitude, google_maps_url, access_note.
+- HTML download: self-contained per-day tables with 📍 Google Maps links.
+- New session state keys: survey_day_lists, survey_day_count, sl_selected_site_ids, sl_last_draw_sig, qc_rect_selected_ids, qc_last_draw_sig.
+- clear_loaded_data resets all new day-list state.
+- Preliminary straight-line day splitting (split_route_into_days) preserved in codebase but removed from main UI per Issue #1.
+
+Features preserved:
+- GBIF pagination, CSV upload, map-click occurrence exclusion, red QC excluded points
+- Ensemble SDM, VIF stepwise filtering, spatial partition diagnostics
+- Raster-style SDM predict map, SDM-high exploration candidates
+- HTML/CSV downloads
+
+Known risks / TODO:
+- folium.plugins.Draw requires streamlit-folium >= 0.13 for all_drawings return; older versions silently ignore rectangle selection.
+- Day list state persists across SDM rebuilds; stale site IDs are pruned but day numbers are not reset.
+
 ## 2026-06-02 - Claude (Anthropic) — survey site list
 
 Changed files:
