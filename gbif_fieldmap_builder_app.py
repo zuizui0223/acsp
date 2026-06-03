@@ -156,6 +156,8 @@ def init_session_state() -> None:
         "vif_table": None,
         "excluded_row_ids": set(),
         "last_exclude_click_signature": "",
+        "sdm_excluded_row_ids": set(),           # SDM-training-only suspicious-record exclusions
+        "sdm_qc_click_sig": "",
         "sdm_occurrence_row_ids": None,
         "selected_route_site_ids": [],
         "last_route_click_signature": "",
@@ -3073,17 +3075,23 @@ def main() -> None:
         return
 
     st.subheader("2 — Prepare records and choose survey range")
-    active_excluded_ids: set[int] = set()  # coordinate QC removed; no excluded IDs
+    active_excluded_ids = set(map(int, st.session_state.excluded_row_ids))
     auto_large_dataset_mode = len(occ_raw) > 1000
     effective_large_dataset_mode = bool(large_dataset_mode or auto_large_dataset_mode)
     effective_max_map_points = min(int(max_map_points), 1000) if effective_large_dataset_mode else int(max_map_points)
     if auto_large_dataset_mode:
         st.info("Large dataset mode was enabled automatically because more than 1,000 valid occurrence records were loaded. Raw records are preserved, but maps, candidates, and SDM use capped/thinned inputs.")
-    # Coordinate QC (click-to-exclude individual records) removed — geographic
-    # filtering is handled by the target occurrence set selection below.
-    # SDM bias-reduction preprocessing (dedup + grid/distance thinning) handles
-    # spatial autocorrelation and clustering bias inside the SDM expander.
-    occ_after_exclusion = occ_raw.copy().reset_index(drop=True)
+    occ_qc_map_display = limit_occurrence_display(occ_raw, active_excluded_ids, int(effective_max_map_points))
+    coordinate_exclusion_panel(occ_raw, occ_qc_map_display, bool(show_occurrence_images))
+    active_excluded_ids = set(map(int, st.session_state.excluded_row_ids))
+    occ_after_exclusion = occ_raw[~occ_raw["_row_id"].astype(int).isin(active_excluded_ids)].copy().reset_index(drop=True)
+    leaked_checked_ids = sorted(set(occ_after_exclusion["_row_id"].astype(int)).intersection(active_excluded_ids))
+    if leaked_checked_ids:
+        st.error(f"Excluded rows leaked into the included occurrence set: {leaked_checked_ids[:20]}. SDM was stopped.")
+        return
+    if occ_after_exclusion.empty:
+        st.error("All occurrence records were excluded. Clear excluded coordinates.")
+        return
 
     target_map_display = limit_occurrence_display(occ_after_exclusion, set(), int(effective_max_map_points))
     occ_extent_selected, target_counts = target_occurrence_set_panel(
@@ -3117,6 +3125,10 @@ def main() -> None:
     tc1.metric("Records used for candidates", f"{len(occ_candidate_input):,}")
     tc2.metric("Records used for SDM / extent", f"{len(occ_sdm_train):,}")
 
+    leaked_occ_ids = sorted(set(occ_sdm_train["_row_id"].astype(int)).intersection(active_excluded_ids))
+    if leaked_occ_ids:
+        st.error(f"Excluded rows leaked into the thinned SDM occurrence set: {leaked_occ_ids[:20]}. SDM was stopped.")
+        return
     occ_candidate_input["cluster_id"] = haversine_dbscan(occ_candidate_input, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occ_sdm_train["cluster_id"] = haversine_dbscan(occ_sdm_train, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occ_map_display = limit_occurrence_display(occ_extent_selected, set(), int(effective_max_map_points))
@@ -3185,11 +3197,14 @@ def main() -> None:
         buffer_km = _ec1.number_input("Buffer radius for buffer / convex hull (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="sdm_buffer_km")
         rectangle_margin_km = _ec2.number_input("Margin around bounding box (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="sdm_rectangle_margin_km")
         exclusion_buffer_km = _ec3.number_input("Hard exclusion radius (km)", min_value=0.1, max_value=100.0, value=10.0, step=1.0, key="sdm_exclusion_cutout_km", help="Excluded records are removed from training and their surrounding area is physically cut out of the prediction extent.")
-        excluded_occ = pd.DataFrame()  # no coordinate QC exclusions
-        extent_geom = prediction_area_geometry(occ_sdm_train, area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km))
+        # Extent preview (no hard-exclusion cutouts since QC is handled below)
+        extent_geom = prediction_area_geometry(occ_sdm_train, area_mode, float(buffer_km), float(rectangle_margin_km), None, 0.0)
         if extent_geom is not None and not extent_geom.is_empty:
             minx, miny, maxx, maxy = extent_geom.bounds
-            st.caption(f"SDM input: {len(occ_sdm_train):,} records from the active target set. Extent: lon {minx:.4f}–{maxx:.4f}, lat {miny:.4f}–{maxy:.4f}.")
+            st.caption(
+                f"SDM prediction extent: lon {minx:.4f}–{maxx:.4f}, lat {miny:.4f}–{maxy:.4f}. "
+                "The extent can be wider than the Step 2 survey area — SDM predicts at macro scale."
+            )
             st_folium(
                 make_sdm_extent_preview_map(occ_sdm_train, extent_geom, area_mode),
                 width=None,
@@ -3197,6 +3212,47 @@ def main() -> None:
                 returned_objects=[],
                 key=f"sdm_extent_preview_map_{area_mode}",
             )
+        st.divider()
+        # ── Optional: exclude suspicious records from SDM training ────────────
+        st.markdown("**Optional: exclude suspicious records from SDM training**")
+        st.caption(
+            "Click occurrence points on the map below to exclude them from SDM training only. "
+            "Useful for clearly wrong coordinates (e.g. sea points, obvious mislocations). "
+            "These exclusions do NOT affect occurrence-based survey candidates. "
+            "Occurrence candidates and survey ranges use the full target set selected in Step 2."
+        )
+        _sdm_qc_excl = st.session_state.sdm_excluded_row_ids
+        _sdm_qc_n = len(_sdm_qc_excl)
+        if _sdm_qc_n > 0:
+            st.caption(f"Currently excluded from SDM: {_sdm_qc_n} record(s) — shown as red points.")
+        _sdm_qc_display = limit_occurrence_display(occ_sdm_train, _sdm_qc_excl, min(len(occ_sdm_train), 500))
+        _sdm_qc_data = st_folium(
+            make_exclusion_review_map(_sdm_qc_display, _sdm_qc_excl, add_draw=False, show_images=False),
+            width=None, height=380,
+            returned_objects=["last_object_clicked", "last_object_clicked_tooltip"],
+            key="sdm_qc_map",
+        )
+        _sdm_clicked = (_sdm_qc_data or {}).get("last_object_clicked")
+        _sdm_clicked_tooltip = (_sdm_qc_data or {}).get("last_object_clicked_tooltip")
+        if _sdm_clicked:
+            _sdm_sig = f"{_sdm_clicked.get('lat'):.6f},{_sdm_clicked.get('lng'):.6f},{_sdm_clicked_tooltip}"
+            if _sdm_sig != st.session_state.sdm_qc_click_sig:
+                st.session_state.sdm_qc_click_sig = _sdm_sig
+                _sdm_rid = nearest_row_id_from_click(_sdm_qc_display, _sdm_clicked, _sdm_clicked_tooltip)
+                if _sdm_rid is not None:
+                    if _sdm_rid in _sdm_qc_excl:
+                        st.session_state.sdm_excluded_row_ids = _sdm_qc_excl - {_sdm_rid}
+                        st.success(f"Restored SDM record {_sdm_rid}.")
+                    else:
+                        st.session_state.sdm_excluded_row_ids = _sdm_qc_excl | {_sdm_rid}
+                        st.success(f"Excluded SDM record {_sdm_rid}.")
+                    reset_model_outputs()
+                    st.rerun()
+        if _sdm_qc_n > 0 and st.button("Clear all SDM exclusions", key="sdm_qc_clear"):
+            st.session_state.sdm_excluded_row_ids = set()
+            st.session_state.sdm_qc_click_sig = ""
+            reset_model_outputs()
+            st.rerun()
         st.divider()
         # ── SDM bias-reduction preprocessing ─────────────────────────────────
         st.markdown("**SDM bias-reduction preprocessing**")
@@ -3282,9 +3338,11 @@ def main() -> None:
         run_sdm = st.button("Build SDM and predict map", type="primary")
 
     # ── SDM preprocessing pipeline (applied to Step 2 active target set) ──────
-    # Occurrence candidates above use occ_candidate_input; optional SDM uses occ_for_sdm below.
-    # SDM uses its own independent preprocessing pipeline for bias reduction.
-    occ_for_sdm = occ_extent_selected.copy()
+    # Occurrence candidates use occ_candidate_input (unmodified).
+    # SDM uses its own pipeline: SDM-specific suspicious-record exclusions first,
+    # then dedup + thinning.
+    _sdm_excl = set(map(int, st.session_state.sdm_excluded_row_ids))
+    occ_for_sdm = occ_extent_selected[~occ_extent_selected["_row_id"].astype(int).isin(_sdm_excl)].copy().reset_index(drop=True)
     sdm_n_after_qc = len(occ_for_sdm)
 
     if sdm_exact_dedup:
@@ -3303,6 +3361,11 @@ def main() -> None:
         occ_for_sdm = spatially_balanced_cap(occ_for_sdm, effective_sdm_max_presence)
     sdm_n_final = len(occ_for_sdm)
 
+    leaked_for_sdm = sorted(set(occ_for_sdm["_row_id"].astype(int)).intersection(active_excluded_ids)) if not occ_for_sdm.empty else []
+    if leaked_for_sdm:
+        st.error(f"Excluded rows leaked into SDM preprocessing output: {leaked_for_sdm[:20]}. SDM aborted.")
+        occ_for_sdm = pd.DataFrame()
+        sdm_n_final = 0
 
     # Preprocessing metrics display
     st.caption("**SDM preprocessing summary** — bias-reduced presence points for SDM training:")
@@ -3330,11 +3393,13 @@ def main() -> None:
             st.error("SDM preprocessing removed all records. Reduce thinning settings.")
         elif extent_geom is None or extent_geom.is_empty:
             st.error("The SDM prediction extent is empty after red-point cutouts. SDM was stopped.")
+        elif set(occ_for_sdm["_row_id"].astype(int)).intersection(active_excluded_ids):
+            st.error("Excluded row IDs are still present in the SDM input. SDM was stopped to prevent using excluded occurrences.")
         else:
             try:
                 progress = st.progress(0.0)
                 status.write("Generating presence/background data...")
-                pb = build_presence_background(occ_for_sdm, int(n_background), area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km), status)
+                pb = build_presence_background(occ_for_sdm, int(n_background), area_mode, float(buffer_km), float(rectangle_margin_km), None, 0.0, status)
                 progress.progress(0.15)
                 status.write("Extracting environmental variables for training data...")
                 train = extract_environment(pb, variables, "latitude", "longitude", resolution, status)
@@ -3343,6 +3408,9 @@ def main() -> None:
                     raise RuntimeError("SDM training data had too few valid rows after raster NoData cleaning.")
                 if "occurrence_row_id" in train.columns:
                     train_presence_ids = set(pd.to_numeric(train.loc[train["presence"].eq(1), "occurrence_row_id"], errors="coerce").dropna().astype(int))
+                    leaked_train_ids = sorted(train_presence_ids.intersection(active_excluded_ids))
+                    if leaked_train_ids:
+                        raise RuntimeError(f"Excluded rows reached the SDM training table: {leaked_train_ids[:20]}")
                 progress.progress(0.35)
                 status.write(f"Running variable selection: {variable_strategy}...")
                 kept_vars, vif_tbl = select_environment_variables(
@@ -3362,7 +3430,7 @@ def main() -> None:
                 sdm_result = fit_sdm(train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg))
                 progress.progress(0.70)
                 status.write("Predicting raster-style suitability map...")
-                overlay, pred_table = build_predict_map(occ_for_sdm, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), excluded_occ, float(exclusion_buffer_km), status)
+                overlay, pred_table = build_predict_map(occ_for_sdm, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), None, 0.0, status)
                 st.session_state.sdm_result = sdm_result
                 st.session_state.sdm_train_table = sdm_result.get("training_table", train)
                 st.session_state.prediction_overlay = overlay
