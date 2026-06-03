@@ -4,6 +4,23 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex (OpenAI) - Issue #10 large GBIF dataset auto-capping
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Automatically enables effective large dataset handling when more than 1,000 valid occurrence records are loaded, even if the sidebar checkbox was left off.
+- Keeps `occ_raw` as the full coordinate-cleaned record set, while using capped/thinned `occ_map_display`, `occ_candidate_input`, and `occ_sdm_train` datasets for interactive maps, candidate clustering, and SDM.
+- Caps interactive occurrence maps to at most 1,000 points in large dataset mode and disables occurrence image popups by default for large datasets.
+- Uses spatially balanced capping so candidate generation is limited to about 1,000 records and SDM training is limited to about 500 records in large dataset mode.
+- Shows a large dataset summary and performance metrics so users can see which record set is used for raw data, map display, candidate generation, and SDM.
+- Updated optional SDM presence caps so raw GBIF records are not accidentally forced into SDM when large datasets would freeze the app.
+
+Features preserved:
+- Coordinate exclusion, occurrence candidate ranges, SDM/VIF/spatial partition diagnostics, predict maps, SSDM workflows, route planning, and HTML downloads remain available.
+
 ## 2026-06-03 - Codex (OpenAI) - Issue #10 VIF NoData cleaning and SSDM UI consistency
 
 Changed files:

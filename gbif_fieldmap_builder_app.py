@@ -835,6 +835,61 @@ def limit_occurrence_display(occ_raw: pd.DataFrame, excluded_ids: set[int], max_
     return out.drop(columns=drop_cols).reset_index(drop=True)
 
 
+def spatially_balanced_cap(df: pd.DataFrame, max_points: int) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+    cap = max(1, int(max_points))
+    if len(df) <= cap:
+        return df.copy().reset_index(drop=True)
+    work = occurrence_sort_for_representative(df)
+    target_cells = max(4, int(math.sqrt(cap)))
+    lat_span = max(1e-9, float(work["_latitude"].max() - work["_latitude"].min()))
+    lon_span = max(1e-9, float(work["_longitude"].max() - work["_longitude"].min()))
+    work["_bal_lat"] = np.floor((work["_latitude"] - work["_latitude"].min()) / lat_span * target_cells).astype(int)
+    work["_bal_lon"] = np.floor((work["_longitude"] - work["_longitude"].min()) / lon_span * target_cells).astype(int)
+    balanced = work.drop_duplicates(subset=["_bal_lat", "_bal_lon"], keep="first").copy()
+    if len(balanced) > cap:
+        positions = np.linspace(0, len(balanced) - 1, cap).round().astype(int)
+        balanced = balanced.iloc[np.unique(positions)].copy()
+    elif len(balanced) < cap:
+        remaining = work[~work["_row_id"].astype(int).isin(set(balanced["_row_id"].astype(int)))]
+        need = cap - len(balanced)
+        if len(remaining) > need:
+            positions = np.linspace(0, len(remaining) - 1, need).round().astype(int)
+            remaining = remaining.iloc[np.unique(positions)]
+        balanced = pd.concat([balanced, remaining], ignore_index=True, sort=False)
+    drop_cols = [c for c in ["_bal_lat", "_bal_lon", "_year_sort", "_has_photo_sort"] if c in balanced.columns]
+    return balanced.drop(columns=drop_cols).reset_index(drop=True)
+
+
+def prepare_large_dataset_inputs(
+    occ_after_exclusion: pd.DataFrame,
+    use_exact_dedup: bool,
+    manual_grid_deg: float,
+    manual_distance_m: float,
+    large_mode: bool,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
+    candidate_target = 1000 if large_mode else 3000
+    sdm_target = 500 if large_mode else 3000
+    base = exact_coordinate_deduplicate(occ_after_exclusion) if use_exact_dedup else occ_after_exclusion.copy().reset_index(drop=True)
+    candidate = grid_thin(base, max(float(manual_grid_deg), 0.05 if large_mode else 0.0))
+    if large_mode:
+        candidate = spatially_balanced_cap(candidate, candidate_target)
+    sdm_train = grid_thin(base, max(float(manual_grid_deg), 0.10 if large_mode else 0.0))
+    if float(manual_distance_m) > 0:
+        sdm_train = spatial_thin(sdm_train, float(manual_distance_m))
+    if large_mode:
+        sdm_train = spatially_balanced_cap(sdm_train, sdm_target)
+    summary = {
+        "candidate_target": int(candidate_target),
+        "sdm_target": int(sdm_target),
+        "after_exact_dedup": int(len(base)),
+        "candidate_input": int(len(candidate)),
+        "sdm_train": int(len(sdm_train)),
+    }
+    return candidate.reset_index(drop=True), sdm_train.reset_index(drop=True), summary
+
+
 def spatial_thin(df: pd.DataFrame, thinning_m: float) -> pd.DataFrame:
     if df.empty or thinning_m <= 0:
         return df.copy().reset_index(drop=True)
@@ -2539,8 +2594,8 @@ def main() -> None:
     st.sidebar.divider()
     st.sidebar.subheader("Sampling design")
     thinning_m = st.sidebar.number_input("Spatial thinning before clustering (m)", 0, 50_000, 1000, 500)
-    large_dataset_mode = st.sidebar.checkbox("Large dataset mode", value=False, help="Limit map drawing and thin analysis inputs so large GBIF downloads do not drive every map/SDM operation.")
-    max_map_points = st.sidebar.number_input("Max occurrence points shown on map", 100, 50_000, 1000 if large_dataset_mode else 3000, 100, help="Raw records are kept, but only this many occurrence points are drawn on Folium maps.")
+    large_dataset_mode = st.sidebar.checkbox("Large dataset mode", value=False, help="Also enabled automatically after loading when valid records exceed 1,000.")
+    max_map_points = st.sidebar.number_input("Max occurrence points shown on map", 100, 50_000, 1000 if large_dataset_mode else 3000, 100, help="Raw records are kept, but only this many occurrence points are drawn on Folium maps. Automatic large dataset mode caps this at 1,000.")
     exact_dedup = st.sidebar.checkbox("Exact coordinate deduplication", value=True, help="Keep one representative record for identical latitude/longitude coordinates before clustering and SDM.")
     grid_thinning_deg = st.sidebar.number_input("Grid thinning for analysis (degrees)", min_value=0.0, max_value=5.0, value=0.05 if large_dataset_mode else 0.0, step=0.01, format="%.2f", help="Optional one-record-per-grid-cell thinning before clustering and SDM. Set 0 to disable.")
     center_method = st.sidebar.selectbox("Candidate center method", ["Medoid", "Centroid"], index=0)
@@ -2568,41 +2623,61 @@ def main() -> None:
 
     st.subheader("2 — Prepare records")
     active_excluded_ids = set(map(int, st.session_state.excluded_row_ids))
-    show_occurrence_images_default = len(occ_raw) <= 500
+    auto_large_dataset_mode = len(occ_raw) > 1000
+    effective_large_dataset_mode = bool(large_dataset_mode or auto_large_dataset_mode)
+    effective_max_map_points = min(int(max_map_points), 1000) if effective_large_dataset_mode else int(max_map_points)
+    if auto_large_dataset_mode:
+        st.info("Large dataset mode was enabled automatically because more than 1,000 valid occurrence records were loaded. Raw records are preserved, but maps, candidates, and SDM use capped/thinned inputs.")
+    show_occurrence_images_default = len(occ_raw) <= 500 and not effective_large_dataset_mode
     show_occurrence_images = st.sidebar.checkbox("Occurrence image popups", value=show_occurrence_images_default, help="Off by default when records exceed 500 because remote images make maps slow.")
-    occ_qc_map_display = limit_occurrence_display(occ_raw, active_excluded_ids, int(max_map_points))
+    occ_qc_map_display = limit_occurrence_display(occ_raw, active_excluded_ids, int(effective_max_map_points))
     coordinate_exclusion_panel(occ_raw, occ_qc_map_display, bool(show_occurrence_images))
     active_excluded_ids = set(map(int, st.session_state.excluded_row_ids))
-    occ_analysis = occ_raw[~occ_raw["_row_id"].astype(int).isin(active_excluded_ids)].copy().reset_index(drop=True)
-    leaked_checked_ids = sorted(set(occ_analysis["_row_id"].astype(int)).intersection(active_excluded_ids))
+    occ_after_exclusion = occ_raw[~occ_raw["_row_id"].astype(int).isin(active_excluded_ids)].copy().reset_index(drop=True)
+    leaked_checked_ids = sorted(set(occ_after_exclusion["_row_id"].astype(int)).intersection(active_excluded_ids))
     if leaked_checked_ids:
         st.error(f"Excluded rows leaked into the included occurrence set: {leaked_checked_ids[:20]}. SDM was stopped.")
         return
-    if occ_analysis.empty:
+    if occ_after_exclusion.empty:
         st.error("All occurrence records were excluded. Clear excluded coordinates.")
         return
 
-    occ_after_exclusion = occ_analysis.copy()
-    occ_before_dedup_n = len(occ_analysis)
-    occ_analysis = exact_coordinate_deduplicate(occ_analysis) if exact_dedup else occ_analysis
-    exact_dedup_removed = occ_before_dedup_n - len(occ_analysis)
-    occ_before_grid_n = len(occ_analysis)
-    occ_analysis = grid_thin(occ_analysis, float(grid_thinning_deg))
-    grid_thinning_removed = occ_before_grid_n - len(occ_analysis)
-    if occ_analysis.empty:
-        st.error("All included occurrence records were removed by deduplication/grid thinning. Reduce thinning settings.")
+    occ_before_dedup_n = len(occ_after_exclusion)
+    occ_candidate_input, occ_sdm_train, large_summary = prepare_large_dataset_inputs(
+        occ_after_exclusion,
+        bool(exact_dedup),
+        float(grid_thinning_deg),
+        float(thinning_m),
+        effective_large_dataset_mode,
+    )
+    exact_dedup_removed = occ_before_dedup_n - large_summary["after_exact_dedup"]
+    grid_thinning_removed = large_summary["after_exact_dedup"] - large_summary["candidate_input"]
+    if occ_candidate_input.empty:
+        st.error("All included occurrence records were removed from candidate input. Reduce thinning settings.")
+        return
+    if occ_sdm_train.empty:
+        st.error("All included occurrence records were removed from SDM input. Reduce thinning settings.")
         return
 
-    occ_sdm_train = spatial_thin(occ_analysis, float(thinning_m))
     leaked_occ_ids = sorted(set(occ_sdm_train["_row_id"].astype(int)).intersection(active_excluded_ids))
     if leaked_occ_ids:
         st.error(f"Excluded rows leaked into the thinned SDM occurrence set: {leaked_occ_ids[:20]}. SDM was stopped.")
         return
+    occ_candidate_input["cluster_id"] = haversine_dbscan(occ_candidate_input, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occ_sdm_train["cluster_id"] = haversine_dbscan(occ_sdm_train, "_latitude", "_longitude", float(cluster_m), int(min_samples))
-    occ_map_display = limit_occurrence_display(occ_after_exclusion, active_excluded_ids, int(max_map_points))
-    occurrence_candidates = make_candidate_sites(occ_sdm_train, center_method, float(occurrence_weight))
+    occ_map_display = limit_occurrence_display(occ_after_exclusion, active_excluded_ids, int(effective_max_map_points))
+    occurrence_candidates = make_candidate_sites(occ_candidate_input, center_method, float(occurrence_weight))
     occurrence_candidates = add_priority_rank(occurrence_candidates)
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
+    if effective_large_dataset_mode:
+        st.caption(
+            "Large dataset summary: "
+            f"occ_raw={len(occ_raw):,}; "
+            f"occ_map_display={len(occ_map_display):,} (cap={effective_max_map_points:,}); "
+            f"occ_candidate_input={len(occ_candidate_input):,} (target about {large_summary['candidate_target']:,}); "
+            f"occ_sdm_train={len(occ_sdm_train):,} (target about {large_summary['sdm_target']:,}). "
+            "Raw GBIF records are preserved for export/QC, but are not sent directly to maps, candidate clustering, or SDM."
+        )
 
     # ── Occurrence-based survey candidates (available without SDM) ────────────
     st.subheader("3 — Occurrence-based survey site suggestions")
@@ -2665,7 +2740,7 @@ def main() -> None:
         sdm_exact_dedup = sp1.checkbox("Exact coordinate deduplication", value=True, key="sdm_prep_exact_dedup", help="Keep one representative record per unique lat/lon coordinate.")
         sdm_grid_deg = sp1.number_input("Grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="sdm_prep_grid_deg", help="Keep one record per grid cell of this size. Reduces spatial autocorrelation.")
         sdm_distance_m = sp2.number_input("Distance thinning — spThin-like (m, 0 = off)", min_value=0, max_value=100_000, value=1000, step=500, key="sdm_prep_distance_m", help="Minimum nearest-neighbour distance between retained presence points. Equivalent to spThin minimum distance.")
-        sdm_max_presence = sp2.number_input("Maximum SDM presence points (0 = no cap)", min_value=0, max_value=50_000, value=0, step=100, key="sdm_prep_max_presence", help="Hard cap on presence points passed to SDM. Useful for very large datasets. 0 disables the cap.")
+        sdm_max_presence = sp2.number_input("Maximum SDM presence points (0 = no cap)", min_value=0, max_value=50_000, value=500 if effective_large_dataset_mode else 0, step=100, key="sdm_prep_max_presence", help="Hard cap on presence points passed to SDM. In large dataset mode, 0 is treated as 500 to prevent freezes.")
         st.divider()
         # ── Environmental variables & model settings ──────────────────────────
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
@@ -2688,7 +2763,7 @@ def main() -> None:
         run_sdm = st.button("Build SDM and predict map", type="primary")
 
     # ── SDM preprocessing pipeline (applied to occ_after_exclusion) ───────────
-    # Occurrence candidates above use occ_sdm_train (sidebar settings).
+    # Occurrence candidates above use occ_candidate_input; optional SDM uses occ_for_sdm below.
     # SDM uses its own independent preprocessing pipeline for bias reduction.
     occ_for_sdm = occ_after_exclusion.copy()
     sdm_n_after_qc = len(occ_for_sdm)
@@ -2702,8 +2777,11 @@ def main() -> None:
         occ_for_sdm = spatial_thin(occ_for_sdm, float(sdm_distance_m))
     sdm_n_after_thinning = len(occ_for_sdm)
 
-    if int(sdm_max_presence) > 0 and len(occ_for_sdm) > int(sdm_max_presence):
-        occ_for_sdm = occurrence_sort_for_representative(occ_for_sdm).head(int(sdm_max_presence)).reset_index(drop=True)
+    effective_sdm_max_presence = int(sdm_max_presence)
+    if effective_large_dataset_mode and effective_sdm_max_presence <= 0:
+        effective_sdm_max_presence = 500
+    if effective_sdm_max_presence > 0 and len(occ_for_sdm) > effective_sdm_max_presence:
+        occ_for_sdm = spatially_balanced_cap(occ_for_sdm, effective_sdm_max_presence)
     sdm_n_final = len(occ_for_sdm)
 
     leaked_for_sdm = sorted(set(occ_for_sdm["_row_id"].astype(int)).intersection(active_excluded_ids)) if not occ_for_sdm.empty else []
@@ -2836,12 +2914,12 @@ def main() -> None:
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Raw valid records", f"{len(occ_raw):,}")
     c2.metric("After exclusion", f"{len(occ_after_exclusion):,}")
-    c3.metric("Analysis records", f"{len(occ_analysis):,}")
+    c3.metric("Candidate input", f"{len(occ_candidate_input):,}")
     c4.metric("SDM train records", f"{len(occ_sdm_train):,}")
     c5.metric("Survey ranges", f"{len(all_candidates):,}")
     c6.metric("Route stops", f"{len(route_plan):,}" if route_plan is not None else "0")
     p1, p2, p3, p4 = st.columns(4)
-    p1.metric("Occurrence clusters", f"{int((occ_sdm_train['cluster_id'] >= 0).sum()):,}")
+    p1.metric("Candidate clustered points", f"{int((occ_candidate_input['cluster_id'] >= 0).sum()):,}")
     p2.metric("Map occurrence points", f"{len(occ_map_display):,}")
     p3.metric("Exact dedupe removed", f"{exact_dedup_removed:,}")
     p4.metric("Grid thinning removed", f"{grid_thinning_removed:,}")
