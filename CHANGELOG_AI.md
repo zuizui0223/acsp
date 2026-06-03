@@ -4,6 +4,40 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Claude (claude-sonnet-4-6) — Simplify environmental variable selection with presets; add Balanced ecology preset
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+**New constants**
+- `BALANCED_ECOLOGY_PRESET = ["bio1", "bio4", "bio12", "bio15", "bio14", "elevation"]` — 6 interpretable variables: temperature level (bio1), temperature seasonality (bio4), annual precipitation (bio12), precipitation seasonality (bio15), driest month precipitation / dryness (bio14), and elevation (topography).
+- `ENV_VARIABLE_PRESETS = ["Balanced ecology preset", "Climate only preset", "Topography only preset", "Custom variables"]` — list of preset options.
+
+**SDM variable selection UI (species mode, inside "Optional: Build SDM" expander)**
+- Replaced raw topography/climate multiselects + variable-strategy selectbox with a clean **"Environmental variable preset"** selectbox as the main UI.
+- Default preset is **"Balanced ecology preset"** — users get a sensible 6-variable set without needing to know bio variable numbers.
+- "Climate only preset" selects all 19 WorldClim BIO variables with a caption recommending variable selection for large sets.
+- "Topography only preset" selects elevation, slope, roughness.
+- "Custom variables" shows the manual multiselects (topography + climate).
+- Advanced variable selection (strategy, VIF/correlation threshold, custom final selection) moved into a **collapsed "Advanced variable selection" expander** — not required and not shown by default.
+
+**SSDM variable selection UI (genus mode, inside SSDM expander)**
+- Same preset-based redesign applied symmetrically to SSDM.
+- Default is "Balanced ecology preset".
+- Advanced variable selection (shared VIF strategy, thresholds) collapsed inside "Advanced variable selection" expander.
+- All existing variable-selection strategies (No VIF, Correlation filter, VIF stepwise, Advanced custom) preserved in the advanced expander.
+
+Features preserved:
+- All variable-selection strategies (No VIF, Correlation filter, VIF stepwise, Ecological preset, Advanced custom) preserved.
+- VIF stepwise is not the default (No VIF is default inside the expander); preset selection is the primary interface.
+- Single-species SDM, SSDM, occurrence candidates, and route planner unchanged.
+
+Known risks / TODO:
+- Sessions that previously had custom variable selections will default to Balanced ecology preset on next load; users should re-select Custom if needed.
+
 ## 2026-06-03 - Codex (OpenAI) - Issue #10 optional model-support scoring and variable-selection strategies
 
 Changed files:
