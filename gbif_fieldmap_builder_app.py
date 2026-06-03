@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+import certifi
 import folium
 import numpy as np
 import pandas as pd
@@ -224,6 +225,12 @@ def read_uploaded_csv(uploaded: Any) -> pd.DataFrame:
         return pd.read_csv(uploaded, encoding="latin1")
 
 
+def _requests_get(url: str, **kwargs) -> requests.Response:
+    """requests.get with certifi CA bundle for Streamlit Cloud SSL compatibility."""
+    kwargs.setdefault("verify", certifi.where())
+    return requests.get(url, **kwargs)
+
+
 def extract_media_url_from_gbif_record(rec: dict[str, Any]) -> str:
     media = rec.get("media") or []
     if isinstance(media, list):
@@ -237,7 +244,7 @@ def extract_media_url_from_gbif_record(rec: dict[str, Any]) -> str:
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[str, pd.DataFrame]:
-    match = requests.get(GBIF_SPECIES_MATCH_URL, params={"name": scientific_name.strip()}, timeout=30)
+    match = _requests_get(GBIF_SPECIES_MATCH_URL, params={"name": scientific_name.strip()}, timeout=30)
     match.raise_for_status()
     payload = match.json()
     usage_key = payload.get("usageKey")
@@ -254,7 +261,7 @@ def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, countr
     elif year_to is not None:
         params_base["year"] = f",{int(year_to)}"
 
-    first = requests.get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "limit": 0, "offset": 0}, timeout=60)
+    first = _requests_get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "limit": 0, "offset": 0}, timeout=60)
     first.raise_for_status()
     total_count = int(first.json().get("count", 0))
     target = min(int(max_records), total_count if total_count > 0 else int(max_records))
@@ -262,7 +269,7 @@ def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, countr
     offset = 0
     while len(records) < target:
         limit = min(300, target - len(records))
-        response = requests.get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "offset": offset, "limit": limit}, timeout=60)
+        response = _requests_get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "offset": offset, "limit": limit}, timeout=60)
         response.raise_for_status()
         page = response.json()
         batch = page.get("results", [])
@@ -308,14 +315,14 @@ def _resolve_gbif_genus_key(genus_name: str) -> tuple[Optional[int], dict[str, A
     genus = genus_name.strip()
     if not genus:
         return None, {}
-    response = requests.get(GBIF_SPECIES_MATCH_URL, params={"name": genus, "rank": "GENUS"}, timeout=20)
+    response = _requests_get(GBIF_SPECIES_MATCH_URL, params={"name": genus, "rank": "GENUS"}, timeout=20)
     response.raise_for_status()
     payload = response.json()
     canonical = str(payload.get("canonicalName") or payload.get("genus") or "").strip()
     if payload.get("rank") == "GENUS" and payload.get("usageKey") and canonical.lower() == genus.lower():
         return int(payload["usageKey"]), payload
 
-    search = requests.get(GBIF_SPECIES_SEARCH_URL, params={"q": genus, "rank": "GENUS", "limit": 10}, timeout=20)
+    search = _requests_get(GBIF_SPECIES_SEARCH_URL, params={"q": genus, "rank": "GENUS", "limit": 10}, timeout=20)
     search.raise_for_status()
     for candidate in search.json().get("results", []):
         canonical = str(candidate.get("canonicalName") or candidate.get("scientificName") or "").strip()
@@ -350,7 +357,7 @@ def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, count
     elif year_to is not None:
         params_base["year"] = f",{int(year_to)}"
 
-    first = requests.get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "limit": 0, "offset": 0}, timeout=45)
+    first = _requests_get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "limit": 0, "offset": 0}, timeout=45)
     first.raise_for_status()
     total_count = int(first.json().get("count", 0))
     target = min(int(max_records), total_count if total_count > 0 else int(max_records))
@@ -358,7 +365,7 @@ def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, count
     offset = 0
     while len(records) < target:
         limit = min(300, target - len(records))
-        response = requests.get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "offset": offset, "limit": limit}, timeout=45)
+        response = _requests_get(GBIF_OCCURRENCE_SEARCH_URL, params={**params_base, "offset": offset, "limit": limit}, timeout=45)
         response.raise_for_status()
         page = response.json()
         batch = page.get("results", [])
@@ -575,7 +582,7 @@ def make_richness_map(grid: pd.DataFrame, hotspots: pd.DataFrame, metric: str) -
 
 @st.cache_resource(show_spinner=False)
 def load_land_geometry():
-    response = requests.get(LAND_GEOJSON_URL, timeout=120)
+    response = _requests_get(LAND_GEOJSON_URL, timeout=120)
     response.raise_for_status()
     geojson = response.json()
     return unary_union([shape(feature["geometry"]) for feature in geojson.get("features", [])])
