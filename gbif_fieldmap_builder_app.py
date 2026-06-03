@@ -373,6 +373,20 @@ def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, count
         if page.get("endOfRecords"):
             break
 
+    genus_columns = [
+        "decimalLatitude",
+        "decimalLongitude",
+        "eventDate",
+        "year",
+        "species",
+        "scientificName",
+        "genus",
+        "basisOfRecord",
+        "countryCode",
+        "locality",
+        "gbifID",
+        "media_url",
+    ]
     rows = []
     for rec in records:
         rows.append({
@@ -391,7 +405,7 @@ def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, count
         })
     matched_name = payload.get("scientificName") or payload.get("canonicalName") or genus_name
     msg = f"GBIF genus match: {matched_name} / taxonKey={usage_key} / rank={payload.get('rank', 'GENUS')}. GBIF total={total_count:,}; fetched={len(rows):,}; cap={int(max_records):,}."
-    return msg, pd.DataFrame(rows)
+    return msg, pd.DataFrame(rows, columns=genus_columns)
 
 
 def genus_species_summary(occ: pd.DataFrame, min_records_for_sdm: int, grid_deg: float) -> pd.DataFrame:
@@ -1455,6 +1469,9 @@ def genus_diversity_panel() -> None:
         st.info(st.session_state.genus_source_message)
         return
     st.success(st.session_state.genus_source_message)
+    if st.session_state.genus_raw_df.empty:
+        st.warning("GBIF returned 0 coordinate records for this genus and filter. Try clearing the country/year filter or increasing the record cap.")
+        return
     try:
         detected = detect_occurrence_columns(st.session_state.genus_raw_df)
         occ = clean_occurrences(st.session_state.genus_raw_df, detected)

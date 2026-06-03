@@ -4,6 +4,22 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex (OpenAI) - Fix genus zero-record coordinate detection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Preserved the expected GBIF genus occurrence columns even when a genus download returns zero records.
+- Added a genus-mode warning for zero coordinate records before latitude/longitude auto-detection runs.
+
+Features preserved:
+- Single species planning, CSV upload, coordinate exclusion, SDM, VIF, spatial partition diagnostics, predict map, route planner, and genus richness outputs remain unchanged.
+
+Known risks / TODO:
+- If GBIF returns zero records because of a strict country/year filter, the user still needs to loosen the filter or choose another genus.
+
 ## 2026-06-03 - Codex (OpenAI) - Issue #2 first step: genus occurrence richness mode
 
 Changed files:
