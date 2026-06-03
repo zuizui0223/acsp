@@ -4,6 +4,28 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex (OpenAI) - Issue #10 VIF NoData cleaning and SSDM UI consistency
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Based the change on the latest GitHub main state (`bd96628`, Issue #4c merged).
+- Added shared raster/environment cleaning helpers for SDM and SSDM workflows.
+- Converted raster `src.nodata`, non-finite values, and extreme fill/sentinel values below `-1e20` or above `1e20` to NaN.
+- Applied environment-table cleaning before single-species SDM VIF/model fitting and before SSDM shared VIF/model fitting.
+- Dropped rows with invalid environmental values and reported drop counts in SDM VIF tables and SSDM VIF diagnostics / model summaries.
+- Added guards so VIF stops with a clear error if extreme raster sentinel values remain after cleaning.
+- Updated SSDM bias-reduction UI to default to `Auto (Recommended)` and moved detailed thinning controls under `Advanced / Custom`.
+- Made SSDM bias-reduction wording parallel with the species SDM bias-reduction preprocessing panel.
+
+Features preserved:
+- Single species SDM, SSDM, shared SSDM VIF, occurrence richness, large dataset controls, spatial partition diagnostics, predict maps, route planner, and downloads remain available.
+
+Known risks / TODO:
+- Rows outside valid raster coverage are now dropped before VIF/SDM. Very sparse datasets may need broader extents, lower-resolution rasters, or fewer selected variables.
+
 ## 2026-06-03 - Claude (claude-sonnet-4-6) — Issue #4 follow-up: SDM bias-reduction preprocessing + SSDM per-species thinning
 
 Changed files:

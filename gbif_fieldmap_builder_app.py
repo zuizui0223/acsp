@@ -50,6 +50,7 @@ from streamlit_folium import st_folium
 APP_TITLE = "GBIF FieldMap Builder"
 APP_BUILD_ID = "hard-exclusion-v2-20260529"
 EARTH_RADIUS_M = 6_371_008.8
+ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
 GBIF_SPECIES_SEARCH_URL = "https://api.gbif.org/v1/species/search"
 GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
@@ -1127,6 +1128,37 @@ def get_worldclim_raster_path(var: str, resolution: str) -> str:
     return str(matches[0])
 
 
+def clean_environment_array(values: Any, nodata: Optional[float] = None) -> np.ndarray:
+    arr = np.asarray(values, dtype=float).copy()
+    if nodata is not None and np.isfinite(float(nodata)):
+        arr[np.isclose(arr, float(nodata), rtol=0.0, atol=0.0)] = np.nan
+    arr[~np.isfinite(arr)] = np.nan
+    arr[(arr < -ENV_SENTINEL_ABS) | (arr > ENV_SENTINEL_ABS)] = np.nan
+    return arr
+
+
+def extreme_environment_sentinel_present(df: pd.DataFrame, variables: list[str]) -> bool:
+    if not variables or df.empty:
+        return False
+    vals = df[variables].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+    finite = vals[np.isfinite(vals)]
+    return bool(finite.size and ((finite < -ENV_SENTINEL_ABS).any() or (finite > ENV_SENTINEL_ABS).any()))
+
+
+def clean_environment_table(df: pd.DataFrame, variables: list[str], label: str, status=None) -> tuple[pd.DataFrame, int]:
+    out = df.copy()
+    for var in variables:
+        out[var] = clean_environment_array(pd.to_numeric(out[var], errors="coerce").to_numpy(dtype=float))
+    if extreme_environment_sentinel_present(out, variables):
+        raise RuntimeError(f"{label}: extreme raster NoData/fill values remain after cleaning; VIF was stopped.")
+    before = len(out)
+    out = out.dropna(subset=variables).reset_index(drop=True)
+    dropped = before - len(out)
+    if dropped and status is not None:
+        status.write(f"{label}: dropped {dropped:,} rows with invalid raster/environment values before VIF/SDM.")
+    return out, dropped
+
+
 def sample_raster_values_fast(points: pd.DataFrame, raster_path: str, lat_col: str, lon_col: str, derived: Optional[str] = None) -> np.ndarray:
     if points.empty:
         return np.array([], dtype=float)
@@ -1138,9 +1170,7 @@ def sample_raster_values_fast(points: pd.DataFrame, raster_path: str, lat_col: s
         r0 = max(0, int(rows.min()) - pad); r1 = min(src.height - 1, int(rows.max()) + pad)
         c0 = max(0, int(cols.min()) - pad); c1 = min(src.width - 1, int(cols.max()) + pad)
         window = Window(c0, r0, c1 - c0 + 1, r1 - r0 + 1)
-        arr = src.read(1, window=window, boundless=True, fill_value=np.nan).astype(float)
-        if src.nodata is not None:
-            arr[arr == src.nodata] = np.nan
+        arr = clean_environment_array(src.read(1, window=window, boundless=True, fill_value=np.nan).astype(float), src.nodata)
         values = np.full(len(points), np.nan, dtype=float)
         for i, (rr, cc) in enumerate(zip(rows - r0, cols - c0)):
             if rr < 0 or cc < 0 or rr >= arr.shape[0] or cc >= arr.shape[1]:
@@ -1152,7 +1182,7 @@ def sample_raster_values_fast(points: pd.DataFrame, raster_path: str, lat_col: s
                 if np.all(np.isnan(sub)):
                     continue
                 values[i] = (np.nanmax(sub) - np.nanmin(sub)) if derived == "roughness" else np.nanmean(np.sqrt(np.gradient(sub)[0] ** 2 + np.gradient(sub)[1] ** 2))
-        return values
+        return clean_environment_array(values)
 
 
 def extract_environment(points: pd.DataFrame, variables: list[str], lat_col: str, lon_col: str, resolution: str, status=None) -> pd.DataFrame:
@@ -1172,6 +1202,8 @@ def extract_environment(points: pd.DataFrame, variables: list[str], lat_col: str
 def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
     if len(variables) == 0:
         return pd.DataFrame(columns=["variable", "vif", "vif_warning"])
+    if extreme_environment_sentinel_present(df, variables):
+        raise RuntimeError("Extreme raster NoData/fill values remain in environmental variables; VIF was stopped.")
     if len(variables) == 1:
         return pd.DataFrame({"variable": variables, "vif": [1.0], "vif_warning": [""], "status": ["kept"]})
     X = df[variables].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
@@ -1190,6 +1222,8 @@ def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
 
 
 def vif_step(df: pd.DataFrame, variables: list[str], threshold: float) -> tuple[list[str], pd.DataFrame]:
+    if extreme_environment_sentinel_present(df, variables):
+        raise RuntimeError("Extreme raster NoData/fill values remain in environmental variables; VIF was stopped.")
     kept = list(dict.fromkeys(variables))
     removed = []
     while len(kept) > 1:
@@ -1451,9 +1485,7 @@ def read_window_array(path: str, bounds: tuple[float, float, float, float], out_
         window = from_bounds(west, south, east, north, transform=src.transform).round_offsets().round_lengths()
         window = Window(max(0, window.col_off), max(0, window.row_off), min(src.width - max(0, window.col_off), window.width), min(src.height - max(0, window.row_off), window.height))
         actual_bounds = src.window_bounds(window)
-        arr = src.read(1, window=window, out_shape=out_shape, resampling=Resampling.bilinear, boundless=True, fill_value=np.nan).astype(float)
-        if src.nodata is not None:
-            arr[arr == src.nodata] = np.nan
+        arr = clean_environment_array(src.read(1, window=window, out_shape=out_shape, resampling=Resampling.bilinear, boundless=True, fill_value=np.nan).astype(float), src.nodata)
     return arr, actual_bounds
 
 
@@ -1476,7 +1508,7 @@ def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, 
             if elev_cache is None:
                 elev_cache, actual_bounds = read_window_array(get_worldclim_raster_path("elevation", resolution), (west, south, east, north), (out_h, out_w))
             gy, gx = np.gradient(elev_cache)
-            arrays[var] = np.sqrt(gx**2 + gy**2) if var == "slope" else np.nan_to_num(elev_cache - np.nanmean(elev_cache))
+            arrays[var] = clean_environment_array(np.sqrt(gx**2 + gy**2) if var == "slope" else elev_cache - np.nanmean(elev_cache))
         else:
             arrays[var], actual_bounds = read_window_array(get_worldclim_raster_path(var, resolution), (west, south, east, north), (out_h, out_w))
     west2, south2, east2, north2 = actual_bounds
@@ -1523,7 +1555,7 @@ def build_environment_prediction_grid(occ: pd.DataFrame, variables: list[str], r
             if elev_cache is None:
                 elev_cache, actual_bounds = read_window_array(get_worldclim_raster_path("elevation", resolution), (west, south, east, north), (out_h, out_w))
             gy, gx = np.gradient(elev_cache)
-            arrays[var] = np.sqrt(gx**2 + gy**2) if var == "slope" else np.nan_to_num(elev_cache - np.nanmean(elev_cache))
+            arrays[var] = clean_environment_array(np.sqrt(gx**2 + gy**2) if var == "slope" else elev_cache - np.nanmean(elev_cache))
         else:
             arrays[var], actual_bounds = read_window_array(get_worldclim_raster_path(var, resolution), (west, south, east, north), (out_h, out_w))
     west2, south2, east2, north2 = actual_bounds
@@ -1679,7 +1711,12 @@ def fit_stacked_species_sdms(
             all_pres = all_pres.sample(1000, random_state=42).reset_index(drop=True)
         all_pres_env = extract_environment(all_pres, variables, "latitude", "longitude", resolution, status=None)
         pooled = pd.concat([all_pres_env, bg_base[all_pres_env.columns]], ignore_index=True, sort=False)
+        pooled, pooled_dropped = clean_environment_table(pooled, variables, "SSDM shared VIF environment", status)
+        if pooled.empty or pooled["presence"].nunique() < 2:
+            raise RuntimeError("SSDM shared VIF data had too few valid rows after raster NoData cleaning.")
         kept_vars, vif_diag, vif_fallback_used = run_ssdm_shared_vif(pooled, variables, float(vif_threshold))
+        if not vif_diag.empty:
+            vif_diag["rows_dropped_before_vif"] = int(pooled_dropped)
         removed_vars = [v for v in variables if v not in kept_vars]
     else:
         kept_vars = list(variables)
@@ -1704,7 +1741,7 @@ def fit_stacked_species_sdms(
             positions = np.linspace(0, len(sp_occ) - 1, int(max_presence_points)).round().astype(int)
             sp_occ = sp_occ.iloc[np.unique(positions)].reset_index(drop=True)
         if len(sp_occ) < int(min_records):
-            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
             continue
         pres = sp_occ[["_row_id", "_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude", "_row_id": "occurrence_row_id"}).copy()
         pres["presence"] = 1
@@ -1715,6 +1752,9 @@ def fit_stacked_species_sdms(
         try:
             if not kept_vars:
                 raise RuntimeError("No environmental variables remained after shared VIF filtering.")
+            train, species_env_dropped = clean_environment_table(train, kept_vars, f"SSDM {species} environment", status)
+            if train.empty or train["presence"].nunique() < 2:
+                raise RuntimeError("Too few valid rows after raster NoData cleaning.")
             sdm_result = fit_sdm(
                 train, kept_vars, algorithms,
                 ssdm_partition_method, 5, 0.05,
@@ -1727,14 +1767,14 @@ def fit_stacked_species_sdms(
             metrics_df = sdm_result["metrics"]
             auc_vals = pd.to_numeric(metrics_df.get("auc", pd.Series(dtype=float)), errors="coerce")
             mean_auc = float(auc_vals.mean()) if auc_vals.notna().any() else np.nan
-            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
         except Exception as exc:
-            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
 
     if progress is not None:
         progress.progress(1.0)
     for species, n_records in skipped_low.items():
-        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "partition_method": ssdm_partition_method, "test_split": np.nan})
+        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "partition_method": ssdm_partition_method, "test_split": np.nan})
 
     out_grid = grid[["raster_row", "raster_col", "cell_index", "latitude", "longitude"]].copy()
     out_grid["ssdm_continuous_richness"] = np.round(richness_cont, 4)
@@ -1971,11 +2011,31 @@ def genus_diversity_panel() -> None:
         s10, s11 = st.columns(2)
         ssdm_background = s10.number_input("Shared background cells per species", min_value=50, max_value=20_000, value=500, step=50, key="ssdm_background")
         ssdm_hotspot_n = s11.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="ssdm_hotspot_n")
-        st.markdown("**Per-species bias-reduction preprocessing**")
-        st.caption("Applied per species before fitting each individual SDM. Exact coordinate deduplication is always applied.")
-        ps1, ps2 = st.columns(2)
-        ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg", help="One record per grid cell per species. Set 0 to disable.")
-        ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m", help="Minimum nearest-neighbour distance between retained presence points per species. Set 0 to disable.")
+        st.markdown("**Per-species SSDM bias-reduction preprocessing**")
+        st.caption(
+            "Applied per species before fitting each individual SDM. "
+            "Auto uses exact coordinate deduplication plus moderate grid thinning, parallel to species SDM bias-reduction preprocessing."
+        )
+        ssdm_bias_mode = st.radio(
+            "Per-species SSDM bias-reduction preprocessing",
+            ["Auto (Recommended)", "Advanced / Custom", "Off"],
+            index=0,
+            horizontal=True,
+            key="ssdm_bias_reduction_mode",
+        )
+        if ssdm_bias_mode.startswith("Auto"):
+            ssdm_per_species_grid_deg = 0.05
+            ssdm_per_species_distance_m = 0
+            st.caption("Auto: exact coordinate deduplication + one record per 0.05-degree grid cell per species; distance thinning off.")
+        elif ssdm_bias_mode.startswith("Off"):
+            ssdm_per_species_grid_deg = 0.0
+            ssdm_per_species_distance_m = 0
+            st.caption("Off: exact coordinate deduplication only.")
+        else:
+            with st.expander("Advanced / Custom per-species thinning settings", expanded=False):
+                ps1, ps2 = st.columns(2)
+                ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg", help="One record per grid cell per species. Set 0 to disable.")
+                ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m", help="Minimum nearest-neighbour distance between retained presence points per species. Set 0 to disable.")
         st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
         ssdm_topo_vars = st.multiselect("SSDM topography variables", TOPOGRAPHY_VARS, default=[], key="ssdm_topo_vars")
         st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
@@ -2688,6 +2748,9 @@ def main() -> None:
                 progress.progress(0.15)
                 status.write("Extracting environmental variables for training data...")
                 train = extract_environment(pb, variables, "latitude", "longitude", resolution, status)
+                train, env_dropped = clean_environment_table(train, variables, "SDM training environment", status)
+                if train.empty or train["presence"].nunique() < 2:
+                    raise RuntimeError("SDM training data had too few valid rows after raster NoData cleaning.")
                 if "occurrence_row_id" in train.columns:
                     train_presence_ids = set(pd.to_numeric(train.loc[train["presence"].eq(1), "occurrence_row_id"], errors="coerce").dropna().astype(int))
                     leaked_train_ids = sorted(train_presence_ids.intersection(active_excluded_ids))
@@ -2702,6 +2765,8 @@ def main() -> None:
                     vif_tbl = compute_vif_table(train, variables)
                     if "status" not in vif_tbl.columns:
                         vif_tbl["status"] = "kept"
+                if not vif_tbl.empty:
+                    vif_tbl["rows_dropped_before_vif"] = int(env_dropped)
                 if not kept_vars:
                     raise RuntimeError("No environmental variables remained after VIF filtering.")
                 progress.progress(0.50)
