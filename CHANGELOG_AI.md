@@ -4,6 +4,22 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Claude (Anthropic) — Issue #2 follow-up: SSDM eligibility label and map legends
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Renamed sidebar label "Minimum records flag for future SSDM" → "Minimum records for SSDM eligibility". Added help text: species below this threshold can still appear in the occurrence-based richness map but will be skipped in SSDM.
+- Added add_richness_legend() helper: yellow-green gradient legend for occurrence richness maps. Title is metric-aware ("Observed species richness", "Occurrence record count", "Species meeting min. records threshold"). Note clarifies this is based on GBIF records, not modeled suitability.
+- Added add_ssdm_richness_legend() helper: blue-red gradient legend for SSDM maps. Continuous variant shows "Predicted richness (suitability sum)" with note that values are not integer species counts. Binary variant shows "Predicted species richness" with note that values are the count of species above the suitability threshold.
+- make_richness_map() now calls add_richness_legend() after drawing the grid.
+- make_ssdm_map() now calls add_ssdm_richness_legend() using the actual min/max values from the grid, dispatching on value_col to choose the correct legend variant.
+
+Features preserved:
+- All genus/SSDM features, single-species SDM, VIF, spatial partition, predict map, route planner, downloads unchanged.
+
 ## 2026-06-03 - Codex (OpenAI) - Add VIF filtering to optional SSDM
 
 Changed files:

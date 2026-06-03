@@ -483,6 +483,49 @@ def richness_color(value: float, max_value: float) -> str:
     return colors[min(len(colors) - 1, int(ratio * (len(colors) - 1)))]
 
 
+def add_richness_legend(fmap: folium.Map, metric: str, max_value: float) -> None:
+    """Add a yellow-green gradient legend for occurrence richness maps."""
+    titles = {
+        "Species richness": "Observed species richness",
+        "Record count": "Occurrence record count",
+        "Species with minimum records": "Species meeting min. records threshold",
+    }
+    title = titles.get(metric, "Observed species richness")
+    note = "Based on GBIF occurrence records — not modeled suitability"
+    legend = f"""
+    <div style="position:fixed;bottom:28px;left:28px;z-index:9999;background:rgba(255,255,255,0.92);padding:10px 12px;border:1px solid #999;border-radius:4px;font-size:12px;color:#222;">
+      <div style="font-weight:700;margin-bottom:6px;">{title}</div>
+      <div style="width:180px;height:12px;background:linear-gradient(90deg,#ffffcc,#c2e699,#78c679,#31a354,#006837);"></div>
+      <div style="display:flex;justify-content:space-between;width:180px;"><span>1</span><span>{max_value:.0f}</span></div>
+      <div style="margin-top:5px;font-size:10px;color:#555;">{note}</div>
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(legend))
+
+
+def add_ssdm_richness_legend(fmap: folium.Map, value_col: str, min_val: float, max_val: float) -> None:
+    """Add a legend for SSDM continuous or binary richness maps."""
+    if value_col == "ssdm_binary_richness":
+        title = "Predicted species richness"
+        lo_label = "0"
+        hi_label = f"{int(round(max_val))}"
+        note = "Number of species with suitability above threshold"
+    else:
+        title = "Predicted richness (suitability sum)"
+        lo_label = f"{min_val:.2f}"
+        hi_label = f"{max_val:.2f}"
+        note = "Sum of per-species suitability — not an integer species count"
+    legend = f"""
+    <div style="position:fixed;bottom:28px;left:28px;z-index:9999;background:rgba(255,255,255,0.92);padding:10px 12px;border:1px solid #999;border-radius:4px;font-size:12px;color:#222;">
+      <div style="font-weight:700;margin-bottom:6px;">{title}</div>
+      <div style="width:180px;height:12px;background:linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c);"></div>
+      <div style="display:flex;justify-content:space-between;width:180px;"><span>{lo_label}</span><span>{hi_label}</span></div>
+      <div style="margin-top:5px;font-size:10px;color:#555;">{note}</div>
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(legend))
+
+
 def make_richness_map(grid: pd.DataFrame, hotspots: pd.DataFrame, metric: str) -> folium.Map:
     center = (float(grid["latitude"].mean()), float(grid["longitude"].mean())) if not grid.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
@@ -520,6 +563,7 @@ def make_richness_map(grid: pd.DataFrame, hotspots: pd.DataFrame, metric: str) -
                 tooltip=f"hotspot {int(row['hotspot_rank'])}",
             ).add_to(fg_hot)
         fg_hot.add_to(fmap)
+    add_richness_legend(fmap, metric, max_value)
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds([[grid["lat_min"].min(), grid["lon_min"].min()], [grid["lat_max"].max(), grid["lon_max"].max()]], padding=(30, 30))
@@ -1464,6 +1508,9 @@ def make_ssdm_map(grid: pd.DataFrame, hotspots: pd.DataFrame, value_col: str, ti
                 tooltip=f"SSDM hotspot {int(row['hotspot_rank'])}",
             ).add_to(fg)
         fg.add_to(fmap)
+    _min_v = float(grid[value_col].min()) if not grid.empty and value_col in grid.columns else 0.0
+    _max_v = float(grid[value_col].max()) if not grid.empty and value_col in grid.columns else 1.0
+    add_ssdm_richness_legend(fmap, value_col, _min_v, _max_v)
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds(bounds, padding=(30, 30))
@@ -1715,7 +1762,12 @@ def genus_diversity_panel() -> None:
     st.sidebar.subheader("Richness grid")
     grid_deg = st.sidebar.number_input("Grid cell size (degrees)", min_value=0.01, max_value=5.0, value=0.25, step=0.05, format="%.2f", key="genus_grid_deg")
     min_records_cell = st.sidebar.number_input("Minimum records per species per cell", min_value=1, max_value=100, value=1, step=1, key="genus_min_records_cell")
-    min_records_for_sdm = st.sidebar.number_input("Minimum records flag for future SSDM", min_value=1, max_value=500, value=10, step=1, key="genus_min_records_for_sdm")
+    min_records_for_sdm = st.sidebar.number_input(
+        "Minimum records for SSDM eligibility",
+        min_value=1, max_value=500, value=10, step=1,
+        key="genus_min_records_for_sdm",
+        help="Species with fewer records than this value will be flagged as too sparse for SSDM modeling. They can still appear in the occurrence-based richness map, but they will be skipped in SSDM.",
+    )
     richness_metric = st.sidebar.selectbox("Hotspot ranking metric", ["Species richness", "Species with minimum records", "Record count"], index=0, key="genus_richness_metric")
     max_hotspots = st.sidebar.number_input("Max hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="genus_max_hotspots")
 
