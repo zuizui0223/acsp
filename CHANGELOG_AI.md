@@ -4,6 +4,23 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Claude (claude-sonnet-4-6) — Issue #4: Unify species/genus workflows; make SDM/SSDM optional
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- **Mode switching fix**: Added `_last_analysis_mode` to session state. On every mode switch between "Single species survey planning" and "Genus diversity / SSDM", widget-collision-prone state (map-click signatures, selected site IDs, draw signatures, QC rectangle IDs) is reset. This prevents Streamlit session-state inconsistencies when users freely alternate between modes.
+- **Species mode — occurrence candidates before SDM**: Added "Occurrence-supported survey candidates" section immediately after DBSCAN clustering, before the SDM section. Shows candidate table with priority scores, plus CSV/KML download buttons. Users can plan surveys from raw occurrence data without running SDM.
+- **Species mode — SDM is optional**: Changed SDM expander from `expanded=True` to `expanded=False` and relabeled from "Build SDM and predict map" to "Optional: Build SDM and predict map". Relabeled the subheader to "SDM (optional enhancement)". SDM exploration candidates and suitability scoring are still fully available when the user chooses to run SDM.
+- **Genus mode — hotspots before SSDM**: Updated heading and caption to emphasize that occurrence richness hotspots are the primary output (no modeling required). The optional SSDM expander was already collapsed; caption now explicitly points users to it as an enhancement-only section.
+- **Large datasets**: Occurrence candidates are always computed from spatially thinned clusters regardless of dataset size, consistent with existing large-dataset-mode behavior.
+
+Features preserved:
+- All existing species SDM, VIF, spatial partition, predict map, exclusion/QC, and route planner features unchanged.
+- All genus richness grid, hotspot, SSDM, and download features unchanged.
+
 ## 2026-06-03 - Claude (Anthropic) — Issue #2 follow-up: SSDM eligibility label and map legends
 
 Changed files:

@@ -138,6 +138,7 @@ def init_session_state() -> None:
         "genus_raw_df": None,
         "genus_source_key": None,
         "genus_source_message": "No genus occurrence data loaded yet.",
+        "_last_analysis_mode": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -1739,8 +1740,12 @@ def genus_diversity_panel() -> None:
             except Exception as exc:
                 st.error(f"GBIF genus download failed: {exc}")
 
-    st.subheader("Genus diversity / SSDM")
-    st.caption("Occurrence richness maps show observed richness from GBIF records. Optional SSDM maps below show predicted stacked richness from per-species SDMs.")
+    st.subheader("Genus diversity — occurrence richness hotspots")
+    st.caption(
+        "Occurrence richness maps show observed species richness from GBIF records — no modeling required. "
+        "Use these hotspot candidates directly for survey planning. "
+        "Optional SSDM (stacked species distribution models) is available at the bottom of this page as an enhancement."
+    )
     if st.session_state.genus_raw_df is None:
         st.info(st.session_state.genus_source_message)
         return
@@ -2246,6 +2251,20 @@ def main() -> None:
 
     st.sidebar.caption(f"Build: {APP_BUILD_ID}")
     analysis_mode = st.sidebar.radio("Analysis mode", ["Single species survey planning", "Genus diversity / SSDM"], index=0, key="analysis_mode")
+
+    # Reset widget-collision-prone state when switching between modes to avoid
+    # Streamlit session-state inconsistencies and stale map-click signatures.
+    last_mode = st.session_state.get("_last_analysis_mode")
+    if last_mode is not None and last_mode != analysis_mode:
+        st.session_state.sl_selected_site_ids = []
+        st.session_state.sl_last_draw_sig = ""
+        st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
+        st.session_state.last_route_click_signature = ""
+        st.session_state.last_exclude_click_signature = ""
+        st.session_state.qc_last_draw_sig = ""
+        st.session_state.qc_rect_selected_ids = []
+    st.session_state["_last_analysis_mode"] = analysis_mode
+
     if analysis_mode == "Genus diversity / SSDM":
         genus_diversity_panel()
         return
@@ -2323,6 +2342,34 @@ def main() -> None:
     occurrence_candidates = add_priority_rank(occurrence_candidates)
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
 
+    # ── Occurrence-based survey candidates (available without SDM) ────────────
+    st.subheader("Occurrence-supported survey candidates")
+    st.caption(
+        "Survey ranges generated from GBIF occurrence clusters — no SDM required. "
+        "These candidates are ready to use immediately. "
+        "Optional SDM below can add suitability scores and exploration ranges."
+    )
+    if occurrence_candidates.empty:
+        st.warning("No occurrence clusters found. Try reducing the cluster distance or minimum-samples setting in the sidebar.")
+    else:
+        occ_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "candidate_type", "n_occurrences", "occurrence_support_score", "latitude", "longitude"] if c in occurrence_candidates.columns]
+        st.dataframe(occurrence_candidates[occ_cand_show_cols], width="stretch", hide_index=True)
+        oc1, oc2 = st.columns(2)
+        oc1.download_button(
+            "Occurrence candidates CSV",
+            occurrence_candidates.to_csv(index=False).encode("utf-8"),
+            "occurrence_survey_candidates.csv",
+            "text/csv",
+            use_container_width=True,
+        )
+        oc2.download_button(
+            "Occurrence candidates KML",
+            make_export_kml(occurrence_candidates).encode("utf-8"),
+            "occurrence_survey_candidates.kml",
+            "application/vnd.google-earth.kml+xml",
+            use_container_width=True,
+        )
+
     st.subheader("SDM prediction extent")
     st.caption("Choose the prediction area before building SDM. Only blue included points are used below; excluded rows are removed from the analysis view and hard-masked from prediction.")
     area_mode = st.selectbox("Area to predict", AREA_MODES, index=2, help="All three modes are land-only: buffer, convex hull, or bounding box.", key="sdm_area_mode")
@@ -2343,8 +2390,8 @@ def main() -> None:
             key=f"sdm_extent_preview_map_{area_mode}",
         )
 
-    st.subheader("SDM settings")
-    with st.expander("Build SDM and predict map", expanded=True):
+    st.subheader("SDM (optional enhancement)")
+    with st.expander("Optional: Build SDM and predict map", expanded=False):
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
         st.caption(f"Selected resolution: {RESOLUTION_NOTE[resolution]}")
         st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
