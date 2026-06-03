@@ -103,6 +103,15 @@ PARTITION_METHODS = ["random holdout", "random k-fold", "block", "checkerboard1"
 ROUTE_ORDER_METHODS = ["priority then nearest", "nearest from west", "priority only", "north to south", "south to north", "west to east", "east to west"]
 VARIABLE_SELECTION_STRATEGIES = ["No VIF", "Correlation filter", "VIF stepwise", "Ecological preset / representative climate set", "Advanced custom selection"]
 ECOLOGICAL_PRESET_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bio12", "bio15"]
+# Balanced ecology preset: 6 interpretable variables covering key ecological gradients.
+# bio1 = Annual Mean Temperature (temperature level)
+# bio4 = Temperature Seasonality (temperature variation)
+# bio12 = Annual Precipitation (precipitation amount)
+# bio15 = Precipitation Seasonality (precipitation variation)
+# bio14 = Precipitation of Driest Month (dryness / dry-month limitation)
+# elevation = terrain (topography)
+BALANCED_ECOLOGY_PRESET = ["bio1", "bio4", "bio12", "bio15", "bio14", "elevation"]
+ENV_VARIABLE_PRESETS = ["Balanced ecology preset", "Climate only preset", "Topography only preset", "Custom variables"]
 
 
 @dataclass(frozen=True)
@@ -2449,26 +2458,58 @@ def genus_diversity_panel() -> None:
                 ps1, ps2 = st.columns(2)
                 ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg", help="One record per grid cell per species. Set 0 to disable.")
                 ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m", help="Minimum nearest-neighbour distance between retained presence points per species. Set 0 to disable.")
-        st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
-        ssdm_topo_vars = st.multiselect("SSDM topography variables", TOPOGRAPHY_VARS, default=[], key="ssdm_topo_vars")
-        st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
-        ssdm_climate_vars = st.multiselect("SSDM climate variables", CLIMATE_VARS, default=[], key="ssdm_climate_vars")
-        ssdm_variables = ssdm_topo_vars + ssdm_climate_vars
-        ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
-        st.markdown("**Shared variable selection (run once for all species)**")
-        ssdm_variable_strategy = st.selectbox("SSDM variable-selection strategy", VARIABLE_SELECTION_STRATEGIES, index=0, key="ssdm_variable_strategy")
-        vc1, vc2 = st.columns(2)
-        ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
-        ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
-        ssdm_custom_variables = ssdm_variables
-        if ssdm_variable_strategy == "Advanced custom selection":
-            ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
-        st.caption(
-            "Variable selection is optional and run once on a pooled sample of all genus occurrences and background points. "
-            "The same retained variable set is then used for every per-species model. "
-            "No VIF is the default; use correlation filtering, VIF stepwise, ecological representatives, or advanced custom selection when needed. "
-            "Diagnostics report final_status, reason, protected_by_group, fallback_kept, and vif_stage."
+        st.markdown("**Environmental variable preset**")
+        ssdm_env_preset = st.selectbox(
+            "SSDM variable preset",
+            ENV_VARIABLE_PRESETS,
+            index=0,
+            key="ssdm_env_preset",
+            help=(
+                "Balanced ecology: 6 interpretable variables — recommended starting point. "
+                "Climate only: all 19 BIO variables (consider Correlation filter or VIF stepwise). "
+                "Topography only: elevation, slope, roughness. "
+                "Custom: choose manually."
+            ),
         )
+        if ssdm_env_preset == "Balanced ecology preset":
+            ssdm_variables = list(BALANCED_ECOLOGY_PRESET)
+            st.caption(
+                "**Balanced ecology preset (6 variables):** "
+                "bio1 · bio4 · bio12 · bio15 · bio14 · elevation. "
+                "Variable selection is run once on pooled genus data; the same set is used for every species model."
+            )
+        elif ssdm_env_preset == "Climate only preset":
+            ssdm_variables = list(CLIMATE_VARS)
+            st.caption(
+                f"Climate only: all {len(CLIMATE_VARS)} BIO variables. "
+                "Correlation filter or VIF stepwise (Advanced options below) recommended to reduce redundancy."
+            )
+        elif ssdm_env_preset == "Topography only preset":
+            ssdm_variables = list(TOPOGRAPHY_VARS)
+            st.caption(f"Topography only: {', '.join(TOPOGRAPHY_VARS)}.")
+        else:
+            st.caption("Select variables manually:")
+            st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
+            _ssdm_topo_vars = st.multiselect("SSDM topography variables", TOPOGRAPHY_VARS, default=[], key="ssdm_topo_vars")
+            st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
+            _ssdm_climate_vars = st.multiselect("SSDM climate variables", CLIMATE_VARS, default=[], key="ssdm_climate_vars")
+            ssdm_variables = _ssdm_topo_vars + _ssdm_climate_vars
+
+        ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
+
+        with st.expander("Advanced variable selection", expanded=False):
+            st.caption(
+                "Variable selection is run once on a pooled sample of all genus occurrences and background points. "
+                "The same retained variable set is used for every per-species model. "
+                "No VIF is the default. Correlation filter or VIF stepwise are useful for Climate only preset."
+            )
+            ssdm_variable_strategy = st.selectbox("SSDM variable-selection strategy", VARIABLE_SELECTION_STRATEGIES, index=0, key="ssdm_variable_strategy")
+            vc1, vc2 = st.columns(2)
+            ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
+            ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
+            ssdm_custom_variables = ssdm_variables
+            if ssdm_variable_strategy == "Advanced custom selection":
+                ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.markdown("**SSDM validation / partition**")
         ssdm_partition_method = st.selectbox(
             "SSDM partition method",
@@ -3137,22 +3178,67 @@ def main() -> None:
         sdm_distance_m = sp2.number_input("Distance thinning — spThin-like (m, 0 = off)", min_value=0, max_value=100_000, value=1000, step=500, key="sdm_prep_distance_m", help="Minimum nearest-neighbour distance between retained presence points. Equivalent to spThin minimum distance.")
         sdm_max_presence = sp2.number_input("Maximum SDM presence points (0 = no cap)", min_value=0, max_value=50_000, value=500 if effective_large_dataset_mode else 0, step=100, key="sdm_prep_max_presence", help="Hard cap on presence points passed to SDM. In large dataset mode, 0 is treated as 500 to prevent freezes.")
         st.divider()
-        # ── Environmental variables & model settings ──────────────────────────
+        # ── Environmental variables ───────────────────────────────────────────
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
         st.caption(f"Selected resolution: {RESOLUTION_NOTE[resolution]}")
-        st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
-        topo_vars = st.multiselect("Topography variables", TOPOGRAPHY_VARS, default=[])
-        st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
-        climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[])
-        variables = topo_vars + climate_vars
-        variable_strategy = st.selectbox("Variable-selection strategy", VARIABLE_SELECTION_STRATEGIES, index=0, key="sdm_variable_strategy")
-        vc1, vc2 = st.columns(2)
-        corr_threshold = vc1.number_input("Correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="sdm_corr_threshold")
-        vif_threshold = vc2.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="sdm_vif_threshold")
-        custom_variables = variables
-        if variable_strategy == "Advanced custom selection":
-            custom_variables = st.multiselect("Custom final variables", variables, default=variables, key="sdm_custom_final_variables")
-        st.caption("SDM/SSDM model support is optional. No VIF is the default; use correlation filtering, VIF stepwise, ecological representatives, or advanced custom selection when needed.")
+        st.markdown("**Environmental variable preset**")
+        env_preset = st.selectbox(
+            "Variable preset",
+            ENV_VARIABLE_PRESETS,
+            index=0,
+            key="sdm_env_preset",
+            help=(
+                "Balanced ecology: 6 interpretable variables covering key ecological gradients — "
+                "recommended starting point for most users. "
+                "Climate only: all 19 WorldClim BIO variables (use advanced variable selection below to reduce redundancy). "
+                "Topography only: elevation, slope, roughness. "
+                "Custom: choose individual variables manually."
+            ),
+        )
+        if env_preset == "Balanced ecology preset":
+            variables = list(BALANCED_ECOLOGY_PRESET)
+            st.caption(
+                "**Balanced ecology preset (6 variables):** "
+                "bio1 (temp level) · bio4 (temp seasonality) · bio12 (precipitation) · "
+                "bio15 (precip seasonality) · bio14 (driest month) · elevation. "
+                "Covers the main ecological gradients without redundancy."
+            )
+        elif env_preset == "Climate only preset":
+            variables = list(CLIMATE_VARS)
+            st.caption(
+                f"Climate only: all {len(CLIMATE_VARS)} WorldClim BIO variables. "
+                "Many BIO variables are highly correlated — consider Correlation filter or VIF stepwise in Advanced options below."
+            )
+        elif env_preset == "Topography only preset":
+            variables = list(TOPOGRAPHY_VARS)
+            st.caption(f"Topography only: {', '.join(TOPOGRAPHY_VARS)}.")
+        else:
+            st.caption("Select variables manually:")
+            st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
+            _topo_vars = st.multiselect("Topography variables", TOPOGRAPHY_VARS, default=[], key="sdm_custom_topo_vars")
+            st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
+            _climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[], key="sdm_custom_climate_vars")
+            variables = _topo_vars + _climate_vars
+
+        with st.expander("Advanced variable selection", expanded=False):
+            st.caption(
+                "No VIF is the default and works well with Balanced ecology preset. "
+                "Correlation filter or VIF stepwise are useful when using Climate only preset (19 variables). "
+                "Advanced custom selection lets you manually pick the final variable subset."
+            )
+            variable_strategy = st.selectbox(
+                "Variable-selection strategy",
+                VARIABLE_SELECTION_STRATEGIES,
+                index=0,
+                key="sdm_variable_strategy",
+            )
+            vc1, vc2 = st.columns(2)
+            corr_threshold = vc1.number_input("Correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="sdm_corr_threshold")
+            vif_threshold = vc2.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="sdm_vif_threshold")
+            custom_variables = variables
+            if variable_strategy == "Advanced custom selection":
+                custom_variables = st.multiselect("Custom final variables", variables, default=variables, key="sdm_custom_final_variables")
+
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
         partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
         k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
