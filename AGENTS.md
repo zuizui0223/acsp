@@ -14,6 +14,16 @@ If local code differs from GitHub, treat GitHub as authoritative.
 
 If there is any uncertainty about whether a feature already exists or has changed, inspect the latest GitHub file first and preserve the current behavior.
 
+## Required design policy
+
+Before changing workflow, sampling, candidate generation, SDM, SSDM, or large-dataset behavior, read:
+
+- `SURVEY_PLANNING_POLICY.md`
+
+This app is a field-survey planning tool, not a full all-record SDM analysis platform.
+
+Raw GBIF records must be preserved for summary/download, but maps, candidate generation, SDM, and SSDM should use spatially representative working subsets by default. Do not reintroduce an all-record-first workflow as the default.
+
 ## Core rule
 
 Do not remove existing features unless the user explicitly asks for removal.
@@ -50,30 +60,34 @@ Do not reintroduce UI elements or older workflows that were intentionally remove
 - duplicated `Priority survey ranges` table at the bottom, if it has been removed
 - daily sampling route layers, if they have been removed
 - redundant occurrence buffer plus survey range layers, if they have been simplified
+- all-record-first map/model/candidate workflows as the default
 
 If a requested change conflicts with an existing feature, make the smallest safe change without deleting unrelated functionality.
 
 ## Collaboration rules for AI coding agents
 
 1. Read this file before editing.
-2. Read the latest relevant files from GitHub before editing.
-3. Prefer small diffs over full-file rewrites.
-4. Do not push directly to `main` unless the user explicitly asks.
-5. Use feature branches and pull requests when possible.
-6. After every code change, update `CHANGELOG_AI.md`.
-7. Run the following before finishing:
+2. Read `SURVEY_PLANNING_POLICY.md` before changing workflow, sampling, large-dataset, candidate, SDM, or SSDM behavior.
+3. Read the latest relevant files from GitHub before editing.
+4. Prefer small diffs over full-file rewrites.
+5. Do not push directly to `main` unless the user explicitly asks.
+6. Use feature branches and pull requests when possible.
+7. After every code change, update `CHANGELOG_AI.md`.
+8. Run the following before finishing:
 
 ```bash
 python -m py_compile gbif_fieldmap_builder_app.py
 ```
 
-8. If routing or survey-site-list code is changed, confirm the app still works both before and after SDM is built.
-9. If occurrence-exclusion code is changed, confirm that red QC points remain visible but are not used for SDM, prediction extent, candidate generation, or survey site lists.
-10. If SDM code is changed, confirm that VIF, spatial partition options, prediction maps, and SDM-high exploration candidates still exist.
-11. If genus diversity or SSDM code is changed, confirm that the single-species workflow still works.
-12. If UI labels are changed, keep the distinction clear:
+9. If routing or survey-site-list code is changed, confirm the app still works both before and after SDM is built.
+10. If occurrence-exclusion code is changed, confirm that red QC points remain visible but are not used for SDM, prediction extent, candidate generation, or survey site lists.
+11. If SDM code is changed, confirm that VIF, spatial partition options, prediction maps, and SDM-high exploration candidates still exist.
+12. If genus diversity or SSDM code is changed, confirm that the single-species workflow still works.
+13. If UI labels are changed, keep the distinction clear:
     - Included points = used for analysis
     - Excluded QC points = visible but not used for analysis
+    - Raw records = preserved for transparency/download
+    - Working subsets = used for maps, candidates, SDM, and SSDM
 
 ## Large-file editing rule
 
