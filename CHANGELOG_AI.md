@@ -4,6 +4,33 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Claude (claude-sonnet-4-6) — Issue #4 follow-up: SDM bias-reduction preprocessing + SSDM per-species thinning
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+**SDM bias-reduction preprocessing (species mode)**
+- Added a "SDM bias-reduction preprocessing" section at the top of the "Optional: Build SDM" expander with four controls: exact coordinate deduplication (default on), grid thinning in degrees (default 0.05°), distance thinning / spThin-like (default 1 000 m, 0 = off), maximum SDM presence points cap (default 0 = no cap).
+- Caption explains the purpose: GBIF records cluster near roads/cities/trails; spatial thinning reduces sampling bias before SDM fitting. Explicitly notes these settings apply only to SDM training and do not affect occurrence-based survey candidates.
+- After the expander, a new `occ_for_sdm` pipeline applies these settings to `occ_after_exclusion` (QC-cleaned but not otherwise pre-processed), keeping the SDM preprocessing pipeline independent of the occurrence-candidate clustering pipeline.
+- Five-column preprocessing metrics panel displayed (always visible, outside the expander): Raw records → After QC exclusion → After exact dedup → After thinning → Final SDM presence points.
+- SDM training (`build_presence_background`, `build_predict_map`, `make_sdm_exploration_candidates`) now use `occ_for_sdm` instead of `occ_sdm_train`.
+- `current_sdm_occurrence_row_ids` now tracks `occ_for_sdm` row IDs; SDM cache invalidation triggers when preprocessing settings or QC exclusions change.
+- `occ_sdm_train` (sidebar-preprocessed set) remains as the basis for occurrence-candidate clustering and SDM extent preview — unchanged behavior for occurrence candidates.
+
+**SSDM per-species bias-reduction preprocessing (genus mode)**
+- Added `per_species_grid_thin_deg` and `per_species_distance_thin_m` parameters to `fit_stacked_species_sdms`.
+- Per-species preprocessing order: exact coordinate dedup → grid thinning → distance thinning → presence cap. Applied before each species SDM fit.
+- Exposed as UI controls in the SSDM expander: "Per-species grid thinning (degrees, 0 = off)" (default 0.05°) and "Per-species distance thinning (m, 0 = off)" (default 0).
+
+Features preserved:
+- Occurrence-based survey candidates and richness hotspots unchanged and always available before SDM/SSDM.
+- Single-species SDM VIF, partition, predict map, exploration candidates, route planner unchanged.
+- Genus richness grid, SSDM shared VIF, SSDM partition, downloads unchanged.
+
 ## 2026-06-03 - Claude (claude-sonnet-4-6) — Issue #4 follow-up: fix widget key conflict, non-blocking QC, symmetric headings
 
 Changed files:
