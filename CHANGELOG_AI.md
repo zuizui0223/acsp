@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex (OpenAI) - Fix genus GBIF backbone key selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Fixed genus-mode GBIF taxon resolution to use exact GENUS matches from species/match when available.
+- Fixed species/search fallback to use GBIF backbone nubKey instead of checklist-specific dataset keys.
+- Prevented unrelated or unranked matches such as Campanulae fungi names from being used as genus occurrence taxon keys.
+- Updated genus download status text to show the GBIF backbone taxonKey.
+
+Features preserved:
+- Genus occurrence richness outputs, single species planning, coordinate exclusion, SDM, VIF, spatial partition diagnostics, predict map, route planner, and downloads remain unchanged.
+
+Known risks / TODO:
+- Homonymous or highly ambiguous genus names may still need manual verification in future UI.
+
 ## 2026-06-03 - Codex (OpenAI) - Fix genus zero-record coordinate detection
 
 Changed files:

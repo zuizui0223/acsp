@@ -307,34 +307,29 @@ def _resolve_gbif_genus_key(genus_name: str) -> tuple[Optional[int], dict[str, A
     genus = genus_name.strip()
     if not genus:
         return None, {}
-    attempts = [
-        {"name": genus, "rank": "GENUS"},
-        {"name": genus},
-    ]
-    for params in attempts:
-        response = requests.get(GBIF_SPECIES_MATCH_URL, params=params, timeout=20)
-        response.raise_for_status()
-        payload = response.json()
-        if payload.get("rank") == "GENUS" and payload.get("usageKey"):
-            return int(payload["usageKey"]), payload
-        if payload.get("genusKey"):
-            payload = dict(payload)
-            payload.setdefault("rank", "GENUS")
-            return int(payload["genusKey"]), payload
+    response = requests.get(GBIF_SPECIES_MATCH_URL, params={"name": genus, "rank": "GENUS"}, timeout=20)
+    response.raise_for_status()
+    payload = response.json()
+    canonical = str(payload.get("canonicalName") or payload.get("genus") or "").strip()
+    if payload.get("rank") == "GENUS" and payload.get("usageKey") and canonical.lower() == genus.lower():
+        return int(payload["usageKey"]), payload
+
     search = requests.get(GBIF_SPECIES_SEARCH_URL, params={"q": genus, "rank": "GENUS", "limit": 10}, timeout=20)
     search.raise_for_status()
     for candidate in search.json().get("results", []):
         canonical = str(candidate.get("canonicalName") or candidate.get("scientificName") or "").strip()
-        if canonical.lower() == genus.lower() and candidate.get("key"):
+        if canonical.lower() == genus.lower() and candidate.get("rank") == "GENUS" and (candidate.get("nubKey") or candidate.get("key")):
             payload = dict(candidate)
             payload.setdefault("scientificName", canonical)
             payload.setdefault("rank", "GENUS")
-            return int(candidate["key"]), payload
+            payload["gbifBackboneKey"] = candidate.get("nubKey") or candidate.get("key")
+            return int(payload["gbifBackboneKey"]), payload
     for candidate in search.json().get("results", []):
-        if candidate.get("key"):
+        if candidate.get("rank") == "GENUS" and (candidate.get("nubKey") or candidate.get("key")):
             payload = dict(candidate)
             payload.setdefault("rank", "GENUS")
-            return int(candidate["key"]), payload
+            payload["gbifBackboneKey"] = candidate.get("nubKey") or candidate.get("key")
+            return int(payload["gbifBackboneKey"]), payload
     return None, {}
 
 
@@ -404,7 +399,7 @@ def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, count
             "media_url": extract_media_url_from_gbif_record(rec),
         })
     matched_name = payload.get("scientificName") or payload.get("canonicalName") or genus_name
-    msg = f"GBIF genus match: {matched_name} / taxonKey={usage_key} / rank={payload.get('rank', 'GENUS')}. GBIF total={total_count:,}; fetched={len(rows):,}; cap={int(max_records):,}."
+    msg = f"GBIF genus match: {matched_name} / GBIF backbone taxonKey={usage_key} / rank={payload.get('rank', 'GENUS')}. GBIF total={total_count:,}; fetched={len(rows):,}; cap={int(max_records):,}."
     return msg, pd.DataFrame(rows, columns=genus_columns)
 
 
