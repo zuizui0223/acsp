@@ -101,6 +101,8 @@ ALGORITHMS = ["Logistic regression", "Random forest", "ExtraTrees", "Gradient bo
 AREA_MODES = ["buffer", "convex hull", "bounding box"]
 PARTITION_METHODS = ["random holdout", "random k-fold", "block", "checkerboard1", "checkerboard2", "jackknife"]
 ROUTE_ORDER_METHODS = ["priority then nearest", "nearest from west", "priority only", "north to south", "south to north", "west to east", "east to west"]
+VARIABLE_SELECTION_STRATEGIES = ["No VIF", "Correlation filter", "VIF stepwise", "Ecological preset / representative climate set", "Advanced custom selection"]
+ECOLOGICAL_PRESET_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bio12", "bio15"]
 
 
 @dataclass(frozen=True)
@@ -486,8 +488,12 @@ def richness_hotspot_candidates(grid: pd.DataFrame, metric: str, max_candidates:
         return pd.DataFrame()
     metric_col = {"Species richness": "species_richness", "Record count": "record_count", "Species with minimum records": "species_with_min_records"}.get(metric, "species_richness")
     out = grid.sort_values([metric_col, "species_richness", "record_count"], ascending=False).head(int(max_candidates)).copy()
+    max_metric = float(out[metric_col].max()) if not out.empty and float(out[metric_col].max()) > 0 else 1.0
     out.insert(0, "hotspot_rank", range(1, len(out) + 1))
+    out["site_id"] = out["hotspot_rank"].astype(int)
     out["candidate_type"] = "Occurrence richness hotspot"
+    out["occurrence_support_score"] = (pd.to_numeric(out[metric_col], errors="coerce").fillna(0.0) / max_metric).clip(0, 1).round(3)
+    out["model_support_score"] = 0.0
     out["google_maps_url"] = [make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])) for _, r in out.iterrows()]
     return out.reset_index(drop=True)
 
@@ -1141,12 +1147,42 @@ def available_sort_cols(df: pd.DataFrame, desired: list[str]) -> list[str]:
     return [c for c in desired if c in df.columns]
 
 
-def add_priority_rank(sites: pd.DataFrame) -> pd.DataFrame:
+def add_priority_rank(sites: pd.DataFrame, observed_weight: float = 0.7, model_weight: float = 0.3) -> pd.DataFrame:
     out = sites.copy()
     if out.empty:
         out["priority_rank"] = []
         return out
-    sort_cols = available_sort_cols(out, ["priority_score", "sdm_suitability", "occurrence_support_score"])
+    observed_w = float(observed_weight)
+    model_w = float(model_weight)
+    if "occurrence_support_score" in out.columns:
+        observed_source = out["occurrence_support_score"]
+    elif "priority_score" in out.columns:
+        observed_source = out["priority_score"]
+    else:
+        observed_source = pd.Series(0.0, index=out.index)
+    observed = pd.to_numeric(observed_source, errors="coerce").fillna(0.0).clip(0, 1)
+    if "model_support_score" in out.columns:
+        model = pd.to_numeric(out["model_support_score"], errors="coerce")
+    elif "sdm_suitability" in out.columns:
+        model = pd.to_numeric(out["sdm_suitability"], errors="coerce")
+    elif "ssdm_model_support_score" in out.columns:
+        model = pd.to_numeric(out["ssdm_model_support_score"], errors="coerce")
+    else:
+        model = pd.Series(np.nan, index=out.index)
+    model = model.clip(0, 1)
+    base_priority = pd.to_numeric(out.get("priority_score", observed), errors="coerce").fillna(observed).clip(0, 1)
+    bonus = (base_priority - observed).clip(lower=0, upper=0.20)
+    model_filled = model.fillna(0.0)
+    out["occurrence_support_score"] = observed.round(3)
+    out["model_support_score"] = model_filled.round(3)
+    out["observed_weight"] = round(observed_w, 3)
+    out["model_weight"] = round(model_w, 3)
+    out["priority_score"] = (observed_w * observed + model_w * model_filled + bonus).clip(0, 1).round(3)
+    out["score_explanation"] = [
+        f"priority = {observed_w:.2f}*observed({obs:.3f}) + {model_w:.2f}*model({mod:.3f}) + bonus({bon:.3f}); SDM/SSDM model support is optional and does not replace observed-data candidates"
+        for obs, mod, bon in zip(observed, model_filled, bonus)
+    ]
+    sort_cols = available_sort_cols(out, ["priority_score", "model_support_score", "occurrence_support_score"])
     if not sort_cols:
         out["priority_rank"] = range(1, len(out) + 1)
         return out
@@ -1419,6 +1455,143 @@ def vif_step(df: pd.DataFrame, variables: list[str], threshold: float) -> tuple[
     return kept, final
 
 
+def ecological_group(var: str) -> str:
+    if var in {"elevation", "slope", "roughness"}:
+        return "topography"
+    if re.match(r"^bio\d+$", var, re.IGNORECASE):
+        n = int(re.sub(r"\D", "", var))
+        if n in {1, 5, 6, 7, 8, 9, 10, 11}:
+            return "temperature"
+        if n in {2, 3, 4}:
+            return "temperature seasonality"
+        if n in {12, 13, 14, 16, 17, 18, 19}:
+            return "precipitation"
+        if n == 15:
+            return "precipitation seasonality"
+        return "climate"
+    return "other"
+
+
+def add_variable_selection_fields(diag: pd.DataFrame, kept: list[str], strategy: str, reason_map: Optional[dict[str, str]] = None, stage_map: Optional[dict[str, str]] = None, fallback_vars: Optional[set[str]] = None, protected_vars: Optional[set[str]] = None) -> pd.DataFrame:
+    out = diag.copy() if diag is not None and not diag.empty else pd.DataFrame({"variable": kept})
+    reason_map = reason_map or {}
+    stage_map = stage_map or {}
+    fallback_vars = fallback_vars or set()
+    protected_vars = protected_vars or set()
+    if "variable" not in out.columns:
+        out["variable"] = []
+    kept_set = set(kept)
+    if "group" not in out.columns:
+        out["group"] = out["variable"].map(ecological_group)
+    out["variable_selection_strategy"] = strategy
+    out["final_status"] = out["variable"].apply(lambda v: "kept" if v in kept_set else "removed")
+    out["reason"] = out["variable"].apply(lambda v: reason_map.get(v, "selected" if v in kept_set else "not selected by strategy"))
+    out["protected_by_group"] = out["variable"].apply(lambda v: ecological_group(str(v)) if v in protected_vars else "")
+    out["fallback_kept"] = out["variable"].apply(lambda v: bool(v in fallback_vars))
+    out["vif_stage"] = out["variable"].apply(lambda v: stage_map.get(v, "not_run" if strategy != "VIF stepwise" else "final"))
+    return out
+
+
+def correlation_filter_variables(env_df: pd.DataFrame, variables: list[str], threshold: float, protected_vars: Optional[set[str]] = None) -> tuple[list[str], dict[str, str]]:
+    protected_vars = protected_vars or set()
+    kept = list(dict.fromkeys(variables))
+    reasons = {v: "correlation <= threshold" for v in kept}
+    if len(kept) <= 1:
+        return kept, reasons
+    X = env_df[kept].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    X_imp = pd.DataFrame(SimpleImputer(strategy="median").fit_transform(X), columns=kept)
+    corr = X_imp.corr().abs()
+    while len(kept) > 1:
+        sub = corr.loc[kept, kept].copy()
+        np.fill_diagonal(sub.values, 0.0)
+        max_corr = float(sub.max().max())
+        if not np.isfinite(max_corr) or max_corr <= float(threshold):
+            break
+        pair = np.where(sub.to_numpy() == max_corr)
+        a = str(sub.index[int(pair[0][0])])
+        b = str(sub.columns[int(pair[1][0])])
+        if a in protected_vars and b not in protected_vars:
+            remove = b
+        elif b in protected_vars and a not in protected_vars:
+            remove = a
+        else:
+            mean_corr = sub.mean().sort_values(ascending=False)
+            remove = str(mean_corr.index[0])
+        kept.remove(remove)
+        reasons[remove] = f"removed: correlated with another selected variable above {threshold:.2f}"
+    for v in kept:
+        reasons[v] = "kept by correlation filter"
+    return kept, reasons
+
+
+def ecological_preset_variables(env_df: pd.DataFrame, variables: list[str], corr_threshold: float = 0.80) -> tuple[list[str], dict[str, str], set[str]]:
+    selected = [v for v in ECOLOGICAL_PRESET_VARS if v in variables]
+    fallback_vars: set[str] = set()
+    if not any(re.match(r"^bio\d+$", v, re.IGNORECASE) for v in selected):
+        bio_vars = [v for v in variables if re.match(r"^bio\d+$", v, re.IGNORECASE)]
+        if bio_vars:
+            X = env_df[bio_vars].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
+            X_imp = pd.DataFrame(SimpleImputer(strategy="median").fit_transform(X), columns=bio_vars)
+            mean_corr = X_imp.corr().abs().mean()
+            best_bio = str(mean_corr.idxmin())
+            selected.append(best_bio)
+            fallback_vars.add(best_bio)
+    selected = list(dict.fromkeys(selected))
+    if not selected:
+        selected = list(dict.fromkeys(variables[: min(4, len(variables))]))
+        fallback_vars.update(selected)
+    protected_vars = set(selected)
+    kept, reasons = correlation_filter_variables(env_df, selected, corr_threshold, protected_vars)
+    for v in selected:
+        reasons[v] = "ecological representative preset" if v in kept else reasons.get(v, "removed by preset correlation filter")
+    return kept, reasons, fallback_vars
+
+
+def select_environment_variables(
+    env_df: pd.DataFrame,
+    variables: list[str],
+    strategy: str,
+    vif_threshold: float = 10.0,
+    corr_threshold: float = 0.80,
+    custom_variables: Optional[list[str]] = None,
+) -> tuple[list[str], pd.DataFrame]:
+    variables = list(dict.fromkeys([v for v in variables if v]))
+    if not variables:
+        return [], pd.DataFrame()
+    diag = ssdm_variable_diagnostics(env_df, variables)
+    if strategy == "Advanced custom selection":
+        kept = list(dict.fromkeys([v for v in (custom_variables or variables) if v in variables]))
+        reasons = {v: "kept by advanced custom selection" for v in kept}
+        return kept, add_variable_selection_fields(diag, kept, strategy, reasons)
+    if strategy == "Ecological preset / representative climate set":
+        kept, reasons, fallback_vars = ecological_preset_variables(env_df, variables, corr_threshold)
+        protected_vars = set([v for v in ECOLOGICAL_PRESET_VARS if v in variables])
+        return kept, add_variable_selection_fields(diag, kept, strategy, reasons, fallback_vars=fallback_vars, protected_vars=protected_vars)
+    if strategy == "Correlation filter":
+        protected = set([v for v in ECOLOGICAL_PRESET_VARS if v in variables])
+        kept, reasons = correlation_filter_variables(env_df, variables, corr_threshold, protected)
+        return kept, add_variable_selection_fields(diag, kept, strategy, reasons, protected_vars=protected)
+    if strategy == "VIF stepwise":
+        kept, vif_tbl = vif_step(env_df, variables, vif_threshold)
+        reasons = {}
+        stage = {}
+        if not vif_tbl.empty:
+            for _, row in vif_tbl.iterrows():
+                var = str(row["variable"])
+                status_val = str(row.get("status", "kept"))
+                reasons[var] = "kept after VIF stepwise" if status_val == "kept" else f"removed by VIF > {vif_threshold:g}"
+                stage[var] = status_val
+        out = add_variable_selection_fields(diag, kept, strategy, reasons, stage_map=stage)
+        if not vif_tbl.empty and "variable" in vif_tbl.columns:
+            out = out.drop(columns=[c for c in ["vif", "vif_warning", "status"] if c in out.columns], errors="ignore").merge(vif_tbl, on="variable", how="left")
+            out["vif_stage"] = out["variable"].map(stage).fillna(out.get("vif_stage", "final"))
+            out["final_status"] = out["variable"].apply(lambda v: "kept" if v in set(kept) else "removed")
+        return kept, out
+    kept = list(variables)
+    reasons = {v: "No VIF/filtering selected; variable retained unless invalid rows were removed by NoData cleaning" for v in kept}
+    return kept, add_variable_selection_fields(diag, kept, "No VIF", reasons)
+
+
 def ssdm_variable_diagnostics(env_df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
     """Diagnostic table (variable, group, stats, max_abs_corr, VIF) computed before SSDM VIF filtering."""
     if not variables or env_df.empty:
@@ -1457,15 +1630,12 @@ def run_ssdm_shared_vif(
     env_df: pd.DataFrame,
     variables: list[str],
     vif_threshold: float,
+    strategy: str = "No VIF",
+    corr_threshold: float = 0.80,
+    custom_variables: Optional[list[str]] = None,
 ) -> tuple[list[str], pd.DataFrame, bool]:
-    """Run VIF once on pooled SSDM environmental data with BIO-variable protection.
-
-    Returns (kept_vars, diagnostics_df, fallback_used).
-    If VIF removes all BIO climate variables, the least-correlated BIO variable is
-    restored and flagged as 'fallback-kept (BIO protection)'.
-    """
-    diag = ssdm_variable_diagnostics(env_df, variables)
-    kept, vif_tbl = vif_step(env_df, variables, vif_threshold)
+    """Run shared SSDM variable selection once on pooled environmental data."""
+    kept, diag = select_environment_variables(env_df, variables, strategy, vif_threshold, corr_threshold, custom_variables)
 
     bio_orig = [v for v in variables if re.match(r"^bio\d+$", v, re.IGNORECASE)]
     bio_kept = [v for v in kept if re.match(r"^bio\d+$", v, re.IGNORECASE)]
@@ -1479,20 +1649,11 @@ def run_ssdm_shared_vif(
         if best_bio not in kept:
             kept = list(kept) + [best_bio]
         fallback_used = True
-        if not diag.empty and "status" in diag.columns:
-            diag.loc[diag["variable"] == best_bio, "status"] = "fallback-kept (BIO protection)"
-
-    # Propagate VIF-step statuses into the diagnostics table
-    if not vif_tbl.empty and "status" in vif_tbl.columns and not diag.empty:
-        for _, vrow in vif_tbl.iterrows():
-            var = str(vrow["variable"])
-            st_val = str(vrow.get("status", "kept"))
-            mask = diag["variable"].eq(var) & diag["status"].eq("to_evaluate")
-            diag.loc[mask, "status"] = st_val
-
-    # Any remaining 'to_evaluate' are kept
-    if not diag.empty and "status" in diag.columns:
-        diag.loc[diag["status"].eq("to_evaluate"), "status"] = "kept"
+        if not diag.empty:
+            diag.loc[diag["variable"] == best_bio, "final_status"] = "kept"
+            diag.loc[diag["variable"] == best_bio, "reason"] = "fallback-kept: BIO climate protection after shared variable selection"
+            diag.loc[diag["variable"] == best_bio, "fallback_kept"] = True
+            diag.loc[diag["variable"] == best_bio, "protected_by_group"] = "climate"
 
     return kept, diag, fallback_used
 
@@ -1814,10 +1975,36 @@ def ssdm_hotspot_candidates(grid: pd.DataFrame, max_candidates: int) -> pd.DataF
     if grid.empty:
         return pd.DataFrame()
     out = grid.sort_values(["ssdm_continuous_richness", "ssdm_binary_richness"], ascending=False).head(int(max_candidates)).copy()
+    max_richness = float(out["ssdm_continuous_richness"].max()) if not out.empty and float(out["ssdm_continuous_richness"].max()) > 0 else 1.0
     out.insert(0, "hotspot_rank", range(1, len(out) + 1))
+    out["site_id"] = out["hotspot_rank"].astype(int)
     out["candidate_type"] = "Predicted SSDM richness hotspot"
+    out["occurrence_support_score"] = 0.0
+    out["model_support_score"] = (pd.to_numeric(out["ssdm_continuous_richness"], errors="coerce").fillna(0.0) / max_richness).clip(0, 1).round(3)
     out["google_maps_url"] = [make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])) for _, r in out.iterrows()]
     return out.reset_index(drop=True)
+
+
+def add_grid_model_support_to_candidates(candidates: pd.DataFrame, grid: pd.DataFrame, value_col: str = "ssdm_continuous_richness") -> pd.DataFrame:
+    if candidates.empty or grid.empty or value_col not in grid.columns:
+        return candidates.copy()
+    out = candidates.copy()
+    max_value = float(pd.to_numeric(grid[value_col], errors="coerce").max())
+    if not np.isfinite(max_value) or max_value <= 0:
+        max_value = 1.0
+    grid_coords = grid[["latitude", "longitude"]].to_numpy(dtype=float)
+    grid_values = pd.to_numeric(grid[value_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+    supports = []
+    raw_vals = []
+    for _, row in out.iterrows():
+        coord = np.array([float(row["latitude"]), float(row["longitude"])], dtype=float)
+        idx = int(np.argmin(np.sum((grid_coords - coord) ** 2, axis=1)))
+        raw = float(grid_values[idx])
+        raw_vals.append(round(raw, 4))
+        supports.append(round(max(0.0, min(1.0, raw / max_value)), 3))
+    out["ssdm_predicted_richness"] = raw_vals
+    out["model_support_score"] = supports
+    return out
 
 
 def fit_stacked_species_sdms(
@@ -1837,6 +2024,9 @@ def fit_stacked_species_sdms(
     max_hotspots: int,
     apply_vif: bool,
     vif_threshold: float,
+    variable_selection_strategy: str = "No VIF",
+    corr_threshold: float = 0.80,
+    custom_variables: Optional[list[str]] = None,
     ssdm_partition_method: str = "random holdout",
     ssdm_test_split: float = 0.20,
     per_species_grid_thin_deg: float = 0.0,
@@ -1875,12 +2065,12 @@ def fit_stacked_species_sdms(
     bg_base["presence"] = 0
     bg_base["occurrence_row_id"] = np.nan
 
-    # ── Shared VIF: run once on pooled presence sample + background ────────────
+    # Shared variable selection: run once on pooled presence sample + background.
     vif_diag: pd.DataFrame = pd.DataFrame()
     vif_fallback_used = False
-    if apply_vif:
+    if variable_selection_strategy != "No VIF" or apply_vif:
         if status is not None:
-            status.write("Running shared VIF on pooled occurrence/background data (once for all species)...")
+            status.write(f"Running shared variable selection ({variable_selection_strategy}) on pooled occurrence/background data...")
         all_pres = work[["_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude"}).copy()
         all_pres["presence"] = 1
         all_pres["occurrence_row_id"] = np.nan
@@ -1888,10 +2078,18 @@ def fit_stacked_species_sdms(
             all_pres = all_pres.sample(1000, random_state=42).reset_index(drop=True)
         all_pres_env = extract_environment(all_pres, variables, "latitude", "longitude", resolution, status=None)
         pooled = pd.concat([all_pres_env, bg_base[all_pres_env.columns]], ignore_index=True, sort=False)
-        pooled, pooled_dropped = clean_environment_table(pooled, variables, "SSDM shared VIF environment", status)
+        pooled, pooled_dropped = clean_environment_table(pooled, variables, "SSDM shared variable-selection environment", status)
         if pooled.empty or pooled["presence"].nunique() < 2:
-            raise RuntimeError("SSDM shared VIF data had too few valid rows after raster NoData cleaning.")
-        kept_vars, vif_diag, vif_fallback_used = run_ssdm_shared_vif(pooled, variables, float(vif_threshold))
+            raise RuntimeError("SSDM shared variable-selection data had too few valid rows after raster NoData cleaning.")
+        strategy_to_run = variable_selection_strategy if variable_selection_strategy != "No VIF" else "VIF stepwise"
+        kept_vars, vif_diag, vif_fallback_used = run_ssdm_shared_vif(
+            pooled,
+            variables,
+            float(vif_threshold),
+            strategy=strategy_to_run,
+            corr_threshold=float(corr_threshold),
+            custom_variables=custom_variables,
+        )
         if not vif_diag.empty:
             vif_diag["rows_dropped_before_vif"] = int(pooled_dropped)
         removed_vars = [v for v in variables if v not in kept_vars]
@@ -1918,7 +2116,7 @@ def fit_stacked_species_sdms(
             positions = np.linspace(0, len(sp_occ) - 1, int(max_presence_points)).round().astype(int)
             sp_occ = sp_occ.iloc[np.unique(positions)].reset_index(drop=True)
         if len(sp_occ) < int(min_records):
-            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
             continue
         pres = sp_occ[["_row_id", "_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude", "_row_id": "occurrence_row_id"}).copy()
         pres["presence"] = 1
@@ -1944,14 +2142,14 @@ def fit_stacked_species_sdms(
             metrics_df = sdm_result["metrics"]
             auc_vals = pd.to_numeric(metrics_df.get("auc", pd.Series(dtype=float)), errors="coerce")
             mean_auc = float(auc_vals.mean()) if auc_vals.notna().any() else np.nan
-            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
         except Exception as exc:
-            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
 
     if progress is not None:
         progress.progress(1.0)
     for species, n_records in skipped_low.items():
-        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": bool(apply_vif), "vif_threshold": float(vif_threshold) if apply_vif else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "partition_method": ssdm_partition_method, "test_split": np.nan})
+        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "variables_removed_by_selection": "", "partition_method": ssdm_partition_method, "test_split": np.nan})
 
     out_grid = grid[["raster_row", "raster_col", "cell_index", "latitude", "longitude"]].copy()
     out_grid["ssdm_continuous_richness"] = np.round(richness_cont, 4)
@@ -2144,6 +2342,10 @@ def genus_diversity_panel() -> None:
     )
     richness_metric = st.sidebar.selectbox("Hotspot ranking metric", ["Species richness", "Species with minimum records", "Record count"], index=0, key="genus_richness_metric")
     max_hotspots = st.sidebar.number_input("Max hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="genus_max_hotspots")
+    st.sidebar.subheader("Candidate scoring")
+    genus_observed_weight = st.sidebar.number_input("Observed-data weight", min_value=0.0, max_value=1.0, value=0.7, step=0.05, format="%.2f", key="genus_observed_weight")
+    genus_model_weight = st.sidebar.number_input("SSDM model weight", min_value=0.0, max_value=1.0, value=0.3, step=0.05, format="%.2f", key="genus_model_weight")
+    st.sidebar.caption("Observed richness generates the basic hotspot candidates. SSDM support is optional and only re-ranks/enriches them.")
 
     st.subheader("2 窶・Prepare records and species summary")
     genus_target_display = limit_occurrence_display(occ_cleaned, set(), 1000)
@@ -2161,6 +2363,7 @@ def genus_diversity_panel() -> None:
     summary = genus_species_summary(occ, int(min_records_for_sdm), float(grid_deg))
     grid = occurrence_richness_grid(occ, float(grid_deg), int(min_records_cell))
     hotspots = richness_hotspot_candidates(grid, richness_metric, int(max_hotspots)) if not grid.empty else pd.DataFrame()
+    hotspots = add_priority_rank(hotspots, float(genus_observed_weight), float(genus_model_weight)) if not hotspots.empty else hotspots
 
     # ── Step 2: Prepare records and species summary ───────────────────────────
     st.caption("Counts below show the active target set used for observed richness hotspots and optional SSDM.")
@@ -2193,7 +2396,7 @@ def genus_diversity_panel() -> None:
 
         # ── Step 4: Selected hotspot sites ───────────────────────────────────
         st.subheader("4 — Selected hotspot sites")
-        hotspot_cols = ["hotspot_rank", "candidate_type", "latitude", "longitude", "species_richness", "record_count", "species_with_min_records", "species_list", "google_maps_url"]
+        hotspot_cols = ["hotspot_rank", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "latitude", "longitude", "species_richness", "record_count", "species_with_min_records", "species_list", "score_explanation", "google_maps_url"]
         st.dataframe(hotspots[[c for c in hotspot_cols if c in hotspots.columns]], width="stretch", hide_index=True)
 
         st.subheader("Downloads")
@@ -2252,14 +2455,19 @@ def genus_diversity_panel() -> None:
         ssdm_climate_vars = st.multiselect("SSDM climate variables", CLIMATE_VARS, default=[], key="ssdm_climate_vars")
         ssdm_variables = ssdm_topo_vars + ssdm_climate_vars
         ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
-        st.markdown("**Shared VIF filtering (run once for all species)**")
-        ssdm_apply_vif = st.checkbox("Apply shared VIF for SSDM (run once on pooled data)", value=True, key="ssdm_apply_vif")
-        ssdm_vif_threshold = st.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
+        st.markdown("**Shared variable selection (run once for all species)**")
+        ssdm_variable_strategy = st.selectbox("SSDM variable-selection strategy", VARIABLE_SELECTION_STRATEGIES, index=0, key="ssdm_variable_strategy")
+        vc1, vc2 = st.columns(2)
+        ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
+        ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
+        ssdm_custom_variables = ssdm_variables
+        if ssdm_variable_strategy == "Advanced custom selection":
+            ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.caption(
-            "Shared VIF: VIF filtering is run **once** on a pooled sample of all genus occurrences and background points. "
+            "Variable selection is optional and run once on a pooled sample of all genus occurrences and background points. "
             "The same retained variable set is then used for every per-species model. "
-            "This prevents per-species VIF instability and avoids accidentally removing all BIO climate variables for species with small or narrow-range occurrence sets. "
-            "If VIF removes all BIO climate variables, the least-correlated BIO variable is automatically restored (fallback-kept)."
+            "No VIF is the default; use correlation filtering, VIF stepwise, ecological representatives, or advanced custom selection when needed. "
+            "Diagnostics report final_status, reason, protected_by_group, fallback_kept, and vif_stage."
         )
         st.markdown("**SSDM validation / partition**")
         ssdm_partition_method = st.selectbox(
@@ -2312,8 +2520,11 @@ def genus_diversity_panel() -> None:
                     n_background=int(ssdm_background),
                     binary_threshold=float(ssdm_binary_threshold),
                     max_hotspots=int(ssdm_hotspot_n),
-                    apply_vif=bool(ssdm_apply_vif),
+                    apply_vif=False,
                     vif_threshold=float(ssdm_vif_threshold),
+                    variable_selection_strategy=ssdm_variable_strategy,
+                    corr_threshold=float(ssdm_corr_threshold),
+                    custom_variables=ssdm_custom_variables,
                     ssdm_partition_method=ssdm_partition_method,
                     ssdm_test_split=float(ssdm_test_split) if ssdm_partition_method != "none (training only)" else 0.20,
                     per_species_grid_thin_deg=float(ssdm_per_species_grid_deg),
@@ -2321,21 +2532,24 @@ def genus_diversity_panel() -> None:
                     status=status,
                     progress=progress,
                 )
+                ssdm_hotspots = add_priority_rank(ssdm_hotspots, float(genus_observed_weight), float(genus_model_weight))
+                ranked_observed_hotspots = add_grid_model_support_to_candidates(hotspots, ssdm_grid)
+                ranked_observed_hotspots = add_priority_rank(ranked_observed_hotspots, float(genus_observed_weight), float(genus_model_weight))
                 st.success("SSDM complete.")
 
-                # ── Shared VIF diagnostics ────────────────────────────────────
-                if ssdm_apply_vif and ssdm_vif_diag is not None and not ssdm_vif_diag.empty:
-                    fallback_rows = ssdm_vif_diag[ssdm_vif_diag.get("status", pd.Series(dtype=str)).str.contains("fallback", case=False, na=False)]
+                # Shared variable-selection diagnostics.
+                if ssdm_vif_diag is not None and not ssdm_vif_diag.empty:
+                    fallback_rows = ssdm_vif_diag[ssdm_vif_diag.get("fallback_kept", pd.Series(dtype=bool)).astype(bool)]
                     if not fallback_rows.empty:
                         st.warning(
-                            "⚠️ Shared VIF removed all BIO climate variables. "
+                            "Shared variable selection kept a fallback/protected climate variable despite high collinearity. "
                             f"Fallback: {', '.join(fallback_rows['variable'].tolist())} was restored. "
-                            "Consider selecting fewer/less-correlated climate variables."
+                            "Check final_status, reason, protected_by_group, fallback_kept, and vif_stage in the diagnostics."
                         )
-                    st.write("Shared VIF diagnostics (run once for all species)")
+                    st.write("Shared variable-selection diagnostics (run once for all species)")
                     st.caption(
                         "This table shows variable statistics, max pairwise correlation, and VIF computed on a pooled sample "
-                        "of all genus occurrences and background points before VIF filtering. "
+                        "of all genus occurrences and background points before variable selection. "
                         "All species models use the same 'kept' variable set."
                     )
                     st.dataframe(ssdm_vif_diag, width="stretch", hide_index=True)
@@ -2350,15 +2564,18 @@ def genus_diversity_panel() -> None:
                 st_folium(binary_map, width=None, height=620, returned_objects=[], key="ssdm_binary_map")
                 st.write("SSDM hotspot candidates")
                 st.dataframe(ssdm_hotspots, width="stretch", hide_index=True)
+                st.write("Observed richness hotspots re-ranked with optional SSDM support")
+                st.caption("These remain observed-data hotspot candidates; SSDM predicted richness only contributes model_support_score for prioritization.")
+                st.dataframe(ranked_observed_hotspots, width="stretch", hide_index=True)
                 d1, d2, d3, d4, d5 = st.columns(5)
                 d1.download_button("ssdm_species_model_summary.csv", model_summary.to_csv(index=False).encode("utf-8"), "ssdm_species_model_summary.csv", "text/csv", width="stretch")
                 d2.download_button("ssdm_richness_grid.csv", ssdm_grid.to_csv(index=False).encode("utf-8"), "ssdm_richness_grid.csv", "text/csv", width="stretch")
                 d3.download_button("ssdm_hotspot_candidates.csv", ssdm_hotspots.to_csv(index=False).encode("utf-8"), "ssdm_hotspot_candidates.csv", "text/csv", width="stretch")
                 d4.download_button("continuous SSDM HTML", continuous_map.get_root().render().encode("utf-8"), "ssdm_continuous_richness_map.html", "text/html", width="stretch")
                 d5.download_button("binary SSDM HTML", binary_map.get_root().render().encode("utf-8"), "ssdm_binary_richness_map.html", "text/html", width="stretch")
-                if ssdm_apply_vif and ssdm_vif_diag is not None and not ssdm_vif_diag.empty:
+                if ssdm_vif_diag is not None and not ssdm_vif_diag.empty:
                     d_vif_col = st.columns(1)[0]
-                    d_vif_col.download_button("ssdm_vif_diagnostics.csv", ssdm_vif_diag.to_csv(index=False).encode("utf-8"), "ssdm_vif_diagnostics.csv", "text/csv", use_container_width=True)
+                    d_vif_col.download_button("ssdm_variable_selection_diagnostics.csv", ssdm_vif_diag.to_csv(index=False).encode("utf-8"), "ssdm_variable_selection_diagnostics.csv", "text/csv", use_container_width=True)
             except Exception as exc:
                 st.error(f"SSDM failed: {exc}")
 
@@ -2400,7 +2617,7 @@ def nearest_site_id_from_click(sites: pd.DataFrame, click: dict[str, Any]) -> Op
     return int(sites.loc[int(dists.idxmin()), "site_id"])
 
 
-SURVEY_DAY_CSV_COLS = ["survey_day", "order_within_day", "site_id", "candidate_type", "priority_rank", "priority_score", "sdm_suitability", "occurrence_support_score", "n_occurrences", "latitude", "longitude", "google_maps_url", "access_note"]
+SURVEY_DAY_CSV_COLS = ["survey_day", "order_within_day", "site_id", "candidate_type", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "n_occurrences", "latitude", "longitude", "google_maps_url", "access_note"]
 
 
 def _make_day_gmaps_urls(day_sites: pd.DataFrame, travelmode: str = "driving") -> list[str]:
@@ -2433,7 +2650,7 @@ def make_survey_day_csv(day_lists: dict, sites: pd.DataFrame) -> str:
             if m.empty:
                 continue
             r = m.iloc[0]
-            rows.append({"survey_day": day_num, "order_within_day": order, "site_id": int(r.get("site_id", sid)), "candidate_type": r.get("candidate_type", ""), "priority_rank": r.get("priority_rank", ""), "priority_score": r.get("priority_score", ""), "sdm_suitability": r.get("sdm_suitability", ""), "occurrence_support_score": r.get("occurrence_support_score", ""), "n_occurrences": r.get("n_occurrences", ""), "latitude": float(r["latitude"]), "longitude": float(r["longitude"]), "google_maps_url": make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), "access_note": r.get("access_note", "")})
+            rows.append({"survey_day": day_num, "order_within_day": order, "site_id": int(r.get("site_id", sid)), "candidate_type": r.get("candidate_type", ""), "priority_rank": r.get("priority_rank", ""), "priority_score": r.get("priority_score", ""), "sdm_suitability": r.get("sdm_suitability", ""), "occurrence_support_score": r.get("occurrence_support_score", ""), "model_support_score": r.get("model_support_score", ""), "observed_weight": r.get("observed_weight", ""), "model_weight": r.get("model_weight", ""), "score_explanation": r.get("score_explanation", ""), "n_occurrences": r.get("n_occurrences", ""), "latitude": float(r["latitude"]), "longitude": float(r["longitude"]), "google_maps_url": make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), "access_note": r.get("access_note", "")})
     return pd.DataFrame(rows).to_csv(index=False) if rows else ",".join(SURVEY_DAY_CSV_COLS) + "\n"
 
 
@@ -2457,7 +2674,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["name", "latitude", "longitude", "priority_rank", "priority_score", "sdm_suitability", "occurrence_support_score", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "google_maps_url"]
+EXPORT_CSV_COLS = ["name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -2677,8 +2894,8 @@ def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
         sel_df["google_maps_point_url"] = sel_df.apply(
             lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
         )
-        show_scols = [c for c in ["site_id", "priority_rank", "priority_score", "sdm_suitability",
-                                   "occurrence_support_score", "n_occurrences", "candidate_type",
+        show_scols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "sdm_suitability",
+                                   "n_occurrences", "candidate_type", "score_explanation",
                                    "latitude", "longitude", "google_maps_point_url"] if c in sel_df.columns]
         scol_cfg: dict[str, Any] = {}
         if "google_maps_point_url" in show_scols:
@@ -2762,6 +2979,10 @@ def main() -> None:
     cluster_m = st.sidebar.number_input("DBSCAN cluster distance (m)", 1, 500_000, 2000, 500)
     min_samples = st.sidebar.number_input("Minimum records per cluster", 1, 50, 1, 1)
     occurrence_weight = st.sidebar.slider("Occurrence record-count weight", 0.0, 0.60, 0.35, 0.05)
+    st.sidebar.subheader("Candidate scoring")
+    observed_weight = st.sidebar.number_input("Observed-data weight", min_value=0.0, max_value=1.0, value=0.7, step=0.05, format="%.2f", key="species_observed_weight")
+    model_weight = st.sidebar.number_input("SDM model weight", min_value=0.0, max_value=1.0, value=0.3, step=0.05, format="%.2f", key="species_model_weight")
+    st.sidebar.caption("Observed occurrence data generate the basic candidates. SDM support is optional and only re-ranks/enriches them.")
     st.sidebar.divider()
     st.sidebar.subheader("Layers")
     layers = {"predict": st.sidebar.checkbox("SDM predict map", True), "occ": st.sidebar.checkbox("Occurrences", True), "candidate_circles": st.sidebar.checkbox("Candidate circles", True)}
@@ -2841,7 +3062,7 @@ def main() -> None:
     occ_sdm_train["cluster_id"] = haversine_dbscan(occ_sdm_train, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occ_map_display = limit_occurrence_display(occ_extent_selected, set(), int(effective_max_map_points))
     occurrence_candidates = make_candidate_sites(occ_candidate_input, center_method, float(occurrence_weight))
-    occurrence_candidates = add_priority_rank(occurrence_candidates)
+    occurrence_candidates = add_priority_rank(occurrence_candidates, float(observed_weight), float(model_weight))
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
     if effective_large_dataset_mode:
         st.caption(
@@ -2863,7 +3084,7 @@ def main() -> None:
     if occurrence_candidates.empty:
         st.warning("No occurrence clusters found. Try reducing the cluster distance or minimum-samples setting in the sidebar.")
     else:
-        occ_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "candidate_type", "n_occurrences", "occurrence_support_score", "latitude", "longitude"] if c in occurrence_candidates.columns]
+        occ_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "latitude", "longitude", "score_explanation"] if c in occurrence_candidates.columns]
         st.dataframe(occurrence_candidates[occ_cand_show_cols], width="stretch", hide_index=True)
         oc1, oc2 = st.columns(2)
         oc1.download_button(
@@ -2924,9 +3145,14 @@ def main() -> None:
         st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
         climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[])
         variables = topo_vars + climate_vars
-        use_vif = st.checkbox("Apply VIF stepwise filtering", value=True)
-        vif_threshold = st.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0)
-        st.caption("VIF filtering is vifstep-like: repeatedly calculate VIF, remove the variable with the highest VIF above the threshold, and refit until all remaining variables pass.")
+        variable_strategy = st.selectbox("Variable-selection strategy", VARIABLE_SELECTION_STRATEGIES, index=0, key="sdm_variable_strategy")
+        vc1, vc2 = st.columns(2)
+        corr_threshold = vc1.number_input("Correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="sdm_corr_threshold")
+        vif_threshold = vc2.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="sdm_vif_threshold")
+        custom_variables = variables
+        if variable_strategy == "Advanced custom selection":
+            custom_variables = st.multiselect("Custom final variables", variables, default=variables, key="sdm_custom_final_variables")
+        st.caption("SDM/SSDM model support is optional. No VIF is the default; use correlation filtering, VIF stepwise, ecological representatives, or advanced custom selection when needed.")
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
         partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
         k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
@@ -3009,18 +3235,19 @@ def main() -> None:
                     if leaked_train_ids:
                         raise RuntimeError(f"Excluded rows reached the SDM training table: {leaked_train_ids[:20]}")
                 progress.progress(0.35)
-                if use_vif:
-                    status.write(f"Running VIF stepwise filtering with threshold {vif_threshold}...")
-                    kept_vars, vif_tbl = vif_step(train, variables, float(vif_threshold))
-                else:
-                    kept_vars = variables
-                    vif_tbl = compute_vif_table(train, variables)
-                    if "status" not in vif_tbl.columns:
-                        vif_tbl["status"] = "kept"
+                status.write(f"Running variable selection: {variable_strategy}...")
+                kept_vars, vif_tbl = select_environment_variables(
+                    train,
+                    variables,
+                    variable_strategy,
+                    vif_threshold=float(vif_threshold),
+                    corr_threshold=float(corr_threshold),
+                    custom_variables=custom_variables,
+                )
                 if not vif_tbl.empty:
                     vif_tbl["rows_dropped_before_vif"] = int(env_dropped)
                 if not kept_vars:
-                    raise RuntimeError("No environmental variables remained after VIF filtering.")
+                    raise RuntimeError("No environmental variables remained after variable selection.")
                 progress.progress(0.50)
                 status.write(f"Fitting ensemble SDM with {partition_method} partition...")
                 sdm_result = fit_sdm(train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg))
@@ -3051,7 +3278,8 @@ def main() -> None:
         st.warning("Stored SDM did not match the currently included occurrence row IDs, so it was discarded. Rebuild SDM to use only the remaining non-excluded points.")
 
     if vif_table is not None:
-        st.write("VIF table")
+        st.write("Variable-selection diagnostics")
+        st.caption("Variables can be kept despite high VIF when protected by an ecological group or restored as fallback_kept; inspect final_status, reason, protected_by_group, fallback_kept, and vif_stage.")
         st.dataframe(vif_table, width="stretch", hide_index=True)
 
     if sdm_result is not None:
@@ -3080,7 +3308,7 @@ def main() -> None:
             all_candidates = pd.concat([all_candidates, exploration], ignore_index=True, sort=False)
 
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_m)) if not all_candidates.empty else all_candidates
-    all_candidates = add_priority_rank(all_candidates)
+    all_candidates = add_priority_rank(all_candidates, float(observed_weight), float(model_weight))
     all_candidates = order_sites(all_candidates, "Nearest-neighbor route")
     route_plan = route_planner_panel(all_candidates)
 

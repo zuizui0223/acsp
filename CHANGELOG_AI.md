@@ -4,6 +4,26 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex (OpenAI) - Issue #10 optional model-support scoring and variable-selection strategies
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Made the shared species/genus workflow explicit: observed occurrence data generate the base survey candidates, while SDM/SSDM adds optional model support for prioritization.
+- Added candidate scoring controls for species and genus modes: observed-data weight and SDM/SSDM model weight, defaulting to 0.7 and 0.3.
+- Standardized output scoring columns: `occurrence_support_score`, `model_support_score`, `observed_weight`, `model_weight`, `priority_score`, and `score_explanation`.
+- Updated candidate ranking so `priority_score = observed_weight * occurrence_support_score + model_weight * model_support_score + optional bonuses`.
+- Species mode uses observed occurrence support plus optional SDM suitability-derived model support.
+- Genus mode uses observed richness/record support plus optional SSDM predicted richness-derived model support; observed richness hotspots can be re-ranked with SSDM support after SSDM runs.
+- Replaced default-on VIF controls with variable-selection strategy options: No VIF, Correlation filter, VIF stepwise, Ecological preset / representative climate set, and Advanced custom selection.
+- Added ecological preset / correlation-cluster representative variable selection and richer diagnostics fields including `final_status`, `reason`, `protected_by_group`, `fallback_kept`, and `vif_stage`.
+- Kept raster NoData/fill-value cleaning safeguards before SDM and SSDM variable selection/modeling.
+
+Features preserved:
+- Observed occurrence candidates remain available without SDM/SSDM, and SDM/SSDM never replaces or becomes required for candidate generation.
+
 ## 2026-06-03 - Codex (OpenAI) - Issue #10 target occurrence rectangle selection
 
 Changed files:
