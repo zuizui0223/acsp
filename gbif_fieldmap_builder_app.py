@@ -1402,7 +1402,7 @@ def genus_diversity_panel() -> None:
     selected_country = st.sidebar.selectbox("Country code filter optional", country_options, index=1, key="genus_country_code_filter_select")
     custom_country = st.sidebar.text_input("Custom country code optional", value="", max_chars=2, key="genus_country_code_filter_custom")
     country = custom_country.strip().upper() or selected_country
-    max_records = st.sidebar.number_input("Maximum genus GBIF records to fetch", 100, 50_000, 3_000, 500, help="GBIF returns at most 300 records per request. Start small while validating the occurrence richness map; increase later if needed.", key="genus_max_records")
+    max_records = st.sidebar.number_input("Maximum genus GBIF records to fetch", 100, 10_000, 1_000, 100, help="GBIF returns at most 300 records per request. Keep this small while validating the occurrence richness map; increase later if needed.", key="genus_max_records_v2")
     min_records_species = st.sidebar.number_input("Minimum records per species", 1, 500, 10, 1, key="genus_min_records_species")
     use_year = st.sidebar.checkbox("Filter genus records by year", value=False, key="genus_use_year")
     year_from = year_to = None
@@ -1410,6 +1410,11 @@ def genus_diversity_panel() -> None:
         c1, c2 = st.sidebar.columns(2)
         year_from = int(c1.number_input("From", 1600, 2100, 2000, key="genus_year_from"))
         year_to = int(c2.number_input("To", 1600, 2100, 2026, key="genus_year_to"))
+    if st.sidebar.button("Clear genus data"):
+        st.session_state.genus_raw_df = None
+        st.session_state.genus_source_key = None
+        st.session_state.genus_source_message = "No genus occurrence data loaded yet."
+        st.rerun()
     if st.sidebar.button("Fetch genus occurrences from GBIF", type="primary"):
         if not genus_name.strip():
             st.warning("Genus name is empty.")

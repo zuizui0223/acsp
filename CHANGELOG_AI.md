@@ -4,6 +4,23 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex - Reset genus fetch cap and add clear button
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Reduced the Genus diversity / SSDM default GBIF record cap to 1,000 and max selectable cap to 10,000 for the initial occurrence-richness workflow.
+- Changed the genus record-cap widget key so stale browser sessions do not keep the old 20,000-record setting.
+- Added a Clear genus data button to reset genus-mode session data.
+
+Features preserved:
+- Existing single-species workflow and all SDM/VIF/spatial partition/predict-map/survey-list features are unchanged.
+
+Known risks / TODO:
+- Large genus downloads can still take time; full SSDM remains deferred until occurrence richness is stable.
+
 ## 2026-06-03 - Codex - Reduce genus fetch blocking
 
 Changed files:
