@@ -4,6 +4,30 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-03 - Codex (OpenAI) - Issue #2 follow-up: optional stacked species SDM
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added an explicit "Optional SSDM: stack species SDMs" section in Genus diversity / SSDM mode.
+- SSDM does not run automatically; it runs only when the user clicks Run SSDM.
+- Added per-species SDM fitting for species with enough occurrence records.
+- Added a shared environmental prediction grid for all modeled species.
+- Added continuous SSDM richness as the sum of predicted suitability values.
+- Added binary SSDM richness as the sum of species predictions above the user-defined suitability threshold.
+- Added continuous and binary SSDM richness maps.
+- Added SSDM outputs: ssdm_species_model_summary.csv, ssdm_richness_grid.csv, and ssdm_hotspot_candidates.csv.
+- Added safeguards for max species to model, max presence points per species, shared background cells, progress per species, and skipping species with too few records.
+- Clarified that occurrence richness is observed richness while SSDM richness is predicted stacked richness.
+
+Features preserved:
+- Occurrence richness grid, genus downloads, single species planning, coordinate exclusion, large dataset controls, SDM, VIF, spatial partition diagnostics, predict map, route planner, and downloads remain available.
+
+Known risks / TODO:
+- SSDM can still be computationally heavy when many species, variables, or prediction cells are selected; defaults are conservative and the run is manual.
+
 ## 2026-06-03 - Codex (OpenAI) - Issue #3 large dataset mode
 
 Changed files:

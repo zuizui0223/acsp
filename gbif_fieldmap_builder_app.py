@@ -1373,6 +1373,175 @@ def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, 
     return overlay, pred_table
 
 
+def build_environment_prediction_grid(occ: pd.DataFrame, variables: list[str], resolution: str, area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[pd.DataFrame, tuple[int, int], list[list[float]], int]:
+    geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km)
+    if geom is None or geom.is_empty:
+        raise RuntimeError("SSDM prediction area could not be generated.")
+    land = load_land_geometry()
+    west, south, east, north = geom.bounds
+    ref_var = "elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0]
+    with rasterio.open(get_worldclim_raster_path(ref_var, resolution)) as src:
+        window = from_bounds(west, south, east, north, transform=src.transform).round_offsets().round_lengths()
+        raw_h = max(1, int(window.height))
+        raw_w = max(1, int(window.width))
+    stride = max(1, int(math.ceil(math.sqrt((raw_h * raw_w) / max(1, int(max_pixels))))))
+    out_h = max(1, int(math.ceil(raw_h / stride)))
+    out_w = max(1, int(math.ceil(raw_w / stride)))
+    if status is not None:
+        status.write(f"Building shared SSDM prediction grid: {out_w:,} x {out_h:,} cells; source stride={stride}")
+    arrays: dict[str, np.ndarray] = {}
+    actual_bounds = None
+    elev_cache = None
+    for var in variables:
+        if var in {"slope", "roughness"}:
+            if elev_cache is None:
+                elev_cache, actual_bounds = read_window_array(get_worldclim_raster_path("elevation", resolution), (west, south, east, north), (out_h, out_w))
+            gy, gx = np.gradient(elev_cache)
+            arrays[var] = np.sqrt(gx**2 + gy**2) if var == "slope" else np.nan_to_num(elev_cache - np.nanmean(elev_cache))
+        else:
+            arrays[var], actual_bounds = read_window_array(get_worldclim_raster_path(var, resolution), (west, south, east, north), (out_h, out_w))
+    west2, south2, east2, north2 = actual_bounds
+    lon_centers = np.linspace(west2 + (east2 - west2) / (2 * out_w), east2 - (east2 - west2) / (2 * out_w), out_w)
+    lat_centers = np.linspace(north2 - (north2 - south2) / (2 * out_h), south2 + (north2 - south2) / (2 * out_h), out_h)
+    lon_grid, lat_grid = np.meshgrid(lon_centers, lat_centers)
+    env = pd.DataFrame({v: arrays[v].ravel() for v in variables})
+    finite = np.isfinite(env.to_numpy()).all(axis=1)
+    spatial = np.array([geom.covers(Point(float(lon), float(lat))) and land.covers(Point(float(lon), float(lat))) for lat, lon in zip(lat_grid.ravel(), lon_grid.ravel())])
+    valid = finite & spatial
+    if valid.sum() == 0:
+        raise RuntimeError("No valid land raster cells were available for SSDM prediction.")
+    row_grid, col_grid = np.indices((out_h, out_w))
+    grid = pd.DataFrame({
+        "raster_row": row_grid.ravel()[valid].astype(int),
+        "raster_col": col_grid.ravel()[valid].astype(int),
+        "cell_index": np.flatnonzero(valid).astype(int),
+        "longitude": lon_grid.ravel()[valid],
+        "latitude": lat_grid.ravel()[valid],
+    })
+    for var in variables:
+        grid[var] = env.loc[valid, var].to_numpy()
+    return grid.reset_index(drop=True), (out_h, out_w), [[south2, west2], [north2, east2]], stride
+
+
+def ssdm_rgba(values: np.ndarray, max_value: float, alpha: int = 170) -> np.ndarray:
+    normalized = np.full(values.shape, np.nan, dtype=float)
+    if max_value > 0:
+        normalized = values / float(max_value)
+    return rgba_from_prediction(np.clip(normalized, 0, 1), alpha=alpha)
+
+
+def make_ssdm_overlay(grid: pd.DataFrame, value_col: str, shape: tuple[int, int], bounds: list[list[float]]) -> dict[str, Any]:
+    arr = np.full(int(shape[0]) * int(shape[1]), np.nan, dtype=float)
+    arr[grid["cell_index"].astype(int).to_numpy()] = pd.to_numeric(grid[value_col], errors="coerce").to_numpy(dtype=float)
+    arr = arr.reshape(shape)
+    max_value = float(np.nanmax(arr)) if np.isfinite(arr).any() else 0.0
+    return {
+        "image": ssdm_rgba(arr, max_value),
+        "bounds": bounds,
+        "shape": shape,
+        "min": round(float(np.nanmin(arr)), 4) if np.isfinite(arr).any() else np.nan,
+        "mean": round(float(np.nanmean(arr)), 4) if np.isfinite(arr).any() else np.nan,
+        "max": round(max_value, 4),
+    }
+
+
+def make_ssdm_map(grid: pd.DataFrame, hotspots: pd.DataFrame, value_col: str, title: str, shape: tuple[int, int], bounds: list[list[float]]) -> folium.Map:
+    center = (float(grid["latitude"].mean()), float(grid["longitude"].mean())) if not grid.empty else (35.5, 135.5)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    overlay = make_ssdm_overlay(grid, value_col, shape, bounds)
+    folium.raster_layers.ImageOverlay(image=overlay["image"], bounds=overlay["bounds"], opacity=0.70, name=title, interactive=True).add_to(fmap)
+    if hotspots is not None and not hotspots.empty:
+        fg = FeatureGroup(name="SSDM hotspot candidates", show=True)
+        for _, row in hotspots.iterrows():
+            folium.CircleMarker(
+                (row["latitude"], row["longitude"]),
+                radius=7,
+                color="#d73027",
+                fill=True,
+                fill_color="#d73027",
+                fill_opacity=0.9,
+                popup=folium.Popup(f"Hotspot rank {int(row['hotspot_rank'])}<br>Continuous richness: {row.get('ssdm_continuous_richness', '')}<br>Binary richness: {row.get('ssdm_binary_richness', '')}<br><a href='{row.get('google_maps_url', '')}' target='_blank'>Open in Google Maps</a>", max_width=360),
+                tooltip=f"SSDM hotspot {int(row['hotspot_rank'])}",
+            ).add_to(fg)
+        fg.add_to(fmap)
+    LayerControl(collapsed=True).add_to(fmap)
+    try:
+        fmap.fit_bounds(bounds, padding=(30, 30))
+    except Exception:
+        pass
+    return fmap
+
+
+def ssdm_hotspot_candidates(grid: pd.DataFrame, max_candidates: int) -> pd.DataFrame:
+    if grid.empty:
+        return pd.DataFrame()
+    out = grid.sort_values(["ssdm_continuous_richness", "ssdm_binary_richness"], ascending=False).head(int(max_candidates)).copy()
+    out.insert(0, "hotspot_rank", range(1, len(out) + 1))
+    out["candidate_type"] = "Predicted SSDM richness hotspot"
+    out["google_maps_url"] = [make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])) for _, r in out.iterrows()]
+    return out.reset_index(drop=True)
+
+
+def fit_stacked_species_sdms(occ: pd.DataFrame, variables: list[str], algorithms: list[str], resolution: str, area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, min_records: int, max_species: int, max_presence_points: int, n_background: int, binary_threshold: float, max_hotspots: int, status=None, progress=None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, tuple[int, int], list[list[float]]]:
+    work = occ.copy()
+    work["_species_clean"] = work["_species"].astype(str).str.strip()
+    work = work[work["_species_clean"].ne("")]
+    counts = work.groupby("_species_clean").size().sort_values(ascending=False)
+    eligible = counts[counts >= int(min_records)].head(int(max_species))
+    skipped_low = counts[counts < int(min_records)]
+    if eligible.empty:
+        raise RuntimeError("No species had enough records for SSDM.")
+    grid, shape, bounds, stride = build_environment_prediction_grid(work, variables, resolution, area_mode, buffer_km, rectangle_margin_km, max_pixels, status=status)
+    richness_cont = np.zeros(len(grid), dtype=float)
+    richness_binary = np.zeros(len(grid), dtype=int)
+    summary_rows = []
+    rng = np.random.default_rng(42)
+    background_n = min(int(n_background), len(grid))
+    bg_idx = rng.choice(len(grid), size=background_n, replace=False)
+    bg_base = grid.iloc[bg_idx][["latitude", "longitude"] + variables].copy()
+    bg_base["presence"] = 0
+    bg_base["occurrence_row_id"] = np.nan
+    total = len(eligible)
+    for i, (species, n_records) in enumerate(eligible.items(), start=1):
+        if status is not None:
+            status.write(f"Fitting SSDM species {i}/{total}: {species} ({int(n_records):,} records)")
+        if progress is not None:
+            progress.progress((i - 1) / max(1, total))
+        sp_occ = occurrence_sort_for_representative(work[work["_species_clean"].eq(species)])
+        sp_occ = exact_coordinate_deduplicate(sp_occ)
+        if len(sp_occ) > int(max_presence_points):
+            positions = np.linspace(0, len(sp_occ) - 1, int(max_presence_points)).round().astype(int)
+            sp_occ = sp_occ.iloc[np.unique(positions)].reset_index(drop=True)
+        if len(sp_occ) < int(min_records):
+            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "mean_auc": np.nan})
+            continue
+        pres = sp_occ[["_row_id", "_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude", "_row_id": "occurrence_row_id"}).copy()
+        pres["presence"] = 1
+        pres_env = extract_environment(pres, variables, "latitude", "longitude", resolution, status=None)
+        train = pd.concat([pres_env, bg_base[pres_env.columns]], ignore_index=True, sort=False)
+        try:
+            sdm_result = fit_sdm(train, variables, algorithms, "random holdout", 5, 0.05)
+            pred = predict_suitability(grid, sdm_result)["sdm_suitability"].to_numpy(dtype=float)
+            pred = np.nan_to_num(pred, nan=0.0)
+            richness_cont += pred
+            richness_binary += (pred >= float(binary_threshold)).astype(int)
+            metrics = sdm_result["metrics"]
+            auc_vals = pd.to_numeric(metrics.get("auc", pd.Series(dtype=float)), errors="coerce")
+            mean_auc = float(auc_vals.mean()) if auc_vals.notna().any() else np.nan
+            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms)})
+        except Exception as exc:
+            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "mean_auc": np.nan, "algorithms": ", ".join(algorithms)})
+    if progress is not None:
+        progress.progress(1.0)
+    for species, n_records in skipped_low.items():
+        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "mean_auc": np.nan, "algorithms": ""})
+    out_grid = grid[["raster_row", "raster_col", "cell_index", "latitude", "longitude"]].copy()
+    out_grid["ssdm_continuous_richness"] = np.round(richness_cont, 4)
+    out_grid["ssdm_binary_richness"] = richness_binary.astype(int)
+    hotspots = ssdm_hotspot_candidates(out_grid, max_hotspots)
+    return pd.DataFrame(summary_rows), out_grid, hotspots, shape, bounds
+
+
 def make_sdm_exploration_candidates(pred_table: pd.DataFrame, known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int) -> pd.DataFrame:
     if pred_table is None or pred_table.empty:
         return pd.DataFrame()
@@ -1516,7 +1685,7 @@ def genus_diversity_panel() -> None:
                 st.error(f"GBIF genus download failed: {exc}")
 
     st.subheader("Genus diversity / SSDM")
-    st.caption("This mode currently builds occurrence-based species richness outputs only. Full SSDM is intentionally left for the next step after this richness map is stable.")
+    st.caption("Occurrence richness maps show observed richness from GBIF records. Optional SSDM maps below show predicted stacked richness from per-species SDMs.")
     if st.session_state.genus_raw_df is None:
         st.info(st.session_state.genus_source_message)
         return
@@ -1556,6 +1725,7 @@ def genus_diversity_panel() -> None:
     st.dataframe(summary, width="stretch", hide_index=True)
 
     st.write("Occurrence-based species richness grid map")
+    st.caption("Observed richness: species counted from GBIF occurrence records inside each grid cell.")
     if grid.empty:
         st.warning("No richness grid could be built. Check whether GBIF records have species names.")
     else:
@@ -1573,6 +1743,79 @@ def genus_diversity_panel() -> None:
         d2.download_button("Richness grid CSV", grid.to_csv(index=False).encode("utf-8"), "genus_richness_grid.csv", "text/csv", width="stretch")
         d3.download_button("Hotspots CSV", hotspots.to_csv(index=False).encode("utf-8"), "genus_richness_hotspots.csv", "text/csv", width="stretch")
         d4.download_button("Richness HTML map", html_bytes, "genus_richness_map.html", "text/html", width="stretch")
+
+    st.subheader("Optional SSDM: stack species SDMs")
+    st.caption("Predicted stacked richness: fit one SDM per eligible species, predict on a shared environmental grid, then sum suitability values across species. This does not run automatically.")
+    with st.expander("Run stacked species distribution models", expanded=False):
+        s1, s2, s3 = st.columns(3)
+        ssdm_resolution = s1.selectbox("SSDM WorldClim resolution", RESOLUTIONS, index=2, key="ssdm_resolution")
+        ssdm_area_mode = s2.selectbox("SSDM prediction area", AREA_MODES, index=2, key="ssdm_area_mode")
+        ssdm_binary_threshold = s3.number_input("Binary suitability threshold", min_value=0.0, max_value=1.0, value=0.50, step=0.05, key="ssdm_binary_threshold")
+        s4, s5, s6 = st.columns(3)
+        ssdm_buffer_km = s4.number_input("SSDM buffer radius / hull buffer (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="ssdm_buffer_km")
+        ssdm_margin_km = s5.number_input("SSDM bounding-box margin (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="ssdm_margin_km")
+        ssdm_max_pixels = s6.number_input("SSDM max prediction cells", min_value=1_000, max_value=200_000, value=30_000, step=5_000, key="ssdm_max_pixels")
+        s7, s8, s9 = st.columns(3)
+        ssdm_min_records = s7.number_input("Minimum records per species", min_value=3, max_value=500, value=max(10, int(min_records_for_sdm)), step=1, key="ssdm_min_records")
+        ssdm_max_species = s8.number_input("Max species to model", min_value=1, max_value=200, value=20, step=1, key="ssdm_max_species")
+        ssdm_max_presence = s9.number_input("Max presence points per species", min_value=3, max_value=5_000, value=300, step=25, key="ssdm_max_presence")
+        s10, s11 = st.columns(2)
+        ssdm_background = s10.number_input("Shared background cells per species", min_value=50, max_value=20_000, value=500, step=50, key="ssdm_background")
+        ssdm_hotspot_n = s11.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="ssdm_hotspot_n")
+        st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
+        ssdm_topo_vars = st.multiselect("SSDM topography variables", TOPOGRAPHY_VARS, default=[], key="ssdm_topo_vars")
+        st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
+        ssdm_climate_vars = st.multiselect("SSDM climate variables", CLIMATE_VARS, default=[], key="ssdm_climate_vars")
+        ssdm_variables = ssdm_topo_vars + ssdm_climate_vars
+        ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
+        run_ssdm = st.button("Run SSDM", type="primary", key="run_ssdm_button")
+
+    if run_ssdm:
+        if not ssdm_variables:
+            st.warning("Select at least one environmental variable for SSDM.")
+        elif not ssdm_algorithms:
+            st.warning("Select at least one algorithm for SSDM.")
+        else:
+            status = st.empty()
+            progress = st.progress(0.0)
+            try:
+                model_summary, ssdm_grid, ssdm_hotspots, ssdm_shape, ssdm_bounds = fit_stacked_species_sdms(
+                    occ=occ,
+                    variables=ssdm_variables,
+                    algorithms=ssdm_algorithms,
+                    resolution=ssdm_resolution,
+                    area_mode=ssdm_area_mode,
+                    buffer_km=float(ssdm_buffer_km),
+                    rectangle_margin_km=float(ssdm_margin_km),
+                    max_pixels=int(ssdm_max_pixels),
+                    min_records=int(ssdm_min_records),
+                    max_species=int(ssdm_max_species),
+                    max_presence_points=int(ssdm_max_presence),
+                    n_background=int(ssdm_background),
+                    binary_threshold=float(ssdm_binary_threshold),
+                    max_hotspots=int(ssdm_hotspot_n),
+                    status=status,
+                    progress=progress,
+                )
+                st.success("SSDM complete.")
+                st.write("SSDM species model summary")
+                st.dataframe(model_summary, width="stretch", hide_index=True)
+                st.write("Continuous SSDM richness map")
+                continuous_map = make_ssdm_map(ssdm_grid, ssdm_hotspots, "ssdm_continuous_richness", "continuous SSDM richness", ssdm_shape, ssdm_bounds)
+                st_folium(continuous_map, width=None, height=620, returned_objects=[], key="ssdm_continuous_map")
+                st.write("Binary SSDM richness map")
+                binary_map = make_ssdm_map(ssdm_grid, ssdm_hotspots, "ssdm_binary_richness", "binary SSDM richness", ssdm_shape, ssdm_bounds)
+                st_folium(binary_map, width=None, height=620, returned_objects=[], key="ssdm_binary_map")
+                st.write("SSDM hotspot candidates")
+                st.dataframe(ssdm_hotspots, width="stretch", hide_index=True)
+                d1, d2, d3, d4, d5 = st.columns(5)
+                d1.download_button("ssdm_species_model_summary.csv", model_summary.to_csv(index=False).encode("utf-8"), "ssdm_species_model_summary.csv", "text/csv", width="stretch")
+                d2.download_button("ssdm_richness_grid.csv", ssdm_grid.to_csv(index=False).encode("utf-8"), "ssdm_richness_grid.csv", "text/csv", width="stretch")
+                d3.download_button("ssdm_hotspot_candidates.csv", ssdm_hotspots.to_csv(index=False).encode("utf-8"), "ssdm_hotspot_candidates.csv", "text/csv", width="stretch")
+                d4.download_button("continuous SSDM HTML", continuous_map.get_root().render().encode("utf-8"), "ssdm_continuous_richness_map.html", "text/html", width="stretch")
+                d5.download_button("binary SSDM HTML", binary_map.get_root().render().encode("utf-8"), "ssdm_binary_richness_map.html", "text/html", width="stretch")
+            except Exception as exc:
+                st.error(f"SSDM failed: {exc}")
 
 
 def make_route_selection_map(sites: pd.DataFrame, selected_ids: list[int], add_draw: bool = False) -> folium.Map:
