@@ -1630,6 +1630,8 @@ def fit_stacked_species_sdms(
     vif_threshold: float,
     ssdm_partition_method: str = "random holdout",
     ssdm_test_split: float = 0.20,
+    per_species_grid_thin_deg: float = 0.0,
+    per_species_distance_thin_m: float = 0.0,
     status=None,
     progress=None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, tuple[int, int], list[list[float]], pd.DataFrame]:
@@ -1694,6 +1696,10 @@ def fit_stacked_species_sdms(
             progress.progress((i - 1) / max(1, total))
         sp_occ = occurrence_sort_for_representative(work[work["_species_clean"].eq(species)])
         sp_occ = exact_coordinate_deduplicate(sp_occ)
+        if float(per_species_grid_thin_deg) > 0 and not sp_occ.empty:
+            sp_occ = grid_thin(sp_occ, float(per_species_grid_thin_deg))
+        if float(per_species_distance_thin_m) > 0 and not sp_occ.empty:
+            sp_occ = spatial_thin(sp_occ, float(per_species_distance_thin_m))
         if len(sp_occ) > int(max_presence_points):
             positions = np.linspace(0, len(sp_occ) - 1, int(max_presence_points)).round().astype(int)
             sp_occ = sp_occ.iloc[np.unique(positions)].reset_index(drop=True)
@@ -1965,6 +1971,11 @@ def genus_diversity_panel() -> None:
         s10, s11 = st.columns(2)
         ssdm_background = s10.number_input("Shared background cells per species", min_value=50, max_value=20_000, value=500, step=50, key="ssdm_background")
         ssdm_hotspot_n = s11.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="ssdm_hotspot_n")
+        st.markdown("**Per-species bias-reduction preprocessing**")
+        st.caption("Applied per species before fitting each individual SDM. Exact coordinate deduplication is always applied.")
+        ps1, ps2 = st.columns(2)
+        ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg", help="One record per grid cell per species. Set 0 to disable.")
+        ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m", help="Minimum nearest-neighbour distance between retained presence points per species. Set 0 to disable.")
         st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
         ssdm_topo_vars = st.multiselect("SSDM topography variables", TOPOGRAPHY_VARS, default=[], key="ssdm_topo_vars")
         st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
@@ -2035,6 +2046,8 @@ def genus_diversity_panel() -> None:
                     vif_threshold=float(ssdm_vif_threshold),
                     ssdm_partition_method=ssdm_partition_method,
                     ssdm_test_split=float(ssdm_test_split) if ssdm_partition_method != "none (training only)" else 0.20,
+                    per_species_grid_thin_deg=float(ssdm_per_species_grid_deg),
+                    per_species_distance_thin_m=float(ssdm_per_species_distance_m),
                     status=status,
                     progress=progress,
                 )
@@ -2527,10 +2540,6 @@ def main() -> None:
         return
     occ_sdm_train["cluster_id"] = haversine_dbscan(occ_sdm_train, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occ_map_display = limit_occurrence_display(occ_after_exclusion, active_excluded_ids, int(max_map_points))
-    current_sdm_occurrence_row_ids = tuple(sorted(occ_sdm_train["_row_id"].astype(int).tolist()))
-    if st.session_state.sdm_occurrence_row_ids is not None and st.session_state.sdm_occurrence_row_ids != current_sdm_occurrence_row_ids:
-        reset_model_outputs()
-        st.info("Coordinate exclusions or thinning changed. Previous SDM and predict map were cleared; rebuild SDM to use the current occurrence set.")
     occurrence_candidates = make_candidate_sites(occ_sdm_train, center_method, float(occurrence_weight))
     occurrence_candidates = add_priority_rank(occurrence_candidates)
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
@@ -2585,6 +2594,20 @@ def main() -> None:
 
     st.subheader("Optional: Build SDM")
     with st.expander("Build SDM and predict map", expanded=False):
+        # ── SDM bias-reduction preprocessing ─────────────────────────────────
+        st.markdown("**SDM bias-reduction preprocessing**")
+        st.caption(
+            "GBIF records are often clustered near roads, cities, trails, and popular observation sites. "
+            "Spatial thinning reduces sampling bias before SDM fitting. "
+            "These settings apply only to SDM training — occurrence-based survey candidates above are unaffected."
+        )
+        sp1, sp2 = st.columns(2)
+        sdm_exact_dedup = sp1.checkbox("Exact coordinate deduplication", value=True, key="sdm_prep_exact_dedup", help="Keep one representative record per unique lat/lon coordinate.")
+        sdm_grid_deg = sp1.number_input("Grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="sdm_prep_grid_deg", help="Keep one record per grid cell of this size. Reduces spatial autocorrelation.")
+        sdm_distance_m = sp2.number_input("Distance thinning — spThin-like (m, 0 = off)", min_value=0, max_value=100_000, value=1000, step=500, key="sdm_prep_distance_m", help="Minimum nearest-neighbour distance between retained presence points. Equivalent to spThin minimum distance.")
+        sdm_max_presence = sp2.number_input("Maximum SDM presence points (0 = no cap)", min_value=0, max_value=50_000, value=0, step=100, key="sdm_prep_max_presence", help="Hard cap on presence points passed to SDM. Useful for very large datasets. 0 disables the cap.")
+        st.divider()
+        # ── Environmental variables & model settings ──────────────────────────
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
         st.caption(f"Selected resolution: {RESOLUTION_NOTE[resolution]}")
         st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
@@ -2604,21 +2627,64 @@ def main() -> None:
         st.caption("buffer = around each occurrence point; convex hull = polygon around records; bounding box = latitude/longitude rectangle around records. All are clipped to land.")
         run_sdm = st.button("Build SDM and predict map", type="primary")
 
+    # ── SDM preprocessing pipeline (applied to occ_after_exclusion) ───────────
+    # Occurrence candidates above use occ_sdm_train (sidebar settings).
+    # SDM uses its own independent preprocessing pipeline for bias reduction.
+    occ_for_sdm = occ_after_exclusion.copy()
+    sdm_n_after_qc = len(occ_for_sdm)
+
+    if sdm_exact_dedup:
+        occ_for_sdm = exact_coordinate_deduplicate(occ_for_sdm)
+    sdm_n_after_dedup = len(occ_for_sdm)
+
+    occ_for_sdm = grid_thin(occ_for_sdm, float(sdm_grid_deg))
+    if float(sdm_distance_m) > 0 and not occ_for_sdm.empty:
+        occ_for_sdm = spatial_thin(occ_for_sdm, float(sdm_distance_m))
+    sdm_n_after_thinning = len(occ_for_sdm)
+
+    if int(sdm_max_presence) > 0 and len(occ_for_sdm) > int(sdm_max_presence):
+        occ_for_sdm = occurrence_sort_for_representative(occ_for_sdm).head(int(sdm_max_presence)).reset_index(drop=True)
+    sdm_n_final = len(occ_for_sdm)
+
+    leaked_for_sdm = sorted(set(occ_for_sdm["_row_id"].astype(int)).intersection(active_excluded_ids)) if not occ_for_sdm.empty else []
+    if leaked_for_sdm:
+        st.error(f"Excluded rows leaked into SDM preprocessing output: {leaked_for_sdm[:20]}. SDM aborted.")
+        occ_for_sdm = pd.DataFrame()
+        sdm_n_final = 0
+
+    # Preprocessing metrics display
+    st.caption("**SDM preprocessing summary** — bias-reduced presence points for SDM training:")
+    pm1, pm2, pm3, pm4, pm5 = st.columns(5)
+    pm1.metric("Raw records", f"{len(occ_raw):,}")
+    pm2.metric("After QC exclusion", f"{sdm_n_after_qc:,}")
+    pm3.metric("After exact dedup", f"{sdm_n_after_dedup:,}")
+    pm4.metric("After thinning", f"{sdm_n_after_thinning:,}")
+    pm5.metric("Final SDM presence pts", f"{sdm_n_final:,}")
+    if sdm_n_final == 0 and not occ_after_exclusion.empty:
+        st.warning("SDM preprocessing removed all records. Reduce grid/distance thinning or increase the max presence cap.")
+
+    current_sdm_occurrence_row_ids = tuple(sorted(occ_for_sdm["_row_id"].astype(int).tolist())) if not occ_for_sdm.empty else ()
+    if st.session_state.sdm_occurrence_row_ids is not None and st.session_state.sdm_occurrence_row_ids != current_sdm_occurrence_row_ids:
+        reset_model_outputs()
+        st.info("SDM preprocessing settings or QC exclusions changed. Previous SDM was cleared; rebuild SDM to use the current preprocessed occurrence set.")
+
     status = st.empty()
     if run_sdm:
         if not variables:
             st.warning("Select at least one environmental variable.")
         elif not algorithms:
             st.warning("Select at least one algorithm.")
+        elif occ_for_sdm.empty:
+            st.error("SDM preprocessing removed all records. Reduce thinning settings.")
         elif extent_geom is None or extent_geom.is_empty:
             st.error("The SDM prediction extent is empty after red-point cutouts. SDM was stopped.")
-        elif set(occ_sdm_train["_row_id"].astype(int)).intersection(active_excluded_ids):
+        elif set(occ_for_sdm["_row_id"].astype(int)).intersection(active_excluded_ids):
             st.error("Excluded row IDs are still present in the SDM input. SDM was stopped to prevent using excluded occurrences.")
         else:
             try:
                 progress = st.progress(0.0)
                 status.write("Generating presence/background data...")
-                pb = build_presence_background(occ_sdm_train, int(n_background), area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km), status)
+                pb = build_presence_background(occ_for_sdm, int(n_background), area_mode, float(buffer_km), float(rectangle_margin_km), excluded_occ, float(exclusion_buffer_km), status)
                 progress.progress(0.15)
                 status.write("Extracting environmental variables for training data...")
                 train = extract_environment(pb, variables, "latitude", "longitude", resolution, status)
@@ -2643,7 +2709,7 @@ def main() -> None:
                 sdm_result = fit_sdm(train, kept_vars, algorithms, partition_method, int(k_folds), float(checkerboard_deg))
                 progress.progress(0.70)
                 status.write("Predicting raster-style suitability map...")
-                overlay, pred_table = build_predict_map(occ_sdm_train, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), excluded_occ, float(exclusion_buffer_km), status)
+                overlay, pred_table = build_predict_map(occ_for_sdm, kept_vars, resolution, sdm_result, area_mode, float(buffer_km), float(rectangle_margin_km), int(max_pixels), excluded_occ, float(exclusion_buffer_km), status)
                 st.session_state.sdm_result = sdm_result
                 st.session_state.sdm_train_table = sdm_result.get("training_table", train)
                 st.session_state.prediction_overlay = overlay
@@ -2692,7 +2758,7 @@ def main() -> None:
             min_dist = c3.number_input("Min distance from known records/ranges (m)", 0, 200_000, 3000, 500)
             max_new = c4.number_input("Max new ranges", 1, 200, 20, 1)
             explore_cluster_m = st.number_input("Exploration clustering distance (m)", 100, 200_000, 3000, 500)
-            exploration = make_sdm_exploration_candidates(pred_table, occ_sdm_train, all_candidates, float(min_suit), float(q), float(min_dist), float(explore_cluster_m), int(max_new), int(all_candidates["site_id"].max()) + 1 if not all_candidates.empty else 1)
+            exploration = make_sdm_exploration_candidates(pred_table, occ_for_sdm, all_candidates, float(min_suit), float(q), float(min_dist), float(explore_cluster_m), int(max_new), int(all_candidates["site_id"].max()) + 1 if not all_candidates.empty else 1)
         if not exploration.empty:
             all_candidates = pd.concat([all_candidates, exploration], ignore_index=True, sort=False)
 
