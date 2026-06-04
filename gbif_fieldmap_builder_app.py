@@ -3551,17 +3551,30 @@ def main() -> None:
         sdm_ind_distance_m = sp2.number_input("Distance thinning — spThin-like (m, 0 = off)", min_value=0, max_value=100_000, value=1000, step=500, key="sdm_ind_prep_distance_m", help="Minimum nearest-neighbour distance between retained presence points.")
         sdm_ind_max_presence = sp2.number_input("Maximum SDM presence points", min_value=1, max_value=50_000, value=int(sdm_working_records), step=25, key="sdm_ind_prep_max_presence", help="Hard cap on SDM presence points. Raw GBIF records are preserved.")
 
-        # Apply QC exclusions then preprocessing to get final SDM presence points
-        _sdm_excl_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
-        occ_sdm_qc_included = occ_raw[~occ_raw["_row_id"].astype(int).isin(_sdm_excl_ids)].copy().reset_index(drop=True)
-        occ_sdm_train = occ_sdm_qc_included.copy()
+        # ── Step 1: Bias reduction FIRST → determines the ~N points shown on QC map ──
+        occ_sdm_bias_reduced = occ_raw.copy()
+        _sdm_br_n0 = len(occ_sdm_bias_reduced)
         if sdm_ind_exact_dedup:
-            occ_sdm_train = exact_coordinate_deduplicate(occ_sdm_train)
-        occ_sdm_train = grid_thin(occ_sdm_train, float(sdm_ind_grid_deg))
-        if float(sdm_ind_distance_m) > 0 and not occ_sdm_train.empty:
-            occ_sdm_train = spatial_thin(occ_sdm_train, float(sdm_ind_distance_m))
-        if len(occ_sdm_train) > int(sdm_ind_max_presence):
-            occ_sdm_train = spatially_balanced_cap(occ_sdm_train, int(sdm_ind_max_presence))
+            occ_sdm_bias_reduced = exact_coordinate_deduplicate(occ_sdm_bias_reduced)
+        _sdm_br_n1 = len(occ_sdm_bias_reduced)
+        occ_sdm_bias_reduced = grid_thin(occ_sdm_bias_reduced, float(sdm_ind_grid_deg))
+        _sdm_br_n2 = len(occ_sdm_bias_reduced)
+        if float(sdm_ind_distance_m) > 0 and not occ_sdm_bias_reduced.empty:
+            occ_sdm_bias_reduced = spatial_thin(occ_sdm_bias_reduced, float(sdm_ind_distance_m))
+        _sdm_br_n3 = len(occ_sdm_bias_reduced)
+        if len(occ_sdm_bias_reduced) > int(sdm_ind_max_presence):
+            occ_sdm_bias_reduced = spatially_balanced_cap(occ_sdm_bias_reduced, int(sdm_ind_max_presence))
+        _sdm_br_n4 = len(occ_sdm_bias_reduced)
+
+        # ── Step 2: QC exclusion on the bias-reduced set (map only shows ~N pts) ─
+        _sdm_excl_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
+        _valid_excl_ids = _sdm_excl_ids & set(occ_sdm_bias_reduced["_row_id"].astype(int))
+        occ_sdm_train = occ_sdm_bias_reduced[~occ_sdm_bias_reduced["_row_id"].astype(int).isin(_valid_excl_ids)].copy().reset_index(drop=True)
+        _sdm_excl_raw = occ_sdm_bias_reduced[occ_sdm_bias_reduced["_row_id"].astype(int).isin(_valid_excl_ids)].copy()
+        # Keep only valid IDs in session state (stale IDs from previous bias settings are dropped)
+        if _valid_excl_ids != _sdm_excl_ids:
+            st.session_state.sdm_excluded_row_ids = _valid_excl_ids
+        occ_sdm_qc_included = occ_sdm_train  # alias for metrics compatibility
 
         st.divider()
         # ── SDM prediction extent controls ────────────────────────────────────
@@ -3575,22 +3588,21 @@ def main() -> None:
         _ec1, _ec2 = st.columns(2)
         buffer_km = _ec1.number_input("Buffer radius / hull buffer (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="sdm_buffer_km")
         rectangle_margin_km = _ec2.number_input("Bounding-box margin (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="sdm_rectangle_margin_km")
-        exclusion_buffer_km = 0.0  # no hard-exclusion cutouts; QC handled in setup map below
+        exclusion_buffer_km = 0.0
 
         extent_geom = prediction_area_geometry(occ_sdm_train, area_mode, float(buffer_km), float(rectangle_margin_km), None, 0.0)
 
         st.divider()
-        # ── Consolidated SDM setup map ────────────────────────────────────────
+        # ── Consolidated SDM setup map (bias-reduced points only — fast) ──────
         st.markdown("**SDM setup map**")
         st.caption(
-            "Blue points = final SDM analysis points actually used for model fitting (all shown, not capped). "
+            f"Blue points = {len(occ_sdm_train):,} final SDM analysis points after bias reduction (all shown). "
             "Red points = records excluded by SDM QC rectangles. "
             "Orange outline = SDM prediction extent. "
-            "Draw a rectangle to bulk-exclude suspicious records from SDM training."
+            "Draw a rectangle to exclude suspicious records from SDM training."
         )
-        _sdm_excl_raw = occ_raw[occ_raw["_row_id"].astype(int).isin(_sdm_excl_ids)].copy() if _sdm_excl_ids else pd.DataFrame()
-        if occ_sdm_train.empty:
-            st.warning("SDM QC / preprocessing removed all fetched records. Clear SDM QC rectangles or adjust bias-reduction settings.")
+        if occ_sdm_train.empty and _sdm_excl_raw.empty:
+            st.warning("Bias reduction removed all records. Reduce grid/distance thinning or increase the max presence cap.")
         else:
             if extent_geom is not None and not extent_geom.is_empty:
                 minx, miny, maxx, maxy = extent_geom.bounds
@@ -3601,18 +3613,18 @@ def main() -> None:
                 returned_objects=["all_drawings", "last_active_drawing"],
                 key="sdm_setup_map",
             )
-            # Handle rectangle draw → SDM QC exclusion
+            # Rectangle draw matches against bias-reduced set (not occ_raw)
             _raw_drawings = (_sdm_map_data or {}).get("all_drawings") or (_sdm_map_data or {}).get("last_active_drawing")
             _qc_features = extract_drawn_features(_raw_drawings)
             if _qc_features:
                 _draw_sig = str(_qc_features)[:800]
                 if _draw_sig != st.session_state.get("sdm_qc_click_sig", ""):
-                    _new_excl = set(ids_inside_drawn_rectangles(occ_raw, "_row_id", "_latitude", "_longitude", _qc_features))
+                    _new_excl = set(ids_inside_drawn_rectangles(occ_sdm_bias_reduced, "_row_id", "_latitude", "_longitude", _qc_features))
                     st.session_state.sdm_qc_click_sig = _draw_sig
                     st.session_state.sdm_excluded_row_ids = _new_excl
                     reset_model_outputs()
                     st.rerun()
-            if _sdm_excl_ids and st.button("Clear SDM QC exclusions", key="sdm_qc_clear"):
+            if _valid_excl_ids and st.button("Clear SDM QC exclusions", key="sdm_qc_clear"):
                 st.session_state.sdm_excluded_row_ids = set()
                 st.session_state.sdm_qc_click_sig = ""
                 reset_model_outputs()
@@ -3669,33 +3681,21 @@ def main() -> None:
         st.caption("buffer = around each occurrence point; convex hull = polygon around records; bounding box = latitude/longitude rectangle around records. All are clipped to land.")
         run_sdm = st.button("Build SDM and predict map", type="primary")
 
-    # ── SDM preprocessing pipeline (applied to Step 2 active target set) ──────
-    # Occurrence candidates use occ_candidate_input (unmodified).
-    # SDM uses its own pipeline: SDM-specific suspicious-record exclusions first,
-    # then dedup + thinning.
+    # ── SDM preprocessing pipeline result ─────────────────────────────────────
     occ_for_sdm = occ_sdm_train.copy().reset_index(drop=True)
-    sdm_n_after_qc = len(occ_sdm_qc_included)
-    sdm_n_after_dedup = len(occ_for_sdm)
-    sdm_n_after_thinning = len(occ_for_sdm)
+    sdm_excluded_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
     sdm_n_final = len(occ_for_sdm)
 
-    sdm_excluded_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
-    leaked_for_sdm = sorted(set(occ_for_sdm["_row_id"].astype(int)).intersection(sdm_excluded_ids)) if not occ_for_sdm.empty else []
-    if leaked_for_sdm:
-        st.error(f"Excluded rows leaked into SDM preprocessing output: {leaked_for_sdm[:20]}. SDM aborted.")
-        occ_for_sdm = pd.DataFrame()
-        sdm_n_final = 0
-
-    # Preprocessing metrics display
-    st.caption("**SDM preprocessing summary** — bias-reduced presence points for SDM training:")
+    # Preprocessing metrics display (bias reduction → QC order)
+    st.caption("**SDM preprocessing summary** — bias reduction first, then QC exclusion:")
     pm1, pm2, pm3, pm4, pm5 = st.columns(5)
-    pm1.metric("Fetched records (SDM source)", f"{len(occ_raw):,}", help="All GBIF records fetched — independent from Step 2 survey area.")
-    pm2.metric("After SDM QC exclusion", f"{sdm_n_after_qc:,}", delta=f"{sdm_n_after_qc - len(occ_raw):,}" if sdm_n_after_qc < len(occ_raw) else None)
-    pm3.metric("After deduplication", f"{sdm_n_after_dedup:,}", delta=f"{sdm_n_after_dedup - sdm_n_after_qc:,}" if sdm_n_after_dedup < sdm_n_after_qc else None)
-    pm4.metric("After spatial thinning", f"{sdm_n_after_thinning:,}", delta=f"{sdm_n_after_thinning - sdm_n_after_dedup:,}" if sdm_n_after_thinning < sdm_n_after_dedup else None)
-    pm5.metric("Final SDM presence points", f"{sdm_n_final:,}", delta=f"{sdm_n_final - sdm_n_after_thinning:,}" if sdm_n_final < sdm_n_after_thinning else None)
+    pm1.metric("Fetched records (SDM source)", f"{_sdm_br_n0:,}", help="All GBIF records — independent from Step 2 survey area.")
+    pm2.metric("After deduplication", f"{_sdm_br_n1:,}", delta=f"{_sdm_br_n1 - _sdm_br_n0:,}" if _sdm_br_n1 < _sdm_br_n0 else None)
+    pm3.metric("After spatial thinning", f"{_sdm_br_n3:,}", delta=f"{_sdm_br_n3 - _sdm_br_n1:,}" if _sdm_br_n3 < _sdm_br_n1 else None)
+    pm4.metric("After cap", f"{_sdm_br_n4:,}", delta=f"{_sdm_br_n4 - _sdm_br_n3:,}" if _sdm_br_n4 < _sdm_br_n3 else None)
+    pm5.metric("Final SDM presence points", f"{sdm_n_final:,}", delta=f"{sdm_n_final - _sdm_br_n4:,}" if sdm_n_final < _sdm_br_n4 else None, help="After SDM QC rectangle exclusions.")
     if sdm_n_final == 0 and not occ_raw.empty:
-        st.warning("SDM preprocessing removed all records. Reduce grid/distance thinning or increase the max presence cap.")
+        st.warning("SDM preprocessing / QC removed all records. Reduce thinning, increase the cap, or clear SDM QC exclusions.")
 
     current_sdm_occurrence_row_ids = tuple(sorted(occ_for_sdm["_row_id"].astype(int).tolist())) if not occ_for_sdm.empty else ()
     if st.session_state.sdm_occurrence_row_ids is not None and st.session_state.sdm_occurrence_row_ids != current_sdm_occurrence_row_ids:
@@ -3711,9 +3711,7 @@ def main() -> None:
         elif occ_for_sdm.empty:
             st.error("SDM preprocessing removed all records. Reduce thinning settings.")
         elif extent_geom is None or extent_geom.is_empty:
-            st.error("The SDM prediction extent is empty after red-point cutouts. SDM was stopped.")
-        elif set(occ_for_sdm["_row_id"].astype(int)).intersection(sdm_excluded_ids):
-            st.error("Excluded row IDs are still present in the SDM input. SDM was stopped to prevent using excluded occurrences.")
+            st.error("The SDM prediction extent is empty. SDM was stopped.")
         else:
             try:
                 progress = st.progress(0.0)
