@@ -101,7 +101,6 @@ ALGORITHMS = ["Logistic regression", "Random forest", "ExtraTrees", "Gradient bo
 AREA_MODES = ["buffer", "convex hull", "bounding box"]
 PARTITION_METHODS = ["random holdout", "random k-fold", "block", "checkerboard1", "checkerboard2", "jackknife"]
 ROUTE_ORDER_METHODS = ["priority then nearest", "nearest from west", "priority only", "north to south", "south to north", "west to east", "east to west"]
-VARIABLE_SELECTION_STRATEGIES = ["No VIF", "Correlation filter", "VIF stepwise", "Ecological preset / representative climate set", "Advanced custom selection"]
 ECOLOGICAL_PRESET_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bio12", "bio15"]
 # Balanced ecology preset: 6 interpretable variables covering key ecological gradients.
 # bio1 = Annual Mean Temperature (temperature level)
@@ -111,47 +110,12 @@ ECOLOGICAL_PRESET_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bi
 # bio14 = Precipitation of Driest Month (dryness / dry-month limitation)
 # elevation = terrain (topography)
 BALANCED_ECOLOGY_PRESET = ["bio1", "bio4", "bio12", "bio15", "bio14", "elevation"]
-ENV_VARIABLE_PRESETS = ["Recommended variable set", "Custom variables"]
-SURVEY_PLANNING_MODES = ["Fast survey planning (recommended)", "Detailed analysis", "Custom"]
 FAST_MAP_RECORDS = 500
 FAST_CANDIDATE_RECORDS = 800
 FAST_SDM_RECORDS = 300
 FAST_SSDM_RECORDS_PER_SPECIES = 150
-DETAILED_MAP_RECORDS = 1000
-DETAILED_CANDIDATE_RECORDS = 1500
-DETAILED_SDM_RECORDS = 500
-DETAILED_SSDM_RECORDS_PER_SPECIES = 300
 FAST_SPECIES_GBIF_FETCH_CAP = 1000
-DETAILED_SPECIES_GBIF_FETCH_CAP = 3000
 FAST_GENUS_GBIF_FETCH_CAP = 3000
-DETAILED_GENUS_GBIF_FETCH_CAP = 10000
-COUNTRY_NAME_TO_CODE = {
-    "All countries": "",
-    "Japan": "JP",
-    "United States": "US",
-    "China": "CN",
-    "South Korea": "KR",
-    "Taiwan": "TW",
-    "United Kingdom": "GB",
-    "Germany": "DE",
-    "France": "FR",
-    "Italy": "IT",
-    "Spain": "ES",
-    "Australia": "AU",
-    "New Zealand": "NZ",
-    "Canada": "CA",
-    "Brazil": "BR",
-    "India": "IN",
-    "Indonesia": "ID",
-    "Thailand": "TH",
-    "Vietnam": "VN",
-    "Philippines": "PH",
-    "Malaysia": "MY",
-    "Mexico": "MX",
-    "Argentina": "AR",
-    "Chile": "CL",
-    "South Africa": "ZA",
-}
 
 
 @dataclass(frozen=True)
@@ -319,13 +283,6 @@ def extract_media_url_from_gbif_record(rec: dict[str, Any]) -> str:
                 if url:
                     return url
     return first_url(rec.get("associatedMedia"))
-
-
-def country_selector(label: str, key: str, default: str = "Japan") -> str:
-    options = list(COUNTRY_NAME_TO_CODE.keys())
-    default_index = options.index(default) if default in options else 0
-    country_name = st.sidebar.selectbox(label, options, index=default_index, key=key)
-    return COUNTRY_NAME_TO_CODE[country_name]
 
 
 def gbif_occurrence_params(taxon_key: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> dict[str, Any]:
@@ -2432,7 +2389,7 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
     return fmap
 
 
-def load_input_controls(survey_planning_mode: str, default_fetch_cap: int) -> None:
+def load_input_controls(default_fetch_cap: int = FAST_SPECIES_GBIF_FETCH_CAP) -> None:
     mode = st.sidebar.radio("Input source", ["Upload coordinate CSV", "Search GBIF by scientific name"], index=1, key="input_source_selector")
     if st.sidebar.button("Clear loaded data"):
         clear_loaded_data()
@@ -2451,7 +2408,17 @@ def load_input_controls(survey_planning_mode: str, default_fetch_cap: int) -> No
                 reset_model_outputs()
         return
     name = st.sidebar.text_input("Taxon scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_taxon_scientific_name_input")
-    country = country_selector("Country filter", "gbif_country_name_filter", default="Japan")
+    country_options = ["", "JP", "US", "GB", "CN", "KR", "TW", "DE", "FR", "IT", "ES", "AU", "NZ", "CA", "BR", "IN", "ID", "TH", "VN"]
+    selected_country = st.sidebar.selectbox("Country code filter optional", country_options, index=1, key="gbif_country_code_filter_select")
+    with st.sidebar.expander("Advanced country filter", expanded=False):
+        custom_country = st.text_input(
+            "Custom country code optional",
+            value="",
+            max_chars=2,
+            key="gbif_country_code_filter_custom",
+            help="Two-letter ISO country code. Overrides the dropdown when set.",
+        )
+    country = custom_country.strip().upper() or selected_country
     use_year = st.sidebar.checkbox("Filter by year", value=False)
     year_from = year_to = None
     if use_year:
@@ -2464,7 +2431,7 @@ def load_input_controls(survey_planning_mode: str, default_fetch_cap: int) -> No
             payload, total_count, _params = gbif_species_count_cached(name.strip(), country.strip().upper(), year_from, year_to)
             st.sidebar.info(
                 f"GBIF total coordinate records: {total_count:,}. "
-                f"{survey_planning_mode} will fetch up to {int(default_fetch_cap):,} representative records by default."
+                f"The app will fetch up to {int(default_fetch_cap):,} representative records by default."
             )
             st.sidebar.caption(f"Matched taxon: {payload.get('scientificName', name)} / usageKey={payload.get('usageKey')}")
         except Exception as exc:
@@ -2503,29 +2470,26 @@ def load_input_controls(survey_planning_mode: str, default_fetch_cap: int) -> No
 
 def genus_diversity_panel() -> None:
     st.sidebar.header("Genus data source")
-    st.sidebar.subheader("Survey planning mode")
-    genus_survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="genus_survey_planning_mode")
-    if genus_survey_planning_mode.startswith("Detailed"):
-        genus_fetch_cap = DETAILED_GENUS_GBIF_FETCH_CAP
-        genus_map_records = DETAILED_MAP_RECORDS
-        genus_candidate_records = DETAILED_CANDIDATE_RECORDS
-        genus_ssdm_records = DETAILED_SSDM_RECORDS_PER_SPECIES
-    elif genus_survey_planning_mode == "Custom":
-        genus_fetch_cap = FAST_GENUS_GBIF_FETCH_CAP
-        genus_map_records = FAST_MAP_RECORDS
-        genus_candidate_records = FAST_CANDIDATE_RECORDS
-        genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
-    else:
-        genus_fetch_cap = FAST_GENUS_GBIF_FETCH_CAP
-        genus_map_records = FAST_MAP_RECORDS
-        genus_candidate_records = FAST_CANDIDATE_RECORDS
-        genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
+    genus_fetch_cap = FAST_GENUS_GBIF_FETCH_CAP
+    genus_map_records = FAST_MAP_RECORDS
+    genus_candidate_records = FAST_CANDIDATE_RECORDS
+    genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
     st.sidebar.caption(
         f"Raw genus records are kept. Defaults: fetch up to {genus_fetch_cap:,}; map about {genus_map_records:,}; "
         f"richness candidates about {genus_candidate_records:,}; SSDM about {genus_ssdm_records:,} per species."
     )
     genus_name = st.sidebar.text_input("Genus name", value="", placeholder="e.g. Cirsium", key="genus_name_input_no_autofill")
-    country = country_selector("Country filter", "genus_country_name_filter", default="Japan")
+    country_options = ["", "JP", "US", "GB", "CN", "KR", "TW", "DE", "FR", "IT", "ES", "AU", "NZ", "CA", "BR", "IN", "ID", "TH", "VN"]
+    selected_country = st.sidebar.selectbox("Country code filter optional", country_options, index=1, key="genus_country_code_filter")
+    with st.sidebar.expander("Advanced country filter", expanded=False):
+        custom_country = st.text_input(
+            "Custom country code optional",
+            value="",
+            max_chars=2,
+            key="genus_country_code_filter_custom",
+            help="Two-letter ISO country code. Overrides the dropdown when set.",
+        )
+    country = custom_country.strip().upper() or selected_country
     use_year = st.sidebar.checkbox("Filter by year", value=False, key="genus_use_year_filter")
     year_from = year_to = None
     if use_year:
@@ -2537,7 +2501,7 @@ def genus_diversity_panel() -> None:
             payload, total_count, _params, usage_key = gbif_genus_count_cached(genus_name.strip(), country.strip().upper(), year_from, year_to)
             st.sidebar.info(
                 f"GBIF total coordinate records: {total_count:,}. "
-                f"{genus_survey_planning_mode} will fetch up to {int(genus_fetch_cap):,} representative records by default."
+                f"The app will fetch up to {int(genus_fetch_cap):,} representative records by default."
             )
             st.sidebar.caption(f"Matched genus: {payload.get('scientificName') or payload.get('canonicalName') or genus_name} / taxonKey={usage_key}")
         except Exception as exc:
@@ -2604,11 +2568,10 @@ def genus_diversity_panel() -> None:
     genus_observed_weight = st.sidebar.number_input("Observed-data weight", min_value=0.0, max_value=1.0, value=0.7, step=0.05, format="%.2f", key="genus_observed_weight")
     genus_model_weight = st.sidebar.number_input("SSDM model weight", min_value=0.0, max_value=1.0, value=0.3, step=0.05, format="%.2f", key="genus_model_weight")
     st.sidebar.caption("Observed richness generates the basic hotspot candidates. SSDM support is optional and only re-ranks/enriches them.")
-    if genus_survey_planning_mode == "Custom":
-        with st.sidebar.expander("Custom working subset caps", expanded=False):
-            genus_map_records = st.number_input("Genus map display records", 100, 50_000, genus_map_records, 100, key="genus_map_records")
-            genus_candidate_records = st.number_input("Genus richness candidate records", 50, 50_000, genus_candidate_records, 50, key="genus_candidate_records")
-            genus_ssdm_records = st.number_input("SSDM presence records per species", 3, 5_000, genus_ssdm_records, 25, key="genus_ssdm_records")
+    with st.sidebar.expander("Advanced working subset caps", expanded=False):
+        genus_map_records = st.number_input("Genus map display records", 100, 50_000, genus_map_records, 100, key="genus_map_records")
+        genus_candidate_records = st.number_input("Genus richness candidate records", 50, 50_000, genus_candidate_records, 50, key="genus_candidate_records")
+        genus_ssdm_records = st.number_input("SSDM presence records per species", 3, 5_000, genus_ssdm_records, 25, key="genus_ssdm_records")
 
     st.subheader("2 窶・Review records and choose survey area")
     st.caption("Step 2 is only for observed-data richness hotspot generation. Optional SSDM starts independently from fetched genus records.")
@@ -2731,43 +2694,15 @@ def genus_diversity_panel() -> None:
                 ps1, ps2 = st.columns(2)
                 ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg", help="One record per grid cell per species. Set 0 to disable.")
                 ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m", help="Minimum nearest-neighbour distance between retained presence points per species. Set 0 to disable.")
-        st.markdown("**Environmental variable preset**")
-        ssdm_env_preset = st.selectbox(
-            "SSDM variable preset",
-            ENV_VARIABLE_PRESETS,
-            index=0,
-            key="ssdm_env_preset",
-            help=(
-                "Balanced ecology: 6 interpretable variables — recommended starting point. "
-                "Climate only: all 19 BIO variables (consider Correlation filter or VIF stepwise). "
-                "Topography only: elevation, slope, roughness. "
-                "Custom: choose manually."
-            ),
+        st.markdown("**SSDM environmental variables**")
+        ssdm_variables = st.multiselect(
+            "SSDM environmental variables",
+            TOPOGRAPHY_VARS + CLIMATE_VARS,
+            default=list(BALANCED_ECOLOGY_PRESET),
+            key="ssdm_environment_variables",
+            help="Balanced ecology variables are selected by default. Add or remove variables directly.",
         )
-        if ssdm_env_preset == "Recommended variable set":
-            ssdm_variables = list(BALANCED_ECOLOGY_PRESET)
-            st.caption(
-                "**Balanced ecology preset (6 variables):** "
-                "bio1 · bio4 · bio12 · bio15 · bio14 · elevation. "
-                "Variable selection is run once on pooled genus data; the same set is used for every species model."
-            )
-        elif ssdm_env_preset == "Climate only preset":
-            ssdm_variables = list(CLIMATE_VARS)
-            st.caption(
-                f"Climate only: all {len(CLIMATE_VARS)} BIO variables. "
-                "Correlation filter or VIF stepwise (Advanced options below) recommended to reduce redundancy."
-            )
-        elif ssdm_env_preset == "Topography only preset":
-            ssdm_variables = list(TOPOGRAPHY_VARS)
-            st.caption(f"Topography only: {', '.join(TOPOGRAPHY_VARS)}.")
-        else:
-            st.caption("Select variables manually:")
-            st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
-            _ssdm_topo_vars = st.multiselect("SSDM topography variables", TOPOGRAPHY_VARS, default=[], key="ssdm_topo_vars")
-            st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
-            _ssdm_climate_vars = st.multiselect("SSDM climate variables", CLIMATE_VARS, default=[], key="ssdm_climate_vars")
-            ssdm_variables = _ssdm_topo_vars + _ssdm_climate_vars
-            ssdm_auto_corr_filter = st.checkbox("Automatically remove highly correlated variables (recommended)", value=True, key="ssdm_auto_corr_filter")
+        st.caption("Shared VIF stepwise filtering is applied automatically before SSDM fitting (default threshold = 10).")
 
         ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
 
@@ -2775,15 +2710,18 @@ def genus_diversity_panel() -> None:
             st.caption(
                 "Variable selection is run once on a pooled sample of all genus occurrences and background points. "
                 "The same retained variable set is used for every per-species model. "
-                "No VIF is the default. Correlation filter or VIF stepwise are useful for Climate only preset."
+                "VIF stepwise is the default; change this only when you need a different diagnostic filter."
             )
-            ssdm_variable_strategy = st.selectbox("SSDM variable-selection strategy", VARIABLE_SELECTION_STRATEGIES, index=0, key="ssdm_variable_strategy")
+            ssdm_variable_strategy = st.selectbox(
+                "Advanced SSDM variable-selection strategy",
+                ["VIF stepwise", "Correlation filter", "Advanced custom selection"],
+                index=0,
+                key="ssdm_variable_strategy",
+            )
             vc1, vc2 = st.columns(2)
             ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
             ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
             ssdm_custom_variables = ssdm_variables
-            if ssdm_env_preset == "Custom variables" and "ssdm_auto_corr_filter" in st.session_state and st.session_state.ssdm_auto_corr_filter and ssdm_variable_strategy == "No VIF":
-                ssdm_variable_strategy = "Correlation filter"
             if ssdm_variable_strategy == "Advanced custom selection":
                 ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.markdown("**SSDM validation / partition**")
@@ -3284,29 +3222,16 @@ def main() -> None:
         genus_diversity_panel()
         return
 
-    st.sidebar.subheader("Survey planning mode")
-    survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="species_survey_planning_mode")
-    if survey_planning_mode.startswith("Detailed"):
-        default_fetch_cap = DETAILED_SPECIES_GBIF_FETCH_CAP
-        default_map_records = DETAILED_MAP_RECORDS
-        default_candidate_records = DETAILED_CANDIDATE_RECORDS
-        default_sdm_records = DETAILED_SDM_RECORDS
-    elif survey_planning_mode == "Custom":
-        default_fetch_cap = FAST_SPECIES_GBIF_FETCH_CAP
-        default_map_records = FAST_MAP_RECORDS
-        default_candidate_records = FAST_CANDIDATE_RECORDS
-        default_sdm_records = FAST_SDM_RECORDS
-    else:
-        default_fetch_cap = FAST_SPECIES_GBIF_FETCH_CAP
-        default_map_records = FAST_MAP_RECORDS
-        default_candidate_records = FAST_CANDIDATE_RECORDS
-        default_sdm_records = FAST_SDM_RECORDS
+    default_fetch_cap = FAST_SPECIES_GBIF_FETCH_CAP
+    default_map_records = FAST_MAP_RECORDS
+    default_candidate_records = FAST_CANDIDATE_RECORDS
+    default_sdm_records = FAST_SDM_RECORDS
     st.sidebar.caption(
         f"Raw GBIF records are kept for summary/download. Defaults: fetch up to {default_fetch_cap:,}; map about {default_map_records:,}, "
         f"candidate input about {default_candidate_records:,}, SDM presence about {default_sdm_records:,}."
     )
     st.sidebar.header("Data source")
-    load_input_controls(survey_planning_mode, int(default_fetch_cap))
+    load_input_controls(int(default_fetch_cap))
     st.sidebar.divider()
     st.sidebar.subheader("Sampling design")
     survey_range_m = st.sidebar.number_input("Survey range radius (m)", 50, 50_000, 500, 50, help="Radius around each candidate center shown as a survey range circle on the map.")
@@ -3314,15 +3239,9 @@ def main() -> None:
     with st.sidebar.expander("Advanced sampling settings", expanded=False):
         thinning_m = st.number_input("Spatial thinning before clustering (m)", 0, 50_000, 1000, 500, help="Minimum distance between retained records used for candidate clustering.")
         large_dataset_mode = st.checkbox("Large dataset mode", value=False, help="Also enabled automatically when valid records exceed 1,000.")
-        if survey_planning_mode == "Custom":
-            max_map_points = st.number_input("Max occurrence points shown on map", 100, 50_000, default_map_records, 100, help="Only this many occurrence points are drawn on Folium maps. Raw records are kept.")
-            candidate_working_records = st.number_input("Candidate input working records", 50, 50_000, default_candidate_records, 50, help="Spatially representative occurrence records used for observed-data candidate generation.")
-            sdm_working_records = st.number_input("SDM presence working records", 20, 50_000, default_sdm_records, 25, help="Bias-reduced presence records used for optional SDM.")
-        else:
-            max_map_points = default_map_records
-            candidate_working_records = default_candidate_records
-            sdm_working_records = default_sdm_records
-            st.caption("Switch to Custom to edit map/candidate/SDM working subset caps.")
+        max_map_points = st.number_input("Max occurrence points shown on map", 100, 50_000, default_map_records, 100, help="Only this many occurrence points are drawn on Folium maps. Raw records are kept.")
+        candidate_working_records = st.number_input("Candidate input working records", 50, 50_000, default_candidate_records, 50, help="Spatially representative occurrence records used for observed-data candidate generation.")
+        sdm_working_records = st.number_input("SDM presence working records", 20, 50_000, default_sdm_records, 25, help="Bias-reduced presence records used for optional SDM.")
         exact_dedup = st.checkbox("Exact coordinate deduplication", value=True, help="Keep one representative record per unique lat/lon coordinate before clustering.")
         grid_thinning_deg = st.number_input("Grid thinning for analysis (degrees)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", help="One record per grid cell before clustering. Representative subsets still use at least light grid thinning by default.")
         center_method = st.selectbox("Candidate center method", ["Medoid", "Centroid"], index=0, help="How to pick the representative point for each occurrence cluster.")
@@ -3555,55 +3474,23 @@ def main() -> None:
         # ── Environmental variables ───────────────────────────────────────────
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
         st.caption(f"Selected resolution: {RESOLUTION_NOTE[resolution]}")
-        st.markdown("**Environmental variable preset**")
-        env_preset = st.selectbox(
-            "Variable preset",
-            ENV_VARIABLE_PRESETS,
-            index=0,
-            key="sdm_env_preset",
-            help=(
-                "Balanced ecology: 6 interpretable variables covering key ecological gradients — "
-                "recommended starting point for most users. "
-                "Climate only: all 19 WorldClim BIO variables (use advanced variable selection below to reduce redundancy). "
-                "Topography only: elevation, slope, roughness. "
-                "Custom: choose individual variables manually."
-            ),
+        st.markdown("**Environmental variables**")
+        variables = st.multiselect(
+            "Environmental variables",
+            TOPOGRAPHY_VARS + CLIMATE_VARS,
+            default=list(BALANCED_ECOLOGY_PRESET),
+            key="sdm_environment_variables",
+            help="Balanced ecology variables are selected by default. Add or remove variables directly.",
         )
-        if env_preset == "Recommended variable set":
-            variables = list(BALANCED_ECOLOGY_PRESET)
-            st.caption(
-                "**Balanced ecology preset (6 variables):** "
-                "bio1 (temp level) · bio4 (temp seasonality) · bio12 (precipitation) · "
-                "bio15 (precip seasonality) · bio14 (driest month) · elevation. "
-                "Covers the main ecological gradients without redundancy."
-            )
-        elif env_preset == "Climate only preset":
-            variables = list(CLIMATE_VARS)
-            st.caption(
-                f"Climate only: all {len(CLIMATE_VARS)} WorldClim BIO variables. "
-                "Many BIO variables are highly correlated — consider Correlation filter or VIF stepwise in Advanced options below."
-            )
-        elif env_preset == "Topography only preset":
-            variables = list(TOPOGRAPHY_VARS)
-            st.caption(f"Topography only: {', '.join(TOPOGRAPHY_VARS)}.")
-        else:
-            st.caption("Select variables manually:")
-            st.markdown("<span style='color:#8c510a;font-weight:700'>Topography variables</span>", unsafe_allow_html=True)
-            _topo_vars = st.multiselect("Topography variables", TOPOGRAPHY_VARS, default=[], key="sdm_custom_topo_vars")
-            st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
-            _climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[], key="sdm_custom_climate_vars")
-            variables = _topo_vars + _climate_vars
-            sdm_auto_corr_filter = st.checkbox("Automatically remove highly correlated variables (recommended)", value=True, key="sdm_auto_corr_filter")
+        st.caption("VIF stepwise filtering is applied automatically before SDM fitting (default threshold = 10).")
 
         with st.expander("Advanced variable selection", expanded=False):
             st.caption(
-                "No VIF is the default and works well with Balanced ecology preset. "
-                "Correlation filter or VIF stepwise are useful when using Climate only preset (19 variables). "
-                "Advanced custom selection lets you manually pick the final variable subset."
+                "VIF stepwise is applied by default. Advanced controls let you change the threshold or use an alternative filter."
             )
             variable_strategy = st.selectbox(
-                "Variable-selection strategy",
-                VARIABLE_SELECTION_STRATEGIES,
+                "Advanced variable-selection strategy",
+                ["VIF stepwise", "Correlation filter", "Advanced custom selection"],
                 index=0,
                 key="sdm_variable_strategy",
             )
@@ -3611,28 +3498,24 @@ def main() -> None:
             corr_threshold = vc1.number_input("Correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="sdm_corr_threshold")
             vif_threshold = vc2.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="sdm_vif_threshold")
             custom_variables = variables
-            if env_preset == "Custom variables" and "sdm_auto_corr_filter" in st.session_state and st.session_state.sdm_auto_corr_filter and variable_strategy == "No VIF":
-                variable_strategy = "Correlation filter"
             if variable_strategy == "Advanced custom selection":
                 custom_variables = st.multiselect("Custom final variables", variables, default=variables, key="sdm_custom_final_variables")
 
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
-        validation_mode = st.selectbox("Validation method", ["Recommended spatial validation", "Fast random split", "Advanced"], index=0, key="sdm_validation_mode")
-        if validation_mode == "Fast random split":
-            partition_method = "random holdout"
-            k_folds = 5
-            checkerboard_deg = 0.05
-        elif validation_mode == "Advanced":
-            partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
+        partition_method = st.selectbox(
+            "Validation method",
+            PARTITION_METHODS,
+            index=PARTITION_METHODS.index("block"),
+            key="sdm_partition_method",
+        )
+        k_folds = 5
+        checkerboard_deg = 0.05
+        if partition_method == "random k-fold":
             k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
+        if partition_method in ["checkerboard1", "checkerboard2"]:
             checkerboard_deg = st.number_input("Checkerboard cell size (degrees)", min_value=0.001, max_value=5.0, value=0.05, step=0.01, format="%.3f")
-        else:
-            partition_method = "block"
-            k_folds = 5
-            checkerboard_deg = 0.05
-            st.caption("Recommended spatial validation uses an automatic block-style spatial partition.")
-        default_background = 500 if survey_planning_mode.startswith("Fast") else 1000
-        default_max_pixels = 40_000 if survey_planning_mode.startswith("Fast") else 80_000
+        default_background = 500
+        default_max_pixels = 40_000
         with st.expander("Advanced model settings", expanded=False):
             n_background = st.number_input("Number of land-only background points", 100, 20_000, default_background, 100)
             max_pixels = st.number_input("Maximum predict-map pixels", 2_000, 500_000, default_max_pixels, 10_000)

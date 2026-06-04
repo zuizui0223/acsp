@@ -4,6 +4,29 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Apply lightweight survey-planning policy UI
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read `AGENTS.md`, `CHANGELOG_AI.md`, and `SURVEY_PLANNING_POLICY.md`, then used the latest GitHub `main` as the baseline.
+- Removed the main species/genus `Survey planning mode` selectors and fixed the default working policy to species fetch 1,000, genus fetch 3,000, map 500, candidate input 800, SDM 300, and SSDM 150 per species.
+- Restored compact country-code filters (`JP`, `US`, etc.) for species and genus GBIF searches, with optional custom two-letter code fields under Advanced.
+- Replaced SDM/SSDM environmental preset selectors with editable multiselects prefilled by the balanced ecology variables.
+- Made VIF stepwise with threshold 10 the default SDM/SSDM variable-selection behavior while keeping threshold/alternative strategies inside Advanced.
+- Restored the single-species validation method selector to the original partition methods, defaulting to `block`; k-fold and checkerboard inputs now appear only when relevant.
+
+Features preserved:
+- Step 2 remains observed-data candidate/hotspot selection only.
+- Optional SDM retains independent SDM-only QC, bias reduction, prediction extent, predict map, VIF diagnostics, and weighted model-support scoring.
+- Optional SSDM remains manual-run only and keeps observed richness separate from predicted stacked richness support.
+
+Verification:
+- `python -m py_compile gbif_fieldmap_builder_app.py`
+- `git diff --check`
+
 ## 2026-06-04 - Codex (OpenAI) - Separate Step 2 observed candidates from optional SDM QC/extent
 
 Changed files:
