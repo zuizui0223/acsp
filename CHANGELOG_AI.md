@@ -4,6 +4,29 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Mirror genus hotspot selection with species workflow
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Added genus-specific selected-site session state and reset handling so genus selections are independent but follow the species-mode selection pattern.
+- Added a priority-aware genus hotspot selection map that overlays observed richness grid cells, shows observed hotspots and SSDM-high exploratory richness candidates with distinct candidate labels, supports click-to-toggle selection, rectangle selection via `ids_inside_drawn_rectangles`, and selected-site green rings.
+- Merged the old genus Step 3/Step 4 table-first flow into one map-first `Richness hotspot suggestions and selection` workflow with top-ranked display controls, priority/model filters, observed/exploratory candidate toggles, compact selected-hotspot summary, and full tables moved into an optional expander.
+- Stored optional SSDM grid/hotspot results in session state so observed richness hotspots can be re-ranked with SSDM predicted richness and SSDM-high exploratory richness candidates can be shown on the main selection map.
+- Moved the Optional SSDM section visually before the main genus selection map using a Streamlit container, mirroring species mode's optional model support before final candidate selection.
+- Expanded selected genus exports and validation templates with observed richness, SSDM predicted richness, species lists, target taxa, specimens, DNA samples, survey effort, and notes.
+- Updated SSDM validation UI to use `Auto recommended` by default and added the species SDM partition choices; Auto now chooses a validation method per species and reports the chosen `partition_method` in the SSDM model summary.
+- Fixed visible genus Step heading encoding and kept low-offset genus GBIF fetch behavior.
+
+Features preserved:
+- Species mode behavior, CSV upload, genus GBIF total count/fetch, partial genus fetch recovery, country/year filters, observed richness grid, species summary, optional SSDM, shared VIF diagnostics, predicted richness maps, and existing downloads remain available.
+
+Known risks / TODO:
+- The genus workflow now mirrors species-mode selection and export behavior, but the SSDM setup map/QC remains lighter than the single-species SDM setup and should be refined in a follow-up if full SSDM QC parity is required.
+
 ## 2026-06-04 - Codex (OpenAI) - Make genus fetch cap directly editable
 
 Changed files:

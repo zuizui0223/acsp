@@ -180,6 +180,13 @@ def init_session_state() -> None:
         "genus_raw_df": None,
         "genus_source_key": None,
         "genus_source_message": "No genus occurrence data loaded yet.",
+        "genus_selected_site_ids": [],
+        "genus_last_click_signature": "",
+        "genus_last_draw_sig": "",
+        "genus_ssdm_grid": None,
+        "genus_ssdm_hotspots": None,
+        "genus_ssdm_shape": None,
+        "genus_ssdm_bounds": None,
         "_last_analysis_mode": None,
     }
     for key, value in defaults.items():
@@ -211,6 +218,13 @@ def clear_genus_data() -> None:
     st.session_state.genus_raw_df = None
     st.session_state.genus_source_key = None
     st.session_state.genus_source_message = "No genus occurrence data loaded yet."
+    st.session_state.genus_selected_site_ids = []
+    st.session_state.genus_last_click_signature = ""
+    st.session_state.genus_last_draw_sig = ""
+    st.session_state.genus_ssdm_grid = None
+    st.session_state.genus_ssdm_hotspots = None
+    st.session_state.genus_ssdm_shape = None
+    st.session_state.genus_ssdm_bounds = None
     st.session_state.excluded_row_ids = set()
     st.session_state.qc_rect_selected_ids = []
     st.session_state.qc_rect_features = []
@@ -649,8 +663,14 @@ def richness_hotspot_candidates(grid: pd.DataFrame, metric: str, max_candidates:
     out.insert(0, "hotspot_rank", range(1, len(out) + 1))
     out["site_id"] = out["hotspot_rank"].astype(int)
     out["candidate_type"] = "Occurrence richness hotspot"
+    out["n_occurrences"] = pd.to_numeric(out["record_count"], errors="coerce").fillna(0).astype(int)
+    out["observed_species_richness"] = pd.to_numeric(out["species_richness"], errors="coerce").fillna(0).astype(int)
+    out["ssdm_predicted_richness"] = np.nan
     out["occurrence_support_score"] = (pd.to_numeric(out[metric_col], errors="coerce").fillna(0.0) / max_metric).clip(0, 1).round(3)
     out["model_support_score"] = 0.0
+    out["candidate_method"] = "Observed occurrence richness grid"
+    out["selection_reason"] = f"High observed {metric_col.replace('_', ' ')} in the selected Step 2 survey area."
+    out["bias_warning"] = "Occurrence-supported hotspot. Field validation is still required."
     out["google_maps_url"] = [make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])) for _, r in out.iterrows()]
     return out.reset_index(drop=True)
 
@@ -747,6 +767,77 @@ def make_richness_map(grid: pd.DataFrame, hotspots: pd.DataFrame, metric: str) -
     LayerControl(collapsed=True).add_to(fmap)
     try:
         fmap.fit_bounds([[grid["lat_min"].min(), grid["lon_min"].min()], [grid["lat_max"].max(), grid["lon_max"].max()]], padding=(30, 30))
+    except Exception:
+        pass
+    return fmap
+
+
+def make_genus_candidate_selection_map(grid: pd.DataFrame, candidates: pd.DataFrame, metric: str, selected_ids: Optional[list[int]] = None, add_draw: bool = True) -> folium.Map:
+    center = (float(grid["latitude"].mean()), float(grid["longitude"].mean())) if grid is not None and not grid.empty else (35.5, 135.5)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    metric_col = {"Species richness": "species_richness", "Record count": "record_count", "Species with minimum records": "species_with_min_records"}.get(metric, "species_richness")
+    max_value = float(grid[metric_col].max()) if grid is not None and not grid.empty and metric_col in grid.columns else 0.0
+    if grid is not None and not grid.empty:
+        fg_grid = FeatureGroup(name=f"observed richness grid: {metric}", show=True)
+        for _, row in grid.iterrows():
+            value = float(row.get(metric_col, 0.0))
+            folium.Rectangle(
+                bounds=[[row["lat_min"], row["lon_min"]], [row["lat_max"], row["lon_max"]]],
+                color=richness_color(value, max_value),
+                weight=1,
+                fill=True,
+                fill_color=richness_color(value, max_value),
+                fill_opacity=0.38,
+                popup=folium.Popup(
+                    f"<b>Observed richness grid cell</b><br>{metric}: {value:g}<br>Species richness: {int(row.get('species_richness', 0))}<br>Records: {int(row.get('record_count', 0))}<br>Species: {row.get('species_list', '')}",
+                    max_width=520,
+                ),
+                tooltip=f"{metric}: {value:g}",
+            ).add_to(fg_grid)
+        fg_grid.add_to(fmap)
+    selected_set = set(int(s) for s in (selected_ids or []))
+    if candidates is not None and not candidates.empty:
+        fg_hot = FeatureGroup(name="richness hotspot candidates", show=True)
+        for _, row in candidates.iterrows():
+            sid = int(row["site_id"])
+            marker_radius, color = _priority_marker_style(row)
+            ctype = str(row.get("candidate_type", ""))
+            rank = row.get("priority_rank", "")
+            rank_label = f"Rank {rank} | " if str(rank).strip() not in ("", "nan") else ""
+            is_exploratory = ctype.lower().startswith("ssdm-high")
+            tooltip_text = f"{rank_label}{ctype} | site {sid}"
+            kwargs: dict[str, Any] = dict(
+                radius=marker_radius,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.88,
+                weight=2,
+                tooltip=tooltip_text,
+                popup=folium.Popup(popup_html_site(row), max_width=460),
+            )
+            if is_exploratory:
+                kwargs["dash_array"] = "10 5"
+            loc = (float(row["latitude"]), float(row["longitude"]))
+            folium.CircleMarker(loc, **kwargs).add_to(fg_hot)
+            if sid in selected_set:
+                folium.CircleMarker(loc, radius=marker_radius + 5, color="#00cc44", fill=False, weight=3, tooltip=f"SELECTED | site {sid}").add_to(fg_hot)
+        fg_hot.add_to(fmap)
+    if add_draw:
+        Draw(export=False, draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False}, edit_options={"edit": False, "remove": True}).add_to(fmap)
+    add_richness_legend(fmap, metric, max_value)
+    LayerControl(collapsed=True).add_to(fmap)
+    try:
+        lat_values: list[float] = []
+        lon_values: list[float] = []
+        if grid is not None and not grid.empty:
+            lat_values.extend(pd.to_numeric(grid["latitude"], errors="coerce").dropna().tolist())
+            lon_values.extend(pd.to_numeric(grid["longitude"], errors="coerce").dropna().tolist())
+        if candidates is not None and not candidates.empty:
+            lat_values.extend(pd.to_numeric(candidates["latitude"], errors="coerce").dropna().tolist())
+            lon_values.extend(pd.to_numeric(candidates["longitude"], errors="coerce").dropna().tolist())
+        if lat_values and lon_values:
+            fmap.fit_bounds([[min(lat_values), min(lon_values)], [max(lat_values), max(lon_values)]], padding=(30, 30))
     except Exception:
         pass
     return fmap
@@ -2410,9 +2501,15 @@ def ssdm_hotspot_candidates(grid: pd.DataFrame, max_candidates: int) -> pd.DataF
     max_richness = float(out["ssdm_continuous_richness"].max()) if not out.empty and float(out["ssdm_continuous_richness"].max()) > 0 else 1.0
     out.insert(0, "hotspot_rank", range(1, len(out) + 1))
     out["site_id"] = out["hotspot_rank"].astype(int)
-    out["candidate_type"] = "Predicted SSDM richness hotspot"
+    out["candidate_type"] = "SSDM-high exploratory richness candidate"
+    out["n_occurrences"] = 0
+    out["observed_species_richness"] = np.nan
+    out["ssdm_predicted_richness"] = pd.to_numeric(out["ssdm_continuous_richness"], errors="coerce").round(4)
     out["occurrence_support_score"] = 0.0
     out["model_support_score"] = (pd.to_numeric(out["ssdm_continuous_richness"], errors="coerce").fillna(0.0) / max_richness).clip(0, 1).round(3)
+    out["candidate_method"] = "Stacked SSDM predicted richness"
+    out["selection_reason"] = "High predicted stacked richness. Model-only exploratory candidate."
+    out["bias_warning"] = "Exploratory SSDM-high candidate. Lower confidence than observed hotspots; field validation is required."
     out["google_maps_url"] = [make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])) for _, r in out.iterrows()]
     return out.reset_index(drop=True)
 
@@ -2547,8 +2644,9 @@ def fit_stacked_species_sdms(
         if len(sp_occ) > int(max_presence_points):
             positions = np.linspace(0, len(sp_occ) - 1, int(max_presence_points)).round().astype(int)
             sp_occ = sp_occ.iloc[np.unique(positions)].reset_index(drop=True)
+        species_partition_method = auto_sdm_partition(int(len(sp_occ)), None)[0] if ssdm_partition_method == "Auto recommended" else ssdm_partition_method
         if len(sp_occ) < int(min_records):
-            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "test_split": float(ssdm_test_split) if species_partition_method == "random holdout" else np.nan})
             continue
         pres = sp_occ[["_row_id", "_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude", "_row_id": "occurrence_row_id"}).copy()
         pres["presence"] = 1
@@ -2564,7 +2662,7 @@ def fit_stacked_species_sdms(
                 raise RuntimeError("Too few valid rows after raster NoData cleaning.")
             sdm_result = fit_sdm(
                 train, kept_vars, algorithms,
-                ssdm_partition_method, 5, 0.05,
+                species_partition_method, 5, 0.05,
                 holdout_test_size=float(ssdm_test_split),
             )
             pred = predict_suitability(grid, sdm_result)["sdm_suitability"].to_numpy(dtype=float)
@@ -2574,14 +2672,15 @@ def fit_stacked_species_sdms(
             metrics_df = sdm_result["metrics"]
             auc_vals = pd.to_numeric(metrics_df.get("auc", pd.Series(dtype=float)), errors="coerce")
             mean_auc = float(auc_vals.mean()) if auc_vals.notna().any() else np.nan
-            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "test_split": float(ssdm_test_split) if species_partition_method == "random holdout" else np.nan})
         except Exception as exc:
-            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": ssdm_partition_method, "test_split": float(ssdm_test_split) if ssdm_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "test_split": float(ssdm_test_split) if species_partition_method == "random holdout" else np.nan})
 
     if progress is not None:
         progress.progress(1.0)
     for species, n_records in skipped_low.items():
-        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "variables_removed_by_selection": "", "partition_method": ssdm_partition_method, "test_split": np.nan})
+        species_partition_method = auto_sdm_partition(int(n_records), None)[0] if ssdm_partition_method == "Auto recommended" else ssdm_partition_method
+        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "variables_removed_by_selection": "", "partition_method": species_partition_method, "test_split": np.nan})
 
     out_grid = grid[["raster_row", "raster_col", "cell_index", "latitude", "longitude"]].copy()
     out_grid["ssdm_continuous_richness"] = np.round(richness_cont, 4)
@@ -2625,6 +2724,8 @@ def popup_html_site(row: pd.Series) -> str:
     Occurrence support: {row.get('occurrence_support_score', '')}<br>
     Occurrence records: {int(row.get('n_occurrences', 0))}<br>
     SDM suitability: {row.get('sdm_suitability', '')}<br>
+    SSDM predicted richness: {row.get('ssdm_predicted_richness', '')}<br>
+    Species richness: {row.get('observed_species_richness', row.get('species_richness', ''))}<br>
     Latitude: {float(row['latitude']):.6f}<br>
     Longitude: {float(row['longitude']):.6f}<br>
     Note: {row.get('bias_warning', '')}<br>
@@ -2636,7 +2737,8 @@ def popup_html_site(row: pd.Series) -> str:
 def _priority_marker_style(row: Any) -> tuple[int, str]:
     """Return (radius, color) for a candidate site marker based on priority_rank and candidate_type."""
     ctype = str(row.get("candidate_type", ""))
-    if ctype.lower().startswith("sdm-high") or ctype.lower().startswith("sdm_high"):
+    ctype_lower = ctype.lower()
+    if ctype_lower.startswith("sdm-high") or ctype_lower.startswith("sdm_high") or ctype_lower.startswith("ssdm-high"):
         return 9, "#9467bd"
     rank = int(row.get("priority_rank", 99)) if str(row.get("priority_rank", "")).strip() not in ("", "nan") else 99
     if rank <= 3:
@@ -2848,6 +2950,13 @@ def genus_diversity_panel() -> None:
                 st.session_state.genus_source_message = msg
                 st.session_state.genus_target_rect_features = []
                 st.session_state.genus_target_last_draw_sig = ""
+                st.session_state.genus_selected_site_ids = []
+                st.session_state.genus_last_click_signature = ""
+                st.session_state.genus_last_draw_sig = ""
+                st.session_state.genus_ssdm_grid = None
+                st.session_state.genus_ssdm_hotspots = None
+                st.session_state.genus_ssdm_shape = None
+                st.session_state.genus_ssdm_bounds = None
                 if partial_warning:
                     st.warning(partial_warning)
                     st.info("Continuing with the successfully fetched partial genus subset.")
@@ -2908,7 +3017,20 @@ def genus_diversity_panel() -> None:
     summary = genus_species_summary(occ, int(min_records_for_sdm), float(grid_deg))
     grid = occurrence_richness_grid(genus_candidate_input, float(grid_deg), int(min_records_cell))
     hotspots = richness_hotspot_candidates(grid, richness_metric, int(max_hotspots)) if not grid.empty else pd.DataFrame()
+    genus_ssdm_grid = st.session_state.get("genus_ssdm_grid")
+    genus_ssdm_hotspots = st.session_state.get("genus_ssdm_hotspots")
+    if genus_ssdm_grid is not None and isinstance(genus_ssdm_grid, pd.DataFrame) and not genus_ssdm_grid.empty and not hotspots.empty:
+        hotspots = add_grid_model_support_to_candidates(hotspots, genus_ssdm_grid)
     hotspots = add_priority_rank(hotspots, float(genus_observed_weight), float(genus_model_weight)) if not hotspots.empty else hotspots
+    exploratory_hotspots = pd.DataFrame()
+    if genus_ssdm_hotspots is not None and isinstance(genus_ssdm_hotspots, pd.DataFrame) and not genus_ssdm_hotspots.empty:
+        exploratory_hotspots = genus_ssdm_hotspots.copy()
+        start_sid = int(hotspots["site_id"].max()) + 1 if not hotspots.empty else 1
+        exploratory_hotspots["site_id"] = range(start_sid, start_sid + len(exploratory_hotspots))
+        exploratory_hotspots = add_priority_rank(exploratory_hotspots, float(genus_observed_weight), float(genus_model_weight))
+    genus_all_candidates = pd.concat([hotspots, exploratory_hotspots], ignore_index=True, sort=False) if not exploratory_hotspots.empty else hotspots.copy()
+    genus_sort_cols = available_sort_cols(genus_all_candidates, ["priority_score", "model_support_score", "occurrence_support_score"])
+    genus_all_candidates = genus_all_candidates.sort_values(genus_sort_cols, ascending=False, na_position="last").reset_index(drop=True) if genus_sort_cols else genus_all_candidates.reset_index(drop=True)
 
     # Step 2: Prepare records and species summary.
     st.caption("Counts below show the active target set used for observed richness hotspots. Optional SSDM starts independently from fetched genus records.")
@@ -2925,52 +3047,164 @@ def genus_diversity_panel() -> None:
     c3.metric("Grid cells", f"{len(grid):,}")
     c4.metric("Hotspots", f"{len(hotspots):,}")
     st.dataframe(summary, width="stretch", hide_index=True)
+    genus_ssdm_slot = st.container()
 
-    # Step 3: Occurrence-based richness hotspots.
-    st.subheader("3 - Occurrence-based richness hotspots")
+    # Step 4: Richness hotspot suggestions and selection.
+    st.subheader("4 - Richness hotspot suggestions and selection")
     st.caption(
-        "Observed species richness from GBIF occurrence records - no modeling required. "
-        "Use the hotspot candidates below directly for survey planning."
+        "Observed richness hotspot candidates are generated from records in the Step 2 survey area and work without SSDM. "
+        "Optional SSDM can add predicted-richness model support for re-ranking and exploratory model-only hotspots."
     )
+    has_ssdm_support = (
+        "model_support_score" in hotspots.columns
+        and pd.to_numeric(hotspots["model_support_score"], errors="coerce").gt(0).any()
+    )
+    if not has_ssdm_support:
+        st.info(
+            f"**Model support score: not available yet.** Hotspots are ranked by observed richness only "
+            f"(observed weight = {genus_observed_weight:.2f}). Run optional SSDM above to add predicted richness support."
+        )
+    else:
+        st.success(
+            f"**Model support score: SSDM predicted richness active.** Observed hotspots are re-ranked with "
+            f"observed weight = {genus_observed_weight:.2f} and SSDM model weight = {genus_model_weight:.2f}."
+        )
+
     if grid.empty:
         st.warning("No richness grid could be built. Check whether GBIF records have species names.")
+    elif genus_all_candidates.empty:
+        st.warning("No richness hotspot candidates found. Try increasing Max hotspot candidates or adjusting the grid settings.")
     else:
-        fmap = make_richness_map(grid, hotspots, richness_metric)
-        st_folium(fmap, width=None, height=720, returned_objects=[], key="genus_richness_map")
-        html_bytes = fmap.get_root().render().encode("utf-8")
+        valid_genus_site_ids = set(genus_all_candidates["site_id"].astype(int).tolist())
+        st.session_state.genus_selected_site_ids = [s for s in st.session_state.get("genus_selected_site_ids", []) if s in valid_genus_site_ids]
 
-        # Step 4: Selected hotspot sites.
-        st.subheader("4 - Selected hotspot sites")
-        has_ssdm_support = (
-            "model_support_score" in hotspots.columns
-            and pd.to_numeric(hotspots["model_support_score"], errors="coerce").gt(0).any()
+        st.markdown("#### Select hotspot candidates on the map")
+        st.caption(
+            "Top-ranked hotspots are shown automatically. Click individual hotspot markers to add/remove them, "
+            "or draw a rectangle to add nearby hotspot groups together."
         )
-        if not has_ssdm_support:
-            st.info(
-                f"**Model support score: not available yet.** "
-                f"Hotspots are ranked by observed richness only "
-                f"(observed weight = {genus_observed_weight:.2f}). "
-                "Run optional SSDM below to add predicted richness-based model support and re-rank hotspots."
-            )
+        has_exploratory = "candidate_type" in genus_all_candidates.columns and genus_all_candidates["candidate_type"].astype(str).str.startswith("SSDM-high").any()
+        gc1, gc2, gc3 = st.columns(3)
+        genus_top_sites_shown = gc1.number_input("Top-ranked hotspots shown", 1, max(1, len(genus_all_candidates)), min(20, len(genus_all_candidates)), 1, key="genus_top_hotspots_shown")
+        genus_min_priority = gc2.number_input("Minimum priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="genus_min_priority")
+        genus_min_model = gc3.number_input("Minimum SSDM model support", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="genus_min_model_support", disabled=not has_ssdm_support, help="Available after SSDM is built.")
+        gi1, gi2, gi3, gi4 = st.columns(4)
+        include_observed_hotspots = gi1.checkbox("Include observed richness hotspots", value=True, key="genus_include_observed_hotspots")
+        include_ssdm_exploration = gi2.checkbox("Include SSDM-high exploratory hotspots", value=True, key="genus_include_ssdm_exploration", disabled=not has_exploratory)
+        genus_travelmode = gi3.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0, key="genus_travelmode")
+        if gi4.button("Clear selected hotspots", key="genus_clear_selected_hotspots", disabled=not st.session_state.genus_selected_site_ids):
+            st.session_state.genus_selected_site_ids = []
+            st.session_state.genus_last_click_signature = ""
+            st.session_state.genus_last_draw_sig = ""
+            st.rerun()
+
+        map_hotspots = genus_all_candidates.copy()
+        type_mask = pd.Series(False, index=map_hotspots.index)
+        if include_observed_hotspots:
+            type_mask |= map_hotspots.get("candidate_type", pd.Series("", index=map_hotspots.index)).astype(str).str.startswith("Occurrence")
+        if include_ssdm_exploration and has_exploratory:
+            type_mask |= map_hotspots.get("candidate_type", pd.Series("", index=map_hotspots.index)).astype(str).str.startswith("SSDM-high")
+        if include_observed_hotspots or (include_ssdm_exploration and has_exploratory):
+            map_hotspots = map_hotspots[type_mask]
+        if "priority_score" in map_hotspots.columns:
+            map_hotspots = map_hotspots[pd.to_numeric(map_hotspots["priority_score"], errors="coerce").fillna(0.0) >= float(genus_min_priority)]
+        if has_ssdm_support and "model_support_score" in map_hotspots.columns:
+            map_hotspots = map_hotspots[pd.to_numeric(map_hotspots["model_support_score"], errors="coerce").fillna(0.0) >= float(genus_min_model)]
+        map_sort_cols = available_sort_cols(map_hotspots, ["priority_score", "model_support_score", "occurrence_support_score"])
+        map_hotspots = map_hotspots.sort_values(map_sort_cols, ascending=False, na_position="last") if map_sort_cols else map_hotspots
+        map_hotspots = map_hotspots.head(int(genus_top_sites_shown)).copy()
+        selected_rows_for_map = genus_all_candidates[genus_all_candidates["site_id"].astype(int).isin(st.session_state.genus_selected_site_ids)].copy()
+        if not selected_rows_for_map.empty:
+            map_hotspots = pd.concat([map_hotspots, selected_rows_for_map], ignore_index=True, sort=False).drop_duplicates(subset=["site_id"], keep="first")
+
+        genus_map = make_genus_candidate_selection_map(grid, map_hotspots, richness_metric, selected_ids=list(st.session_state.genus_selected_site_ids), add_draw=True)
+        genus_map_data = st_folium(
+            genus_map,
+            width=None,
+            height=720,
+            returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],
+            key="genus_hotspot_selection_map",
+        )
+        clicked = (genus_map_data or {}).get("last_object_clicked")
+        clicked_tooltip = (genus_map_data or {}).get("last_object_clicked_tooltip") or ""
+        if clicked:
+            sig = f"{clicked.get('lat'):.6f},{clicked.get('lng'):.6f},{clicked_tooltip}"
+            if sig != st.session_state.get("genus_last_click_signature", ""):
+                st.session_state.genus_last_click_signature = sig
+                sid = None
+                match = re.search(r"site\s+(\d+)", str(clicked_tooltip), flags=re.IGNORECASE)
+                if match:
+                    sid = int(match.group(1))
+                else:
+                    sid = nearest_site_id_from_click(map_hotspots, clicked)
+                if sid is not None and sid in valid_genus_site_ids:
+                    selected = list(st.session_state.genus_selected_site_ids)
+                    if sid in selected:
+                        selected.remove(sid)
+                    else:
+                        selected.append(sid)
+                    st.session_state.genus_selected_site_ids = selected
+                    st.rerun()
+        raw_drawings = (genus_map_data or {}).get("all_drawings") or (genus_map_data or {}).get("last_active_drawing")
+        features = extract_drawn_features(raw_drawings)
+        if features:
+            draw_sig = str(features)[:800]
+            if draw_sig != st.session_state.get("genus_last_draw_sig", ""):
+                st.session_state.genus_last_draw_sig = draw_sig
+                rect_ids = ids_inside_drawn_rectangles(genus_all_candidates, "site_id", "latitude", "longitude", features)
+                if rect_ids:
+                    existing = set(st.session_state.genus_selected_site_ids)
+                    st.session_state.genus_selected_site_ids = sorted(existing | set(map(int, rect_ids)))
+                    st.rerun()
+
+        html_bytes = genus_map.get_root().render().encode("utf-8")
+        selected_ids_now = list(st.session_state.get("genus_selected_site_ids", []))
+        selected_hotspots = genus_all_candidates[genus_all_candidates["site_id"].astype(int).isin(selected_ids_now)].copy()
+        if not selected_hotspots.empty and selected_ids_now:
+            order_map = {sid: i for i, sid in enumerate(selected_ids_now)}
+            selected_hotspots = selected_hotspots.assign(_ord=selected_hotspots["site_id"].astype(int).map(order_map)).sort_values("_ord").drop(columns=["_ord"])
+        st.markdown(f"**Selected hotspot sites ({len(selected_hotspots)})**")
+        if selected_hotspots.empty:
+            st.info("No hotspots selected yet. Click candidate markers or draw a rectangle on the map above.")
         else:
-            st.success(
-                f"**Model support score: SSDM predicted richness active.** "
-                f"Hotspots are re-ranked with observed weight = {genus_observed_weight:.2f} and "
-                f"SSDM model weight = {genus_model_weight:.2f}."
-            )
-        hotspot_cols = ["hotspot_rank", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "latitude", "longitude", "species_richness", "record_count", "species_with_min_records", "species_list", "score_explanation", "google_maps_url"]
-        st.dataframe(hotspots[[c for c in hotspot_cols if c in hotspots.columns]], width="stretch", hide_index=True)
+            selected_hotspots["google_maps_point_url"] = selected_hotspots.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
+            sum_cols = [c for c in ["site_id", "priority_rank", "priority_score", "candidate_type", "observed_species_richness", "ssdm_predicted_richness", "google_maps_point_url"] if c in selected_hotspots.columns]
+            cfg: dict[str, Any] = {}
+            if "google_maps_point_url" in sum_cols:
+                cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="Open")
+            st.dataframe(selected_hotspots[sum_cols], column_config=cfg, width="stretch", hide_index=True)
+            gs1, gs2, gs3, gs4, gs5, gs6 = st.columns(6)
+            gs1.link_button("Open all in Google Maps", make_google_maps_route_url(selected_hotspots, travelmode=genus_travelmode, max_waypoints=8), use_container_width=True)
+            gs2.download_button("CSV", make_export_csv(selected_hotspots), "genus_selected_hotspot_sites.csv", "text/csv", use_container_width=True, key="genus_selected_hotspots_csv_download")
+            gs3.download_button("HTML", make_shareable_html(selected_hotspots), "genus_selected_hotspot_sites.html", "text/html", use_container_width=True, key="genus_selected_hotspots_html_download")
+            gs4.download_button("KML", make_export_kml(selected_hotspots).encode("utf-8"), "genus_selected_hotspot_sites.kml", "application/vnd.google-earth.kml+xml", use_container_width=True, key="genus_selected_hotspots_kml_download")
+            gs5.download_button("Validation CSV", make_validation_template(selected_hotspots).to_csv(index=False).encode("utf-8"), "genus_field_validation_template.csv", "text/csv", use_container_width=True, key="genus_selected_hotspots_validation_csv_download")
+            if gs6.button("Clear selected", key="genus_clear_selected_hotspots_summary"):
+                st.session_state.genus_selected_site_ids = []
+                st.session_state.genus_last_click_signature = ""
+                st.session_state.genus_last_draw_sig = ""
+                st.rerun()
 
-        st.subheader("Downloads")
-        d1, d2, d3, d4 = st.columns(4)
-        d1.download_button("Species summary CSV", summary.to_csv(index=False).encode("utf-8"), "genus_species_summary.csv", "text/csv", width="stretch", key="genus_species_summary_csv_download")
-        d2.download_button("Richness grid CSV", grid.to_csv(index=False).encode("utf-8"), "genus_richness_grid.csv", "text/csv", width="stretch", key="genus_richness_grid_csv_download")
-        d3.download_button("Hotspots CSV", hotspots.to_csv(index=False).encode("utf-8"), "genus_richness_hotspots.csv", "text/csv", width="stretch", key="genus_richness_hotspots_csv_download")
-        d4.download_button("Richness HTML map", html_bytes, "genus_richness_map.html", "text/html", width="stretch", key="genus_richness_html_map_download")
+        with st.expander("Optional: full genus hotspot tables and downloads", expanded=False):
+            hotspot_cols = ["site_id", "hotspot_rank", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "latitude", "longitude", "observed_species_richness", "ssdm_predicted_richness", "species_richness", "record_count", "species_with_min_records", "species_list", "score_explanation", "google_maps_url"]
+            st.write("All genus hotspot candidates")
+            st.dataframe(genus_all_candidates[[c for c in hotspot_cols if c in genus_all_candidates.columns]], width="stretch", hide_index=True)
+            d1, d2, d3, d4, d5 = st.columns(5)
+            d1.download_button("Species summary CSV", summary.to_csv(index=False).encode("utf-8"), "genus_species_summary.csv", "text/csv", width="stretch", key="genus_species_summary_csv_download")
+            d2.download_button("Richness grid CSV", grid.to_csv(index=False).encode("utf-8"), "genus_richness_grid.csv", "text/csv", width="stretch", key="genus_richness_grid_csv_download")
+            d3.download_button("All hotspots CSV", genus_all_candidates.to_csv(index=False).encode("utf-8"), "genus_all_hotspot_candidates.csv", "text/csv", width="stretch", key="genus_all_hotspots_csv_download")
+            d4.download_button("Richness HTML map", html_bytes, "genus_hotspot_selection_map.html", "text/html", width="stretch", key="genus_richness_html_map_download")
+            d5.download_button("All hotspots KML", make_export_kml(genus_all_candidates).encode("utf-8"), "genus_all_hotspot_candidates.kml", "application/vnd.google-earth.kml+xml", width="stretch", key="genus_all_hotspots_kml_download")
 
-    st.subheader("Optional: Run SSDM")
-    st.caption("Predicted stacked richness: fit one SDM per eligible species, predict on a shared environmental grid, then sum suitability values across species. This does not run automatically.")
-    with st.expander("Run stacked species distribution models", expanded=False):
+    with genus_ssdm_slot:
+        st.subheader("3 - Optional: Run SSDM")
+        st.caption("Predicted stacked richness: fit one SDM per eligible species, predict on a shared environmental grid, then sum suitability values across species. This does not run automatically.")
+        sm1, sm2, sm3 = st.columns(3)
+        sm1.metric("SSDM source records", f"{len(occ_cleaned):,}", help="Independent from the Step 2 observed-richness survey-area rectangle.")
+        sm2.metric("Observed hotspot records", f"{len(genus_candidate_input):,}", help="Records used for observed richness hotspot generation after Step 2 and thinning.")
+        sm3.metric("Per-species SSDM cap", f"{int(genus_ssdm_records):,}", help="Maximum presence records used per species before fitting SSDM.")
+        ssdm_expander = st.expander("Run stacked species distribution models", expanded=False)
+    with ssdm_expander:
         s1, s2, s3 = st.columns(3)
         ssdm_resolution = s1.selectbox("SSDM WorldClim resolution", RESOLUTIONS, index=2, key="ssdm_resolution")
         ssdm_area_mode = s2.selectbox("SSDM prediction area", AREA_MODES, index=2, key="ssdm_area_mode")
@@ -3042,29 +3276,33 @@ def genus_diversity_panel() -> None:
             if ssdm_variable_strategy == "Advanced custom selection":
                 ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.markdown("**SSDM validation / partition**")
-        ssdm_partition_method = st.selectbox(
-            "SSDM partition method",
-            ["random holdout", "none (training only)"],
-            index=0,
-            key="ssdm_partition_method",
-            help="random holdout: fit on a training split and evaluate AUC on a held-out test split. "
-                 "none (training only): fit on all data, no AUC computed - fastest option for exploratory runs. "
-                 "Spatial block/checkerboard partitions are available in single-species SDM but not yet implemented for SSDM.",
-        )
+        auto_ssdm_partition, auto_ssdm_reason = auto_sdm_partition(int(min_records_for_sdm), None)
+        st.caption(f"Auto recommended SSDM validation: {auto_ssdm_partition}. Each species reports the method used in the SSDM model summary.")
+        with st.expander("Advanced SSDM validation override", expanded=False):
+            ssdm_partition_choice = st.selectbox(
+                "SSDM partition method",
+                ["Auto recommended"] + PARTITION_METHODS + ["none (training only)"],
+                index=0,
+                key="ssdm_partition_method",
+                help="Auto uses the same SDM validation recommendation logic. Override only when you need a specific diagnostic partition.",
+            )
+            st.caption(auto_ssdm_reason)
+        ssdm_partition_method = ssdm_partition_choice
         ssdm_test_split = st.number_input(
             "SSDM holdout test split proportion",
             min_value=0.05, max_value=0.50, value=0.20, step=0.05, format="%.2f",
             key="ssdm_test_split",
-            help="Fraction of presence+background rows held out for AUC evaluation. Only used for random holdout. "
-                 "Default 0.20 (20%). For very small species samples, reduce to 0.10.",
+            help="Fraction of presence+background rows held out for AUC evaluation. Only used for random holdout.",
             disabled=(ssdm_partition_method == "none (training only)"),
         )
         if ssdm_partition_method == "none (training only)":
             st.caption("SSDM partition: none - models are fit on all data. No AUC will be computed.")
+        elif ssdm_partition_method == "Auto recommended":
+            st.caption("SSDM partition: Auto recommended. The app chooses a validation method per species and reports it in the SSDM model summary.")
         else:
             st.caption(
-                f"SSDM partition: random holdout with test split = {ssdm_test_split:.0%}. "
-                "Spatial partition methods (block, checkerboard) are available in single-species SDM but not yet implemented for SSDM."
+                f"SSDM partition selected: {ssdm_partition_method}. "
+                "The method used is reported for each species in ssdm_species_model_summary.csv."
             )
         run_ssdm = st.button("Run SSDM", type="primary", key="run_ssdm_button")
 
@@ -3107,6 +3345,10 @@ def genus_diversity_panel() -> None:
                 ssdm_hotspots = add_priority_rank(ssdm_hotspots, float(genus_observed_weight), float(genus_model_weight))
                 ranked_observed_hotspots = add_grid_model_support_to_candidates(hotspots, ssdm_grid)
                 ranked_observed_hotspots = add_priority_rank(ranked_observed_hotspots, float(genus_observed_weight), float(genus_model_weight))
+                st.session_state.genus_ssdm_grid = ssdm_grid
+                st.session_state.genus_ssdm_hotspots = ssdm_hotspots
+                st.session_state.genus_ssdm_shape = ssdm_shape
+                st.session_state.genus_ssdm_bounds = ssdm_bounds
                 st.success("SSDM complete.")
 
                 # Shared variable-selection diagnostics.
@@ -3139,6 +3381,7 @@ def genus_diversity_panel() -> None:
                 st.write("Observed richness hotspots re-ranked with optional SSDM support")
                 st.caption("These remain observed-data hotspot candidates; SSDM predicted richness only contributes model_support_score for prioritization.")
                 st.dataframe(ranked_observed_hotspots, width="stretch", hide_index=True)
+                st.info("SSDM results were saved for the main richness hotspot map. The next app rerun will add SSDM support in the Step 4 candidate selection workflow.")
                 d1, d2, d3, d4, d5 = st.columns(5)
                 d1.download_button("ssdm_species_model_summary.csv", model_summary.to_csv(index=False).encode("utf-8"), "ssdm_species_model_summary.csv", "text/csv", width="stretch", key="ssdm_species_model_summary_csv_download")
                 d2.download_button("ssdm_richness_grid.csv", ssdm_grid.to_csv(index=False).encode("utf-8"), "ssdm_richness_grid.csv", "text/csv", width="stretch", key="ssdm_richness_grid_csv_download")
@@ -3217,7 +3460,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -3238,7 +3481,7 @@ def make_export_kml(sites: pd.DataFrame) -> str:
     ]
     for _, r in sites.iterrows():
         name = f"Site {int(r['site_id'])}"
-        desc_parts = [f"{col}: {r[col]}" for col in ["candidate_type", "priority_rank", "priority_score", "sdm_suitability", "occurrence_support_score", "n_occurrences", "selection_reason", "access_note"] if col in r and str(r[col]) not in ("", "nan")]
+        desc_parts = [f"{col}: {r[col]}" for col in ["candidate_type", "priority_rank", "priority_score", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_list", "occurrence_support_score", "n_occurrences", "selection_reason", "access_note"] if col in r and str(r[col]) not in ("", "nan")]
         desc = "\n".join(desc_parts)
         lat, lon = float(r["latitude"]), float(r["longitude"])
         lines += ["  <Placemark>", f"    <name>{name}</name>", f"    <description><![CDATA[{desc}]]></description>", f"    <Point><coordinates>{lon:.6f},{lat:.6f},0</coordinates></Point>", "  </Placemark>"]
@@ -3316,13 +3559,14 @@ def make_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
     cols = [
         "site_id", "candidate_type", "priority_rank", "priority_score",
         "occurrence_support_score", "model_support_score", "sdm_suitability", "ssdm_predicted_richness",
+        "observed_species_richness", "species_richness", "species_list",
         "latitude", "longitude", "google_maps_url",
         "google_maps_checked", "accessible", "access_mode", "access_note",
         "visited", "survey_date", "observer", "survey_effort_minutes", "search_area_m2",
-        "access_success", "target_species_found", "abundance_count", "abundance_class",
+        "access_success", "target_species_found", "target_taxa_found", "abundance_count", "abundance_class",
         "flowering_status", "number_of_species_detected", "newly_confirmed_population",
-        "photographs_taken", "photo_file", "specimen_collected", "specimen_id",
-        "dna_sample_collected", "dna_sample_id", "habitat_note", "comments",
+        "photographs_taken", "photo_file", "specimen_collected", "specimens_collected", "specimen_id",
+        "dna_sample_collected", "dna_samples_collected", "dna_sample_id", "habitat_note", "notes", "comments",
     ]
     base = sites.copy()
     if not base.empty and {"latitude", "longitude"}.issubset(base.columns):
@@ -3359,6 +3603,9 @@ def main() -> None:
         st.session_state.target_last_draw_sig = ""
         st.session_state.genus_target_rect_features = []
         st.session_state.genus_target_last_draw_sig = ""
+        st.session_state.genus_selected_site_ids = []
+        st.session_state.genus_last_click_signature = ""
+        st.session_state.genus_last_draw_sig = ""
     st.session_state["_last_analysis_mode"] = analysis_mode
 
     if analysis_mode == "Genus diversity / SSDM":
