@@ -4,6 +4,22 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Claude (claude-sonnet-4-6) - SSDM validation parity: per-species auto_sdm_partition, jackknife, spatial CV
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the full 4400+ line app before editing; all changes are targeted diffs to fit_sdm, fit_stacked_species_sdms, the SSDM UI section, and summary column additions only.
+- Added a true leave-one-out jackknife branch in fit_sdm (lines ~2283-2330): for each presence record i, trains on all other rows, predicts on i; final AUC is computed from held-out presence predictions vs a background sample. This enables reliable AUC for n < 15.
+- Extended fit_stacked_species_sdms signature with ssdm_partition_override, ssdm_k_folds, ssdm_checkerboard_deg, ssdm_holdout_split parameters.
+- In the per-species loop, when override=="auto", calls prediction_area_geometry(sp_occ, "bounding box", 10.0, 20.0) to get sp_extent, then auto_sdm_partition(n_occ, sp_extent) for the true per-species method+reason. When override is forced, uses those fixed parameters.
+- Added partition_reason, n_folds, valid_folds, auc_warning columns to every summary_rows entry (modeled, skipped_after_thinning, skipped_too_few_records, failed).
+- Replaced the old single-selectbox SSDM partition UI with the new expander-based UI: default is "auto", with sub-inputs for k, checkerboard cell size, and holdout split appearing conditionally when the corresponding method is forced. Caption explains auto_sdm_partition is used per species.
+- Updated the fit_stacked_species_sdms call site to pass all new parameters.
+- py_compile: no errors.
+
 ## 2026-06-04 - Codex (OpenAI) - Mirror genus hotspot selection with species workflow
 
 Changed files:

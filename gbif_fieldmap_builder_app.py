@@ -2287,6 +2287,43 @@ def fit_sdm(train_df: pd.DataFrame, variables: list[str], algorithms: list[str],
             auc = float(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]))
             metrics.append({"algorithm": alg, "partition_method": partition_method, "fold": "diagnostic", "auc": round(auc, 3), "warning": auc_warning(auc, partition_method)})
             model.fit(X, y); models[alg] = model
+    elif partition_method == "jackknife":
+        # True leave-one-out jackknife over presence rows.
+        # For each presence record i, train on all other rows, predict on row i.
+        # Background rows are always included in the training set.
+        X_all = data[variables].apply(pd.to_numeric, errors="coerce")
+        y_all = data["presence"].astype(int)
+        pres_idx = list(data.index[y_all == 1])
+        n_pres = len(pres_idx)
+        for alg in algorithms:
+            fold_aucs = []
+            for fold_num, test_i in enumerate(pres_idx, start=1):
+                train_mask = data.index != test_i
+                X_tr = X_all.loc[train_mask]; y_tr = y_all.loc[train_mask]
+                if y_tr.nunique() < 2:
+                    continue
+                model_loo = make_model(alg); model_loo.fit(X_tr, y_tr)
+                prob = float(model_loo.predict_proba(X_all.loc[[test_i]])[:, 1][0])
+                fold_aucs.append(prob)
+                metrics.append({"algorithm": alg, "partition_method": partition_method, "fold": fold_num, "auc": round(prob, 3), "warning": ""})
+            # For LOO the AUC is computed across all held-out presence predictions vs a random background sample.
+            if fold_aucs:
+                bg_idx_loo = list(data.index[y_all == 0])
+                bg_sample = np.random.default_rng(42).choice(bg_idx_loo, size=min(len(bg_idx_loo), len(pres_idx) * 5), replace=False) if bg_idx_loo else []
+                bg_probs = []
+                if len(bg_sample):
+                    final_model_tmp = make_model(alg); final_model_tmp.fit(X_all, y_all)
+                    bg_probs = list(final_model_tmp.predict_proba(X_all.loc[bg_sample])[:, 1])
+                all_probs = fold_aucs + bg_probs
+                all_labels = [1] * len(fold_aucs) + [0] * len(bg_probs)
+                try:
+                    mean_auc = float(roc_auc_score(all_labels, all_probs)) if len(set(all_labels)) == 2 else float(np.mean(fold_aucs))
+                except Exception:
+                    mean_auc = float(np.mean(fold_aucs))
+            else:
+                mean_auc = np.nan
+            metrics.append({"algorithm": alg, "partition_method": partition_method, "fold": "mean", "auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "warning": auc_warning(mean_auc, partition_method) if np.isfinite(mean_auc) else "no valid folds"})
+            final_model = make_model(alg); final_model.fit(X_all, y_all); models[alg] = final_model
     else:
         data["cv_fold"] = assign_spatial_folds(data, partition_method, k_folds, checkerboard_deg).values
         X_all = data[variables].apply(pd.to_numeric, errors="coerce"); y_all = data["presence"].astype(int)
@@ -2556,8 +2593,12 @@ def fit_stacked_species_sdms(
     variable_selection_strategy: str = "No VIF",
     corr_threshold: float = 0.80,
     custom_variables: Optional[list[str]] = None,
+    ssdm_partition_override: str = "auto",
     ssdm_partition_method: str = "random holdout",
     ssdm_test_split: float = 0.20,
+    ssdm_k_folds: int = 5,
+    ssdm_checkerboard_deg: float = 0.05,
+    ssdm_holdout_split: float = 0.20,
     per_species_grid_thin_deg: float = 0.0,
     per_species_distance_thin_m: float = 0.0,
     status=None,
@@ -2644,9 +2685,18 @@ def fit_stacked_species_sdms(
         if len(sp_occ) > int(max_presence_points):
             positions = np.linspace(0, len(sp_occ) - 1, int(max_presence_points)).round().astype(int)
             sp_occ = sp_occ.iloc[np.unique(positions)].reset_index(drop=True)
-        species_partition_method = auto_sdm_partition(int(len(sp_occ)), None)[0] if ssdm_partition_method == "Auto recommended" else ssdm_partition_method
+        # Determine per-species partition method using auto_sdm_partition with extent_geom
+        _effective_override = ssdm_partition_override if ssdm_partition_override != "auto" else (ssdm_partition_method if ssdm_partition_method not in ("Auto recommended", "auto") else "auto")
+        if _effective_override == "auto":
+            sp_extent = prediction_area_geometry(sp_occ, "bounding box", 10.0, 20.0)
+            species_partition_method, species_partition_reason = auto_sdm_partition(int(len(sp_occ)), sp_extent)
+            sp_k = 5; sp_checker = 0.05; sp_holdout = 0.25
+        else:
+            species_partition_method = _effective_override
+            species_partition_reason = f"Forced override: {_effective_override}"
+            sp_k = ssdm_k_folds; sp_checker = ssdm_checkerboard_deg; sp_holdout = ssdm_holdout_split
         if len(sp_occ) < int(min_records):
-            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "test_split": float(ssdm_test_split) if species_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": "skipped_after_thinning", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "partition_reason": species_partition_reason, "test_split": float(sp_holdout) if species_partition_method == "random holdout" else np.nan, "n_folds": np.nan, "valid_folds": np.nan, "auc_warning": "skipped"})
             continue
         pres = sp_occ[["_row_id", "_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude", "_row_id": "occurrence_row_id"}).copy()
         pres["presence"] = 1
@@ -2662,8 +2712,8 @@ def fit_stacked_species_sdms(
                 raise RuntimeError("Too few valid rows after raster NoData cleaning.")
             sdm_result = fit_sdm(
                 train, kept_vars, algorithms,
-                species_partition_method, 5, 0.05,
-                holdout_test_size=float(ssdm_test_split),
+                species_partition_method, int(sp_k), float(sp_checker),
+                holdout_test_size=float(sp_holdout),
             )
             pred = predict_suitability(grid, sdm_result)["sdm_suitability"].to_numpy(dtype=float)
             pred = np.nan_to_num(pred, nan=0.0)
@@ -2671,16 +2721,26 @@ def fit_stacked_species_sdms(
             richness_binary += (pred >= float(binary_threshold)).astype(int)
             metrics_df = sdm_result["metrics"]
             auc_vals = pd.to_numeric(metrics_df.get("auc", pd.Series(dtype=float)), errors="coerce")
-            mean_auc = float(auc_vals.mean()) if auc_vals.notna().any() else np.nan
-            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc, 3) if np.isfinite(mean_auc) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "test_split": float(ssdm_test_split) if species_partition_method == "random holdout" else np.nan})
+            mean_auc_val = float(auc_vals.mean()) if auc_vals.notna().any() else np.nan
+            # Compute n_folds and valid_folds from metrics
+            fold_rows = metrics_df[metrics_df.get("fold", pd.Series(dtype=object)).apply(lambda x: str(x) not in ("mean", "diagnostic")) if "fold" in metrics_df.columns else pd.Series([False] * len(metrics_df), index=metrics_df.index)]
+            n_folds_val = int(len(fold_rows["fold"].unique())) if not fold_rows.empty and "fold" in fold_rows.columns else (1 if species_partition_method == "random holdout" else 0)
+            valid_folds_val = int(fold_rows["auc"].notna().sum()) if not fold_rows.empty and "auc" in fold_rows.columns else (1 if (species_partition_method == "random holdout" and np.isfinite(mean_auc_val)) else 0)
+            _auc_warn = "AUC not computed" if not np.isfinite(mean_auc_val) else ("low AUC" if mean_auc_val < 0.7 else "")
+            summary_rows.append({"species": species, "status": "modeled", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": int(species_env_dropped), "mean_auc": round(mean_auc_val, 3) if np.isfinite(mean_auc_val) else np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": ", ".join(kept_vars), "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "partition_reason": species_partition_reason, "test_split": float(sp_holdout) if species_partition_method == "random holdout" else np.nan, "n_folds": n_folds_val, "valid_folds": valid_folds_val, "auc_warning": _auc_warn})
         except Exception as exc:
-            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "test_split": float(ssdm_test_split) if species_partition_method == "random holdout" else np.nan})
+            summary_rows.append({"species": species, "status": f"failed: {exc}", "n_records": int(n_records), "n_presence_used": int(len(sp_occ)), "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": ", ".join(algorithms), "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": ", ".join(removed_vars), "variables_removed_by_selection": ", ".join(removed_vars), "partition_method": species_partition_method, "partition_reason": species_partition_reason, "test_split": float(sp_holdout) if species_partition_method == "random holdout" else np.nan, "n_folds": np.nan, "valid_folds": 0, "auc_warning": "AUC not computed"})
 
     if progress is not None:
         progress.progress(1.0)
     for species, n_records in skipped_low.items():
-        species_partition_method = auto_sdm_partition(int(n_records), None)[0] if ssdm_partition_method == "Auto recommended" else ssdm_partition_method
-        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "variables_removed_by_selection": "", "partition_method": species_partition_method, "test_split": np.nan})
+        _eff_ov2 = ssdm_partition_override if ssdm_partition_override != "auto" else (ssdm_partition_method if ssdm_partition_method not in ("Auto recommended", "auto") else "auto")
+        if _eff_ov2 == "auto":
+            _skip_method, _skip_reason = auto_sdm_partition(int(n_records), None)
+        else:
+            _skip_method = _eff_ov2
+            _skip_reason = f"Forced override: {_eff_ov2}"
+        summary_rows.append({"species": species, "status": "skipped_too_few_records", "n_records": int(n_records), "n_presence_used": 0, "n_background": int(background_n), "environment_rows_dropped": np.nan, "mean_auc": np.nan, "algorithms": "", "shared_vif_applied": variable_selection_strategy == "VIF stepwise", "variable_selection_strategy": variable_selection_strategy, "vif_threshold": float(vif_threshold) if variable_selection_strategy == "VIF stepwise" else np.nan, "variables_kept": "", "variables_removed_by_vif": "", "variables_removed_by_selection": "", "partition_method": _skip_method, "partition_reason": _skip_reason, "test_split": np.nan, "n_folds": np.nan, "valid_folds": 0, "auc_warning": "skipped"})
 
     out_grid = grid[["raster_row", "raster_col", "cell_index", "latitude", "longitude"]].copy()
     out_grid["ssdm_continuous_richness"] = np.round(richness_cont, 4)
@@ -3276,34 +3336,28 @@ def genus_diversity_panel() -> None:
             if ssdm_variable_strategy == "Advanced custom selection":
                 ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.markdown("**SSDM validation / partition**")
-        auto_ssdm_partition, auto_ssdm_reason = auto_sdm_partition(int(min_records_for_sdm), None)
-        st.caption(f"Auto recommended SSDM validation: {auto_ssdm_partition}. Each species reports the method used in the SSDM model summary.")
-        with st.expander("Advanced SSDM validation override", expanded=False):
-            ssdm_partition_choice = st.selectbox(
-                "SSDM partition method",
-                ["Auto recommended"] + PARTITION_METHODS + ["none (training only)"],
+        st.caption("Validation: automatically selected per species using the same rules as species SDM (auto_sdm_partition).")
+        ssdm_partition_override = "auto"  # default
+        ssdm_k_folds = 5
+        ssdm_checkerboard_deg = 0.05
+        ssdm_holdout_split = 0.20
+        with st.expander("Advanced: force validation method across all species", expanded=False):
+            st.caption("block/checkerboard needs enough records per species; jackknife for very small samples.")
+            ssdm_partition_override = st.selectbox(
+                "Force validation method (or keep Auto)",
+                ["auto"] + PARTITION_METHODS,
                 index=0,
-                key="ssdm_partition_method",
-                help="Auto uses the same SDM validation recommendation logic. Override only when you need a specific diagnostic partition.",
+                key="ssdm_partition_override",
             )
-            st.caption(auto_ssdm_reason)
-        ssdm_partition_method = ssdm_partition_choice
-        ssdm_test_split = st.number_input(
-            "SSDM holdout test split proportion",
-            min_value=0.05, max_value=0.50, value=0.20, step=0.05, format="%.2f",
-            key="ssdm_test_split",
-            help="Fraction of presence+background rows held out for AUC evaluation. Only used for random holdout.",
-            disabled=(ssdm_partition_method == "none (training only)"),
-        )
-        if ssdm_partition_method == "none (training only)":
-            st.caption("SSDM partition: none - models are fit on all data. No AUC will be computed.")
-        elif ssdm_partition_method == "Auto recommended":
-            st.caption("SSDM partition: Auto recommended. The app chooses a validation method per species and reports it in the SSDM model summary.")
-        else:
-            st.caption(
-                f"SSDM partition selected: {ssdm_partition_method}. "
-                "The method used is reported for each species in ssdm_species_model_summary.csv."
-            )
+            if ssdm_partition_override == "random k-fold":
+                ssdm_k_folds = st.number_input("k", 2, 20, 5, 1, key="ssdm_k_folds")
+            if ssdm_partition_override in ("checkerboard1", "checkerboard2"):
+                ssdm_checkerboard_deg = st.number_input("Checkerboard cell size (degrees)", 0.001, 5.0, 0.05, 0.01, format="%.3f", key="ssdm_checker_deg")
+            if ssdm_partition_override == "random holdout":
+                ssdm_holdout_split = st.number_input("Test split proportion", 0.10, 0.50, 0.20, 0.05, key="ssdm_holdout_split")
+        # Legacy variables kept for backward compatibility in call site
+        ssdm_partition_method = ssdm_partition_override
+        ssdm_test_split = ssdm_holdout_split
         run_ssdm = st.button("Run SSDM", type="primary", key="run_ssdm_button")
 
     if run_ssdm:
@@ -3335,8 +3389,12 @@ def genus_diversity_panel() -> None:
                     variable_selection_strategy=ssdm_variable_strategy,
                     corr_threshold=float(ssdm_corr_threshold),
                     custom_variables=ssdm_custom_variables,
+                    ssdm_partition_override=ssdm_partition_override,
                     ssdm_partition_method=ssdm_partition_method,
-                    ssdm_test_split=float(ssdm_test_split) if ssdm_partition_method != "none (training only)" else 0.20,
+                    ssdm_test_split=float(ssdm_test_split),
+                    ssdm_k_folds=int(ssdm_k_folds),
+                    ssdm_checkerboard_deg=float(ssdm_checkerboard_deg),
+                    ssdm_holdout_split=float(ssdm_holdout_split),
                     per_species_grid_thin_deg=float(ssdm_per_species_grid_deg),
                     per_species_distance_thin_m=float(ssdm_per_species_distance_m),
                     status=status,
