@@ -827,17 +827,20 @@ def target_occurrence_set_panel(
         "Survey candidates and occurrence hotspots are generated from records in this area. "
         "SDM can predict across a wider macro-scale extent — set that separately inside Optional: Build SDM."
     )
-    survey_area_options = ["Use all remaining cleaned records", "Use only records inside drawn rectangle", "Exclude records inside drawn rectangle"]
-    survey_area_key = f"{key_prefix}_target_occurrence_mode"
-    if st.session_state.get(survey_area_key) not in (None, *survey_area_options):
-        st.session_state[survey_area_key] = survey_area_options[0]
-    mode = st.radio(
-        "Survey area",
-        survey_area_options,
-        index=0,
-        horizontal=True,
-        key=survey_area_key,
-    )
+    if show_map:
+        survey_area_options = ["Use all remaining cleaned records", "Use only records inside drawn rectangle", "Exclude records inside drawn rectangle"]
+        survey_area_key = f"{key_prefix}_target_occurrence_mode"
+        if st.session_state.get(survey_area_key) not in (None, *survey_area_options):
+            st.session_state[survey_area_key] = survey_area_options[0]
+        mode = st.radio(
+            "Survey area",
+            survey_area_options,
+            index=0,
+            horizontal=True,
+            key=survey_area_key,
+        )
+    else:
+        mode = "Use only records inside drawn rectangle"
     if show_map:
         if len(occ_map_display) < len(occ_base):
             st.caption(f"Showing {len(occ_map_display):,} of {len(occ_base):,} cleaned records on this rectangle-selection map.")
@@ -872,7 +875,8 @@ def target_occurrence_set_panel(
         selected = occ_base.copy()
         rectangle_excluded = 0
     elif not has_rectangle:
-        st.warning("Draw a rectangle first. Until a rectangle is drawn, all cleaned records are used.")
+        if show_map:
+            st.warning("Draw a rectangle first. Until a rectangle is drawn, all cleaned records are used.")
         selected = occ_base.copy()
         rectangle_excluded = 0
     elif mode == "Use only records inside drawn rectangle":
@@ -3417,32 +3421,8 @@ def main() -> None:
         show_map=False,
     )
     if occ_extent_selected.empty:
-        st.error("The active target occurrence set is empty. Draw a rectangle or select 'Use all records'.")
+        st.error("No records in the selected area. Draw a larger rectangle or clear the rectangle to use all records.")
         return
-
-    # Show individual records within the selected survey area (no cap — this is the focused area)
-    if target_counts.get("records_inside_rectangle", 0) > 0:
-        st.caption(
-            f"**Selected area: {len(occ_extent_selected):,} individual records** "
-            "(all shown — draw rectangle smaller if too crowded)."
-        )
-        _detail_map = Map(location=(float(occ_extent_selected["_latitude"].mean()), float(occ_extent_selected["_longitude"].mean())), zoom_start=9, tiles="OpenStreetMap", control_scale=True)
-        _fg_detail = FeatureGroup(name=f"Individual records in survey area ({len(occ_extent_selected):,})", show=True)
-        for _, _row in occ_extent_selected.iterrows():
-            _yr = f" ({int(_row['_year'])})" if pd.notna(_row.get("_year")) and str(_row.get("_year","")) not in ("","nan") else ""
-            folium.CircleMarker(
-                (_row["_latitude"], _row["_longitude"]),
-                radius=4, color="#e6842a", fill=True, fill_color="#e6842a", fill_opacity=0.85, weight=1,
-                popup=folium.Popup(f"{_row.get('_species','')}{_yr}<br>{_row.get('_locality','')}", max_width=280),
-                tooltip=f"row {int(_row['_row_id'])}",
-            ).add_to(_fg_detail)
-        _fg_detail.add_to(_detail_map)
-        LayerControl(collapsed=True).add_to(_detail_map)
-        try:
-            _detail_map.fit_bounds([[occ_extent_selected["_latitude"].min(), occ_extent_selected["_longitude"].min()], [occ_extent_selected["_latitude"].max(), occ_extent_selected["_longitude"].max()]], padding=(30, 30))
-        except Exception:
-            pass
-        st_folium(_detail_map, width=None, height=500, returned_objects=[], key="survey_area_detail_map")
 
     occ_before_dedup_n = len(occ_extent_selected)
     occ_candidate_input, _unused_sdm_train, large_summary = prepare_large_dataset_inputs(
