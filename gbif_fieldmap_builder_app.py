@@ -1166,20 +1166,31 @@ def prepare_large_dataset_inputs(
 
 
 def spatial_thin(df: pd.DataFrame, thinning_m: float) -> pd.DataFrame:
+    """Greedy minimum-distance thinning using vectorised haversine (replaces O(n²) geopy loop)."""
     if df.empty or thinning_m <= 0:
         return df.copy().reset_index(drop=True)
     work = df.copy()
     work["_year_sort"] = pd.to_numeric(work.get("_year"), errors="coerce").fillna(-9999)
     work["_has_photo_sort"] = work.get("_media_url", "").astype(str).str.len() > 0
     work = work.sort_values(["_has_photo_sort", "_year_sort"], ascending=[False, False]).reset_index(drop=True)
-    kept_rows = []
-    kept_coords: list[tuple[float, float]] = []
-    for _, row in work.iterrows():
-        coord = (float(row["_latitude"]), float(row["_longitude"]))
-        if all(geodesic(coord, kept).m >= thinning_m for kept in kept_coords):
-            kept_rows.append(row)
-            kept_coords.append(coord)
-    return pd.DataFrame(kept_rows).drop(columns=["_year_sort", "_has_photo_sort"], errors="ignore").reset_index(drop=True)
+    lats = work["_latitude"].to_numpy(dtype=float)
+    lons = work["_longitude"].to_numpy(dtype=float)
+    kept_mask = np.zeros(len(work), dtype=bool)
+    kept_lats: list[float] = []
+    kept_lons: list[float] = []
+    for i in range(len(work)):
+        if kept_lats:
+            kl = np.radians(np.array(kept_lats))
+            ko = np.radians(np.array(kept_lons))
+            dlat = kl - math.radians(lats[i])
+            dlon = ko - math.radians(lons[i])
+            a = np.sin(dlat / 2) ** 2 + math.cos(math.radians(lats[i])) * np.cos(kl) * np.sin(dlon / 2) ** 2
+            if (2 * EARTH_RADIUS_M * np.arcsin(np.sqrt(a.clip(0, 1)))).min() < thinning_m:
+                continue
+        kept_mask[i] = True
+        kept_lats.append(lats[i])
+        kept_lons.append(lons[i])
+    return work.loc[kept_mask].drop(columns=["_year_sort", "_has_photo_sort"], errors="ignore").reset_index(drop=True)
 
 
 def haversine_dbscan(df: pd.DataFrame, lat_col: str, lon_col: str, threshold_m: float, min_samples: int) -> pd.Series:
@@ -2151,52 +2162,20 @@ def read_window_array(path: str, bounds: tuple[float, float, float, float], out_
     return arr, actual_bounds
 
 
-def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, sdm_result: dict[str, Any], area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[dict[str, Any], pd.DataFrame]:
+def _build_prediction_grid_base(
+    occ: pd.DataFrame, variables: list[str], resolution: str,
+    area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int,
+    excluded_occ: Optional[pd.DataFrame], exclusion_buffer_km: float,
+    status, status_msg: str,
+) -> tuple[Any, pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, int, int, tuple[float, float, float, float], int]:
+    """Shared raster-grid builder for SDM and SSDM prediction.
+
+    Returns (geom, env_df, valid_mask, lon_grid_flat, lat_grid_flat,
+             out_h, out_w, (west2, south2, east2, north2), stride).
+    """
     geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km)
     if geom is None or geom.is_empty:
         raise RuntimeError("Prediction area could not be generated.")
-    land = load_land_geometry(); west, south, east, north = geom.bounds
-    ref_var = "elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0]
-    with rasterio.open(get_worldclim_raster_path(ref_var, resolution)) as src:
-        window = from_bounds(west, south, east, north, transform=src.transform).round_offsets().round_lengths()
-        raw_h = max(1, int(window.height)); raw_w = max(1, int(window.width))
-    stride = max(1, int(math.ceil(math.sqrt((raw_h * raw_w) / max(1, max_pixels)))))
-    out_h = max(1, int(math.ceil(raw_h / stride))); out_w = max(1, int(math.ceil(raw_w / stride)))
-    if status is not None:
-        status.write(f"Predicting raster map: {out_w:,} × {out_h:,} cells; source stride={stride}")
-    arrays = {}; actual_bounds = None; elev_cache = None
-    for var in variables:
-        if var in {"slope", "roughness"}:
-            if elev_cache is None:
-                elev_cache, actual_bounds = read_window_array(get_worldclim_raster_path("elevation", resolution), (west, south, east, north), (out_h, out_w))
-            gy, gx = np.gradient(elev_cache)
-            arrays[var] = clean_environment_array(np.sqrt(gx**2 + gy**2) if var == "slope" else elev_cache - np.nanmean(elev_cache))
-        else:
-            arrays[var], actual_bounds = read_window_array(get_worldclim_raster_path(var, resolution), (west, south, east, north), (out_h, out_w))
-    west2, south2, east2, north2 = actual_bounds
-    lon_centers = np.linspace(west2 + (east2 - west2) / (2 * out_w), east2 - (east2 - west2) / (2 * out_w), out_w)
-    lat_centers = np.linspace(north2 - (north2 - south2) / (2 * out_h), south2 + (north2 - south2) / (2 * out_h), out_h)
-    lon_grid, lat_grid = np.meshgrid(lon_centers, lat_centers)
-    X = pd.DataFrame({v: arrays[v].ravel() for v in variables})
-    finite = np.isfinite(X.to_numpy()).all(axis=1)
-    spatial = np.array([geom.covers(Point(float(lon), float(lat))) and land.covers(Point(float(lon), float(lat))) for lat, lon in zip(lat_grid.ravel(), lon_grid.ravel())])
-    valid = finite & spatial
-    pred_flat = np.full(X.shape[0], np.nan, dtype=float)
-    if valid.sum() == 0:
-        raise RuntimeError("No valid land raster cells were available for prediction.")
-    preds = [model.predict_proba(X.loc[valid, variables])[:, 1] for model in sdm_result["models"].values()]
-    pred_flat[valid] = np.mean(np.vstack(preds), axis=0)
-    pred = pred_flat.reshape(out_h, out_w)
-    row_grid, col_grid = np.indices((out_h, out_w))
-    overlay = {"image": rgba_from_prediction(pred), "bounds": [[south2, west2], [north2, east2]], "shape": pred.shape, "source_stride": stride, "min": round(float(np.nanmin(pred)), 4), "max": round(float(np.nanmax(pred)), 4), "mean": round(float(np.nanmean(pred)), 4), "method": "Ensemble predict_proba over environmental raster grid"}
-    pred_table = pd.DataFrame({"raster_row": row_grid.ravel()[valid].astype(int), "raster_col": col_grid.ravel()[valid].astype(int), "cell_index": np.flatnonzero(valid).astype(int), "x": lon_grid.ravel()[valid], "y": lat_grid.ravel()[valid], "longitude": lon_grid.ravel()[valid], "latitude": lat_grid.ravel()[valid], "sdm_suitability": pred_flat[valid]})
-    return overlay, pred_table
-
-
-def build_environment_prediction_grid(occ: pd.DataFrame, variables: list[str], resolution: str, area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[pd.DataFrame, tuple[int, int], list[list[float]], int]:
-    geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km)
-    if geom is None or geom.is_empty:
-        raise RuntimeError("SSDM prediction area could not be generated.")
     land = load_land_geometry()
     west, south, east, north = geom.bounds
     ref_var = "elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0]
@@ -2208,7 +2187,7 @@ def build_environment_prediction_grid(occ: pd.DataFrame, variables: list[str], r
     out_h = max(1, int(math.ceil(raw_h / stride)))
     out_w = max(1, int(math.ceil(raw_w / stride)))
     if status is not None:
-        status.write(f"Building shared SSDM prediction grid: {out_w:,} x {out_h:,} cells; source stride={stride}")
+        status.write(status_msg.format(out_w=out_w, out_h=out_h, stride=stride))
     arrays: dict[str, np.ndarray] = {}
     actual_bounds = None
     elev_cache = None
@@ -2226,18 +2205,42 @@ def build_environment_prediction_grid(occ: pd.DataFrame, variables: list[str], r
     lon_grid, lat_grid = np.meshgrid(lon_centers, lat_centers)
     env = pd.DataFrame({v: arrays[v].ravel() for v in variables})
     finite = np.isfinite(env.to_numpy()).all(axis=1)
-    spatial = np.array([geom.covers(Point(float(lon), float(lat))) and land.covers(Point(float(lon), float(lat))) for lat, lon in zip(lat_grid.ravel(), lon_grid.ravel())])
+    spatial = np.array([
+        geom.covers(Point(float(lo), float(la))) and land.covers(Point(float(lo), float(la)))
+        for la, lo in zip(lat_grid.ravel(), lon_grid.ravel())
+    ])
     valid = finite & spatial
+    return geom, env, valid, lon_grid.ravel(), lat_grid.ravel(), out_h, out_w, (west2, south2, east2, north2), stride
+
+
+def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, sdm_result: dict[str, Any], area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[dict[str, Any], pd.DataFrame]:
+    _, X, valid, lon_flat, lat_flat, out_h, out_w, (west2, south2, east2, north2), stride = _build_prediction_grid_base(
+        occ, variables, resolution, area_mode, buffer_km, rectangle_margin_km, max_pixels,
+        excluded_occ, exclusion_buffer_km, status,
+        "Predicting raster map: {out_w:,} × {out_h:,} cells; source stride={stride}",
+    )
+    if valid.sum() == 0:
+        raise RuntimeError("No valid land raster cells were available for prediction.")
+    pred_flat = np.full(X.shape[0], np.nan, dtype=float)
+    preds = [model.predict_proba(X.loc[valid, variables])[:, 1] for model in sdm_result["models"].values()]
+    pred_flat[valid] = np.mean(np.vstack(preds), axis=0)
+    pred = pred_flat.reshape(out_h, out_w)
+    row_grid, col_grid = np.indices((out_h, out_w))
+    overlay = {"image": rgba_from_prediction(pred), "bounds": [[south2, west2], [north2, east2]], "shape": pred.shape, "source_stride": stride, "min": round(float(np.nanmin(pred)), 4), "max": round(float(np.nanmax(pred)), 4), "mean": round(float(np.nanmean(pred)), 4), "method": "Ensemble predict_proba over environmental raster grid"}
+    pred_table = pd.DataFrame({"raster_row": row_grid.ravel()[valid].astype(int), "raster_col": col_grid.ravel()[valid].astype(int), "cell_index": np.flatnonzero(valid).astype(int), "x": lon_flat[valid], "y": lat_flat[valid], "longitude": lon_flat[valid], "latitude": lat_flat[valid], "sdm_suitability": pred_flat[valid]})
+    return overlay, pred_table
+
+
+def build_environment_prediction_grid(occ: pd.DataFrame, variables: list[str], resolution: str, area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[pd.DataFrame, tuple[int, int], list[list[float]], int]:
+    _, env, valid, lon_flat, lat_flat, out_h, out_w, (west2, south2, east2, north2), stride = _build_prediction_grid_base(
+        occ, variables, resolution, area_mode, buffer_km, rectangle_margin_km, max_pixels,
+        excluded_occ, exclusion_buffer_km, status,
+        "Building shared SSDM prediction grid: {out_w:,} × {out_h:,} cells; source stride={stride}",
+    )
     if valid.sum() == 0:
         raise RuntimeError("No valid land raster cells were available for SSDM prediction.")
     row_grid, col_grid = np.indices((out_h, out_w))
-    grid = pd.DataFrame({
-        "raster_row": row_grid.ravel()[valid].astype(int),
-        "raster_col": col_grid.ravel()[valid].astype(int),
-        "cell_index": np.flatnonzero(valid).astype(int),
-        "longitude": lon_grid.ravel()[valid],
-        "latitude": lat_grid.ravel()[valid],
-    })
+    grid = pd.DataFrame({"raster_row": row_grid.ravel()[valid].astype(int), "raster_col": col_grid.ravel()[valid].astype(int), "cell_index": np.flatnonzero(valid).astype(int), "longitude": lon_flat[valid], "latitude": lat_flat[valid]})
     for var in variables:
         grid[var] = env.loc[valid, var].to_numpy()
     return grid.reset_index(drop=True), (out_h, out_w), [[south2, west2], [north2, east2]], stride
