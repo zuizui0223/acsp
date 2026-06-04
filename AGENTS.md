@@ -14,15 +14,20 @@ If local code differs from GitHub, treat GitHub as authoritative.
 
 If there is any uncertainty about whether a feature already exists or has changed, inspect the latest GitHub file first and preserve the current behavior.
 
-## Required design policy
+## Required design and research policy
 
-Before changing workflow, sampling, candidate generation, SDM, SSDM, or large-dataset behavior, read:
+Before changing workflow, sampling, candidate generation, SDM, SSDM, large-dataset behavior, map selection, exports, or field-validation behavior, read:
 
 - `SURVEY_PLANNING_POLICY.md`
+- `RESEARCH_POSITIONING.md`
 
-This app is a field-survey planning tool, not a full all-record SDM analysis platform.
+`SURVEY_PLANNING_POLICY.md` defines the intended application workflow and implementation constraints.
 
-Raw GBIF records must be preserved for summary/download, but maps, candidate generation, SDM, and SSDM should use spatially representative working subsets by default. Do not reintroduce an all-record-first workflow as the default.
+`RESEARCH_POSITIONING.md` defines the scientific purpose, publication novelty, intended users, hypotheses, and field-validation goals.
+
+This app is a field-survey planning tool, not a general all-record SDM analysis platform.
+
+The app should convert occurrence records into practical survey-site decisions. Occurrence-supported candidates must work without SDM. Optional SDM is especially useful for sparse or incomplete records and may identify exploratory model-only sites. Genus / SSDM workflows should support multi-species, taxonomic, phylogeographic, and evolutionary sampling.
 
 ## Core rule
 
@@ -60,14 +65,25 @@ Do not reintroduce UI elements or older workflows that were intentionally remove
 - duplicated `Priority survey ranges` table at the bottom, if it has been removed
 - daily sampling route layers, if they have been removed
 - redundant occurrence buffer plus survey range layers, if they have been simplified
-- all-record-first map/model/candidate workflows as the default
+- all-record-first model workflows as the default
+
+Do not weaken these scientific design concepts:
+
+- occurrence-supported candidates must remain available without SDM;
+- SDM must remain optional and especially useful for sparse occurrence data;
+- SDM-high exploration candidates must remain clearly labeled exploratory;
+- Step 2 survey-area selection must not automatically become the SDM extent;
+- researcher-owned CSV uploads must remain a first-class input;
+- genus / SSDM workflows must remain relevant to multi-species and evolutionary sampling;
+- field validation must remain part of the intended workflow;
+- the interface should remain map-first and fieldwork-oriented.
 
 If a requested change conflicts with an existing feature, make the smallest safe change without deleting unrelated functionality.
 
 ## Collaboration rules for AI coding agents
 
 1. Read this file before editing.
-2. Read `SURVEY_PLANNING_POLICY.md` before changing workflow, sampling, large-dataset, candidate, SDM, or SSDM behavior.
+2. Read `SURVEY_PLANNING_POLICY.md` and `RESEARCH_POSITIONING.md` before changing workflow, sampling, candidate generation, SDM, SSDM, selection, exports, or field-validation behavior.
 3. Read the latest relevant files from GitHub before editing.
 4. Prefer small diffs over full-file rewrites.
 5. Do not push directly to `main` unless the user explicitly asks.
@@ -87,7 +103,9 @@ python -m py_compile gbif_fieldmap_builder_app.py
     - Included points = used for analysis
     - Excluded QC points = visible but not used for analysis
     - Raw records = preserved for transparency/download
-    - Working subsets = used for maps, candidates, SDM, and SSDM
+    - Working subsets = used for candidates, SDM, and SSDM
+    - Occurrence-supported candidates = based on known records
+    - SDM-high exploration candidates = model-only, exploratory, and field-validation required
 
 ## Large-file editing rule
 
@@ -120,8 +138,10 @@ Do not run full SSDM automatically. Use lightweight defaults, record caps, speci
 
 Occurrence richness maps and SSDM predicted richness maps must be clearly distinguished:
 
-- Occurrence richness = observed species richness from GBIF records.
+- Occurrence richness = observed species richness from occurrence records.
 - SSDM richness = predicted richness from stacked species-level SDMs.
+
+Genus / SSDM outputs should support biodiversity, taxonomic, phylogeographic, and evolutionary sampling decisions rather than prediction maps alone.
 
 ## Changelog requirement
 
