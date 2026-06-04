@@ -2855,10 +2855,10 @@ def genus_diversity_panel() -> None:
 
         st.subheader("Downloads")
         d1, d2, d3, d4 = st.columns(4)
-        d1.download_button("Species summary CSV", summary.to_csv(index=False).encode("utf-8"), "genus_species_summary.csv", "text/csv", width="stretch")
-        d2.download_button("Richness grid CSV", grid.to_csv(index=False).encode("utf-8"), "genus_richness_grid.csv", "text/csv", width="stretch")
-        d3.download_button("Hotspots CSV", hotspots.to_csv(index=False).encode("utf-8"), "genus_richness_hotspots.csv", "text/csv", width="stretch")
-        d4.download_button("Richness HTML map", html_bytes, "genus_richness_map.html", "text/html", width="stretch")
+        d1.download_button("Species summary CSV", summary.to_csv(index=False).encode("utf-8"), "genus_species_summary.csv", "text/csv", width="stretch", key="genus_species_summary_csv_download")
+        d2.download_button("Richness grid CSV", grid.to_csv(index=False).encode("utf-8"), "genus_richness_grid.csv", "text/csv", width="stretch", key="genus_richness_grid_csv_download")
+        d3.download_button("Hotspots CSV", hotspots.to_csv(index=False).encode("utf-8"), "genus_richness_hotspots.csv", "text/csv", width="stretch", key="genus_richness_hotspots_csv_download")
+        d4.download_button("Richness HTML map", html_bytes, "genus_richness_map.html", "text/html", width="stretch", key="genus_richness_html_map_download")
 
     st.subheader("Optional: Run SSDM")
     st.caption("Predicted stacked richness: fit one SDM per eligible species, predict on a shared environmental grid, then sum suitability values across species. This does not run automatically.")
@@ -3032,14 +3032,14 @@ def genus_diversity_panel() -> None:
                 st.caption("These remain observed-data hotspot candidates; SSDM predicted richness only contributes model_support_score for prioritization.")
                 st.dataframe(ranked_observed_hotspots, width="stretch", hide_index=True)
                 d1, d2, d3, d4, d5 = st.columns(5)
-                d1.download_button("ssdm_species_model_summary.csv", model_summary.to_csv(index=False).encode("utf-8"), "ssdm_species_model_summary.csv", "text/csv", width="stretch")
-                d2.download_button("ssdm_richness_grid.csv", ssdm_grid.to_csv(index=False).encode("utf-8"), "ssdm_richness_grid.csv", "text/csv", width="stretch")
-                d3.download_button("ssdm_hotspot_candidates.csv", ssdm_hotspots.to_csv(index=False).encode("utf-8"), "ssdm_hotspot_candidates.csv", "text/csv", width="stretch")
-                d4.download_button("continuous SSDM HTML", continuous_map.get_root().render().encode("utf-8"), "ssdm_continuous_richness_map.html", "text/html", width="stretch")
-                d5.download_button("binary SSDM HTML", binary_map.get_root().render().encode("utf-8"), "ssdm_binary_richness_map.html", "text/html", width="stretch")
+                d1.download_button("ssdm_species_model_summary.csv", model_summary.to_csv(index=False).encode("utf-8"), "ssdm_species_model_summary.csv", "text/csv", width="stretch", key="ssdm_species_model_summary_csv_download")
+                d2.download_button("ssdm_richness_grid.csv", ssdm_grid.to_csv(index=False).encode("utf-8"), "ssdm_richness_grid.csv", "text/csv", width="stretch", key="ssdm_richness_grid_csv_download")
+                d3.download_button("ssdm_hotspot_candidates.csv", ssdm_hotspots.to_csv(index=False).encode("utf-8"), "ssdm_hotspot_candidates.csv", "text/csv", width="stretch", key="ssdm_hotspot_candidates_csv_download")
+                d4.download_button("continuous SSDM HTML", continuous_map.get_root().render().encode("utf-8"), "ssdm_continuous_richness_map.html", "text/html", width="stretch", key="ssdm_continuous_html_download")
+                d5.download_button("binary SSDM HTML", binary_map.get_root().render().encode("utf-8"), "ssdm_binary_richness_map.html", "text/html", width="stretch", key="ssdm_binary_html_download")
                 if ssdm_vif_diag is not None and not ssdm_vif_diag.empty:
                     d_vif_col = st.columns(1)[0]
-                    d_vif_col.download_button("ssdm_variable_selection_diagnostics.csv", ssdm_vif_diag.to_csv(index=False).encode("utf-8"), "ssdm_variable_selection_diagnostics.csv", "text/csv", use_container_width=True)
+                    d_vif_col.download_button("ssdm_variable_selection_diagnostics.csv", ssdm_vif_diag.to_csv(index=False).encode("utf-8"), "ssdm_variable_selection_diagnostics.csv", "text/csv", use_container_width=True, key="ssdm_variable_selection_diagnostics_csv_download")
             except Exception as exc:
                 st.error(f"SSDM failed: {exc}")
 
@@ -3955,15 +3955,16 @@ def main() -> None:
         _gmaps_all_url_sum = make_google_maps_route_url(_sel_df_summary, travelmode=_travelmode_sum, max_waypoints=8)
         _sb1, _sb2, _sb3, _sb4, _sb5, _sb6 = st.columns(6)
         _sb1.link_button("🗺️ Open all in Google Maps", _gmaps_all_url_sum, use_container_width=True)
-        _sb2.download_button("⬇ CSV", make_export_csv(_sel_df_summary), "survey_site_list.csv", "text/csv", use_container_width=True)
-        _sb3.download_button("⬇ HTML", make_shareable_html(_sel_df_summary), "survey_site_list.html", "text/html", use_container_width=True)
-        _sb4.download_button("⬇ KML", make_export_kml(_sel_df_summary).encode("utf-8"), "survey_site_list.kml", "application/vnd.google-earth.kml+xml", use_container_width=True)
+        _sb2.download_button("⬇ CSV", make_export_csv(_sel_df_summary), "survey_site_list.csv", "text/csv", use_container_width=True, key="selected_summary_csv_download")
+        _sb3.download_button("⬇ HTML", make_shareable_html(_sel_df_summary), "survey_site_list.html", "text/html", use_container_width=True, key="selected_summary_html_download")
+        _sb4.download_button("⬇ KML", make_export_kml(_sel_df_summary).encode("utf-8"), "survey_site_list.kml", "application/vnd.google-earth.kml+xml", use_container_width=True, key="selected_summary_kml_download")
         _sb5.download_button(
             "Validation CSV",
             make_validation_template(_sel_df_summary).to_csv(index=False).encode("utf-8"),
             "field_validation_template.csv",
             "text/csv",
             use_container_width=True,
+            key="selected_summary_validation_csv_download",
         )
         if _sb6.button("Clear selected sites", key="sl_clear_summary"):
             st.session_state.sl_selected_site_ids = []
@@ -3987,6 +3988,7 @@ def main() -> None:
                 "survey_candidates.csv",
                 "text/csv",
                 use_container_width=True,
+                key="candidate_details_csv_download",
             )
             oc2.download_button(
                 "Candidates KML",
@@ -3994,6 +3996,7 @@ def main() -> None:
                 "survey_candidates.kml",
                 "application/vnd.google-earth.kml+xml",
                 use_container_width=True,
+                key="candidate_details_kml_download",
             )
 
     st.subheader("Performance summary")
@@ -4052,7 +4055,7 @@ def main() -> None:
     st.code(_methods_text, language=None)
 
     st.subheader("Downloads")
-    st.download_button("Download sampling HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
+    st.download_button("Download sampling HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch", key="sampling_html_map_download")
 
 
 if __name__ == "__main__":

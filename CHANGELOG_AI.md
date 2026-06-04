@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Add explicit download button keys
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Confirmed the latest `main` no longer has `route_planner_panel()` after the unified map-selection workflow, so the duplicate selected-site summary is already structurally removed.
+- Added explicit unique `key=` values to the compact selected-sites CSV, HTML, KML, and validation CSV download buttons to prevent `StreamlitDuplicateElementId`.
+- Added explicit keys to remaining genus, SSDM, candidate-details, and sampling-map download buttons so repeated labels or filenames remain safe if sections are rendered together.
+
+Features preserved:
+- Unified map-first candidate selection, selected-site session state, click and rectangle selection, green selected-site outlines, Google Maps links, CSV/HTML/KML/validation downloads, genus mode, and optional SDM/SSDM workflows remain unchanged.
+
+Known risks / TODO:
+- The fix targets duplicate Streamlit element IDs by keying download widgets; no data-processing behavior was changed.
+
 ## 2026-06-04 - Codex (OpenAI) - Unify candidate selection on the main map
 
 Changed files:
