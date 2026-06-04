@@ -4,6 +4,29 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Unify candidate selection on the main map
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed the separate `Auto: top-ranked` / `Manual: map & rectangle` selection modes from the species candidate workflow.
+- Removed the separate manual site-selection map; the main priority-aware candidate map is now the only candidate selection map.
+- Added map display controls for top-ranked sites shown, minimum priority score, minimum SDM suitability when available, and candidate-type inclusion.
+- Added a persistent `Clear selected sites` control above the main candidate map.
+- Added rectangle drawing to the main candidate map; drawn rectangles add candidate site IDs using `ids_inside_drawn_rectangles(all_candidates, "site_id", "latitude", "longitude", features)`.
+- Kept click-to-toggle individual candidate sites on the main map and preserved green selected-site outlines.
+- Updated the performance metric from `Route stops` to `Selected sites`.
+
+Features preserved:
+- Occurrence-supported candidates work without SDM; SDM-high exploration candidates remain available and clearly distinct.
+- Selected-site session state, compact selected-sites summary, Google Maps links, CSV/HTML/KML downloads, validation CSV download, and priority-aware candidate markers remain available.
+- Step 2 survey-area selection and independent optional SDM workflow are unchanged.
+
+Known risks / TODO:
+- Rectangle selection adds sites inside drawn rectangles; removing a group still uses individual click toggles or the Clear selected sites button.
+
 ## 2026-06-04 - Codex (OpenAI) - Strengthen field-validation exports
 
 Changed files:

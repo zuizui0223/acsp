@@ -2556,7 +2556,7 @@ def _priority_marker_style(row: Any) -> tuple[int, str]:
         return 7, "#7f7f7f"
 
 
-def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], occurrence_buffer_m: float, survey_range_m: float, layers: dict[str, bool], show_images: bool = True, selected_ids: Optional[list] = None) -> folium.Map:
+def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], occurrence_buffer_m: float, survey_range_m: float, layers: dict[str, bool], show_images: bool = True, selected_ids: Optional[list] = None, add_draw: bool = False) -> folium.Map:
     center = (float(occ["_latitude"].mean()), float(occ["_longitude"].mean())) if not occ.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True)
     if layers.get("predict") and overlay is not None:
@@ -2596,9 +2596,20 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
             if sid in selected_set:
                 folium.CircleMarker(loc, radius=marker_radius + 5, color="#00cc44", fill=False, weight=3, tooltip=f"SELECTED | site {sid}").add_to(fg)
         fg.add_to(fmap)
+    if add_draw:
+        Draw(export=False, draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False}, edit_options={"edit": False, "remove": True}).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
-        fmap.fit_bounds([[occ["_latitude"].min(), occ["_longitude"].min()], [occ["_latitude"].max(), occ["_longitude"].max()]], padding=(30, 30))
+        lat_values = []
+        lon_values = []
+        if occ is not None and not occ.empty:
+            lat_values.extend(pd.to_numeric(occ["_latitude"], errors="coerce").dropna().tolist())
+            lon_values.extend(pd.to_numeric(occ["_longitude"], errors="coerce").dropna().tolist())
+        if sites is not None and not sites.empty:
+            lat_values.extend(pd.to_numeric(sites["latitude"], errors="coerce").dropna().tolist())
+            lon_values.extend(pd.to_numeric(sites["longitude"], errors="coerce").dropna().tolist())
+        if lat_values and lon_values:
+            fmap.fit_bounds([[min(lat_values), min(lon_values)], [max(lat_values), max(lon_values)]], padding=(30, 30))
     except Exception:
         pass
     return fmap
@@ -3033,35 +3044,6 @@ def genus_diversity_panel() -> None:
                 st.error(f"SSDM failed: {exc}")
 
 
-def make_route_selection_map(sites: pd.DataFrame, selected_ids: list[int], add_draw: bool = False) -> folium.Map:
-    selected = set(map(int, selected_ids))
-    center = (float(sites["latitude"].mean()), float(sites["longitude"].mean())) if not sites.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True)
-    fg = FeatureGroup(name="candidate survey ranges", show=True)
-    for _, row in sites.iterrows():
-        sid = int(row["site_id"])
-        picked = sid in selected
-        color = "#2ca02c" if picked else "#1f77b4"
-        html = f"""
-        <b>{'Selected' if picked else 'Candidate'} survey site {sid}</b><br>
-        type: {row.get('candidate_type', '')}<br>
-        priority: {row.get('priority_score', '')}<br>
-        SDM: {row.get('sdm_suitability', '')}<br>
-        lat/lon: {float(row['latitude']):.6f}, {float(row['longitude']):.6f}<br>
-        <a href='{make_google_maps_point_url(float(row['latitude']), float(row['longitude']))}' target='_blank'>Open point in Google Maps</a>
-        """
-        folium.CircleMarker((row["latitude"], row["longitude"]), radius=9 if picked else 6, color=color, fill=True, fill_color=color, fill_opacity=0.9 if picked else 0.65, weight=3 if picked else 1, popup=folium.Popup(html, max_width=360), tooltip=f"{'selected' if picked else 'click to select'} | site {sid}").add_to(fg)
-    fg.add_to(fmap)
-    if add_draw:
-        Draw(export=False, draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False}, edit_options={"edit": False, "remove": True}).add_to(fmap)
-    LayerControl(collapsed=True).add_to(fmap)
-    try:
-        fmap.fit_bounds([[sites["latitude"].min(), sites["longitude"].min()], [sites["latitude"].max(), sites["longitude"].max()]], padding=(30, 30))
-    except Exception:
-        pass
-    return fmap
-
-
 def nearest_site_id_from_click(sites: pd.DataFrame, click: dict[str, Any]) -> Optional[int]:
     if not click or "lat" not in click or "lng" not in click or sites.empty:
         return None
@@ -3220,171 +3202,6 @@ def _make_gmaps_url_with_end(ordered: pd.DataFrame, travelmode: str, start_locat
         if wps:
             params["waypoints"] = "|".join(f"{lat:.6f},{lon:.6f}" for lat, lon in wps)
     return "https://www.google.com/maps/dir/?" + urllib.parse.urlencode(params, safe=",|")
-
-
-def route_planner_panel(sites: pd.DataFrame, show_subheader: bool = True) -> pd.DataFrame:
-    if show_subheader:
-        st.subheader("4 — Selected survey sites")
-        st.caption(
-            "⚠️ Google Maps verification is required. "
-            "This app does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility."
-        )
-    if sites.empty:
-        return pd.DataFrame()
-
-    sort_cols = available_sort_cols(sites, ["priority_score", "sdm_suitability", "occurrence_support_score"])
-    ranked_sites = sites.sort_values(sort_cols, ascending=False, na_position="last") if sort_cols else sites
-    options = sites["site_id"].astype(int).tolist()
-    has_suit = "sdm_suitability" in sites.columns and sites["sdm_suitability"].notna().any()
-    has_sdm_high = "candidate_type" in sites.columns and sites["candidate_type"].str.startswith("SDM-high").any()
-
-    # ── Initialise / prune state ─────────────────────────────────────────────
-    if not isinstance(st.session_state.get("survey_day_lists"), dict):
-        st.session_state.survey_day_lists = {1: [], 2: []}
-    valid_ids = set(options)
-    for k in list(st.session_state.survey_day_lists.keys()):
-        st.session_state.survey_day_lists[k] = [s for s in st.session_state.survey_day_lists[k] if s in valid_ids]
-    st.session_state.sl_selected_site_ids = [s for s in st.session_state.get("sl_selected_site_ids", []) if s in valid_ids]
-
-    travelmode = st.selectbox("Travel mode for Google Maps links", ["driving", "walking", "bicycling", "transit"], index=0, key="sl_travelmode")
-
-    # ── Selection area (auto / manual+rectangle — unchanged logic) ───────────
-    st.markdown("#### Select candidate sites")
-    sel_mode = st.radio("Selection mode", ["Auto: top-ranked", "Manual: map & rectangle"], horizontal=True, key="sl_sel_mode")
-
-    if sel_mode.startswith("Auto"):
-        ac1, ac2, ac3 = st.columns(3)
-        top_n = ac1.number_input("Top N sites", 1, max(1, len(sites)), min(10, len(sites)), 1, key="sl_top_n")
-        min_priority = ac2.number_input("Min priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_priority")
-        min_suit = ac3.number_input("Min SDM suitability", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_suit",
-                                    help="SDM not built yet." if not has_suit else "Filter by SDM suitability.")
-        ic1, ic2 = st.columns(2)
-        incl_occ = ic1.checkbox("Occurrence-supported sites", value=True, key="sl_incl_occ")
-        incl_sdm = ic2.checkbox("SDM-high exploration sites", value=True, key="sl_incl_sdm", disabled=not has_sdm_high)
-
-        filtered = ranked_sites.copy()
-        type_mask = pd.Series(False, index=filtered.index)
-        if incl_occ:
-            type_mask |= filtered.get("candidate_type", pd.Series("", index=filtered.index)).str.startswith("Occurrence")
-        if incl_sdm and has_sdm_high:
-            type_mask |= filtered.get("candidate_type", pd.Series("", index=filtered.index)).str.startswith("SDM-high")
-        if incl_occ or (incl_sdm and has_sdm_high):
-            filtered = filtered[type_mask]
-        if "priority_score" in filtered.columns:
-            filtered = filtered[pd.to_numeric(filtered["priority_score"], errors="coerce").fillna(0.0) >= float(min_priority)]
-        if has_suit:
-            filtered = filtered[pd.to_numeric(filtered["sdm_suitability"], errors="coerce").fillna(0.0) >= float(min_suit)]
-        auto_ids = filtered.head(int(top_n))["site_id"].astype(int).tolist()
-
-        show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "sdm_suitability", "candidate_type"] if c in filtered.columns]
-        if auto_ids:
-            st.dataframe(filtered.head(int(top_n))[show_cols], width="stretch", hide_index=True)
-        if not filtered.iloc[int(top_n):].empty:
-            with st.expander(f"Lower-priority sites not included ({len(filtered) - int(top_n)})", expanded=False):
-                st.dataframe(filtered.iloc[int(top_n):][show_cols], width="stretch", hide_index=True)
-        if st.button("Use these as selected sites", key="sl_auto_apply") and auto_ids:
-            st.session_state.sl_selected_site_ids = auto_ids
-            st.rerun()
-
-    else:
-        # Manual: map click + rectangle Draw (logic unchanged)
-        st.caption("Click sites to toggle. Draw a rectangle to add all sites inside to the selection. 🟢 = selected, 🔵 = not selected.")
-        click_data = st_folium(
-            make_route_selection_map(sites, st.session_state.sl_selected_site_ids, add_draw=True),
-            width=None, height=480,
-            returned_objects=["last_object_clicked", "all_drawings", "last_active_drawing"],
-            key="sl_manual_map",
-        )
-        clicked = (click_data or {}).get("last_object_clicked")
-        if clicked:
-            sig = f"{clicked.get('lat'):.6f},{clicked.get('lng'):.6f}"
-            if sig != st.session_state.last_route_click_signature:
-                sid = nearest_site_id_from_click(sites, clicked)
-                st.session_state.last_route_click_signature = sig
-                if sid is not None:
-                    sel = list(st.session_state.sl_selected_site_ids)
-                    if sid in sel:
-                        sel.remove(sid)
-                    else:
-                        sel.append(sid)
-                    st.session_state.sl_selected_site_ids = sel
-                    st.rerun()
-        raw_sl_drawings = (click_data or {}).get("all_drawings") or (click_data or {}).get("last_active_drawing")
-        sl_features = extract_drawn_features(raw_sl_drawings)
-        if sl_features:
-            draw_sig = str(sl_features)[:400]
-            if draw_sig != st.session_state.get("sl_last_draw_sig", ""):
-                st.session_state.sl_last_draw_sig = draw_sig
-                rect_ids = ids_inside_drawn_rectangles(sites, "site_id", "latitude", "longitude", sl_features)
-                if rect_ids:
-                    existing = set(st.session_state.sl_selected_site_ids)
-                    st.session_state.sl_selected_site_ids = list(existing | set(rect_ids))
-                    st.rerun()
-        _tok = st.session_state.get("sl_reset_token", 0)
-        manual_ids = st.multiselect("Selected site IDs", options=options, default=st.session_state.sl_selected_site_ids, key=f"sl_manual_ids_{_tok}")
-        st.session_state.sl_selected_site_ids = [int(x) for x in manual_ids]
-        b1, b2 = st.columns(2)
-        if b1.button("Use top ranked", key="sl_top_btn"):
-            st.session_state.sl_selected_site_ids = ranked_sites["site_id"].astype(int).head(min(10, len(ranked_sites))).tolist()
-            st.rerun()
-        if b2.button("Clear selected sites", key="sl_clear_btn"):
-            st.session_state.sl_selected_site_ids = []
-            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
-            st.session_state.last_route_click_signature = ""
-            st.session_state.sl_last_draw_sig = ""
-            st.rerun()
-
-    # ── Selected survey sites (main output) ──────────────────────────────────
-    selected_ids = st.session_state.sl_selected_site_ids
-    sel_df = sites[sites["site_id"].astype(int).isin(selected_ids)].copy()
-    if not sel_df.empty and selected_ids:
-        sid_order = {sid: i for i, sid in enumerate(selected_ids)}
-        sel_df = sel_df.assign(_ord=sel_df["site_id"].astype(int).map(sid_order)).sort_values("_ord").drop(columns=["_ord"])
-
-    st.markdown(f"#### Selected survey sites ({len(sel_df)})")
-    if sel_df.empty:
-        st.info("No sites selected yet. Use Auto or Manual mode above.")
-    else:
-        sel_df["google_maps_point_url"] = sel_df.apply(
-            lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
-        )
-        show_scols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "sdm_suitability",
-                                   "n_occurrences", "candidate_type", "score_explanation",
-                                   "latitude", "longitude", "google_maps_point_url"] if c in sel_df.columns]
-        scol_cfg: dict[str, Any] = {}
-        if "google_maps_point_url" in show_scols:
-            scol_cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="📍")
-        st.dataframe(sel_df[show_scols], column_config=scol_cfg, width="stretch", hide_index=True)
-
-        gmaps_all_url = make_google_maps_route_url(sel_df, travelmode=travelmode, max_waypoints=8)
-        ab1, ab2, ab3, ab4, ab5 = st.columns(5)
-        ab1.link_button("🗺️ Open all in Google Maps", gmaps_all_url, use_container_width=True)
-        ab2.download_button("⬇ CSV", make_export_csv(sel_df), "survey_site_list.csv", "text/csv", use_container_width=True)
-        ab3.download_button("⬇ HTML", make_shareable_html(sel_df), "survey_site_list.html", "text/html", use_container_width=True)
-        ab4.download_button(
-            "Validation CSV",
-            make_validation_template(sel_df).to_csv(index=False).encode("utf-8"),
-            "field_validation_template.csv",
-            "text/csv",
-            use_container_width=True,
-        )
-        if ab5.button("Clear selected sites", key="sl_clear_main"):
-            st.session_state.sl_selected_site_ids = []
-            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
-            st.session_state.last_route_click_signature = ""
-            st.session_state.sl_last_draw_sig = ""
-            st.rerun()
-
-    # ── Return selected sites for map route layer (survey_day=1) ─────────────
-    if sel_df.empty:
-        return pd.DataFrame()
-    gurl = make_google_maps_route_url(sel_df, travelmode=travelmode, max_waypoints=8)
-    all_rows: list[dict] = []
-    for order, (_, row) in enumerate(sel_df.iterrows(), start=1):
-        r = row.to_dict()
-        r.update({"survey_day": 1, "day_route_order": order, "distance_from_previous_km": 0.0, "cumulative_day_distance_km": 0.0, "day_google_maps_route_url": gurl})
-        all_rows.append(r)
-    return pd.DataFrame(all_rows)
 
 
 def make_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
@@ -4010,15 +3827,109 @@ def main() -> None:
         st.warning("No occurrence clusters found. Try reducing the cluster distance or minimum-samples setting in the sidebar.")
         route_plan = pd.DataFrame()
     else:
-        # ── Selection controls (before the map) ───────────────────────────────
-        route_plan = route_planner_panel(all_candidates, show_subheader=False)
+        valid_site_ids = set(all_candidates["site_id"].astype(int).tolist())
+        st.session_state.sl_selected_site_ids = [s for s in st.session_state.get("sl_selected_site_ids", []) if s in valid_site_ids]
+
+        st.markdown("#### Select candidate sites on the map")
+        st.caption(
+            "Top-ranked sites are shown on the map for inspection. "
+            "Click individual candidate markers to add/remove them, or draw a rectangle to add nearby candidate groups together."
+        )
+        has_suit = "sdm_suitability" in all_candidates.columns and all_candidates["sdm_suitability"].notna().any()
+        has_sdm_high = "candidate_type" in all_candidates.columns and all_candidates["candidate_type"].astype(str).str.startswith("SDM-high").any()
+        sc1, sc2, sc3 = st.columns(3)
+        top_sites_shown = sc1.number_input("Top-ranked sites shown", 1, max(1, len(all_candidates)), min(20, len(all_candidates)), 1, key="sl_top_sites_shown")
+        min_priority = sc2.number_input("Minimum priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_priority")
+        min_suit = sc3.number_input(
+            "Minimum SDM suitability",
+            0.0,
+            1.0,
+            0.0,
+            0.05,
+            format="%.2f",
+            key="sl_min_suit",
+            disabled=not has_suit,
+            help="Available after SDM is built." if not has_suit else "Filter displayed candidates by SDM suitability.",
+        )
+        ic1, ic2, ic3, ic4 = st.columns(4)
+        include_occurrence_candidates = ic1.checkbox("Include occurrence-supported candidates", value=True, key="sl_incl_occ")
+        include_sdm_candidates = ic2.checkbox("Include SDM-high exploration candidates", value=True, key="sl_incl_sdm", disabled=not has_sdm_high)
+        travelmode = ic3.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0, key="sl_travelmode")
+        if ic4.button("Clear selected sites", key="sl_clear_map_controls", disabled=not st.session_state.sl_selected_site_ids):
+            st.session_state.sl_selected_site_ids = []
+            st.session_state.last_route_click_signature = ""
+            st.session_state.sl_last_draw_sig = ""
+            st.rerun()
+
+        map_candidates = all_candidates.copy()
+        type_mask = pd.Series(False, index=map_candidates.index)
+        if include_occurrence_candidates:
+            type_mask |= map_candidates.get("candidate_type", pd.Series("", index=map_candidates.index)).astype(str).str.startswith("Occurrence")
+        if include_sdm_candidates and has_sdm_high:
+            type_mask |= map_candidates.get("candidate_type", pd.Series("", index=map_candidates.index)).astype(str).str.startswith("SDM-high")
+        if include_occurrence_candidates or (include_sdm_candidates and has_sdm_high):
+            map_candidates = map_candidates[type_mask]
+        if "priority_score" in map_candidates.columns:
+            map_candidates = map_candidates[pd.to_numeric(map_candidates["priority_score"], errors="coerce").fillna(0.0) >= float(min_priority)]
+        if has_suit:
+            map_candidates = map_candidates[pd.to_numeric(map_candidates["sdm_suitability"], errors="coerce").fillna(0.0) >= float(min_suit)]
+
+        sort_cols = available_sort_cols(map_candidates, ["priority_score", "sdm_suitability", "occurrence_support_score"])
+        map_candidates = map_candidates.sort_values(sort_cols, ascending=False, na_position="last") if sort_cols else map_candidates
+        map_candidates = map_candidates.head(int(top_sites_shown)).copy()
+
+        selected_rows_for_map = all_candidates[all_candidates["site_id"].astype(int).isin(st.session_state.sl_selected_site_ids)].copy()
+        if not selected_rows_for_map.empty:
+            map_candidates = pd.concat([map_candidates, selected_rows_for_map], ignore_index=True, sort=False)
+            map_candidates = map_candidates.drop_duplicates(subset=["site_id"], keep="first")
+        route_plan = pd.DataFrame()
 
     # ── Priority-aware candidate map ─────────────────────────────────────────
     # Marker legend: red (rank 1-3) | orange (rank 4-10) | green (rank 11-20) | grey (rank >20) | purple dashed (SDM-high)
     # Selected sites show a green outer ring.
     _sel_ids_for_map = list(st.session_state.get("sl_selected_site_ids", []))
-    fmap = build_map(occ_candidate_input, all_candidates, overlay, route_plan if not all_candidates.empty else None, 0.0, float(survey_range_m), layers, bool(show_occurrence_images), selected_ids=_sel_ids_for_map)
-    st_folium(fmap, width=None, height=720, returned_objects=[], key="main_map")
+    _sites_for_map = map_candidates if not all_candidates.empty else all_candidates
+    fmap = build_map(occ_candidate_input, _sites_for_map, overlay, None, 0.0, float(survey_range_m), layers, bool(show_occurrence_images), selected_ids=_sel_ids_for_map, add_draw=not all_candidates.empty)
+    main_map_data = st_folium(
+        fmap,
+        width=None,
+        height=720,
+        returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],
+        key="main_map",
+    )
+
+    if not all_candidates.empty:
+        clicked = (main_map_data or {}).get("last_object_clicked")
+        clicked_tooltip = (main_map_data or {}).get("last_object_clicked_tooltip") or ""
+        if clicked:
+            sig = f"{clicked.get('lat'):.6f},{clicked.get('lng'):.6f},{clicked_tooltip}"
+            if sig != st.session_state.last_route_click_signature:
+                st.session_state.last_route_click_signature = sig
+                sid = None
+                match = re.search(r"site\s+(\d+)", str(clicked_tooltip), flags=re.IGNORECASE)
+                if match:
+                    sid = int(match.group(1))
+                elif _sites_for_map is not None and not _sites_for_map.empty:
+                    sid = nearest_site_id_from_click(_sites_for_map, clicked)
+                if sid is not None and sid in valid_site_ids:
+                    selected = list(st.session_state.sl_selected_site_ids)
+                    if sid in selected:
+                        selected.remove(sid)
+                    else:
+                        selected.append(sid)
+                    st.session_state.sl_selected_site_ids = selected
+                    st.rerun()
+        raw_drawings = (main_map_data or {}).get("all_drawings") or (main_map_data or {}).get("last_active_drawing")
+        features = extract_drawn_features(raw_drawings)
+        if features:
+            draw_sig = str(features)[:800]
+            if draw_sig != st.session_state.get("sl_last_draw_sig", ""):
+                st.session_state.sl_last_draw_sig = draw_sig
+                rect_ids = ids_inside_drawn_rectangles(all_candidates, "site_id", "latitude", "longitude", features)
+                if rect_ids:
+                    existing = set(st.session_state.sl_selected_site_ids)
+                    st.session_state.sl_selected_site_ids = sorted(existing | set(map(int, rect_ids)))
+                    st.rerun()
 
     html_bytes = fmap.get_root().render().encode("utf-8")
 
@@ -4030,7 +3941,7 @@ def main() -> None:
         _sel_df_summary = _sel_df_summary.assign(_ord=_sel_df_summary["site_id"].astype(int).map(_ord_map)).sort_values("_ord").drop(columns=["_ord"])
     st.markdown(f"**Selected survey sites ({len(_sel_df_summary)})**")
     if _sel_df_summary.empty:
-        st.info("No sites selected yet. Use the selection controls above.")
+        st.info("No sites selected yet. Click candidate markers or draw a rectangle on the map above.")
     else:
         _sel_df_summary["google_maps_point_url"] = _sel_df_summary.apply(
             lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
@@ -4060,6 +3971,7 @@ def main() -> None:
             st.session_state.last_route_click_signature = ""
             st.session_state.sl_last_draw_sig = ""
             st.rerun()
+        route_plan = _sel_df_summary.copy()
 
     # ── Optional: full candidate details table ────────────────────────────────
     with st.expander("Optional: candidate details table", expanded=False):
@@ -4091,7 +4003,7 @@ def main() -> None:
     c3.metric("Inside rectangle", f"{target_counts['records_inside_rectangle']:,}")
     c4.metric("Active target set", f"{target_counts['active_target_records']:,}")
     c5.metric("Survey ranges", f"{len(all_candidates):,}")
-    c6.metric("Route stops", f"{len(route_plan):,}" if route_plan is not None else "0")
+    c6.metric("Selected sites", f"{len(route_plan):,}" if route_plan is not None else "0")
     p1, p2, p3, p4, p5, p6 = st.columns(6)
     p1.metric("Excluded by rectangle", f"{target_counts['records_excluded_by_rectangle']:,}")
     p2.metric("Candidate input", f"{len(occ_candidate_input):,}")
