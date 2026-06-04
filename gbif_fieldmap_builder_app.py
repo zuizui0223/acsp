@@ -112,6 +112,15 @@ ECOLOGICAL_PRESET_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bi
 # elevation = terrain (topography)
 BALANCED_ECOLOGY_PRESET = ["bio1", "bio4", "bio12", "bio15", "bio14", "elevation"]
 ENV_VARIABLE_PRESETS = ["Balanced ecology preset", "Climate only preset", "Topography only preset", "Custom variables"]
+SURVEY_PLANNING_MODES = ["Fast survey planning (recommended)", "Detailed analysis", "Custom"]
+FAST_MAP_RECORDS = 500
+FAST_CANDIDATE_RECORDS = 800
+FAST_SDM_RECORDS = 300
+FAST_SSDM_RECORDS_PER_SPECIES = 150
+DETAILED_MAP_RECORDS = 1000
+DETAILED_CANDIDATE_RECORDS = 1500
+DETAILED_SDM_RECORDS = 500
+DETAILED_SSDM_RECORDS_PER_SPECIES = 300
 
 
 @dataclass(frozen=True)
@@ -999,18 +1008,18 @@ def prepare_large_dataset_inputs(
     manual_grid_deg: float,
     manual_distance_m: float,
     large_mode: bool,
+    candidate_target: int = FAST_CANDIDATE_RECORDS,
+    sdm_target: int = FAST_SDM_RECORDS,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
-    candidate_target = 1000 if large_mode else 3000
-    sdm_target = 500 if large_mode else 3000
+    candidate_target = max(1, int(candidate_target))
+    sdm_target = max(1, int(sdm_target))
     base = exact_coordinate_deduplicate(occ_after_exclusion) if use_exact_dedup else occ_after_exclusion.copy().reset_index(drop=True)
-    candidate = grid_thin(base, max(float(manual_grid_deg), 0.05 if large_mode else 0.0))
-    if large_mode:
-        candidate = spatially_balanced_cap(candidate, candidate_target)
-    sdm_train = grid_thin(base, max(float(manual_grid_deg), 0.10 if large_mode else 0.0))
+    candidate = grid_thin(base, max(float(manual_grid_deg), 0.05))
+    candidate = spatially_balanced_cap(candidate, candidate_target)
+    sdm_train = grid_thin(base, max(float(manual_grid_deg), 0.10))
     if float(manual_distance_m) > 0:
         sdm_train = spatial_thin(sdm_train, float(manual_distance_m))
-    if large_mode:
-        sdm_train = spatially_balanced_cap(sdm_train, sdm_target)
+    sdm_train = spatially_balanced_cap(sdm_train, sdm_target)
     summary = {
         "candidate_target": int(candidate_target),
         "sdm_target": int(sdm_target),
@@ -2354,6 +2363,20 @@ def genus_diversity_panel() -> None:
     occ_cleaned = occ.copy()
 
     st.sidebar.divider()
+    st.sidebar.subheader("Survey planning mode")
+    genus_survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="genus_survey_planning_mode")
+    if genus_survey_planning_mode.startswith("Detailed"):
+        genus_map_records = DETAILED_MAP_RECORDS
+        genus_candidate_records = DETAILED_CANDIDATE_RECORDS
+        genus_ssdm_records = DETAILED_SSDM_RECORDS_PER_SPECIES
+    else:
+        genus_map_records = FAST_MAP_RECORDS
+        genus_candidate_records = FAST_CANDIDATE_RECORDS
+        genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
+    st.sidebar.caption(
+        f"Raw genus records are kept. Working subsets: map about {genus_map_records:,}, "
+        f"richness candidates about {genus_candidate_records:,}, SSDM about {genus_ssdm_records:,} per species."
+    )
     st.sidebar.subheader("Richness grid")
     grid_deg = st.sidebar.number_input("Grid cell size (degrees)", min_value=0.01, max_value=5.0, value=0.25, step=0.05, format="%.2f", key="genus_grid_deg")
     min_records_cell = st.sidebar.number_input("Minimum records per species per cell", min_value=1, max_value=100, value=1, step=1, key="genus_min_records_cell")
@@ -2369,9 +2392,14 @@ def genus_diversity_panel() -> None:
     genus_observed_weight = st.sidebar.number_input("Observed-data weight", min_value=0.0, max_value=1.0, value=0.7, step=0.05, format="%.2f", key="genus_observed_weight")
     genus_model_weight = st.sidebar.number_input("SSDM model weight", min_value=0.0, max_value=1.0, value=0.3, step=0.05, format="%.2f", key="genus_model_weight")
     st.sidebar.caption("Observed richness generates the basic hotspot candidates. SSDM support is optional and only re-ranks/enriches them.")
+    if genus_survey_planning_mode == "Custom":
+        with st.sidebar.expander("Custom working subset caps", expanded=False):
+            genus_map_records = st.number_input("Genus map display records", 100, 50_000, genus_map_records, 100, key="genus_map_records")
+            genus_candidate_records = st.number_input("Genus richness candidate records", 50, 50_000, genus_candidate_records, 50, key="genus_candidate_records")
+            genus_ssdm_records = st.number_input("SSDM presence records per species", 3, 5_000, genus_ssdm_records, 25, key="genus_ssdm_records")
 
     st.subheader("2 窶・Prepare records and species summary")
-    genus_target_display = limit_occurrence_display(occ_cleaned, set(), 1000)
+    genus_target_display = limit_occurrence_display(occ_cleaned, set(), int(genus_map_records))
     occ, genus_target_counts = target_occurrence_set_panel(
         occ_cleaned,
         genus_target_display,
@@ -2383,8 +2411,9 @@ def genus_diversity_panel() -> None:
         st.error("The active genus target occurrence set is empty. Change the rectangle target option or clear the target rectangle.")
         return
 
+    genus_candidate_input = spatially_balanced_cap(grid_thin(exact_coordinate_deduplicate(occ), 0.05), int(genus_candidate_records))
     summary = genus_species_summary(occ, int(min_records_for_sdm), float(grid_deg))
-    grid = occurrence_richness_grid(occ, float(grid_deg), int(min_records_cell))
+    grid = occurrence_richness_grid(genus_candidate_input, float(grid_deg), int(min_records_cell))
     hotspots = richness_hotspot_candidates(grid, richness_metric, int(max_hotspots)) if not grid.empty else pd.DataFrame()
     hotspots = add_priority_rank(hotspots, float(genus_observed_weight), float(genus_model_weight)) if not hotspots.empty else hotspots
 
@@ -2395,8 +2424,8 @@ def genus_diversity_panel() -> None:
     g2.metric("Inside rectangle", f"{genus_target_counts['records_inside_rectangle']:,}")
     g3.metric("Excluded by rectangle", f"{genus_target_counts['records_excluded_by_rectangle']:,}")
     g4.metric("Active target records", f"{genus_target_counts['active_target_records']:,}")
-    g5.metric("Records for hotspots", f"{len(occ):,}")
-    g6.metric("Records for SSDM", f"{len(occ):,}")
+    g5.metric("Records for hotspots", f"{len(genus_candidate_input):,}")
+    g6.metric("SSDM per species cap", f"{int(genus_ssdm_records):,}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Valid target records", f"{len(occ):,}")
     c2.metric("Species", f"{summary['species'].nunique():,}" if not summary.empty else "0")
@@ -2460,7 +2489,7 @@ def genus_diversity_panel() -> None:
         s7, s8, s9 = st.columns(3)
         ssdm_min_records = s7.number_input("Minimum records per species", min_value=3, max_value=500, value=max(10, int(min_records_for_sdm)), step=1, key="ssdm_min_records")
         ssdm_max_species = s8.number_input("Max species to model", min_value=1, max_value=200, value=20, step=1, key="ssdm_max_species")
-        ssdm_max_presence = s9.number_input("Max presence points per species", min_value=3, max_value=5_000, value=300, step=25, key="ssdm_max_presence")
+        ssdm_max_presence = s9.number_input("Max presence points per species", min_value=3, max_value=5_000, value=int(genus_ssdm_records), step=25, key="ssdm_max_presence")
         s10, s11 = st.columns(2)
         ssdm_background = s10.number_input("Shared background cells per species", min_value=50, max_value=20_000, value=500, step=50, key="ssdm_background")
         ssdm_hotspot_n = s11.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="ssdm_hotspot_n")
@@ -3041,14 +3070,35 @@ def main() -> None:
     load_input_controls()
     st.sidebar.divider()
     st.sidebar.subheader("Sampling design")
+    survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="species_survey_planning_mode")
+    if survey_planning_mode.startswith("Detailed"):
+        default_map_records = DETAILED_MAP_RECORDS
+        default_candidate_records = DETAILED_CANDIDATE_RECORDS
+        default_sdm_records = DETAILED_SDM_RECORDS
+    else:
+        default_map_records = FAST_MAP_RECORDS
+        default_candidate_records = FAST_CANDIDATE_RECORDS
+        default_sdm_records = FAST_SDM_RECORDS
+    st.sidebar.caption(
+        f"Raw GBIF records are kept for summary/download. Working subsets: map about {default_map_records:,}, "
+        f"candidate input about {default_candidate_records:,}, SDM presence about {default_sdm_records:,}."
+    )
     survey_range_m = st.sidebar.number_input("Survey range radius (m)", 50, 50_000, 500, 50, help="Radius around each candidate center shown as a survey range circle on the map.")
     cluster_m = st.sidebar.number_input("Candidate grouping scale (m)", 1, 500_000, 2000, 500, help="Occurrences within this distance are grouped into a single survey candidate (DBSCAN clustering distance).")
     with st.sidebar.expander("Advanced sampling settings", expanded=False):
         thinning_m = st.number_input("Spatial thinning before clustering (m)", 0, 50_000, 1000, 500, help="Minimum distance between retained records used for candidate clustering.")
         large_dataset_mode = st.checkbox("Large dataset mode", value=False, help="Also enabled automatically when valid records exceed 1,000.")
-        max_map_points = st.number_input("Max occurrence points shown on map", 100, 50_000, 1000 if large_dataset_mode else 3000, 100, help="Only this many occurrence points are drawn on Folium maps. Raw records are kept.")
+        if survey_planning_mode == "Custom":
+            max_map_points = st.number_input("Max occurrence points shown on map", 100, 50_000, default_map_records, 100, help="Only this many occurrence points are drawn on Folium maps. Raw records are kept.")
+            candidate_working_records = st.number_input("Candidate input working records", 50, 50_000, default_candidate_records, 50, help="Spatially representative occurrence records used for observed-data candidate generation.")
+            sdm_working_records = st.number_input("SDM presence working records", 20, 50_000, default_sdm_records, 25, help="Bias-reduced presence records used for optional SDM.")
+        else:
+            max_map_points = default_map_records
+            candidate_working_records = default_candidate_records
+            sdm_working_records = default_sdm_records
+            st.caption("Switch to Custom to edit map/candidate/SDM working subset caps.")
         exact_dedup = st.checkbox("Exact coordinate deduplication", value=True, help="Keep one representative record per unique lat/lon coordinate before clustering.")
-        grid_thinning_deg = st.number_input("Grid thinning for analysis (degrees)", min_value=0.0, max_value=5.0, value=0.05 if large_dataset_mode else 0.0, step=0.01, format="%.2f", help="One record per grid cell before clustering. Set 0 to disable.")
+        grid_thinning_deg = st.number_input("Grid thinning for analysis (degrees)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", help="One record per grid cell before clustering. Representative subsets still use at least light grid thinning by default.")
         center_method = st.selectbox("Candidate center method", ["Medoid", "Centroid"], index=0, help="How to pick the representative point for each occurrence cluster.")
         min_samples = st.number_input("Minimum records per cluster", 1, 50, 1, 1, help="Clusters with fewer records are discarded.")
         occurrence_weight = st.slider("Record-density bonus", 0.0, 0.60, 0.35, 0.05, help="How much the number of records in a cluster boosts candidate priority.")
@@ -3112,6 +3162,8 @@ def main() -> None:
         float(grid_thinning_deg),
         float(thinning_m),
         effective_large_dataset_mode,
+        candidate_target=int(candidate_working_records),
+        sdm_target=int(sdm_working_records),
     )
     exact_dedup_removed = occ_before_dedup_n - large_summary["after_exact_dedup"]
     grid_thinning_removed = large_summary["after_exact_dedup"] - large_summary["candidate_input"]
@@ -3271,7 +3323,7 @@ def main() -> None:
         sdm_exact_dedup = sp1.checkbox("Exact coordinate deduplication", value=True, key="sdm_prep_exact_dedup", help="Keep one representative record per unique lat/lon coordinate.")
         sdm_grid_deg = sp1.number_input("Grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="sdm_prep_grid_deg", help="Keep one record per grid cell of this size. Reduces spatial autocorrelation.")
         sdm_distance_m = sp2.number_input("Distance thinning — spThin-like (m, 0 = off)", min_value=0, max_value=100_000, value=1000, step=500, key="sdm_prep_distance_m", help="Minimum nearest-neighbour distance between retained presence points. Equivalent to spThin minimum distance.")
-        sdm_max_presence = sp2.number_input("Maximum SDM presence points (0 = no cap)", min_value=0, max_value=50_000, value=500 if effective_large_dataset_mode else 0, step=100, key="sdm_prep_max_presence", help="Hard cap on presence points passed to SDM. In large dataset mode, 0 is treated as 500 to prevent freezes.")
+        sdm_max_presence = sp2.number_input("Maximum SDM presence points", min_value=1, max_value=50_000, value=int(sdm_working_records), step=25, key="sdm_prep_max_presence", help="Hard cap on presence points passed to optional SDM. Raw records are preserved, but SDM uses a spatially representative subset by default.")
         st.divider()
         # ── Environmental variables ───────────────────────────────────────────
         resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
@@ -3361,8 +3413,8 @@ def main() -> None:
     sdm_n_after_thinning = len(occ_for_sdm)
 
     effective_sdm_max_presence = int(sdm_max_presence)
-    if effective_large_dataset_mode and effective_sdm_max_presence <= 0:
-        effective_sdm_max_presence = 500
+    if effective_sdm_max_presence <= 0:
+        effective_sdm_max_presence = int(sdm_working_records)
     if effective_sdm_max_presence > 0 and len(occ_for_sdm) > effective_sdm_max_presence:
         occ_for_sdm = spatially_balanced_cap(occ_for_sdm, effective_sdm_max_presence)
     sdm_n_final = len(occ_for_sdm)

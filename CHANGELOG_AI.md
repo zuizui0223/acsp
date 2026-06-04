@@ -4,6 +4,31 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Survey-planning representative subset defaults
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Based the edit on the latest GitHub `main` after fast-forwarding to `9193bb4`.
+- Read `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, and `CHANGELOG_AI.md` before editing.
+- Added explicit survey-planning mode controls for species and genus workflows: Fast survey planning (recommended), Detailed analysis, and Custom.
+- Set Fast survey planning defaults to spatially representative working subsets: map display about 500 records, candidate input about 800 records, SDM presence about 300 records, and SSDM about 150 records per species.
+- Kept Detailed analysis higher but still bounded: map about 1000, candidate input about 1500, SDM about 500, and SSDM about 300 per species.
+- Custom mode exposes manual caps without making all-record map/model/candidate processing the default.
+- Updated `prepare_large_dataset_inputs` so candidate generation and SDM presence inputs are capped spatially representative subsets by default, not only when large dataset mode is active.
+- Updated genus occurrence-richness hotspot generation to use a spatially representative working subset while preserving raw/active records for summaries.
+
+Features preserved:
+- Raw GBIF records remain preserved for transparency, summaries, and downloads.
+- Observed-data candidates remain available before SDM/SSDM.
+- SDM/SSDM remain optional model support for prioritization, not prerequisites.
+- Existing GBIF download, CSV upload, target occurrence selection, SDM, SSDM, variable selection, route/site list, and downloads remain available.
+
+Known risks / TODO:
+- Representative subset defaults intentionally change candidate rankings compared with all-record processing; this matches the survey-planning policy and should be evaluated in planned subset-vs-all-record validation.
+
 ## 2026-06-03 - Claude (claude-sonnet-4-6) — Simplify Step 2 / Sampling design UI; move SDM extent inside expander
 
 Changed files:
