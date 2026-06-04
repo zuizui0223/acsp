@@ -4,6 +4,25 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Strengthen field-validation exports
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Added `site_id` to the selected-site CSV export so downloaded fieldwork lists keep the stable app site identifier.
+- Expanded `make_validation_template()` to include field-validation fields for accessibility, survey effort, target-species detection, abundance, flowering status, number of species detected, newly confirmed populations, photographs, specimens, DNA samples, habitat notes, and comments.
+- Added `Validation CSV` download buttons to the selected-sites controls so users can directly export a field-validation template for chosen survey sites.
+
+Features preserved:
+- Map-first candidate selection, compact selected-sites summary, priority-aware markers, independent optional SDM workflow, SDM-high exploration candidates, genus/SSDM workflows, and existing CSV/HTML/KML exports remain available.
+- Occurrence-supported candidates still work without SDM, and SDM/SSDM support remains optional model support for ranking/exploration.
+
+Known risks / TODO:
+- The validation template is a CSV scaffold; app-side entry/editing of returned field-validation results is still future work.
+
 ## 2026-06-04 - Claude (claude-sonnet-4-6) — Merge Step 3/4: unified priority-visualized candidate map and selection
 
 Changed files:

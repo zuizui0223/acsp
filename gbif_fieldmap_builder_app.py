@@ -3127,7 +3127,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -3357,11 +3357,18 @@ def route_planner_panel(sites: pd.DataFrame, show_subheader: bool = True) -> pd.
         st.dataframe(sel_df[show_scols], column_config=scol_cfg, width="stretch", hide_index=True)
 
         gmaps_all_url = make_google_maps_route_url(sel_df, travelmode=travelmode, max_waypoints=8)
-        ab1, ab2, ab3, ab4 = st.columns(4)
+        ab1, ab2, ab3, ab4, ab5 = st.columns(5)
         ab1.link_button("🗺️ Open all in Google Maps", gmaps_all_url, use_container_width=True)
         ab2.download_button("⬇ CSV", make_export_csv(sel_df), "survey_site_list.csv", "text/csv", use_container_width=True)
         ab3.download_button("⬇ HTML", make_shareable_html(sel_df), "survey_site_list.html", "text/html", use_container_width=True)
-        if ab4.button("Clear selected sites", key="sl_clear_main"):
+        ab4.download_button(
+            "Validation CSV",
+            make_validation_template(sel_df).to_csv(index=False).encode("utf-8"),
+            "field_validation_template.csv",
+            "text/csv",
+            use_container_width=True,
+        )
+        if ab5.button("Clear selected sites", key="sl_clear_main"):
             st.session_state.sl_selected_site_ids = []
             st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
             st.session_state.last_route_click_signature = ""
@@ -3381,8 +3388,20 @@ def route_planner_panel(sites: pd.DataFrame, show_subheader: bool = True) -> pd.
 
 
 def make_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
-    cols = ["site_id", "candidate_type", "priority_rank", "latitude", "longitude", "priority_score", "occurrence_support_score", "sdm_suitability", "google_maps_checked", "accessible", "access_mode", "access_note", "visited", "survey_date", "observer", "access_success", "target_species_found", "abundance_count", "abundance_class", "flowering_status", "habitat_note", "photo_file", "comments"]
+    cols = [
+        "site_id", "candidate_type", "priority_rank", "priority_score",
+        "occurrence_support_score", "model_support_score", "sdm_suitability", "ssdm_predicted_richness",
+        "latitude", "longitude", "google_maps_url",
+        "google_maps_checked", "accessible", "access_mode", "access_note",
+        "visited", "survey_date", "observer", "survey_effort_minutes", "search_area_m2",
+        "access_success", "target_species_found", "abundance_count", "abundance_class",
+        "flowering_status", "number_of_species_detected", "newly_confirmed_population",
+        "photographs_taken", "photo_file", "specimen_collected", "specimen_id",
+        "dna_sample_collected", "dna_sample_id", "habitat_note", "comments",
+    ]
     base = sites.copy()
+    if not base.empty and {"latitude", "longitude"}.issubset(base.columns):
+        base["google_maps_url"] = base.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
     for col in cols:
         if col not in base.columns:
             base[col] = ""
@@ -4023,12 +4042,19 @@ def main() -> None:
         st.dataframe(_sel_df_summary[_sum_cols], column_config=_sum_cfg, width="stretch", hide_index=True)
         _travelmode_sum = st.session_state.get("sl_travelmode", "driving")
         _gmaps_all_url_sum = make_google_maps_route_url(_sel_df_summary, travelmode=_travelmode_sum, max_waypoints=8)
-        _sb1, _sb2, _sb3, _sb4, _sb5 = st.columns(5)
+        _sb1, _sb2, _sb3, _sb4, _sb5, _sb6 = st.columns(6)
         _sb1.link_button("🗺️ Open all in Google Maps", _gmaps_all_url_sum, use_container_width=True)
         _sb2.download_button("⬇ CSV", make_export_csv(_sel_df_summary), "survey_site_list.csv", "text/csv", use_container_width=True)
         _sb3.download_button("⬇ HTML", make_shareable_html(_sel_df_summary), "survey_site_list.html", "text/html", use_container_width=True)
         _sb4.download_button("⬇ KML", make_export_kml(_sel_df_summary).encode("utf-8"), "survey_site_list.kml", "application/vnd.google-earth.kml+xml", use_container_width=True)
-        if _sb5.button("Clear selected sites", key="sl_clear_summary"):
+        _sb5.download_button(
+            "Validation CSV",
+            make_validation_template(_sel_df_summary).to_csv(index=False).encode("utf-8"),
+            "field_validation_template.csv",
+            "text/csv",
+            use_container_width=True,
+        )
+        if _sb6.button("Clear selected sites", key="sl_clear_summary"):
             st.session_state.sl_selected_site_ids = []
             st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
             st.session_state.last_route_click_signature = ""
