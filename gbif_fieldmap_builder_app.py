@@ -3310,6 +3310,11 @@ def main() -> None:
         st.info(st.session_state.source_message)
         return
     st.success(st.session_state.source_message)
+    st.caption(
+        "📊 The GBIF total, requested cap, and actual fetched count are shown in the green banner above. "
+        "Fetched count < cap means GBIF has fewer matching records than your cap, "
+        "or deduplication during fetch reduced the count."
+    )
     try:
         detected = detect_occurrence_columns(st.session_state.raw_df)
         occ_raw = clean_occurrences(st.session_state.raw_df, detected)
@@ -3354,24 +3359,61 @@ def main() -> None:
         st.error("All included occurrence records were removed from candidate input. Reduce thinning settings.")
         return
 
-    tc1, tc2 = st.columns(2)
-    tc1.metric("Records used for candidates", f"{len(occ_candidate_input):,}")
-    tc2.metric("Fetched records available for optional SDM", f"{len(occ_raw):,}")
+    # ── Record pipeline: transparent stage-by-stage counts ───────────────────
+    _n_fetched = len(occ_raw)
+    _n_survey = len(occ_extent_selected)
+    _n_after_dedup = large_summary["after_exact_dedup"]
+    _n_after_grid = large_summary.get("after_grid_thin", _n_after_dedup)
+    _n_candidates = len(occ_candidate_input)
+
+    st.caption("**Record pipeline** — why counts change at each stage:")
+    rp1, rp2, rp3, rp4, rp5 = st.columns(5)
+    rp1.metric(
+        "GBIF fetched records",
+        f"{_n_fetched:,}",
+        help=(
+            "Actual records fetched from GBIF after representative retrieval and coordinate cleaning. "
+            "This may be less than your requested cap if GBIF has fewer matching records, "
+            "or if deduplication during fetch reduced the count."
+        ),
+    )
+    rp2.metric(
+        "Active survey-area records",
+        f"{_n_survey:,}",
+        delta=f"{_n_survey - _n_fetched:,}" if _n_survey != _n_fetched else None,
+        help="Records within the Step 2 survey area (after rectangle filter, if any). Used only for observed-data candidate generation.",
+    )
+    rp3.metric(
+        "After exact deduplication",
+        f"{_n_after_dedup:,}",
+        delta=f"{_n_after_dedup - _n_survey:,}" if _n_after_dedup < _n_survey else None,
+        help="Duplicate lat/lon coordinates removed — keeps one representative record per unique location.",
+    )
+    rp4.metric(
+        "After grid/spatial thinning",
+        f"{_n_after_grid:,}" if _n_after_grid != _n_after_dedup else f"{_n_after_dedup:,}",
+        delta=f"{_n_after_grid - _n_after_dedup:,}" if _n_after_grid < _n_after_dedup else None,
+        help="Grid thinning (one record per grid cell) and/or distance thinning reduce spatial clustering bias.",
+    )
+    rp5.metric(
+        "Records used for candidates",
+        f"{_n_candidates:,}",
+        delta=f"{_n_candidates - _n_after_grid:,}" if _n_candidates < _n_after_grid else None,
+        help=(
+            f"Spatially balanced representative subset used for survey candidate generation (target ≈ {large_summary['candidate_target']:,}). "
+            "Fewer records reduce computation; candidates still cover the full geographic range."
+        ),
+    )
+    st.caption(
+        f"Fetched records ({_n_fetched:,}) are independent from the candidate pipeline and are used as the starting point for optional SDM. "
+        "See 'Optional: Build SDM' for the SDM-specific record pipeline."
+    )
 
     occ_candidate_input["cluster_id"] = haversine_dbscan(occ_candidate_input, "_latitude", "_longitude", float(cluster_m), int(min_samples))
     occ_map_display = limit_occurrence_display(occ_extent_selected, set(), int(effective_max_map_points))
     occurrence_candidates = make_candidate_sites(occ_candidate_input, center_method, float(occurrence_weight))
     occurrence_candidates = add_priority_rank(occurrence_candidates, float(observed_weight), float(model_weight))
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
-    if effective_large_dataset_mode:
-        st.caption(
-            "Large dataset summary: "
-            f"occ_raw={len(occ_raw):,}; active_target={len(occ_extent_selected):,}; "
-            f"occ_map_display={len(occ_map_display):,} (cap={effective_max_map_points:,}); "
-            f"occ_candidate_input={len(occ_candidate_input):,} (target about {large_summary['candidate_target']:,}); "
-            f"optional SDM starts independently from fetched records={len(occ_raw):,}. "
-            "Raw GBIF records are preserved for export; Step 2 selected records are used only for observed-data candidate clustering."
-        )
 
     # ── Occurrence-based survey candidates (available without SDM) ────────────
     st.subheader("3 — Survey site suggestions")
