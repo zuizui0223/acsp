@@ -114,8 +114,8 @@ FAST_MAP_RECORDS = 500
 FAST_CANDIDATE_RECORDS = 800
 FAST_SDM_RECORDS = 300
 FAST_SSDM_RECORDS_PER_SPECIES = 150
-FAST_SPECIES_GBIF_FETCH_CAP = 1000
-FAST_GENUS_GBIF_FETCH_CAP = 3000
+FAST_SPECIES_GBIF_FETCH_CAP = 10_000   # fetch all records for most species (GBIF paginates 300/request)
+FAST_GENUS_GBIF_FETCH_CAP = 10_000
 
 
 @dataclass(frozen=True)
@@ -1311,6 +1311,43 @@ def make_sdm_setup_map(
             fmap.fit_bounds([[miny, minx], [maxy, maxx]], padding=(20, 20))
         elif not all_pts.empty:
             fmap.fit_bounds([[all_pts["_latitude"].min(), all_pts["_longitude"].min()], [all_pts["_latitude"].max(), all_pts["_longitude"].max()]], padding=(30, 30))
+    except Exception:
+        pass
+    return fmap
+
+
+def make_macro_cluster_map(occ: pd.DataFrame) -> folium.Map:
+    """National-scale MarkerCluster map for macro distribution overview.
+
+    All fetched records are shown as auto-clustering circles that expand/contract
+    with zoom level.  Users can see where species are concentrated without the
+    app being slow — MarkerCluster handles thousands of points efficiently.
+    """
+    if occ.empty:
+        return Map(location=(35.5, 135.5), zoom_start=6, tiles="OpenStreetMap")
+    center = (float(occ["_latitude"].mean()), float(occ["_longitude"].mean()))
+    fmap = Map(location=center, zoom_start=6, tiles="OpenStreetMap", control_scale=True)
+    mc = MarkerCluster(name=f"All occurrences ({len(occ):,} records)", show=True,
+                       options={"maxClusterRadius": 40, "disableClusteringAtZoom": 10})
+    for _, row in occ.iterrows():
+        year_str = f" ({int(row['_year'])})" if pd.notna(row.get("_year")) and str(row.get("_year", "")) not in ("", "nan") else ""
+        folium.CircleMarker(
+            (row["_latitude"], row["_longitude"]),
+            radius=3,
+            color="#1f77b4",
+            fill=True,
+            fill_color="#1f77b4",
+            fill_opacity=0.75,
+            weight=0,
+            popup=folium.Popup(f"{row.get('_species', '')}{year_str}", max_width=250),
+        ).add_to(mc)
+    mc.add_to(fmap)
+    LayerControl(collapsed=True).add_to(fmap)
+    try:
+        fmap.fit_bounds([
+            [occ["_latitude"].min(), occ["_longitude"].min()],
+            [occ["_latitude"].max(), occ["_longitude"].max()],
+        ], padding=(40, 40))
     except Exception:
         pass
     return fmap
@@ -3329,9 +3366,28 @@ def main() -> None:
     auto_large_dataset_mode = len(occ_raw) > 1000
     effective_large_dataset_mode = bool(large_dataset_mode or auto_large_dataset_mode)
     effective_max_map_points = min(int(max_map_points), 1000) if effective_large_dataset_mode else int(max_map_points)
-    if auto_large_dataset_mode:
-        st.info("Large dataset mode was enabled automatically because more than 1,000 valid occurrence records were loaded. Raw records are preserved, but maps, candidates, and SDM use capped/thinned inputs.")
-    st.caption("Step 2 is only for observed-data candidate generation. Coordinate QC and SDM prediction extent are independent and live inside Optional: Build SDM.")
+
+    # ── Phase 1: Macro cluster map — national distribution overview ───────────
+    st.markdown("**Phase 1 — National distribution overview**")
+    st.caption(
+        f"All {len(occ_raw):,} fetched records shown as auto-clustering circles. "
+        "Circles shrink/expand as you zoom — click a cluster to zoom in. "
+        "Use this to identify where the species is concentrated before selecting your survey area below."
+    )
+    st_folium(
+        make_macro_cluster_map(occ_raw),
+        width=None, height=600,
+        returned_objects=[],
+        key="macro_cluster_map",
+    )
+
+    # ── Phase 2: Select survey area ───────────────────────────────────────────
+    st.markdown("**Phase 2 — Select your fieldwork survey area**")
+    st.caption(
+        "Draw a rectangle on the map below to select the area you can actually visit. "
+        "Individual occurrence points and survey candidates are generated for that area only. "
+        "SDM prediction extent is set separately inside Optional: Build SDM and can be wider."
+    )
     target_map_display = limit_occurrence_display(occ_raw, set(), int(effective_max_map_points))
     occ_extent_selected, target_counts = target_occurrence_set_panel(
         occ_raw,
@@ -3340,8 +3396,32 @@ def main() -> None:
         key_prefix="target",
     )
     if occ_extent_selected.empty:
-        st.error("The active target occurrence set is empty. Change the rectangle target option or clear the target rectangle.")
+        st.error("The active target occurrence set is empty. Draw a rectangle or select 'Use all records'.")
         return
+
+    # Show individual records within the selected survey area (no cap — this is the focused area)
+    if target_counts.get("records_inside_rectangle", 0) > 0:
+        st.caption(
+            f"**Selected area: {len(occ_extent_selected):,} individual records** "
+            "(all shown — draw rectangle smaller if too crowded)."
+        )
+        _detail_map = Map(location=(float(occ_extent_selected["_latitude"].mean()), float(occ_extent_selected["_longitude"].mean())), zoom_start=9, tiles="OpenStreetMap", control_scale=True)
+        _fg_detail = FeatureGroup(name=f"Individual records in survey area ({len(occ_extent_selected):,})", show=True)
+        for _, _row in occ_extent_selected.iterrows():
+            _yr = f" ({int(_row['_year'])})" if pd.notna(_row.get("_year")) and str(_row.get("_year","")) not in ("","nan") else ""
+            folium.CircleMarker(
+                (_row["_latitude"], _row["_longitude"]),
+                radius=4, color="#e6842a", fill=True, fill_color="#e6842a", fill_opacity=0.85, weight=1,
+                popup=folium.Popup(f"{_row.get('_species','')}{_yr}<br>{_row.get('_locality','')}", max_width=280),
+                tooltip=f"row {int(_row['_row_id'])}",
+            ).add_to(_fg_detail)
+        _fg_detail.add_to(_detail_map)
+        LayerControl(collapsed=True).add_to(_detail_map)
+        try:
+            _detail_map.fit_bounds([[occ_extent_selected["_latitude"].min(), occ_extent_selected["_longitude"].min()], [occ_extent_selected["_latitude"].max(), occ_extent_selected["_longitude"].max()]], padding=(30, 30))
+        except Exception:
+            pass
+        st_folium(_detail_map, width=None, height=500, returned_objects=[], key="survey_area_detail_map")
 
     occ_before_dedup_n = len(occ_extent_selected)
     occ_candidate_input, _unused_sdm_train, large_summary = prepare_large_dataset_inputs(
