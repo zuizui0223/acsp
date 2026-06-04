@@ -6,9 +6,9 @@ This app is a field-survey planning tool, not a full all-record SDM analysis pla
 
 Do not push all GBIF occurrence records into maps, candidate generation, SDM, or SSDM by default.
 
-For normal survey planning, the app should first show the GBIF total count, then fetch only a field-survey-appropriate representative subset.
+The app should use fixed, sensible lightweight defaults chosen by the application itself. Do not make general users choose between multiple survey-planning modes just to avoid lag.
 
-The goal is not to maximize the number of occurrence records used in every computation. The goal is to identify realistic, field-ready survey candidates quickly, reproducibly, and with reduced observer/access bias.
+The goal is to identify realistic, field-ready survey candidates quickly, reproducibly, and with reduced observer/access bias.
 
 ## Required top-level workflow
 
@@ -22,19 +22,9 @@ The main species-mode workflow is:
 
 The Step 2 survey area must not automatically flow into SDM.
 
-The survey-area selection exists only to decide where observed occurrence-based survey candidates are generated.
-
 The optional SDM workflow is independent. It should start from the fetched occurrence records, apply SDM-specific coordinate QC, apply SDM bias-reduction preprocessing, define an SDM-specific prediction extent, build the model, and then add model support back to the observed-data candidates.
 
-## Scientific rationale
-
-For field-survey planning, using every public occurrence record is often unnecessary and can be harmful.
-
-Large GBIF/iNaturalist-style datasets are commonly clustered near roads, towns, popular trails, and accessible places. These clusters can make maps slow, bias candidate ranking toward well-observed areas, and make optional SDM/SSDM workflows too heavy for a Streamlit app.
-
-This is a deliberate methodological choice, not careless data loss.
-
-## GBIF fetch policy
+## GBIF fetch and performance policy
 
 The GBIF fetch cap is the primary performance control. Working-set caps alone are not enough if downloading and cleaning thousands of records already makes the app lag.
 
@@ -42,31 +32,37 @@ Required behavior:
 
 - Run a lightweight GBIF count query first.
 - Show the total coordinate-record count before downloading occurrences.
-- Let the user choose how many records to fetch.
-- Fast survey planning should use a modest default fetch cap.
-- Detailed analysis and Custom may allow larger caps.
+- Use a modest default fetch cap selected by the app.
 - Do not default species mode to 10,000 records.
-- Do not simply take the first N records when the total is larger than the cap. Prefer a representative retrieval strategy, such as distributed offsets, year-stratified retrieval, or another documented approach that reduces ordering bias.
+- Do not add a `Survey planning mode` selector to the main UI.
+- Do not simply take the first N records when the total exceeds the cap. Prefer a representative retrieval strategy such as distributed offsets, year-stratified retrieval, or another documented approach that reduces ordering bias.
 
-Recommended starting defaults:
+Recommended fixed defaults:
 
-- Species Fast survey planning fetch cap: about 1,000 records.
-- Species Detailed analysis fetch cap: about 3,000 records.
-- Genus Fast survey planning fetch cap: about 3,000 records.
-- Genus Detailed analysis fetch cap: about 10,000 records only when necessary and safe.
+- Species fetch cap: about 1,000 records.
+- Genus fetch cap: about 3,000 records.
+- Map display cap: about 500 records.
+- Candidate input cap: about 800 records.
+- SDM presence cap: about 300 records.
+- SSDM presence cap: about 150 records per species.
+
+If a manual `Maximum GBIF records to fetch` control remains, keep the default lightweight and place unusually large values behind an advanced/custom control.
 
 The UI should preserve and report the GBIF total count even when only a subset is fetched.
 
 ## Country filter UI
 
-Do not require general users to know two-letter country codes.
+Use the original compact country-code selector.
 
 Preferred UI:
 
-- A searchable country selector using full English country names.
-- `All countries` as an explicit option.
-- Internally convert the selected country name to the ISO two-letter code required by GBIF.
-- Remove the separate `Custom country code optional` text field from the main UI.
+- `Country code filter optional`
+- Common two-letter codes such as JP, US, GB, CN, KR, TW, and others
+- Empty value for all countries
+
+Do not replace this with a full English country-name selector.
+
+A separate custom country-code field may remain optional, but it should not dominate the UI.
 
 ## Required data separation
 
@@ -149,26 +145,39 @@ Inside `Optional: Build SDM`, allow the user to define the SDM extent from the S
 
 ### Environmental variables and collinearity
 
-The main SDM UI should be simple for general users:
+Do not show a `Variable preset` selector with `Recommended` versus `Custom` as the main UI.
 
-- Recommended variable set
-- Custom variables
+Instead:
 
-When Custom variables are selected, offer a simple recommended option to automatically remove highly correlated variables.
+- Show one editable environmental-variable multiselect.
+- Pre-populate it with the recommended balanced ecology set.
+- Let the user directly add or remove variables from that default selection.
+- Automatically apply VIF stepwise filtering with threshold 10 before model fitting.
+- Do not show `Variable-selection strategy` or `No VIF` in the main UI.
+- Keep VIF threshold, alternative correlation filtering, and detailed diagnostics under Advanced settings only.
 
-Keep VIF stepwise, thresholds, detailed diagnostics, and other technical controls under Advanced settings.
+Apply the same simplified approach to SSDM shared variable selection.
 
 ### Spatial validation
 
-The main UI should use plain-language validation choices:
+The main UI should expose the original validation-method choices because they are scientifically meaningful:
 
-- Recommended spatial validation
-- Fast random split
-- Advanced
+- block
+- checkerboard1
+- checkerboard2
+- random holdout
+- random k-fold
+- jackknife
 
-Hide `k for random k-fold`, `Checkerboard cell size (degrees)`, and similar technical settings unless Advanced is selected.
+Default validation method: `block`.
 
-Hide `Maximum predict-map pixels` from the main UI and calculate a sensible automatic value from survey-planning mode.
+Do not replace these with only `Recommended spatial validation` or `Fast random split` labels.
+
+Hide or automatically calculate technical parameters unless they are relevant:
+
+- `k for random k-fold` should only appear when random k-fold is selected, or be automatically set.
+- `Checkerboard cell size (degrees)` should only appear for checkerboard methods, or be automatically set.
+- `Maximum predict-map pixels` should not appear in the main UI. Use a fixed sensible automatic value or move it to Advanced settings.
 
 ## Candidate scoring
 
@@ -184,18 +193,6 @@ Recommended default weights:
 - SDM/SSDM model weight: 0.3
 
 If SDM/SSDM has not been run, rank by observed occurrence support only and show that model support is unavailable.
-
-## Survey-planning mode UI
-
-Prefer a simple mode selector rather than many technical controls by default:
-
-- Fast survey planning, recommended default.
-- Detailed analysis.
-- Custom.
-
-Fast survey planning should control both the GBIF fetch cap and the downstream working-set caps.
-
-Technical controls should be hidden under advanced settings unless the user chooses Custom or Advanced.
 
 ## Validation for publication
 
@@ -217,6 +214,8 @@ Spatially representative occurrence subsets can preserve field-survey-relevant c
 ## Anti-rollback rule
 
 Do not reintroduce an all-record-first workflow as the default.
+
+Do not add a main `Survey planning mode` selector.
 
 Do not place coordinate QC in Step 2.
 
