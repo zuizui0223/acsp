@@ -3750,11 +3750,18 @@ def main() -> None:
     # Preprocessing metrics display (bias reduction → QC order)
     st.caption("**SDM preprocessing summary** — bias reduction first, then QC exclusion:")
     pm1, pm2, pm3, pm4, pm5 = st.columns(5)
-    pm1.metric("Fetched records (SDM source)", f"{_sdm_br_n0:,}", help="All GBIF records — independent from Step 2 survey area.")
-    pm2.metric("After deduplication", f"{_sdm_br_n1:,}", delta=f"{_sdm_br_n1 - _sdm_br_n0:,}" if _sdm_br_n1 < _sdm_br_n0 else None)
-    pm3.metric("After spatial thinning", f"{_sdm_br_n3:,}", delta=f"{_sdm_br_n3 - _sdm_br_n1:,}" if _sdm_br_n3 < _sdm_br_n1 else None)
-    pm4.metric("After cap", f"{_sdm_br_n4:,}", delta=f"{_sdm_br_n4 - _sdm_br_n3:,}" if _sdm_br_n4 < _sdm_br_n3 else None)
-    pm5.metric("Final SDM presence points", f"{sdm_n_final:,}", delta=f"{sdm_n_final - _sdm_br_n4:,}" if sdm_n_final < _sdm_br_n4 else None, help="After SDM QC rectangle exclusions.")
+    pm1.metric("Fetched records (SDM source)", f"{_sdm_br_n0:,}", help="All GBIF records fetched — independent from Step 2 survey area.")
+    pm2.metric("After exact dedup", f"{_sdm_br_n1:,}", delta=f"{_sdm_br_n1 - _sdm_br_n0:,}" if _sdm_br_n1 < _sdm_br_n0 else None, help="Duplicate lat/lon coordinates removed — one record kept per unique coordinate.")
+    pm3.metric("After distance thinning", f"{_sdm_br_n3:,}", delta=f"{_sdm_br_n3 - _sdm_br_n1:,}" if _sdm_br_n3 < _sdm_br_n1 else None, help="Grid thinning (1 record per grid cell) + optional minimum-distance thinning to reduce spatial autocorrelation.")
+    _cap_help = (
+        f"Spatially balanced grid subsampling down to {int(sdm_ind_max_presence):,} points: "
+        f"the extent is divided into roughly √{int(sdm_ind_max_presence)} × √{int(sdm_ind_max_presence)} ≈ "
+        f"{int(math.sqrt(int(sdm_ind_max_presence))):d} × {int(math.sqrt(int(sdm_ind_max_presence))):d} geographic cells, "
+        "and the highest-quality record (photo > recent year) is kept per cell. "
+        "Ensures the training set is spatially representative rather than random."
+    )
+    pm4.metric("After spatial cap", f"{_sdm_br_n4:,}", delta=f"{_sdm_br_n4 - _sdm_br_n3:,}" if _sdm_br_n4 < _sdm_br_n3 else None, help=_cap_help)
+    pm5.metric("Final SDM presence points", f"{sdm_n_final:,}", delta=f"{sdm_n_final - _sdm_br_n4:,}" if sdm_n_final < _sdm_br_n4 else None, help="After SDM QC rectangle exclusions on the map above.")
     if sdm_n_final == 0 and not occ_raw.empty:
         st.warning("SDM preprocessing / QC removed all records. Reduce thinning, increase the cap, or clear SDM QC exclusions.")
 
