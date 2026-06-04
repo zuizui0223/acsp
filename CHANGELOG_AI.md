@@ -4,6 +4,29 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Claude (claude-sonnet-4-6) — Merge Phase 1 and Phase 2 maps; remove sidebar caption
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+**Draw rectangle directly on Phase 1 national distribution map**
+- Added `folium.plugins.Draw` (rectangle only) to `make_macro_cluster_map` so users can draw the survey area rectangle on the Phase 1 overview map instead of needing a separate Phase 2 map.
+- Phase 1 `st_folium` now returns `["all_drawings", "last_active_drawing"]` and handles draw state (stores to `target_rect_features` / `target_last_draw_sig`).
+- Added "Clear survey rectangle" button next to the Phase 1 map.
+- `target_occurrence_set_panel` gained a `show_map: bool = True` parameter; called with `show_map=False` in species mode to suppress its previously separate rectangle-selection map.
+- Phase 2 caption updated from "map below" to "map above".
+
+**Remove "Raw GBIF records are kept..." sidebar caption**
+- Removed the four-value sidebar caption (fetch / map / candidate / SDM record counts) from the main species workflow.
+
+Features preserved:
+- Genus mode still uses `target_occurrence_set_panel` with its own map (`show_map=True`, default).
+- All rectangle-based survey area selection logic (include / exclude / clear), Phase 2 radio buttons, and metrics unchanged.
+- All SDM, VIF, route planner, and download features preserved.
+
 ## 2026-06-04 - Claude (claude-sonnet-4-6) — SURVEY_PLANNING_POLICY: transparency, consolidated SDM map, label clarity, country filter
 
 Changed files:
