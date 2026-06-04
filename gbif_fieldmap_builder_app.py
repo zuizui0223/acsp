@@ -5,7 +5,7 @@ Streamlit app for field-survey planning from GBIF records or a coordinate CSV.
 
 Features:
 - GBIF page-by-page download. GBIF returns max 300 records per request; the app repeats requests until the selected cap or endOfRecords.
-- Map-click coordinate exclusion. Click an occurrence point to exclude it from clustering, SDM, prediction area, and route planning.
+- Rectangle-based coordinate QC exclusion before candidate generation and optional SDM/SSDM.
 - Candidate survey ranges from occurrence clusters.
 - Optional ensemble SDM with VIF stepwise filtering and spatial partition diagnostics.
 - Land-only prediction areas: buffer, convex hull, bounding box.
@@ -111,7 +111,7 @@ ECOLOGICAL_PRESET_VARS = ["elevation", "slope", "roughness", "bio1", "bio4", "bi
 # bio14 = Precipitation of Driest Month (dryness / dry-month limitation)
 # elevation = terrain (topography)
 BALANCED_ECOLOGY_PRESET = ["bio1", "bio4", "bio12", "bio15", "bio14", "elevation"]
-ENV_VARIABLE_PRESETS = ["Balanced ecology preset", "Climate only preset", "Topography only preset", "Custom variables"]
+ENV_VARIABLE_PRESETS = ["Recommended variable set", "Custom variables"]
 SURVEY_PLANNING_MODES = ["Fast survey planning (recommended)", "Detailed analysis", "Custom"]
 FAST_MAP_RECORDS = 500
 FAST_CANDIDATE_RECORDS = 800
@@ -121,6 +121,37 @@ DETAILED_MAP_RECORDS = 1000
 DETAILED_CANDIDATE_RECORDS = 1500
 DETAILED_SDM_RECORDS = 500
 DETAILED_SSDM_RECORDS_PER_SPECIES = 300
+FAST_SPECIES_GBIF_FETCH_CAP = 1000
+DETAILED_SPECIES_GBIF_FETCH_CAP = 3000
+FAST_GENUS_GBIF_FETCH_CAP = 3000
+DETAILED_GENUS_GBIF_FETCH_CAP = 10000
+COUNTRY_NAME_TO_CODE = {
+    "All countries": "",
+    "Japan": "JP",
+    "United States": "US",
+    "China": "CN",
+    "South Korea": "KR",
+    "Taiwan": "TW",
+    "United Kingdom": "GB",
+    "Germany": "DE",
+    "France": "FR",
+    "Italy": "IT",
+    "Spain": "ES",
+    "Australia": "AU",
+    "New Zealand": "NZ",
+    "Canada": "CA",
+    "Brazil": "BR",
+    "India": "IN",
+    "Indonesia": "ID",
+    "Thailand": "TH",
+    "Vietnam": "VN",
+    "Philippines": "PH",
+    "Malaysia": "MY",
+    "Mexico": "MX",
+    "Argentina": "AR",
+    "Chile": "CL",
+    "South Africa": "ZA",
+}
 
 
 @dataclass(frozen=True)
@@ -176,6 +207,7 @@ def init_session_state() -> None:
         "sl_last_draw_sig": "",
         "sl_reset_token": 0,
         "qc_rect_selected_ids": [],
+        "qc_rect_features": [],
         "qc_last_draw_sig": "",
         "target_rect_features": [],
         "target_last_draw_sig": "",
@@ -204,6 +236,7 @@ def clear_loaded_data() -> None:
     st.session_state.sl_last_draw_sig = ""
     st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
     st.session_state.qc_rect_selected_ids = []
+    st.session_state.qc_rect_features = []
     st.session_state.qc_last_draw_sig = ""
     st.session_state.target_rect_features = []
     st.session_state.target_last_draw_sig = ""
@@ -214,6 +247,10 @@ def clear_genus_data() -> None:
     st.session_state.genus_raw_df = None
     st.session_state.genus_source_key = None
     st.session_state.genus_source_message = "No genus occurrence data loaded yet."
+    st.session_state.excluded_row_ids = set()
+    st.session_state.qc_rect_selected_ids = []
+    st.session_state.qc_rect_features = []
+    st.session_state.qc_last_draw_sig = ""
     st.session_state.genus_target_rect_features = []
     st.session_state.genus_target_last_draw_sig = ""
 
@@ -284,14 +321,15 @@ def extract_media_url_from_gbif_record(rec: dict[str, Any]) -> str:
     return first_url(rec.get("associatedMedia"))
 
 
-@st.cache_data(show_spinner=False, ttl=3600)
-def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[str, pd.DataFrame]:
-    payload = gbif_get_json(GBIF_SPECIES_MATCH_URL, {"name": scientific_name.strip()}, timeout=30)
-    usage_key = payload.get("usageKey")
-    if usage_key is None:
-        raise ValueError(f"GBIF could not match this scientific name: {scientific_name}")
+def country_selector(label: str, key: str, default: str = "Japan") -> str:
+    options = list(COUNTRY_NAME_TO_CODE.keys())
+    default_index = options.index(default) if default in options else 0
+    country_name = st.sidebar.selectbox(label, options, index=default_index, key=key)
+    return COUNTRY_NAME_TO_CODE[country_name]
 
-    params_base: dict[str, Any] = {"taxonKey": usage_key, "hasCoordinate": "true", "hasGeospatialIssue": "false"}
+
+def gbif_occurrence_params(taxon_key: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> dict[str, Any]:
+    params_base: dict[str, Any] = {"taxonKey": taxon_key, "hasCoordinate": "true", "hasGeospatialIssue": "false"}
     if country_code.strip():
         params_base["country"] = country_code.strip().upper()
     if year_from is not None and year_to is not None:
@@ -301,38 +339,113 @@ def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, countr
     elif year_to is not None:
         params_base["year"] = f",{int(year_to)}"
 
-    first = gbif_get_json(GBIF_OCCURRENCE_SEARCH_URL, {**params_base, "limit": 0, "offset": 0}, timeout=60)
-    total_count = int(first.get("count", 0))
-    target = min(int(max_records), total_count if total_count > 0 else int(max_records))
+    return params_base
+
+
+def gbif_representative_offsets(total_count: int, target: int, page_size: int = 300) -> list[int]:
+    if total_count <= 0 or target <= 0:
+        return []
+    n_pages = max(1, int(math.ceil(target / page_size)))
+    if total_count <= target:
+        return [i * page_size for i in range(n_pages)]
+    max_offset = max(0, total_count - page_size)
+    offsets = np.linspace(0, max_offset, n_pages)
+    out = sorted({int(round(float(offset) / page_size) * page_size) for offset in offsets})
+    return [min(offset, max_offset) for offset in out]
+
+
+def gbif_record_to_species_row(rec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "decimalLatitude": rec.get("decimalLatitude"),
+        "decimalLongitude": rec.get("decimalLongitude"),
+        "eventDate": rec.get("eventDate", ""),
+        "year": rec.get("year"),
+        "species": rec.get("species") or rec.get("scientificName", ""),
+        "scientificName": rec.get("scientificName", ""),
+        "basisOfRecord": rec.get("basisOfRecord", ""),
+        "countryCode": rec.get("countryCode", ""),
+        "locality": rec.get("locality", ""),
+        "gbifID": rec.get("gbifID") or rec.get("key"),
+        "media_url": extract_media_url_from_gbif_record(rec),
+    }
+
+
+def gbif_record_to_genus_row(rec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "decimalLatitude": rec.get("decimalLatitude"),
+        "decimalLongitude": rec.get("decimalLongitude"),
+        "eventDate": rec.get("eventDate", ""),
+        "year": rec.get("year"),
+        "species": _species_name_from_genus_record(rec),
+        "scientificName": rec.get("scientificName", ""),
+        "genus": rec.get("genus", ""),
+        "basisOfRecord": rec.get("basisOfRecord", ""),
+        "countryCode": rec.get("countryCode", ""),
+        "locality": rec.get("locality", ""),
+        "gbifID": rec.get("gbifID") or rec.get("key"),
+        "media_url": extract_media_url_from_gbif_record(rec),
+    }
+
+
+def representative_row_cap(df: pd.DataFrame, target: int) -> pd.DataFrame:
+    if df.empty or len(df) <= target:
+        return df.reset_index(drop=True)
+    work = df.copy()
+    work["_latitude"] = pd.to_numeric(work["decimalLatitude"], errors="coerce")
+    work["_longitude"] = pd.to_numeric(work["decimalLongitude"], errors="coerce")
+    work["_year"] = pd.to_numeric(work.get("year"), errors="coerce")
+    work["_row_id"] = np.arange(len(work), dtype=int)
+    work = work.dropna(subset=["_latitude", "_longitude"]).copy()
+    capped = spatially_balanced_cap(work, int(target))
+    keep_ids = set(capped["_row_id"].astype(int))
+    return df.iloc[[i for i in range(len(df)) if i in keep_ids]].reset_index(drop=True)
+
+
+def fetch_gbif_records_representative(params_base: dict[str, Any], max_records: int, total_count: int, timeout: int) -> tuple[list[dict[str, Any]], str]:
+    target = min(int(max_records), int(total_count) if total_count > 0 else int(max_records))
     records: list[dict[str, Any]] = []
-    offset = 0
-    while len(records) < target:
+    offsets = gbif_representative_offsets(total_count, target, 300)
+    retrieval = "sequential pages" if total_count <= target else "representative evenly spaced GBIF offsets"
+    for offset in offsets:
+        if len(records) >= target:
+            break
         limit = min(300, target - len(records))
-        page = gbif_get_json(GBIF_OCCURRENCE_SEARCH_URL, {**params_base, "offset": offset, "limit": limit}, timeout=60)
+        page = gbif_get_json(GBIF_OCCURRENCE_SEARCH_URL, {**params_base, "offset": offset, "limit": limit}, timeout=timeout)
         batch = page.get("results", [])
         if not batch:
-            break
+            continue
         records.extend(batch)
-        offset += len(batch)
-        if page.get("endOfRecords"):
+        if page.get("endOfRecords") and total_count <= target:
             break
+    return records[:target], retrieval
 
-    rows = []
-    for rec in records:
-        rows.append({
-            "decimalLatitude": rec.get("decimalLatitude"),
-            "decimalLongitude": rec.get("decimalLongitude"),
-            "eventDate": rec.get("eventDate", ""),
-            "year": rec.get("year"),
-            "species": rec.get("species") or rec.get("scientificName", ""),
-            "scientificName": rec.get("scientificName", ""),
-            "basisOfRecord": rec.get("basisOfRecord", ""),
-            "countryCode": rec.get("countryCode", ""),
-            "locality": rec.get("locality", ""),
-            "gbifID": rec.get("gbifID") or rec.get("key"),
-            "media_url": extract_media_url_from_gbif_record(rec),
-        })
-    msg = f"GBIF match: {payload.get('scientificName', scientific_name)} / usageKey={usage_key} / confidence={payload.get('confidence')}. GBIF total={total_count:,}; fetched={len(rows):,}; cap={int(max_records):,}."
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def gbif_species_count_cached(scientific_name: str, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[dict[str, Any], int, dict[str, Any]]:
+    payload = gbif_get_json(GBIF_SPECIES_MATCH_URL, {"name": scientific_name.strip()}, timeout=30)
+    usage_key = payload.get("usageKey")
+    if usage_key is None:
+        raise ValueError(f"GBIF could not match this scientific name: {scientific_name}")
+    params_base = gbif_occurrence_params(int(usage_key), country_code, year_from, year_to)
+    first = gbif_get_json(GBIF_OCCURRENCE_SEARCH_URL, {**params_base, "limit": 0, "offset": 0}, timeout=60)
+    return payload, int(first.get("count", 0)), params_base
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_gbif_occurrences_cached(scientific_name: str, max_records: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[str, pd.DataFrame]:
+    payload, total_count, params_base = gbif_species_count_cached(scientific_name, country_code, year_from, year_to)
+    usage_key = payload.get("usageKey")
+    records, retrieval = fetch_gbif_records_representative(params_base, int(max_records), int(total_count), timeout=60)
+
+    df = pd.DataFrame([gbif_record_to_species_row(rec) for rec in records])
+    if not df.empty:
+        with_id = df[df["gbifID"].notna() & df["gbifID"].astype(str).ne("")]
+        without_id = df[~(df["gbifID"].notna() & df["gbifID"].astype(str).ne(""))]
+        df = pd.concat([with_id.drop_duplicates(subset=["gbifID"], keep="first"), without_id], ignore_index=True, sort=False)
+        df = df.drop_duplicates(subset=["decimalLatitude", "decimalLongitude", "year"], keep="first")
+        df = representative_row_cap(df, int(max_records))
+    msg = f"GBIF match: {payload.get('scientificName', scientific_name)} / usageKey={usage_key} / confidence={payload.get('confidence')}. GBIF total coordinate records={total_count:,}; requested fetch cap={int(max_records):,}; actual fetched records={len(df):,}; retrieval={retrieval}."
+    rows = df.to_dict("records") if not df.empty else []
     return msg, pd.DataFrame(rows)
 
 
@@ -376,36 +489,19 @@ def _resolve_gbif_genus_key(genus_name: str) -> tuple[Optional[int], dict[str, A
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[str, pd.DataFrame]:
+def gbif_genus_count_cached(genus_name: str, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[dict[str, Any], int, dict[str, Any], int]:
     usage_key, payload = _resolve_gbif_genus_key(genus_name)
     if usage_key is None:
         raise ValueError(f"GBIF could not match this genus name: {genus_name}")
-
-    params_base: dict[str, Any] = {"taxonKey": usage_key, "hasCoordinate": "true", "hasGeospatialIssue": "false"}
-    if country_code.strip():
-        params_base["country"] = country_code.strip().upper()
-    if year_from is not None and year_to is not None:
-        params_base["year"] = f"{int(year_from)},{int(year_to)}"
-    elif year_from is not None:
-        params_base["year"] = f"{int(year_from)},"
-    elif year_to is not None:
-        params_base["year"] = f",{int(year_to)}"
-
+    params_base = gbif_occurrence_params(int(usage_key), country_code, year_from, year_to)
     first = gbif_get_json(GBIF_OCCURRENCE_SEARCH_URL, {**params_base, "limit": 0, "offset": 0}, timeout=45)
-    total_count = int(first.get("count", 0))
-    target = min(int(max_records), total_count if total_count > 0 else int(max_records))
-    records: list[dict[str, Any]] = []
-    offset = 0
-    while len(records) < target:
-        limit = min(300, target - len(records))
-        page = gbif_get_json(GBIF_OCCURRENCE_SEARCH_URL, {**params_base, "offset": offset, "limit": limit}, timeout=45)
-        batch = page.get("results", [])
-        if not batch:
-            break
-        records.extend(batch)
-        offset += len(batch)
-        if page.get("endOfRecords"):
-            break
+    return payload, int(first.get("count", 0)), params_base, int(usage_key)
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, country_code: str, year_from: Optional[int], year_to: Optional[int]) -> tuple[str, pd.DataFrame]:
+    payload, total_count, params_base, usage_key = gbif_genus_count_cached(genus_name, country_code, year_from, year_to)
+    records, retrieval = fetch_gbif_records_representative(params_base, int(max_records), int(total_count), timeout=45)
 
     genus_columns = [
         "decimalLatitude",
@@ -421,25 +517,16 @@ def fetch_gbif_genus_occurrences_cached(genus_name: str, max_records: int, count
         "gbifID",
         "media_url",
     ]
-    rows = []
-    for rec in records:
-        rows.append({
-            "decimalLatitude": rec.get("decimalLatitude"),
-            "decimalLongitude": rec.get("decimalLongitude"),
-            "eventDate": rec.get("eventDate", ""),
-            "year": rec.get("year"),
-            "species": _species_name_from_genus_record(rec),
-            "scientificName": rec.get("scientificName", ""),
-            "genus": rec.get("genus", ""),
-            "basisOfRecord": rec.get("basisOfRecord", ""),
-            "countryCode": rec.get("countryCode", ""),
-            "locality": rec.get("locality", ""),
-            "gbifID": rec.get("gbifID") or rec.get("key"),
-            "media_url": extract_media_url_from_gbif_record(rec),
-        })
+    df = pd.DataFrame([gbif_record_to_genus_row(rec) for rec in records], columns=genus_columns)
+    if not df.empty:
+        with_id = df[df["gbifID"].notna() & df["gbifID"].astype(str).ne("")]
+        without_id = df[~(df["gbifID"].notna() & df["gbifID"].astype(str).ne(""))]
+        df = pd.concat([with_id.drop_duplicates(subset=["gbifID"], keep="first"), without_id], ignore_index=True, sort=False)
+        df = df.drop_duplicates(subset=["decimalLatitude", "decimalLongitude", "year", "species"], keep="first")
+        df = representative_row_cap(df, int(max_records))
     matched_name = payload.get("scientificName") or payload.get("canonicalName") or genus_name
-    msg = f"GBIF genus match: {matched_name} / GBIF backbone taxonKey={usage_key} / rank={payload.get('rank', 'GENUS')}. GBIF total={total_count:,}; fetched={len(rows):,}; cap={int(max_records):,}."
-    return msg, pd.DataFrame(rows, columns=genus_columns)
+    msg = f"GBIF genus match: {matched_name} / GBIF backbone taxonKey={usage_key} / rank={payload.get('rank', 'GENUS')}. GBIF total coordinate records={total_count:,}; requested fetch cap={int(max_records):,}; actual fetched records={len(df):,}; retrieval={retrieval}."
+    return msg, pd.DataFrame(df.to_dict("records") if not df.empty else [], columns=genus_columns)
 
 
 def genus_species_summary(occ: pd.DataFrame, min_records_for_sdm: int, grid_deg: float) -> pd.DataFrame:
@@ -782,12 +869,16 @@ def target_occurrence_set_panel(
         "Survey candidates and occurrence hotspots are generated from records in this area. "
         "SDM can predict across a wider macro-scale extent — set that separately inside Optional: Build SDM."
     )
+    survey_area_options = ["Use all remaining cleaned records", "Use only records inside drawn rectangle", "Exclude records inside drawn rectangle"]
+    survey_area_key = f"{key_prefix}_target_occurrence_mode"
+    if st.session_state.get(survey_area_key) not in (None, *survey_area_options):
+        st.session_state[survey_area_key] = survey_area_options[0]
     mode = st.radio(
         "Survey area",
-        ["Use all records", "Use only records inside drawn rectangle", "Exclude records inside drawn rectangle"],
+        survey_area_options,
         index=0,
         horizontal=True,
-        key=f"{key_prefix}_target_occurrence_mode",
+        key=survey_area_key,
     )
     if len(occ_map_display) < len(occ_base):
         st.caption(f"Showing {len(occ_map_display):,} of {len(occ_base):,} cleaned records on this rectangle-selection map.")
@@ -818,7 +909,7 @@ def target_occurrence_set_panel(
     stored_features = st.session_state.get(f"{key_prefix}_rect_features", []) or []
     inside_ids = set(ids_inside_drawn_rectangles(occ_base, "_row_id", "_latitude", "_longitude", stored_features)) if stored_features else set()
     has_rectangle = bool(stored_features)
-    if mode == "Use all cleaned records":
+    if mode in ("Use all cleaned records", "Use all records", "Use all remaining cleaned records"):
         selected = occ_base.copy()
         rectangle_excluded = 0
     elif not has_rectangle:
@@ -919,6 +1010,49 @@ def coordinate_exclusion_panel(occ_raw: pd.DataFrame, occ_map_display: pd.DataFr
                     st.rerun()
         filtered = occ_raw[~occ_raw["_row_id"].astype(int).isin(set(st.session_state.excluded_row_ids))].copy()
         st.info(f"Included: {len(filtered):,} / {len(occ_raw):,} records. Excluded: {len(occ_raw) - len(filtered):,}.")
+    return filtered.reset_index(drop=True)
+
+
+def rectangle_qc_exclusion_panel(occ_raw: pd.DataFrame, occ_map_display: pd.DataFrame, show_images: bool) -> pd.DataFrame:
+    """Rectangle-only QC exclusion for suspicious coordinate regions."""
+    n_excl = len(set(st.session_state.excluded_row_ids))
+    expander_label = f"Optional rectangle-based coordinate QC - {n_excl} excluded" if n_excl else "Optional rectangle-based coordinate QC"
+    with st.expander(expander_label, expanded=False):
+        st.caption(
+            "Draw one or more rectangles around suspicious coordinate regions. "
+            "Records inside the QC rectangle are shown in red and removed from candidate generation, SDM/SSDM, prediction extents, and survey-site lists. "
+            "Use the separate survey-area rectangle below to choose which remaining records define the fieldwork target area."
+        )
+        if len(occ_map_display) < len(occ_raw):
+            st.caption(f"Showing {len(occ_map_display):,} of {len(occ_raw):,} records. Raw records remain preserved for summary/download.")
+        if st.button("Clear QC rectangles / restore excluded records", key="qc_clear_rectangles_btn"):
+            st.session_state.excluded_row_ids = set()
+            st.session_state.qc_rect_selected_ids = []
+            st.session_state.qc_rect_features = []
+            st.session_state.qc_last_draw_sig = ""
+            reset_model_outputs()
+            st.rerun()
+        draw_data = st_folium(
+            make_exclusion_review_map(occ_map_display, set(st.session_state.excluded_row_ids), add_draw=True, show_images=show_images),
+            width=None,
+            height=440,
+            returned_objects=["all_drawings", "last_active_drawing"],
+            key="rectangle_qc_exclusion_map",
+        )
+        raw_drawings = (draw_data or {}).get("all_drawings") or (draw_data or {}).get("last_active_drawing")
+        features = extract_drawn_features(raw_drawings)
+        if features:
+            draw_sig = str(features)[:800]
+            if draw_sig != st.session_state.get("qc_last_draw_sig", ""):
+                excluded_ids = set(ids_inside_drawn_rectangles(occ_raw, "_row_id", "_latitude", "_longitude", features))
+                st.session_state.qc_last_draw_sig = draw_sig
+                st.session_state.qc_rect_features = features
+                st.session_state.qc_rect_selected_ids = sorted(excluded_ids)
+                st.session_state.excluded_row_ids = excluded_ids
+                reset_model_outputs()
+                st.rerun()
+        filtered = occ_raw[~occ_raw["_row_id"].astype(int).isin(set(st.session_state.excluded_row_ids))].copy()
+        st.info(f"Included: {len(filtered):,} / {len(occ_raw):,} records. Excluded by QC rectangle: {len(occ_raw) - len(filtered):,}.")
     return filtered.reset_index(drop=True)
 
 
@@ -2261,7 +2395,7 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
     return fmap
 
 
-def load_input_controls() -> None:
+def load_input_controls(survey_planning_mode: str, default_fetch_cap: int) -> None:
     mode = st.sidebar.radio("Input source", ["Upload coordinate CSV", "Search GBIF by scientific name"], index=1, key="input_source_selector")
     if st.sidebar.button("Clear loaded data"):
         clear_loaded_data()
@@ -2280,23 +2414,41 @@ def load_input_controls() -> None:
                 reset_model_outputs()
         return
     name = st.sidebar.text_input("Taxon scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_taxon_scientific_name_input")
-    country_options = ["", "JP", "US", "GB", "CN", "KR", "TW", "DE", "FR", "IT", "ES", "AU", "NZ", "CA", "BR", "IN", "ID", "TH", "VN"]
-    selected_country = st.sidebar.selectbox("Country code filter optional", country_options, index=1, key="gbif_country_code_filter_select")
-    custom_country = st.sidebar.text_input("Custom country code optional", value="", max_chars=2, key="gbif_country_code_filter_custom", help="Two-letter ISO country code. Overrides the dropdown when set.")
-    country = custom_country.strip().upper() or selected_country
-    max_records = st.sidebar.number_input("Maximum GBIF records to fetch", 100, 200_000, 10_000, 1000, help="GBIF returns at most 300 records per request. The app fetches repeated pages until this cap or GBIF endOfRecords.")
+    country = country_selector("Country filter", "gbif_country_name_filter", default="Japan")
     use_year = st.sidebar.checkbox("Filter by year", value=False)
     year_from = year_to = None
     if use_year:
         c1, c2 = st.sidebar.columns(2)
         year_from = int(c1.number_input("From", 1600, 2100, 2000))
         year_to = int(c2.number_input("To", 1600, 2100, 2026))
+    total_count: Optional[int] = None
+    if name.strip():
+        try:
+            payload, total_count, _params = gbif_species_count_cached(name.strip(), country.strip().upper(), year_from, year_to)
+            st.sidebar.info(
+                f"GBIF total coordinate records: {total_count:,}. "
+                f"{survey_planning_mode} will fetch up to {int(default_fetch_cap):,} representative records by default."
+            )
+            st.sidebar.caption(f"Matched taxon: {payload.get('scientificName', name)} / usageKey={payload.get('usageKey')}")
+        except Exception as exc:
+            st.sidebar.warning(f"GBIF count check failed: {exc}")
+    max_records = st.sidebar.number_input(
+        "Maximum GBIF records to fetch",
+        100,
+        200_000,
+        int(default_fetch_cap),
+        100 if int(default_fetch_cap) <= 3000 else 1000,
+        help="The app first checks the GBIF total, then fetches only this survey-planning cap. If total records exceed the cap, pages are sampled from evenly spaced offsets across the full GBIF result range.",
+    )
+    st.sidebar.caption(
+        "Representative fetch: when GBIF total exceeds the cap, records are retrieved from evenly spaced offsets, then deduplicated and spatially capped for survey planning."
+    )
     if st.sidebar.button("Fetch occurrences from GBIF", type="primary"):
         if not name.strip():
             st.warning("Scientific name is empty.")
             return
         try:
-            with st.spinner("Fetching GBIF occurrences page by page, 300 records per request..."):
+            with st.spinner("Fetching representative GBIF occurrence subset, 300 records per request..."):
                 msg, df = fetch_gbif_occurrences_cached(name.strip(), int(max_records), country.strip().upper(), year_from, year_to)
         except Exception as exc:
             st.error(f"GBIF occurrence download failed after retries: {exc}")
@@ -2314,18 +2466,55 @@ def load_input_controls() -> None:
 
 def genus_diversity_panel() -> None:
     st.sidebar.header("Genus data source")
+    st.sidebar.subheader("Survey planning mode")
+    genus_survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="genus_survey_planning_mode")
+    if genus_survey_planning_mode.startswith("Detailed"):
+        genus_fetch_cap = DETAILED_GENUS_GBIF_FETCH_CAP
+        genus_map_records = DETAILED_MAP_RECORDS
+        genus_candidate_records = DETAILED_CANDIDATE_RECORDS
+        genus_ssdm_records = DETAILED_SSDM_RECORDS_PER_SPECIES
+    elif genus_survey_planning_mode == "Custom":
+        genus_fetch_cap = FAST_GENUS_GBIF_FETCH_CAP
+        genus_map_records = FAST_MAP_RECORDS
+        genus_candidate_records = FAST_CANDIDATE_RECORDS
+        genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
+    else:
+        genus_fetch_cap = FAST_GENUS_GBIF_FETCH_CAP
+        genus_map_records = FAST_MAP_RECORDS
+        genus_candidate_records = FAST_CANDIDATE_RECORDS
+        genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
+    st.sidebar.caption(
+        f"Raw genus records are kept. Defaults: fetch up to {genus_fetch_cap:,}; map about {genus_map_records:,}; "
+        f"richness candidates about {genus_candidate_records:,}; SSDM about {genus_ssdm_records:,} per species."
+    )
     genus_name = st.sidebar.text_input("Genus name", value="", placeholder="e.g. Cirsium", key="genus_name_input_no_autofill")
-    country_options = ["", "JP", "US", "GB", "CN", "KR", "TW", "DE", "FR", "IT", "ES", "AU", "NZ", "CA", "BR", "IN", "ID", "TH", "VN"]
-    selected_country = st.sidebar.selectbox("Country code filter optional", country_options, index=1, key="genus_country_code_filter")
-    custom_country = st.sidebar.text_input("Custom country code optional", value="", max_chars=2, key="genus_country_code_filter_custom", help="Two-letter ISO country code. Overrides the dropdown when set.")
-    country = custom_country.strip().upper() or selected_country
-    max_records = st.sidebar.number_input("Maximum GBIF records to fetch", 300, 50_000, 3_000, 300, key="genus_max_records", help="GBIF returns at most 300 records per request. Genus mode starts with a lighter cap so Streamlit Cloud stays responsive.")
+    country = country_selector("Country filter", "genus_country_name_filter", default="Japan")
     use_year = st.sidebar.checkbox("Filter by year", value=False, key="genus_use_year_filter")
     year_from = year_to = None
     if use_year:
         c1, c2 = st.sidebar.columns(2)
         year_from = int(c1.number_input("From", 1600, 2100, 2000, key="genus_year_from"))
         year_to = int(c2.number_input("To", 1600, 2100, 2026, key="genus_year_to"))
+    if genus_name.strip():
+        try:
+            payload, total_count, _params, usage_key = gbif_genus_count_cached(genus_name.strip(), country.strip().upper(), year_from, year_to)
+            st.sidebar.info(
+                f"GBIF total coordinate records: {total_count:,}. "
+                f"{genus_survey_planning_mode} will fetch up to {int(genus_fetch_cap):,} representative records by default."
+            )
+            st.sidebar.caption(f"Matched genus: {payload.get('scientificName') or payload.get('canonicalName') or genus_name} / taxonKey={usage_key}")
+        except Exception as exc:
+            st.sidebar.warning(f"GBIF genus count check failed: {exc}")
+    max_records = st.sidebar.number_input(
+        "Maximum GBIF records to fetch",
+        300,
+        50_000,
+        int(genus_fetch_cap),
+        300 if int(genus_fetch_cap) <= 3000 else 1000,
+        key="genus_max_records",
+        help="The app first checks the GBIF total, then fetches only this survey-planning cap. If total records exceed the cap, pages are sampled from evenly spaced offsets across the full GBIF result range.",
+    )
+    st.sidebar.caption("Representative fetch avoids simply taking the first N GBIF records.")
     if st.sidebar.button("Clear genus data", key="clear_genus_data_button"):
         clear_genus_data()
     if st.sidebar.button("Fetch genus occurrences from GBIF", type="primary", key="fetch_genus_occurrences_button"):
@@ -2333,7 +2522,7 @@ def genus_diversity_panel() -> None:
             st.warning("Genus name is empty.")
         else:
             try:
-                with st.spinner("Fetching GBIF genus occurrences page by page, 300 records per request..."):
+                with st.spinner("Fetching representative GBIF genus occurrence subset, 300 records per request..."):
                     msg, df = fetch_gbif_genus_occurrences_cached(genus_name.strip(), int(max_records), country.strip().upper(), year_from, year_to)
                 st.session_state.genus_raw_df = df
                 st.session_state.genus_source_key = f"genus::{genus_name}::{country}::{max_records}::{year_from}::{year_to}"
@@ -2363,20 +2552,6 @@ def genus_diversity_panel() -> None:
     occ_cleaned = occ.copy()
 
     st.sidebar.divider()
-    st.sidebar.subheader("Survey planning mode")
-    genus_survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="genus_survey_planning_mode")
-    if genus_survey_planning_mode.startswith("Detailed"):
-        genus_map_records = DETAILED_MAP_RECORDS
-        genus_candidate_records = DETAILED_CANDIDATE_RECORDS
-        genus_ssdm_records = DETAILED_SSDM_RECORDS_PER_SPECIES
-    else:
-        genus_map_records = FAST_MAP_RECORDS
-        genus_candidate_records = FAST_CANDIDATE_RECORDS
-        genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
-    st.sidebar.caption(
-        f"Raw genus records are kept. Working subsets: map about {genus_map_records:,}, "
-        f"richness candidates about {genus_candidate_records:,}, SSDM about {genus_ssdm_records:,} per species."
-    )
     st.sidebar.subheader("Richness grid")
     grid_deg = st.sidebar.number_input("Grid cell size (degrees)", min_value=0.01, max_value=5.0, value=0.25, step=0.05, format="%.2f", key="genus_grid_deg")
     min_records_cell = st.sidebar.number_input("Minimum records per species per cell", min_value=1, max_value=100, value=1, step=1, key="genus_min_records_cell")
@@ -2398,10 +2573,16 @@ def genus_diversity_panel() -> None:
             genus_candidate_records = st.number_input("Genus richness candidate records", 50, 50_000, genus_candidate_records, 50, key="genus_candidate_records")
             genus_ssdm_records = st.number_input("SSDM presence records per species", 3, 5_000, genus_ssdm_records, 25, key="genus_ssdm_records")
 
-    st.subheader("2 窶・Prepare records and species summary")
-    genus_target_display = limit_occurrence_display(occ_cleaned, set(), int(genus_map_records))
+    st.subheader("2 窶・Review records and choose survey area")
+    genus_qc_display = limit_occurrence_display(occ_cleaned, set(map(int, st.session_state.excluded_row_ids)), int(genus_map_records))
+    st.markdown("**Lightweight occurrence map and coordinate QC**")
+    occ_after_genus_qc = rectangle_qc_exclusion_panel(occ_cleaned, genus_qc_display, show_images=False)
+    if occ_after_genus_qc.empty:
+        st.error("All genus occurrence records were excluded by QC rectangles. Clear QC rectangles to continue.")
+        return
+    genus_target_display = limit_occurrence_display(occ_after_genus_qc, set(), int(genus_map_records))
     occ, genus_target_counts = target_occurrence_set_panel(
-        occ_cleaned,
+        occ_after_genus_qc,
         genus_target_display,
         raw_record_count=len(occ_cleaned),
         key_prefix="genus_target",
@@ -2531,7 +2712,7 @@ def genus_diversity_panel() -> None:
                 "Custom: choose manually."
             ),
         )
-        if ssdm_env_preset == "Balanced ecology preset":
+        if ssdm_env_preset == "Recommended variable set":
             ssdm_variables = list(BALANCED_ECOLOGY_PRESET)
             st.caption(
                 "**Balanced ecology preset (6 variables):** "
@@ -2554,6 +2735,7 @@ def genus_diversity_panel() -> None:
             st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
             _ssdm_climate_vars = st.multiselect("SSDM climate variables", CLIMATE_VARS, default=[], key="ssdm_climate_vars")
             ssdm_variables = _ssdm_topo_vars + _ssdm_climate_vars
+            ssdm_auto_corr_filter = st.checkbox("Automatically remove highly correlated variables (recommended)", value=True, key="ssdm_auto_corr_filter")
 
         ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
 
@@ -2568,6 +2750,8 @@ def genus_diversity_panel() -> None:
             ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
             ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
             ssdm_custom_variables = ssdm_variables
+            if ssdm_env_preset == "Custom variables" and "ssdm_auto_corr_filter" in st.session_state and st.session_state.ssdm_auto_corr_filter and ssdm_variable_strategy == "No VIF":
+                ssdm_variable_strategy = "Correlation filter"
             if ssdm_variable_strategy == "Advanced custom selection":
                 ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.markdown("**SSDM validation / partition**")
@@ -3040,7 +3224,7 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
     st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Occurrence-based survey ranges, map-click coordinate exclusion, raster-style SDM predict maps, VIF filtering, spatial partition diagnostics, and route planning.")
+    st.caption("Occurrence-based survey ranges, rectangle coordinate QC, raster-style SDM predict maps, VIF diagnostics, spatial partition diagnostics, and route planning.")
 
     st.sidebar.caption(f"Build: {APP_BUILD_ID}")
     analysis_mode = st.sidebar.radio("Analysis mode", ["Single species survey planning", "Genus diversity / SSDM"], index=0, key="analysis_mode")
@@ -3054,8 +3238,10 @@ def main() -> None:
         st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
         st.session_state.last_route_click_signature = ""
         st.session_state.last_exclude_click_signature = ""
+        st.session_state.excluded_row_ids = set()
         st.session_state.qc_last_draw_sig = ""
         st.session_state.qc_rect_selected_ids = []
+        st.session_state.qc_rect_features = []
         st.session_state.target_rect_features = []
         st.session_state.target_last_draw_sig = ""
         st.session_state.genus_target_rect_features = []
@@ -3066,23 +3252,31 @@ def main() -> None:
         genus_diversity_panel()
         return
 
-    st.sidebar.header("Data source")
-    load_input_controls()
-    st.sidebar.divider()
-    st.sidebar.subheader("Sampling design")
+    st.sidebar.subheader("Survey planning mode")
     survey_planning_mode = st.sidebar.selectbox("Survey planning mode", SURVEY_PLANNING_MODES, index=0, key="species_survey_planning_mode")
     if survey_planning_mode.startswith("Detailed"):
+        default_fetch_cap = DETAILED_SPECIES_GBIF_FETCH_CAP
         default_map_records = DETAILED_MAP_RECORDS
         default_candidate_records = DETAILED_CANDIDATE_RECORDS
         default_sdm_records = DETAILED_SDM_RECORDS
+    elif survey_planning_mode == "Custom":
+        default_fetch_cap = FAST_SPECIES_GBIF_FETCH_CAP
+        default_map_records = FAST_MAP_RECORDS
+        default_candidate_records = FAST_CANDIDATE_RECORDS
+        default_sdm_records = FAST_SDM_RECORDS
     else:
+        default_fetch_cap = FAST_SPECIES_GBIF_FETCH_CAP
         default_map_records = FAST_MAP_RECORDS
         default_candidate_records = FAST_CANDIDATE_RECORDS
         default_sdm_records = FAST_SDM_RECORDS
     st.sidebar.caption(
-        f"Raw GBIF records are kept for summary/download. Working subsets: map about {default_map_records:,}, "
+        f"Raw GBIF records are kept for summary/download. Defaults: fetch up to {default_fetch_cap:,}; map about {default_map_records:,}, "
         f"candidate input about {default_candidate_records:,}, SDM presence about {default_sdm_records:,}."
     )
+    st.sidebar.header("Data source")
+    load_input_controls(survey_planning_mode, int(default_fetch_cap))
+    st.sidebar.divider()
+    st.sidebar.subheader("Sampling design")
     survey_range_m = st.sidebar.number_input("Survey range radius (m)", 50, 50_000, 500, 50, help="Radius around each candidate center shown as a survey range circle on the map.")
     cluster_m = st.sidebar.number_input("Candidate grouping scale (m)", 1, 500_000, 2000, 500, help="Occurrences within this distance are grouped into a single survey candidate (DBSCAN clustering distance).")
     with st.sidebar.expander("Advanced sampling settings", expanded=False):
@@ -3133,7 +3327,8 @@ def main() -> None:
     if auto_large_dataset_mode:
         st.info("Large dataset mode was enabled automatically because more than 1,000 valid occurrence records were loaded. Raw records are preserved, but maps, candidates, and SDM use capped/thinned inputs.")
     occ_qc_map_display = limit_occurrence_display(occ_raw, active_excluded_ids, int(effective_max_map_points))
-    coordinate_exclusion_panel(occ_raw, occ_qc_map_display, bool(show_occurrence_images))
+    st.markdown("**Lightweight occurrence map and coordinate QC**")
+    rectangle_qc_exclusion_panel(occ_raw, occ_qc_map_display, bool(show_occurrence_images))
     active_excluded_ids = set(map(int, st.session_state.excluded_row_ids))
     occ_after_exclusion = occ_raw[~occ_raw["_row_id"].astype(int).isin(active_excluded_ids)].copy().reset_index(drop=True)
     leaked_checked_ids = sorted(set(occ_after_exclusion["_row_id"].astype(int)).intersection(active_excluded_ids))
@@ -3272,14 +3467,14 @@ def main() -> None:
             )
         st.divider()
         # ── Optional: exclude suspicious records from SDM training ────────────
-        st.markdown("**Optional: exclude suspicious records from SDM training**")
+        st.markdown("**SDM occurrence input**")
         st.caption(
-            "Click occurrence points on the map below to exclude them from SDM training only. "
-            "Useful for clearly wrong coordinates (e.g. sea points, obvious mislocations). "
-            "These exclusions do NOT affect occurrence-based survey candidates. "
-            "Occurrence candidates and survey ranges use the full target set selected in Step 2."
+            "SDM uses the active target occurrence set after Step 2 rectangle QC and survey-area selection. "
+            "The Step 2 rectangle itself is not the final SDM extent; buffer, convex hull, or bounding box are generated below from the active occurrence set."
         )
-        _sdm_qc_excl = st.session_state.sdm_excluded_row_ids
+        st.session_state.sdm_excluded_row_ids = set()
+        st.session_state.sdm_qc_click_sig = ""
+        _sdm_qc_excl = set()
         _sdm_qc_n = len(_sdm_qc_excl)
         if _sdm_qc_n > 0:
             st.caption(f"Currently excluded from SDM: {_sdm_qc_n} record(s) — shown as red points.")
@@ -3287,12 +3482,12 @@ def main() -> None:
         _sdm_qc_data = st_folium(
             make_exclusion_review_map(_sdm_qc_display, _sdm_qc_excl, add_draw=False, show_images=False),
             width=None, height=380,
-            returned_objects=["last_object_clicked", "last_object_clicked_tooltip"],
+            returned_objects=[],
             key="sdm_qc_map",
         )
         _sdm_clicked = (_sdm_qc_data or {}).get("last_object_clicked")
         _sdm_clicked_tooltip = (_sdm_qc_data or {}).get("last_object_clicked_tooltip")
-        if _sdm_clicked:
+        if False and _sdm_clicked:
             _sdm_sig = f"{_sdm_clicked.get('lat'):.6f},{_sdm_clicked.get('lng'):.6f},{_sdm_clicked_tooltip}"
             if _sdm_sig != st.session_state.sdm_qc_click_sig:
                 st.session_state.sdm_qc_click_sig = _sdm_sig
@@ -3342,7 +3537,7 @@ def main() -> None:
                 "Custom: choose individual variables manually."
             ),
         )
-        if env_preset == "Balanced ecology preset":
+        if env_preset == "Recommended variable set":
             variables = list(BALANCED_ECOLOGY_PRESET)
             st.caption(
                 "**Balanced ecology preset (6 variables):** "
@@ -3366,6 +3561,7 @@ def main() -> None:
             st.markdown("<span style='color:#2166ac;font-weight:700'>Climate variables</span>", unsafe_allow_html=True)
             _climate_vars = st.multiselect("Climate variables", CLIMATE_VARS, default=[], key="sdm_custom_climate_vars")
             variables = _topo_vars + _climate_vars
+            sdm_auto_corr_filter = st.checkbox("Automatically remove highly correlated variables (recommended)", value=True, key="sdm_auto_corr_filter")
 
         with st.expander("Advanced variable selection", expanded=False):
             st.caption(
@@ -3383,15 +3579,31 @@ def main() -> None:
             corr_threshold = vc1.number_input("Correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="sdm_corr_threshold")
             vif_threshold = vc2.number_input("VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="sdm_vif_threshold")
             custom_variables = variables
+            if env_preset == "Custom variables" and "sdm_auto_corr_filter" in st.session_state and st.session_state.sdm_auto_corr_filter and variable_strategy == "No VIF":
+                variable_strategy = "Correlation filter"
             if variable_strategy == "Advanced custom selection":
                 custom_variables = st.multiselect("Custom final variables", variables, default=variables, key="sdm_custom_final_variables")
 
         algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
-        partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
-        k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
-        checkerboard_deg = st.number_input("Checkerboard cell size (degrees)", min_value=0.001, max_value=5.0, value=0.05, step=0.01, format="%.3f")
-        n_background = st.number_input("Number of land-only background points", 100, 20_000, 500, 100)
-        max_pixels = st.number_input("Maximum predict-map pixels", 2_000, 500_000, 80_000, 10_000)
+        validation_mode = st.selectbox("Validation method", ["Recommended spatial validation", "Fast random split", "Advanced"], index=0, key="sdm_validation_mode")
+        if validation_mode == "Fast random split":
+            partition_method = "random holdout"
+            k_folds = 5
+            checkerboard_deg = 0.05
+        elif validation_mode == "Advanced":
+            partition_method = st.selectbox("Spatial partition method for AUC", PARTITION_METHODS, index=2)
+            k_folds = st.number_input("k for random k-fold", min_value=2, max_value=20, value=5, step=1)
+            checkerboard_deg = st.number_input("Checkerboard cell size (degrees)", min_value=0.001, max_value=5.0, value=0.05, step=0.01, format="%.3f")
+        else:
+            partition_method = "block"
+            k_folds = 5
+            checkerboard_deg = 0.05
+            st.caption("Recommended spatial validation uses an automatic block-style spatial partition.")
+        default_background = 500 if survey_planning_mode.startswith("Fast") else 1000
+        default_max_pixels = 40_000 if survey_planning_mode.startswith("Fast") else 80_000
+        with st.expander("Advanced model settings", expanded=False):
+            n_background = st.number_input("Number of land-only background points", 100, 20_000, default_background, 100)
+            max_pixels = st.number_input("Maximum predict-map pixels", 2_000, 500_000, default_max_pixels, 10_000)
         st.caption("buffer = around each occurrence point; convex hull = polygon around records; bounding box = latitude/longitude rectangle around records. All are clipped to land.")
         run_sdm = st.button("Build SDM and predict map", type="primary")
 

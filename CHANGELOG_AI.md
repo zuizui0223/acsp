@@ -4,6 +4,32 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Codex (OpenAI) - Count-first representative GBIF fetching and rectangle QC workflow
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, and `CHANGELOG_AI.md`, then used the latest GitHub `main` as the baseline.
+- Changed GBIF species and genus downloads to a count-first workflow: taxon match plus `limit=0` count is shown before occurrence download.
+- Made survey-planning mode control GBIF fetch caps as well as downstream working subsets: species Fast defaults to 1,000 records, species Detailed to 3,000, genus Fast to 3,000, and genus Detailed to 10,000.
+- Added representative GBIF retrieval when totals exceed the cap by sampling evenly spaced result offsets instead of simply taking the first N records, followed by GBIF ID / coordinate deduplication and spatial capping.
+- Replaced sidebar country-code entry with a full-name country selector shared by species and genus workflows.
+- Added rectangle-based coordinate QC to the main Step 2 workflow and genus workflow; QC exclusions are red on the QC map and removed from downstream candidate generation, SDM/SSDM, extents, and survey-site lists.
+- Kept the survey-area rectangle separate from QC rectangles: the survey-area rectangle selects the active target occurrence set, while SDM/SSDM prediction extents are still generated inside the optional model expanders from that active set.
+- Simplified environmental variable choices to Recommended variable set or Custom variables; Custom exposes an automatic high-correlation removal checkbox while VIF and detailed settings remain under Advanced.
+- Simplified species SDM validation to Recommended spatial validation, Fast random split, or Advanced; k-fold, checkerboard size, and max predict-map pixels are no longer main-screen controls.
+
+Features preserved:
+- Raw GBIF records are kept for summary/download while maps, candidates, SDM, and SSDM use representative working subsets by default.
+- GBIF taxon matching, paginated occurrence requests, CSV upload, target occurrence set selection, occurrence candidates, genus richness hotspots, optional SDM/SSDM, weighted scoring, NoData cleaning, prediction maps, downloads, and route/site list remain available.
+- VIF stepwise and spatial partition diagnostics remain available under advanced settings.
+
+Known risks / TODO:
+- GBIF representative retrieval reduces ordering bias but still depends on GBIF result ordering within sampled pages; future validation should compare candidate rankings against all-record downloads.
+- SSDM validation is still limited to the existing random-holdout/training-only implementation; full spatial SSDM partitions remain a future enhancement.
+
 ## 2026-06-04 - Codex (OpenAI) - Survey-planning representative subset defaults
 
 Changed files:
