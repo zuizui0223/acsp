@@ -3737,7 +3737,7 @@ def main() -> None:
     st.subheader("Performance summary")
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("GBIF fetched records", f"{len(occ_raw):,}")
-    c2.metric("After exclusion", f"{len(occ_after_exclusion):,}")
+    c2.metric("Active survey-area records", f"{len(occ_extent_selected):,}")
     c3.metric("Inside rectangle", f"{target_counts['records_inside_rectangle']:,}")
     c4.metric("Active target set", f"{target_counts['active_target_records']:,}")
     c5.metric("Survey ranges", f"{len(all_candidates):,}")
