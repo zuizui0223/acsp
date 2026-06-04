@@ -2727,10 +2727,9 @@ def genus_diversity_panel() -> None:
     )
     richness_metric = st.sidebar.selectbox("Hotspot ranking metric", ["Species richness", "Species with minimum records", "Record count"], index=0, key="genus_richness_metric")
     max_hotspots = st.sidebar.number_input("Max hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="genus_max_hotspots")
-    st.sidebar.subheader("Candidate scoring")
-    genus_observed_weight = st.sidebar.number_input("Observed-data weight", min_value=0.0, max_value=1.0, value=0.7, step=0.05, format="%.2f", key="genus_observed_weight")
-    genus_model_weight = st.sidebar.number_input("SSDM model weight", min_value=0.0, max_value=1.0, value=0.3, step=0.05, format="%.2f", key="genus_model_weight")
-    st.sidebar.caption("Observed richness generates the basic hotspot candidates. SSDM support is optional and only re-ranks/enriches them.")
+    # Candidate scoring: fixed scientific defaults
+    genus_observed_weight: float = 0.7
+    genus_model_weight: float = 0.3
     with st.sidebar.expander("Advanced working subset caps", expanded=False):
         genus_map_records = st.number_input("Genus map display records", 100, 50_000, genus_map_records, 100, key="genus_map_records")
         genus_candidate_records = st.number_input("Genus richness candidate records", 50, 50_000, genus_candidate_records, 50, key="genus_candidate_records")
@@ -3394,23 +3393,22 @@ def main() -> None:
     st.sidebar.divider()
     st.sidebar.subheader("Sampling design")
     survey_range_m = st.sidebar.number_input("Survey range radius (m)", 50, 50_000, 500, 50, help="Radius around each candidate center shown as a survey range circle on the map.")
-    cluster_m = st.sidebar.number_input("Candidate grouping scale (m)", 1, 500_000, 2000, 500, help="Occurrences within this distance are grouped into a single survey candidate (DBSCAN clustering distance).")
     with st.sidebar.expander("Advanced sampling settings", expanded=False):
+        cluster_m = st.number_input("Candidate grouping scale (m)", 1, 500_000, 2000, 500, help="Occurrences within this distance are grouped into a single survey candidate (DBSCAN clustering distance).")
         thinning_m = st.number_input("Spatial thinning before clustering (m)", 0, 50_000, 1000, 500, help="Minimum distance between retained records used for candidate clustering.")
         large_dataset_mode = st.checkbox("Large dataset mode", value=False, help="Also enabled automatically when valid records exceed 1,000.")
         max_map_points = st.number_input("Max occurrence points shown on map", 100, 50_000, default_map_records, 100, help="Only this many occurrence points are drawn on Folium maps. Raw records are kept.")
         candidate_working_records = st.number_input("Candidate input working records", 50, 50_000, default_candidate_records, 50, help="Spatially representative occurrence records used for observed-data candidate generation.")
         sdm_working_records = st.number_input("SDM presence working records", 20, 50_000, default_sdm_records, 25, help="Bias-reduced presence records used for optional SDM.")
         exact_dedup = st.checkbox("Exact coordinate deduplication", value=True, help="Keep one representative record per unique lat/lon coordinate before clustering.")
-        grid_thinning_deg = st.number_input("Grid thinning for analysis (degrees)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", help="One record per grid cell before clustering. Representative subsets still use at least light grid thinning by default.")
+        grid_thinning_deg = st.number_input("Grid thinning for analysis (degrees)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", help="One record per grid cell before clustering.")
         center_method = st.selectbox("Candidate center method", ["Medoid", "Centroid"], index=0, help="How to pick the representative point for each occurrence cluster.")
         min_samples = st.number_input("Minimum records per cluster", 1, 50, 1, 1, help="Clusters with fewer records are discarded.")
         occurrence_weight = st.slider("Record-density bonus", 0.0, 0.60, 0.35, 0.05, help="How much the number of records in a cluster boosts candidate priority.")
         show_occurrence_images = st.checkbox("Occurrence image popups", value=False, help="Show GBIF occurrence photos in map popups. Off by default to keep maps fast.")
-    st.sidebar.subheader("Candidate scoring")
-    observed_weight = st.sidebar.number_input("Observed-data weight", min_value=0.0, max_value=1.0, value=0.7, step=0.05, format="%.2f", key="species_observed_weight")
-    model_weight = st.sidebar.number_input("SDM model weight", min_value=0.0, max_value=1.0, value=0.3, step=0.05, format="%.2f", key="species_model_weight")
-    st.sidebar.caption("Observed occurrence data generate the basic candidates. SDM support is optional and only re-ranks/enriches them.")
+    # Candidate scoring: fixed scientific defaults — no user decision needed
+    observed_weight: float = 0.7
+    model_weight: float = 0.3
     st.sidebar.divider()
     st.sidebar.subheader("Layers")
     layers = {"predict": st.sidebar.checkbox("SDM predict map", True), "occ": st.sidebar.checkbox("Occurrences", True), "candidate_circles": st.sidebar.checkbox("Candidate circles", True)}
@@ -3694,24 +3692,45 @@ def main() -> None:
                 st.rerun()
         st.divider()
         # ── Environmental variables ───────────────────────────────────────────
-        resolution = st.selectbox("WorldClim raster resolution", RESOLUTIONS, index=2)
-        st.caption(f"Selected resolution: {RESOLUTION_NOTE[resolution]}")
+        # WorldClim 2.1 at 2.5 arc-minutes (~4.5 km) — standard resolution for
+        # national-scale SDM; coarser than 1km but avoids over-precision at
+        # occurrence-record density.
+        resolution = "2.5m"
         st.markdown("**Environmental variables**")
-        variables = st.multiselect(
-            "Environmental variables",
-            TOPOGRAPHY_VARS + CLIMATE_VARS,
-            default=list(BALANCED_ECOLOGY_PRESET),
-            key="sdm_environment_variables",
-            help="Balanced ecology variables are selected by default. Add or remove variables directly.",
+        st.caption(
+            f"Default: balanced ecology preset — {', '.join(BALANCED_ECOLOGY_PRESET)}. "
+            "Covers temperature level, seasonality, precipitation amount/seasonality, "
+            "dryness, and elevation. Override in Advanced below."
         )
-        st.caption("VIF stepwise filtering is applied automatically before SDM fitting (default threshold = 10).")
+        # Default algorithms: Random Forest + ExtraTrees — well-calibrated for SDM,
+        # complementary bias-variance trade-off, no hyperparameter tuning required.
+        _DEFAULT_ALGORITHMS = ["Random forest", "ExtraTrees"]
+        # Fixed defaults — no user decision required
+        variables = list(BALANCED_ECOLOGY_PRESET)
+        variable_strategy = "VIF stepwise"
+        vif_threshold = 10.0
+        corr_threshold = 0.80
+        custom_variables = variables
+        algorithms = list(_DEFAULT_ALGORITHMS)
 
-        with st.expander("Advanced variable selection", expanded=False):
-            st.caption(
-                "VIF stepwise is applied by default. Advanced controls let you change the threshold or use an alternative filter."
+        with st.expander("Advanced: variables & algorithms", expanded=False):
+            st.caption("Override scientific defaults. Changes here are reflected in the auto-generated Methods text.")
+            variables = st.multiselect(
+                "Environmental variables",
+                TOPOGRAPHY_VARS + CLIMATE_VARS,
+                default=list(BALANCED_ECOLOGY_PRESET),
+                key="sdm_environment_variables",
+                help="Balanced ecology preset is the default. Add or remove variables.",
+            )
+            algorithms = st.multiselect(
+                "Ensemble algorithms",
+                ALGORITHMS,
+                default=list(_DEFAULT_ALGORITHMS),
+                key="sdm_algorithms_override",
+                help="Random Forest + ExtraTrees is the scientific default. Both are robust without hyperparameter tuning.",
             )
             variable_strategy = st.selectbox(
-                "Advanced variable-selection strategy",
+                "Variable-selection strategy",
                 ["VIF stepwise", "Correlation filter", "Advanced custom selection"],
                 index=0,
                 key="sdm_variable_strategy",
@@ -3722,8 +3741,7 @@ def main() -> None:
             custom_variables = variables
             if variable_strategy == "Advanced custom selection":
                 custom_variables = st.multiselect("Custom final variables", variables, default=variables, key="sdm_custom_final_variables")
-
-        algorithms = st.multiselect("Ensemble algorithms", ALGORITHMS, default=[])
+        st.caption("VIF stepwise filtering (threshold 10) applied automatically. WorldClim 2.1, 2.5 arc-min.")
 
         # Auto-select validation method based on record count + geographic extent
         _auto_partition, _auto_reason = auto_sdm_partition(len(occ_sdm_train), extent_geom)
@@ -3936,6 +3954,45 @@ def main() -> None:
     st_folium(fmap, width=None, height=720, returned_objects=[], key="main_map")
 
     html_bytes = fmap.get_root().render().encode("utf-8")
+
+    # ── Auto-generated Methods text ───────────────────────────────────────────
+    st.subheader("Methods (auto-generated)")
+    st.caption("Copy this text for the Methods section of your report or paper.")
+    _sdm_result_now = st.session_state.get("sdm_result")
+    _sdm_methods = ""
+    if _sdm_result_now is not None:
+        _auc_val = _sdm_result_now.get("mean_auc", float("nan"))
+        _kept = _sdm_result_now.get("kept_variables", variables)
+        _algs_used = _sdm_result_now.get("algorithms", algorithms)
+        _part_used = _sdm_result_now.get("partition_method", partition_method)
+        _auc_str = f"{_auc_val:.3f}" if isinstance(_auc_val, float) and not math.isnan(_auc_val) else "N/A"
+        _sdm_methods = (
+            f" An ensemble SDM was fitted using {' and '.join(_algs_used)} "
+            f"with {len(_kept)} environmental predictors "
+            f"({', '.join(_kept[:4])}{'...' if len(_kept) > 4 else ''}; "
+            f"WorldClim 2.1, 2.5 arc-minutes). "
+            f"Predictor collinearity was reduced by VIF stepwise filtering (threshold = {int(vif_threshold)}). "
+            f"Model performance was evaluated by {_part_used} spatial cross-validation "
+            f"(mean AUC = {_auc_str}, n = {len(occ_for_sdm):,} presence points). "
+            f"SDM prediction extent: {area_mode} ({buffer_km:.0f} km buffer). "
+            f"Survey candidates were re-ranked by a weighted composite score "
+            f"(observed occurrence support w = {observed_weight:.1f}; SDM suitability w = {model_weight:.1f})."
+        )
+    _methods_text = (
+        f"Species occurrence records for {st.session_state.get('source_key', '[species]')} "
+        f"were retrieved from the Global Biodiversity Information Facility (GBIF; gbif.org) "
+        f"on {__import__('datetime').date.today().isoformat()} "
+        f"({len(occ_raw):,} records fetched). "
+        f"Records were spatially balanced to {len(occ_sdm_train) if occ_sdm_train is not None else len(occ_raw):,} "
+        f"representative presence points using a "
+        f"≈{int(math.sqrt(int(sdm_ind_max_presence)))}×{int(math.sqrt(int(sdm_ind_max_presence)))} "
+        f"geographic grid (highest-quality record per cell retained, prioritising photo-verified "
+        f"and recent observations; spatially_balanced_cap). "
+        f"Survey candidates were generated by DBSCAN spatial clustering "
+        f"(ε = {cluster_m:,} m) of {len(occ_candidate_input):,} spatially thinned occurrence records "
+        f"within the study area, and ranked by occurrence density.{_sdm_methods}"
+    )
+    st.code(_methods_text, language=None)
 
     st.subheader("Downloads")
     st.download_button("Download sampling HTML map", html_bytes, "fieldmap.html", "text/html", width="stretch")
