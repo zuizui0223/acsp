@@ -2540,7 +2540,23 @@ def popup_html_site(row: pd.Series) -> str:
     """
 
 
-def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], occurrence_buffer_m: float, survey_range_m: float, layers: dict[str, bool], show_images: bool = True) -> folium.Map:
+def _priority_marker_style(row: Any) -> tuple[int, str]:
+    """Return (radius, color) for a candidate site marker based on priority_rank and candidate_type."""
+    ctype = str(row.get("candidate_type", ""))
+    if ctype.lower().startswith("sdm-high") or ctype.lower().startswith("sdm_high"):
+        return 9, "#9467bd"
+    rank = int(row.get("priority_rank", 99)) if str(row.get("priority_rank", "")).strip() not in ("", "nan") else 99
+    if rank <= 3:
+        return 14, "#d62728"
+    elif rank <= 10:
+        return 11, "#ff7f0e"
+    elif rank <= 20:
+        return 9, "#2ca02c"
+    else:
+        return 7, "#7f7f7f"
+
+
+def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], occurrence_buffer_m: float, survey_range_m: float, layers: dict[str, bool], show_images: bool = True, selected_ids: Optional[list] = None) -> folium.Map:
     center = (float(occ["_latitude"].mean()), float(occ["_longitude"].mean())) if not occ.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True)
     if layers.get("predict") and overlay is not None:
@@ -2554,11 +2570,31 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
             html = f"Occurrence<br>{row['_latitude']:.6f}, {row['_longitude']:.6f}<br>{row.get('_species','')}<br>GBIF {row.get('_gbif_id','')}<br>{media_html}"
             folium.CircleMarker((row["_latitude"], row["_longitude"]), radius=4, color="#1f77b4", fill=True, popup=folium.Popup(html, max_width=330)).add_to(mc)
         mc.add_to(fg); fg.add_to(fmap)
+    selected_set = set(int(s) for s in (selected_ids or []))
     if layers.get("candidate_circles") and sites is not None and not sites.empty:
         fg = FeatureGroup(name="candidate circles", show=True)
         for _, row in sites.iterrows():
-            color = "#2ca02c" if str(row.get("candidate_type", "")).startswith("SDM-high") else "#d62728"
-            folium.Circle((row["latitude"], row["longitude"]), radius=survey_range_m, color=color, fill=True, fill_opacity=0.14, weight=2, popup=folium.Popup(popup_html_site(row), max_width=460)).add_to(fg)
+            ctype = str(row.get("candidate_type", ""))
+            marker_radius, color = _priority_marker_style(row)
+            rank = row.get("priority_rank", "")
+            rank_label = f"Rank {rank} | " if str(rank).strip() not in ("", "nan") else ""
+            is_sdm_high = ctype.lower().startswith("sdm-high") or ctype.lower().startswith("sdm_high")
+            weight = 2
+            dash = "10 5" if is_sdm_high else None
+            tooltip_text = f"{rank_label}{ctype} | site {int(row['site_id'])}"
+            popup_html = popup_html_site(row)
+            loc = (row["latitude"], row["longitude"])
+            # Survey range circle
+            folium.Circle(loc, radius=survey_range_m, color=color, fill=True, fill_opacity=0.12, weight=weight, popup=folium.Popup(popup_html, max_width=460)).add_to(fg)
+            # Priority marker dot
+            kwargs: dict[str, Any] = dict(radius=marker_radius, color=color, fill=True, fill_color=color, fill_opacity=0.85, weight=2 if not is_sdm_high else 2, tooltip=tooltip_text, popup=folium.Popup(popup_html, max_width=460))
+            if dash:
+                kwargs["dash_array"] = dash
+            folium.CircleMarker(loc, **kwargs).add_to(fg)
+            # Selected-site outer ring
+            sid = int(row["site_id"])
+            if sid in selected_set:
+                folium.CircleMarker(loc, radius=marker_radius + 5, color="#00cc44", fill=False, weight=3, tooltip=f"SELECTED | site {sid}").add_to(fg)
         fg.add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
@@ -3186,12 +3222,13 @@ def _make_gmaps_url_with_end(ordered: pd.DataFrame, travelmode: str, start_locat
     return "https://www.google.com/maps/dir/?" + urllib.parse.urlencode(params, safe=",|")
 
 
-def route_planner_panel(sites: pd.DataFrame) -> pd.DataFrame:
-    st.subheader("4 — Selected survey sites")
-    st.caption(
-        "⚠️ Google Maps verification is required. "
-        "This app does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility."
-    )
+def route_planner_panel(sites: pd.DataFrame, show_subheader: bool = True) -> pd.DataFrame:
+    if show_subheader:
+        st.subheader("4 — Selected survey sites")
+        st.caption(
+            "⚠️ Google Maps verification is required. "
+            "This app does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility."
+        )
     if sites.empty:
         return pd.DataFrame()
 
@@ -3559,49 +3596,7 @@ def main() -> None:
     occurrence_candidates = add_priority_rank(occurrence_candidates, float(observed_weight), float(model_weight))
     occurrence_candidates = order_sites(occurrence_candidates, "Nearest-neighbor route")
 
-    # ── Occurrence-based survey candidates (available without SDM) ────────────
-    st.subheader("3 — Survey site suggestions")
-    st.caption(
-        "Candidate survey sites generated from occurrence clusters within your Step 2 survey area. "
-        "Ready to use immediately — no SDM required. "
-        "Optional SDM below predicts suitability at macro scale and can re-rank or add new exploration candidates."
-    )
-    if st.session_state.sdm_result is None:
-        st.info(
-            f"ℹ️ **Model support score: not available yet.** "
-            f"Candidates are ranked by observed occurrence support only "
-            f"(observed weight = {observed_weight:.2f}). "
-            "Run optional SDM below to add SDM suitability-based model support and re-rank candidates."
-        )
-    else:
-        st.success(
-            f"✅ **Model support score: SDM suitability active.** "
-            f"Candidates are re-ranked with observed weight = {observed_weight:.2f} and "
-            f"model weight = {model_weight:.2f}. "
-            "Rebuild SDM if settings changed."
-        )
-    if occurrence_candidates.empty:
-        st.warning("No occurrence clusters found. Try reducing the cluster distance or minimum-samples setting in the sidebar.")
-    else:
-        occ_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "latitude", "longitude", "score_explanation"] if c in occurrence_candidates.columns]
-        st.dataframe(occurrence_candidates[occ_cand_show_cols], width="stretch", hide_index=True)
-        oc1, oc2 = st.columns(2)
-        oc1.download_button(
-            "Occurrence candidates CSV",
-            occurrence_candidates.to_csv(index=False).encode("utf-8"),
-            "occurrence_survey_candidates.csv",
-            "text/csv",
-            use_container_width=True,
-        )
-        oc2.download_button(
-            "Occurrence candidates KML",
-            make_export_kml(occurrence_candidates).encode("utf-8"),
-            "occurrence_survey_candidates.kml",
-            "application/vnd.google-earth.kml+xml",
-            use_container_width=True,
-        )
-
-    # ── SDM record-count guidance ─────────────────────────────────────────────
+    # ── SDM record-count guidance (before SDM expander) ──────────────────────
     _pre_sdm_n = min(len(occ_raw), int(sdm_working_records))
     _raw_n = len(occ_raw)
     if _pre_sdm_n < 20:
@@ -3967,7 +3962,101 @@ def main() -> None:
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_m)) if not all_candidates.empty else all_candidates
     all_candidates = add_priority_rank(all_candidates, float(observed_weight), float(model_weight))
     all_candidates = order_sites(all_candidates, "Nearest-neighbor route")
-    route_plan = route_planner_panel(all_candidates)
+
+    # ── 3 — Survey site suggestions and selection (merged) ───────────────────
+    st.subheader("3 — Survey site suggestions and selection")
+    st.caption(
+        "Candidate survey sites generated from occurrence clusters within your Step 2 survey area. "
+        "Ready to use immediately — no SDM required. "
+        "Optional SDM above predicts suitability at macro scale and can re-rank or add new exploration candidates. "
+        "⚠️ Google Maps verification is required. "
+        "This app does not guarantee road, ferry, mountain, cliff, or restricted-access feasibility."
+    )
+    if st.session_state.sdm_result is None:
+        st.info(
+            f"ℹ️ **Model support score: not available yet.** "
+            f"Candidates are ranked by observed occurrence support only "
+            f"(observed weight = {observed_weight:.2f}). "
+            "Run optional SDM above to add SDM suitability-based model support and re-rank candidates."
+        )
+    else:
+        st.success(
+            f"✅ **Model support score: SDM suitability active.** "
+            f"Candidates are re-ranked with observed weight = {observed_weight:.2f} and "
+            f"model weight = {model_weight:.2f}. "
+            "Rebuild SDM if settings changed."
+        )
+
+    if all_candidates.empty:
+        st.warning("No occurrence clusters found. Try reducing the cluster distance or minimum-samples setting in the sidebar.")
+        route_plan = pd.DataFrame()
+    else:
+        # ── Selection controls (before the map) ───────────────────────────────
+        route_plan = route_planner_panel(all_candidates, show_subheader=False)
+
+    # ── Priority-aware candidate map ─────────────────────────────────────────
+    # Marker legend: red (rank 1-3) | orange (rank 4-10) | green (rank 11-20) | grey (rank >20) | purple dashed (SDM-high)
+    # Selected sites show a green outer ring.
+    _sel_ids_for_map = list(st.session_state.get("sl_selected_site_ids", []))
+    fmap = build_map(occ_candidate_input, all_candidates, overlay, route_plan if not all_candidates.empty else None, 0.0, float(survey_range_m), layers, bool(show_occurrence_images), selected_ids=_sel_ids_for_map)
+    st_folium(fmap, width=None, height=720, returned_objects=[], key="main_map")
+
+    html_bytes = fmap.get_root().render().encode("utf-8")
+
+    # ── Selected-sites compact summary (replaces Step 4) ─────────────────────
+    _sel_ids_now = list(st.session_state.get("sl_selected_site_ids", []))
+    _sel_df_summary = all_candidates[all_candidates["site_id"].astype(int).isin(_sel_ids_now)].copy() if not all_candidates.empty else pd.DataFrame()
+    if not _sel_df_summary.empty and _sel_ids_now:
+        _ord_map = {sid: i for i, sid in enumerate(_sel_ids_now)}
+        _sel_df_summary = _sel_df_summary.assign(_ord=_sel_df_summary["site_id"].astype(int).map(_ord_map)).sort_values("_ord").drop(columns=["_ord"])
+    st.markdown(f"**Selected survey sites ({len(_sel_df_summary)})**")
+    if _sel_df_summary.empty:
+        st.info("No sites selected yet. Use the selection controls above.")
+    else:
+        _sel_df_summary["google_maps_point_url"] = _sel_df_summary.apply(
+            lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
+        )
+        _sum_cols = [c for c in ["site_id", "priority_rank", "priority_score", "candidate_type", "google_maps_point_url"] if c in _sel_df_summary.columns]
+        _sum_cfg: dict[str, Any] = {}
+        if "google_maps_point_url" in _sum_cols:
+            _sum_cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="📍")
+        st.dataframe(_sel_df_summary[_sum_cols], column_config=_sum_cfg, width="stretch", hide_index=True)
+        _travelmode_sum = st.session_state.get("sl_travelmode", "driving")
+        _gmaps_all_url_sum = make_google_maps_route_url(_sel_df_summary, travelmode=_travelmode_sum, max_waypoints=8)
+        _sb1, _sb2, _sb3, _sb4, _sb5 = st.columns(5)
+        _sb1.link_button("🗺️ Open all in Google Maps", _gmaps_all_url_sum, use_container_width=True)
+        _sb2.download_button("⬇ CSV", make_export_csv(_sel_df_summary), "survey_site_list.csv", "text/csv", use_container_width=True)
+        _sb3.download_button("⬇ HTML", make_shareable_html(_sel_df_summary), "survey_site_list.html", "text/html", use_container_width=True)
+        _sb4.download_button("⬇ KML", make_export_kml(_sel_df_summary).encode("utf-8"), "survey_site_list.kml", "application/vnd.google-earth.kml+xml", use_container_width=True)
+        if _sb5.button("Clear selected sites", key="sl_clear_summary"):
+            st.session_state.sl_selected_site_ids = []
+            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
+            st.session_state.last_route_click_signature = ""
+            st.session_state.sl_last_draw_sig = ""
+            st.rerun()
+
+    # ── Optional: full candidate details table ────────────────────────────────
+    with st.expander("Optional: candidate details table", expanded=False):
+        if all_candidates.empty:
+            st.info("No candidates generated yet.")
+        else:
+            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "latitude", "longitude", "score_explanation"] if c in all_candidates.columns]
+            st.dataframe(all_candidates[all_cand_show_cols], width="stretch", hide_index=True)
+            oc1, oc2 = st.columns(2)
+            oc1.download_button(
+                "Candidates CSV",
+                all_candidates.to_csv(index=False).encode("utf-8"),
+                "survey_candidates.csv",
+                "text/csv",
+                use_container_width=True,
+            )
+            oc2.download_button(
+                "Candidates KML",
+                make_export_kml(all_candidates).encode("utf-8"),
+                "survey_candidates.kml",
+                "application/vnd.google-earth.kml+xml",
+                use_container_width=True,
+            )
 
     st.subheader("Performance summary")
     c1, c2, c3, c4, c5, c6 = st.columns(6)
@@ -3984,13 +4073,6 @@ def main() -> None:
     p4.metric("Map occurrence points", f"{len(occ_map_display):,}")
     p5.metric("Exact dedupe removed", f"{exact_dedup_removed:,}")
     p6.metric("Grid thinning removed", f"{grid_thinning_removed:,}")
-
-    # Show all occ_candidate_input points (actual analysis points, uncapped) on the main map.
-    # It is acceptable not to show every unused GBIF record.
-    fmap = build_map(occ_candidate_input, all_candidates, overlay, route_plan, 0.0, float(survey_range_m), layers, bool(show_occurrence_images))
-    st_folium(fmap, width=None, height=720, returned_objects=[], key="main_map")
-
-    html_bytes = fmap.get_root().render().encode("utf-8")
 
     # ── Auto-generated Methods text ───────────────────────────────────────────
     st.subheader("Methods (auto-generated)")

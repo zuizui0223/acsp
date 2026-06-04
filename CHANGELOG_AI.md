@@ -4,6 +4,38 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-04 - Claude (claude-sonnet-4-6) — Merge Step 3/4: unified priority-visualized candidate map and selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+**1. Priority-aware candidate markers in `build_map`**
+- Added `_priority_marker_style(row)` helper that returns `(radius, color)` based on `priority_rank` and `candidate_type`: rank 1–3 → radius 14 red `#d62728`; rank 4–10 → radius 11 orange `#ff7f0e`; rank 11–20 → radius 9 green `#2ca02c`; rank >20 → radius 7 grey `#7f7f7f`; SDM-high → radius 9 purple `#9467bd` with dashed outline.
+- `build_map` gains optional `selected_ids` parameter; selected sites receive a green outer ring (`CircleMarker` radius+5, color `#00cc44`, fill=False, weight=3).
+
+**2. Merged Step 3 and Step 4 into one section**
+- Replaced `st.subheader("3 — Survey site suggestions")` and the separate `route_planner_panel` subheader `"4 — Selected survey sites"` with a single `st.subheader("3 — Survey site suggestions and selection")`.
+- Selection controls (Auto/Manual/rectangle) appear before the map via `route_planner_panel(all_candidates, show_subheader=False)`.
+- `route_planner_panel` gains `show_subheader: bool = True` parameter; genus mode unaffected (not called in genus mode).
+- Map rendered once after selection controls, passing `selected_ids` for green rings.
+- After the map: compact selected-sites summary (site_id, priority_rank, priority_score, candidate_type, Google Maps link) + Open all in Google Maps, CSV, HTML, KML downloads, Clear button.
+- Full candidate details table moved into `st.expander("Optional: candidate details table", expanded=False)` with CSV and KML downloads.
+- Removed duplicate map rendering that previously existed after the Performance summary block.
+
+Features preserved:
+- `sl_selected_site_ids` session state unchanged.
+- Auto/Manual/rectangle selection logic fully preserved inside `route_planner_panel`.
+- Google Maps links, CSV, HTML, KML downloads preserved.
+- Phase 1, Phase 2, SDM expander, VIF, prediction map, performance summary, methods text untouched.
+- `add_priority_rank`, `order_sites`, candidate generation unchanged.
+- `layers` dict controlling occurrences/predict overlay/candidate_circles preserved.
+
+Known risks / TODO:
+- `html_bytes` (used by "Download sampling HTML map") now comes from the map built inside the merged section; verify the reference is still in scope.
+
 ## 2026-06-04 - Claude (claude-sonnet-4-6) — Add SDM record-count guidance and candidate-type labels
 
 Changed files:
