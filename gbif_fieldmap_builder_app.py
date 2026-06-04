@@ -1724,6 +1724,20 @@ def compute_vif_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
 def auto_sdm_partition(n_occ: int, extent_geom) -> tuple[str, str]:
     """Choose the best SDM validation method based on record count and geographic spread.
 
+    Decision rationale
+    ------------------
+    block      — standard SDM best-practice (Valavi et al. 2019 blockCV). Tests
+                 transferability across large spatial gradients. Appropriate for
+                 50 – several-thousand records over a broad area. Because the SDM
+                 presence cap is 300, block covers nearly all realistic use cases.
+    checkerboard — fine-grained checkerboard pattern; better at detecting overfit
+                 to local spatial autocorrelation when records are very dense
+                 (>= 500). With a 300-point cap this threshold is unreachable in
+                 normal use, so checkerboard is available only via manual override.
+    random k-fold / holdout — ignore spatial structure; only appropriate when
+                 records are few or the geographic extent is small.
+    jackknife  — leave-one-out; for tiny datasets (< 15).
+
     Returns (partition_method, reason_text).
     """
     geo_spread_deg: Optional[float] = None
@@ -1744,28 +1758,25 @@ def auto_sdm_partition(n_occ: int, extent_geom) -> tuple[str, str]:
             "random holdout",
             f"**Random holdout** (75 % train / 25 % test) — {n_occ} records.{spread_note} "
             "Spatial block partitioning needs enough records on both sides of each block boundary; "
-            "with few records or a small extent, a random split avoids empty test folds.",
+            "with few records or a small extent a random split avoids empty test folds.",
         )
     if n_occ < 50:
         return (
             "random k-fold",
             f"**Random 5-fold cross-validation** — {n_occ} records. "
-            "Enough records for k-fold but not yet enough to fill spatial blocks reliably. "
+            "Enough for k-fold but not yet enough to fill all four spatial block quadrants reliably. "
             "Five-fold CV gives a stable AUC estimate without wasting too much training data.",
         )
-    if n_occ >= 200:
-        return (
-            "checkerboard1",
-            f"**Checkerboard** spatial cross-validation — {n_occ} records over a wide area. "
-            "With many records the checkerboard creates fine-grained spatial test sets that "
-            "detect overfitting to local clusters better than coarse blocks.",
-        )
+    # 50 – cap (300): block is the SDM community standard.
+    # Checkerboard is only better for very dense datasets (500+), which the 300-point cap prevents.
     return (
         "block",
         f"**Spatial block** cross-validation — {n_occ} records. "
-        "Records are split into geographically separated blocks so the model is tested on "
-        "areas it has never seen. This is the standard rigorous approach for SDM and "
-        "best simulates real-world transferability.",
+        "The extent is split into four geographic quadrants; each quadrant is held out in turn. "
+        "Block CV tests whether the model predicts across space it has never seen — "
+        "the standard rigorous approach for SDM (Valavi et al. 2019). "
+        "Checkerboard offers finer granularity only at very high record counts (500+); "
+        "with the 300-point cap, block is the right choice here.",
     )
 
 
