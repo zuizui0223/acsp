@@ -339,6 +339,7 @@ def init_session_state() -> None:
         "genus_ssdm_hotspots": None,
         "genus_ssdm_shape": None,
         "genus_ssdm_bounds": None,
+        "genus_ssdm_model_summary": None,
         "_last_analysis_mode": None,
     }
     for key, value in defaults.items():
@@ -3316,7 +3317,7 @@ def genus_diversity_panel() -> None:
     if occ.empty:
         st.error("No valid genus coordinate records found.")
         return
-    occ_cleaned = occ.copy()
+    occ_cleaned = enrich_occurrences_with_phenology(occ.copy())
 
     st.sidebar.divider()
     st.sidebar.subheader("Richness grid")
@@ -3532,6 +3533,96 @@ def genus_diversity_panel() -> None:
             d3.download_button("All hotspots CSV", genus_all_candidates.to_csv(index=False).encode("utf-8"), "genus_all_hotspot_candidates.csv", "text/csv", width="stretch", key="genus_all_hotspots_csv_download")
             d4.download_button("Richness HTML map", html_bytes, "genus_hotspot_selection_map.html", "text/html", width="stretch", key="genus_richness_html_map_download")
             d5.download_button("All hotspots KML", make_export_kml(genus_all_candidates).encode("utf-8"), "genus_all_hotspot_candidates.kml", "application/vnd.google-earth.kml+xml", width="stretch", key="genus_all_hotspots_kml_download")
+
+    # ── Optional: Field season / flowering timing (genus mode) ───────────────
+    with st.expander("Optional: Field season / flowering timing", expanded=False):
+        st.caption(
+            "⚠️ Occurrence dates reflect when specimens were observed or collected, "
+            "not guaranteed flowering dates. Flowering windows labeled 'confirmed' require "
+            "flowering-state evidence (lifeStage, reproductiveCondition, or remarks). "
+            "Windows derived from date distributions alone are inferred, not confirmed."
+        )
+        if "_obs_month" in occ_cleaned.columns:
+            _gc_dated = occ_cleaned.dropna(subset=["_obs_month"])
+            if not _gc_dated.empty:
+                _gc_month_counts = _gc_dated["_obs_month"].value_counts().sort_index()
+                _gc_fl = _gc_dated[_gc_dated["_phenology_state"] == "flowering"] if "_phenology_state" in _gc_dated.columns else pd.DataFrame()
+                _pc1, _pc2 = st.columns(2)
+                with _pc1:
+                    st.markdown("**Observation months — all genus records**")
+                    st.bar_chart(_gc_month_counts.rename("records"))
+                with _pc2:
+                    if not _gc_fl.empty:
+                        st.markdown(f"**Flowering-state records ({len(_gc_fl):,})**")
+                        st.bar_chart(_gc_fl["_obs_month"].value_counts().sort_index().rename("flowering records"))
+                    else:
+                        st.markdown("**Flowering-state records**")
+                        st.info("No flowering-state evidence found in occurrence text fields.")
+                st.caption(f"Dated records: {len(_gc_dated):,} / {len(occ_cleaned):,}. Flowering-state confirmed: {len(_gc_fl):,}.")
+                # Per-species phenology table
+                if "_species_clean" in occ_cleaned.columns:
+                    _sp_ph_rows = []
+                    for _sp, _grp in occ_cleaned.groupby("_species_clean"):
+                        _sp_dated = _grp.dropna(subset=["_obs_month"])
+                        _sp_fl = _sp_dated[_sp_dated["_phenology_state"] == "flowering"] if "_phenology_state" in _sp_dated.columns else pd.DataFrame()
+                        _obs_m = sorted(_sp_dated["_obs_month"].dropna().astype(int).unique().tolist())
+                        _fl_m = sorted(_sp_fl["_obs_month"].dropna().astype(int).unique().tolist()) if not _sp_fl.empty else []
+                        _sp_ph_rows.append({
+                            "species": _sp,
+                            "records": len(_grp),
+                            "dated_records": len(_sp_dated),
+                            "flowering_records": len(_sp_fl),
+                            "observation_months": ", ".join(str(m) for m in _obs_m),
+                            "flowering_months": ", ".join(str(m) for m in _fl_m),
+                            "recommended_window": _months_to_window_str(_fl_m if _fl_m else _obs_m),
+                        })
+                    if _sp_ph_rows:
+                        _sp_ph_df = pd.DataFrame(_sp_ph_rows).sort_values("flowering_records", ascending=False).reset_index(drop=True)
+                        with st.expander("Per-species phenology summary", expanded=False):
+                            st.dataframe(_sp_ph_df, hide_index=True, width="stretch")
+        else:
+            st.info("No date information available in genus occurrence records.")
+
+    # ── Auto-generated Methods text (genus) ───────────────────────────────────
+    st.subheader("Methods (auto-generated)")
+    st.caption("Copy this text for the Methods section of your report or paper.")
+    _genus_ssdm_summary = st.session_state.get("genus_ssdm_model_summary")
+    _genus_ssdm_methods = ""
+    if _genus_ssdm_summary is not None and not _genus_ssdm_summary.empty:
+        _modeled_sp = _genus_ssdm_summary[_genus_ssdm_summary["status"] == "modeled"]
+        _n_modeled = len(_modeled_sp)
+        _n_eligible = len(_genus_ssdm_summary[_genus_ssdm_summary["status"].isin(["modeled", "skipped_after_thinning"])])
+        _mean_aucs = pd.to_numeric(_modeled_sp["mean_auc"], errors="coerce").dropna()
+        _mean_auc_str = f"{_mean_aucs.mean():.3f}" if not _mean_aucs.empty else "N/A"
+        _kept_vars_str = _modeled_sp["variables_kept"].iloc[0] if not _modeled_sp.empty and "variables_kept" in _modeled_sp.columns else ", ".join(BALANCED_ECOLOGY_PRESET)
+        _algs_str = _modeled_sp["algorithms"].iloc[0] if not _modeled_sp.empty and "algorithms" in _modeled_sp.columns else "Random Forest and ExtraTrees"
+        _extent_mode = st.session_state.get("ssdm_extent_mode", "species_specific")
+        _extent_note = (
+            "Species-specific prediction extents were used; cells outside each species' occurrence-based bounding box were treated as unevaluated (NA), not as absence."
+            if _extent_mode == "species_specific"
+            else "A shared genus-wide prediction extent was used for all species."
+        )
+        _genus_ssdm_methods = (
+            f" An ensemble SSDM was fitted for {_n_modeled} of {_n_eligible} eligible species "
+            f"using {_algs_str} with environmental predictors ({_kept_vars_str[:80]}{'...' if len(_kept_vars_str) > 80 else ''}; "
+            f"WorldClim 2.1, 2.5 arc-minutes). "
+            f"Predictor collinearity was reduced by shared VIF stepwise filtering (threshold = 10) "
+            f"applied once on pooled occurrence and background data. "
+            f"{_extent_note} "
+            f"SSDM predicted richness was summed from per-species suitability values (mean cross-validation AUC = {_mean_auc_str}). "
+            f"Hotspot candidates were re-ranked by a weighted composite score "
+            f"(observed richness support w = {genus_observed_weight:.1f}; SSDM richness support w = {genus_model_weight:.1f})."
+        )
+    _genus_source = st.session_state.get("genus_source_key", "[genus]")
+    _genus_methods_text = (
+        f"Genus {_genus_source} occurrence records were retrieved from the Global Biodiversity Information Facility "
+        f"(GBIF; gbif.org) on {__import__('datetime').date.today().isoformat()} "
+        f"({len(occ_cleaned):,} records fetched). "
+        f"Records were aggregated to a {float(grid_deg):.2f}° grid; observed species richness was computed per cell. "
+        f"Survey hotspot candidates (top {len(hotspots):,}) were identified from peak-richness grid cells "
+        f"and ranked by {richness_metric.lower()}.{_genus_ssdm_methods}"
+    )
+    st.code(_genus_methods_text, language=None)
 
     with genus_ssdm_slot:
         st.subheader("Optional: Run SSDM")
@@ -3768,6 +3859,7 @@ def genus_diversity_panel() -> None:
                 st.session_state.genus_ssdm_hotspots = ssdm_hotspots
                 st.session_state.genus_ssdm_shape = ssdm_shape
                 st.session_state.genus_ssdm_bounds = ssdm_bounds
+                st.session_state.genus_ssdm_model_summary = model_summary
                 st.success("SSDM complete.")
 
                 # Shared variable-selection diagnostics.
