@@ -4,6 +4,32 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-05 - Claude (claude-sonnet-4-6) - Unify Step 2 survey-area panel: simple rectangle-include default for both species and genus
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Refactored `target_occurrence_set_panel` with new signature: added `model_label` (default `"SDM"`) and `allow_advanced_modes` (default `False`) parameters.
+- Default simple mode (`allow_advanced_modes=False`) shows no radio buttons; automatically uses rectangle-include when a rectangle is drawn, and shows an `st.info` message when no rectangle is drawn.
+- Advanced mode (`allow_advanced_modes=True`) shows the three radio options (use all / include / exclude) inside a collapsed `st.expander("Advanced survey area mode")`.
+- Simplified the four count metrics to: "Cleaned records", "Inside survey rectangle", "Active target records", and "Records used for candidates" (or "Records used for hotspots" in SSDM mode).
+- Removed "Excluded by rectangle" metric from the default simple view; it remains tracked in the returned `counts` dict for downstream use.
+- Updated species mode call site: `show_map=False`, `model_label="SDM"`, `allow_advanced_modes=False`.
+- Updated genus mode call site: `show_map=True`, `model_label="SSDM"`, `allow_advanced_modes=False`, label `"Survey area for richness hotspots"`.
+- Replaced `**Phase 2 — Select your fieldwork survey area**` heading with `**2 — Choose your survey area**` + concise caption for species mode; replaced genus Step 2 subheader to `2 — Choose your survey area` with matching caption.
+- Removed redundant genus duplicate-metrics block (g1-g6) that was showing the same counts as the panel's own metric row.
+- py_compile: no errors.
+
+Features preserved:
+- Rectangle draw and clear logic (stored in session state) unchanged for both modes.
+- All advanced three-mode logic preserved inside the `allow_advanced_modes` branch; no behavior removed.
+- Phase 1 national distribution map, SDM, SSDM, VIF, candidates, hotspots, downloads, and all other features unchanged.
+
+Known risks / TODO:
+- Sessions with a previously active "Exclude records inside drawn rectangle" mode will default to simple include mode on next load; users who need exclude mode must enable `allow_advanced_modes`.
+
 ## 2026-06-04 - Claude (claude-sonnet-4-6) - SSDM validation parity: per-species auto_sdm_partition, jackknife, spatial CV
 
 Changed files:

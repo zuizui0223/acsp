@@ -1005,30 +1005,29 @@ def target_occurrence_set_panel(
     key_prefix: str,
     label: str = "Survey area selection",
     show_map: bool = True,
+    model_label: str = "SDM",
+    allow_advanced_modes: bool = False,
 ) -> tuple[pd.DataFrame, dict[str, int]]:
-    st.markdown(f"**{label}**")
-    st.caption(
-        "Select the area you can actually visit for fieldwork. "
-        "Survey candidates and occurrence hotspots are generated from records in this area. "
-        "SDM can predict across a wider macro-scale extent — set that separately inside Optional: Build SDM."
+    """Survey area selection panel.
+
+    Default behaviour (allow_advanced_modes=False):
+    - No radio buttons shown.
+    - Mode is always 'include rectangle' when a rectangle has been drawn.
+    - When no rectangle is drawn, all cleaned records are used with an info message.
+
+    Advanced mode (allow_advanced_modes=True):
+    - Three radio options inside a collapsed expander: use all / include / exclude.
+    """
+    build_or_run = "Run" if model_label != "SDM" else "Build"
+    caption_text = (
+        f"{model_label} can predict across a wider macro-scale extent — "
+        f"set that separately inside Optional: {build_or_run} {model_label}."
     )
-    if show_map:
-        survey_area_options = ["Use all remaining cleaned records", "Use only records inside drawn rectangle", "Exclude records inside drawn rectangle"]
-        survey_area_key = f"{key_prefix}_target_occurrence_mode"
-        if st.session_state.get(survey_area_key) not in (None, *survey_area_options):
-            st.session_state[survey_area_key] = survey_area_options[0]
-        mode = st.radio(
-            "Survey area",
-            survey_area_options,
-            index=0,
-            horizontal=True,
-            key=survey_area_key,
-        )
-    else:
-        mode = "Use only records inside drawn rectangle"
+
+    # ── Map (genus mode only; species mode reuses the Phase 1 map) ─────────────
     if show_map:
         if len(occ_map_display) < len(occ_base):
-            st.caption(f"Showing {len(occ_map_display):,} of {len(occ_base):,} cleaned records on this rectangle-selection map.")
+            st.caption(f"Showing {len(occ_map_display):,} of {len(occ_base):,} cleaned records on this map.")
         col_map, col_clear = st.columns([4, 1])
         with col_clear:
             if st.button("Clear target rectangle", key=f"{key_prefix}_clear_target_rect"):
@@ -1053,15 +1052,47 @@ def target_occurrence_set_panel(
                 st.session_state[f"{key_prefix}_rect_features"] = features
                 reset_model_outputs()
                 st.rerun()
+
+    # ── Retrieve stored rectangle ──────────────────────────────────────────────
     stored_features = st.session_state.get(f"{key_prefix}_rect_features", []) or []
     inside_ids = set(ids_inside_drawn_rectangles(occ_base, "_row_id", "_latitude", "_longitude", stored_features)) if stored_features else set()
     has_rectangle = bool(stored_features)
+
+    # ── Mode determination ─────────────────────────────────────────────────────
+    if allow_advanced_modes:
+        survey_area_options = [
+            "Use all remaining cleaned records",
+            "Use only records inside drawn rectangle",
+            "Exclude records inside drawn rectangle",
+        ]
+        survey_area_key = f"{key_prefix}_target_occurrence_mode"
+        if st.session_state.get(survey_area_key) not in (None, *survey_area_options):
+            st.session_state[survey_area_key] = survey_area_options[0]
+        with st.expander("Advanced survey area mode", expanded=False):
+            mode = st.radio(
+                "Survey area",
+                survey_area_options,
+                index=0,
+                horizontal=True,
+                key=survey_area_key,
+            )
+    else:
+        # Simple default: rectangle-include when drawn, all records otherwise
+        if has_rectangle:
+            mode = "Use only records inside drawn rectangle"
+        else:
+            mode = "Use all remaining cleaned records"
+            st.info(
+                "Draw a rectangle on the map above to set your survey area. "
+                "Until then, all cleaned records are used."
+            )
+
+    # ── Apply mode ─────────────────────────────────────────────────────────────
+    rectangle_excluded = 0
     if mode in ("Use all cleaned records", "Use all records", "Use all remaining cleaned records"):
         selected = occ_base.copy()
         rectangle_excluded = 0
     elif not has_rectangle:
-        if show_map:
-            st.warning("Draw a rectangle first. Until a rectangle is drawn, all cleaned records are used.")
         selected = occ_base.copy()
         rectangle_excluded = 0
     elif mode == "Use only records inside drawn rectangle":
@@ -1070,17 +1101,23 @@ def target_occurrence_set_panel(
     else:
         selected = occ_base[~occ_base["_row_id"].astype(int).isin(inside_ids)].copy()
         rectangle_excluded = len(inside_ids)
+
     counts = {
         "raw_records": int(raw_record_count),
         "records_inside_rectangle": int(len(inside_ids)),
         "records_excluded_by_rectangle": int(rectangle_excluded),
         "active_target_records": int(len(selected)),
     }
+
+    # ── Metrics ────────────────────────────────────────────────────────────────
+    candidates_label = "Records used for hotspots" if model_label == "SSDM" else "Records used for candidates"
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Active survey-area records", f"{counts['raw_records']:,}")
-    m2.metric("Inside rectangle", f"{counts['records_inside_rectangle']:,}")
-    m3.metric("Excluded by rectangle", f"{counts['records_excluded_by_rectangle']:,}")
-    m4.metric("Selected for candidates", f"{counts['active_target_records']:,}")
+    m1.metric("Cleaned records", f"{counts['raw_records']:,}")
+    m2.metric("Inside survey rectangle", f"{counts['records_inside_rectangle']:,}")
+    m3.metric("Active target records", f"{counts['active_target_records']:,}")
+    m4.metric(candidates_label, f"{len(selected):,}")
+
+    st.caption(caption_text)
     return selected.reset_index(drop=True), counts
 
 
@@ -3059,15 +3096,21 @@ def genus_diversity_panel() -> None:
         genus_candidate_records = st.number_input("Genus richness candidate records", 50, 50_000, genus_candidate_records, 50, key="genus_candidate_records")
         genus_ssdm_records = st.number_input("SSDM presence records per species", 3, 5_000, genus_ssdm_records, 25, key="genus_ssdm_records")
 
-    st.subheader("2 - Review records and choose survey area")
-    st.caption("Step 2 is only for observed-data richness hotspot generation. Optional SSDM starts independently from fetched genus records.")
+    st.subheader("2 — Choose your survey area")
+    st.caption(
+        "Draw a rectangle around the area you can actually visit. "
+        "Richness hotspots are generated from records inside this rectangle."
+    )
     genus_target_display = limit_occurrence_display(occ_cleaned, set(), int(genus_map_records))
     occ, genus_target_counts = target_occurrence_set_panel(
         occ_cleaned,
         genus_target_display,
         raw_record_count=len(occ_cleaned),
         key_prefix="genus_target",
-        label="Target occurrence set for observed richness hotspots",
+        label="Survey area for richness hotspots",
+        show_map=True,
+        model_label="SSDM",
+        allow_advanced_modes=False,
     )
     if occ.empty:
         st.error("The active genus target occurrence set is empty. Change the rectangle target option or clear the target rectangle.")
@@ -3092,15 +3135,7 @@ def genus_diversity_panel() -> None:
     genus_sort_cols = available_sort_cols(genus_all_candidates, ["priority_score", "model_support_score", "occurrence_support_score"])
     genus_all_candidates = genus_all_candidates.sort_values(genus_sort_cols, ascending=False, na_position="last").reset_index(drop=True) if genus_sort_cols else genus_all_candidates.reset_index(drop=True)
 
-    # Step 2: Prepare records and species summary.
-    st.caption("Counts below show the active target set used for observed richness hotspots. Optional SSDM starts independently from fetched genus records.")
-    g1, g2, g3, g4, g5, g6 = st.columns(6)
-    g1.metric("Active survey-area records", f"{genus_target_counts['raw_records']:,}")
-    g2.metric("Inside rectangle", f"{genus_target_counts['records_inside_rectangle']:,}")
-    g3.metric("Excluded by rectangle", f"{genus_target_counts['records_excluded_by_rectangle']:,}")
-    g4.metric("Active target records", f"{genus_target_counts['active_target_records']:,}")
-    g5.metric("Records for hotspots", f"{len(genus_candidate_input):,}")
-    g6.metric("SSDM per species cap", f"{int(genus_ssdm_records):,}")
+    # Species summary metrics (below the survey area panel).
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Valid target records", f"{len(occ):,}")
     c2.metric("Species", f"{summary['species'].nunique():,}" if not summary.empty else "0")
@@ -3718,7 +3753,6 @@ def main() -> None:
         st.error("No valid coordinate records found.")
         return
 
-    st.subheader("2 — Choose your survey area")
     auto_large_dataset_mode = len(occ_raw) > 1000
     effective_large_dataset_mode = bool(large_dataset_mode or auto_large_dataset_mode)
     effective_max_map_points = min(int(max_map_points), 1000) if effective_large_dataset_mode else int(max_map_points)
@@ -3755,11 +3789,10 @@ def main() -> None:
             st.rerun()
 
     # ── Phase 2: Select survey area ───────────────────────────────────────────
-    st.markdown("**Phase 2 — Select your fieldwork survey area**")
+    st.markdown("**2 — Choose your survey area**")
     st.caption(
-        "Draw a rectangle on the map above to select the area you can actually visit. "
-        "Individual occurrence points and survey candidates are generated for that area only. "
-        "SDM prediction extent is set separately inside Optional: Build SDM and can be wider."
+        "Draw a rectangle around the area you can actually visit. "
+        "Candidates are generated from records inside this rectangle."
     )
     target_map_display = limit_occurrence_display(occ_raw, set(), int(effective_max_map_points))
     occ_extent_selected, target_counts = target_occurrence_set_panel(
@@ -3768,6 +3801,8 @@ def main() -> None:
         raw_record_count=len(occ_raw),
         key_prefix="target",
         show_map=False,
+        model_label="SDM",
+        allow_advanced_modes=False,
     )
     if occ_extent_selected.empty:
         st.error("No records in the selected area. Draw a larger rectangle or clear the rectangle to use all records.")
