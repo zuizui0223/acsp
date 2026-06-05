@@ -3582,6 +3582,40 @@ def genus_diversity_panel() -> None:
             d4.download_button("Richness HTML map", html_bytes, "genus_hotspot_selection_map.html", "text/html", width="stretch", key="genus_richness_html_map_download")
             d5.download_button("All hotspots KML", make_export_kml(genus_all_candidates).encode("utf-8"), "genus_all_hotspot_candidates.kml", "application/vnd.google-earth.kml+xml", width="stretch", key="genus_all_hotspots_kml_download")
 
+    # ── Best time to visit (genus survey area) ────────────────────────────────
+    if not genus_all_candidates.empty and "_obs_month" in occ_cleaned.columns:
+        _gc2_ph_dated = occ_cleaned.dropna(subset=["_obs_month"])
+        if not _gc2_ph_dated.empty:
+            st.subheader("📅 Best time to visit (survey area)")
+            _gc2_ph_fl = _gc2_ph_dated[_gc2_ph_dated["_phenology_state"] == "flowering"] if "_phenology_state" in _gc2_ph_dated.columns else pd.DataFrame()
+            _gc2_all_months = sorted(_gc2_ph_dated["_obs_month"].dropna().astype(int).unique().tolist())
+            _gc2_fl_months = sorted(_gc2_ph_fl["_obs_month"].dropna().astype(int).unique().tolist()) if not _gc2_ph_fl.empty else []
+            _gc2_all_counts_d = _gc2_ph_dated["_obs_month"].value_counts().to_dict()
+            if _gc2_fl_months:
+                _gc2_fl_counts_d = _gc2_ph_fl["_obs_month"].value_counts().to_dict()
+                _gc2_ph_window = _months_to_window_str(_gc2_fl_months, counts=_gc2_fl_counts_d)
+            else:
+                _gc2_ph_window = _months_to_window_str(_gc2_all_months, counts=_gc2_all_counts_d)
+            _gc2_pc1, _gc2_pc2 = st.columns([3, 1])
+            with _gc2_pc1:
+                _gc2_month_counts = _gc2_ph_dated["_obs_month"].value_counts().sort_index()
+                if not _gc2_ph_fl.empty:
+                    _gc2_chart = pd.DataFrame({
+                        "All records": _gc2_month_counts,
+                        "Flowering": _gc2_ph_fl["_obs_month"].value_counts().sort_index(),
+                    }).fillna(0).astype(int)
+                else:
+                    _gc2_chart = _gc2_month_counts.rename("All records").to_frame()
+                st.bar_chart(_gc2_chart, height=160)
+            with _gc2_pc2:
+                st.metric("Recommended window", _gc2_ph_window)
+                if _gc2_ph_fl.empty:
+                    st.caption(f"Based on {len(_gc2_ph_dated):,} dated records (no flowering evidence).")
+                else:
+                    _gc2_conf = "high" if len(_gc2_ph_fl) >= 5 else "medium" if len(_gc2_ph_fl) >= 2 else "low"
+                    st.caption(f"Flowering evidence: {len(_gc2_ph_fl):,} records (confidence: {_gc2_conf}).")
+            st.caption("⚠️ Based on genus occurrence records used to generate hotspot candidates.")
+
     # ── Auto-generated Methods text (genus) ───────────────────────────────────
     st.subheader("Methods (auto-generated)")
     st.caption("Copy this text for the Methods section of your report or paper.")
@@ -4886,6 +4920,40 @@ def main() -> None:
             st.session_state.sl_last_draw_sig = ""
             st.rerun()
         route_plan = _sel_df_summary.copy()
+
+    # ── Best time to visit (candidate survey area) ────────────────────────────
+    if not all_candidates.empty and "_obs_month" in occ_candidate_input.columns:
+        _cand_ph_dated = occ_candidate_input.dropna(subset=["_obs_month"])
+        if not _cand_ph_dated.empty:
+            st.subheader("📅 Best time to visit (survey area)")
+            _cand_ph_fl = _cand_ph_dated[_cand_ph_dated["_phenology_state"] == "flowering"] if "_phenology_state" in _cand_ph_dated.columns else pd.DataFrame()
+            _cand_all_months = sorted(_cand_ph_dated["_obs_month"].dropna().astype(int).unique().tolist())
+            _cand_fl_months = sorted(_cand_ph_fl["_obs_month"].dropna().astype(int).unique().tolist()) if not _cand_ph_fl.empty else []
+            _cand_all_counts_d = _cand_ph_dated["_obs_month"].value_counts().to_dict()
+            if _cand_fl_months:
+                _cand_fl_counts_d = _cand_ph_fl["_obs_month"].value_counts().to_dict()
+                _cand_ph_window = _months_to_window_str(_cand_fl_months, counts=_cand_fl_counts_d)
+            else:
+                _cand_ph_window = _months_to_window_str(_cand_all_months, counts=_cand_all_counts_d)
+            _cand_pc1, _cand_pc2 = st.columns([3, 1])
+            with _cand_pc1:
+                _cand_month_counts = _cand_ph_dated["_obs_month"].value_counts().sort_index()
+                if not _cand_ph_fl.empty:
+                    _cand_chart = pd.DataFrame({
+                        "All records": _cand_month_counts,
+                        "Flowering": _cand_ph_fl["_obs_month"].value_counts().sort_index(),
+                    }).fillna(0).astype(int)
+                else:
+                    _cand_chart = _cand_month_counts.rename("All records").to_frame()
+                st.bar_chart(_cand_chart, height=160)
+            with _cand_pc2:
+                st.metric("Recommended window", _cand_ph_window)
+                if _cand_ph_fl.empty:
+                    st.caption(f"Based on {len(_cand_ph_dated):,} records in the survey area (no flowering evidence).")
+                else:
+                    _cand_conf = "high" if len(_cand_ph_fl) >= 5 else "medium" if len(_cand_ph_fl) >= 2 else "low"
+                    st.caption(f"Flowering evidence: {len(_cand_ph_fl):,} records in survey area (confidence: {_cand_conf}).")
+            st.caption("⚠️ Based on occurrence records within the survey area used to generate candidate sites.")
 
     # ── Optional: full candidate details table ────────────────────────────────
     with st.expander("Optional: candidate details table", expanded=False):
