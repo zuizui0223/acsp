@@ -304,22 +304,13 @@ def _months_to_window_str(months: list, counts: Optional[dict] = None) -> str:
     if len(months_s) == 1:
         return _MONTH_ABBR[months_s[0] - 1]
     if counts:
-        total = sum(counts.get(m, 0) for m in months_s)
-        if total > 0:
-            lo = total * 0.10
-            hi = total * 0.90
-            cum = 0
-            peak_start = months_s[0]
-            peak_end = months_s[-1]
-            found_start = False
-            for m in months_s:
-                cum += counts.get(m, 0)
-                if not found_start and cum >= lo:
-                    peak_start = m
-                    found_start = True
-                if cum <= hi:
-                    peak_end = m
-            return f"{_MONTH_ABBR[peak_start - 1]}–{_MONTH_ABBR[peak_end - 1]}"
+        max_count = max((counts.get(m, 0) for m in months_s), default=0)
+        if max_count > 0:
+            # Include months where record count is ≥ 15 % of the peak month
+            threshold = max_count * 0.15
+            peak_months = [m for m in months_s if counts.get(m, 0) >= threshold]
+            if peak_months:
+                return f"{_MONTH_ABBR[peak_months[0] - 1]}–{_MONTH_ABBR[peak_months[-1] - 1]}"
     return f"{_MONTH_ABBR[months_s[0] - 1]}–{_MONTH_ABBR[months_s[-1] - 1]}"
 
 
