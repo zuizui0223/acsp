@@ -3534,65 +3534,120 @@ def genus_diversity_panel() -> None:
             d5.download_button("All hotspots KML", make_export_kml(genus_all_candidates).encode("utf-8"), "genus_all_hotspot_candidates.kml", "application/vnd.google-earth.kml+xml", width="stretch", key="genus_all_hotspots_kml_download")
 
     with genus_ssdm_slot:
-        st.subheader("3 - Optional: Run SSDM")
+        st.subheader("Optional: Run SSDM")
         st.caption("Predicted stacked richness: fit one SDM per eligible species, predict on a shared environmental grid, then sum suitability values across species. This does not run automatically.")
+        # Record-count guidance (mirrors species SDM guidance)
+        _pre_ssdm_n = min(len(occ_cleaned), int(genus_ssdm_records))
+        if _pre_ssdm_n < 20:
+            st.info(f"⚠️ Source records are sparse ({_pre_ssdm_n} per-species cap). SSDM predictions will be highly uncertain — use for exploration only, with field validation required.")
+        elif _pre_ssdm_n < 50:
+            st.info(f"SSDM can help identify exploratory potential sites beyond known hotspots ({_pre_ssdm_n} per-species cap).")
+        else:
+            st.info(f"SSDM will use a spatially representative subset of up to {_pre_ssdm_n} records per species rather than all fetched records.")
         sm1, sm2, sm3 = st.columns(3)
         sm1.metric("SSDM source records", f"{len(occ_cleaned):,}", help="Independent from the Step 2 observed-richness survey-area rectangle.")
         sm2.metric("Observed hotspot records", f"{len(genus_candidate_input):,}", help="Records used for observed richness hotspot generation after Step 2 and thinning.")
         sm3.metric("Per-species SSDM cap", f"{int(genus_ssdm_records):,}", help="Maximum presence records used per species before fitting SSDM.")
         ssdm_expander = st.expander("Run stacked species distribution models", expanded=False)
     with ssdm_expander:
-        s1, s2, s3 = st.columns(3)
-        ssdm_resolution = s1.selectbox("SSDM WorldClim resolution", RESOLUTIONS, index=2, key="ssdm_resolution")
-        ssdm_area_mode = s2.selectbox("SSDM prediction area", AREA_MODES, index=2, key="ssdm_area_mode")
-        ssdm_binary_threshold = s3.number_input("Binary suitability threshold", min_value=0.0, max_value=1.0, value=0.50, step=0.05, key="ssdm_binary_threshold")
-        s4, s5, s6 = st.columns(3)
-        ssdm_buffer_km = s4.number_input("SSDM buffer radius / hull buffer (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="ssdm_buffer_km")
-        ssdm_margin_km = s5.number_input("SSDM bounding-box margin (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="ssdm_margin_km")
-        ssdm_max_pixels = s6.number_input("SSDM max prediction cells", min_value=1_000, max_value=200_000, value=30_000, step=5_000, key="ssdm_max_pixels")
-        s7, s8, s9 = st.columns(3)
-        ssdm_min_records = s7.number_input("Minimum records per species", min_value=3, max_value=500, value=max(10, int(min_records_for_sdm)), step=1, key="ssdm_min_records")
-        ssdm_max_species = s8.number_input("Max species to model", min_value=1, max_value=200, value=20, step=1, key="ssdm_max_species")
-        ssdm_max_presence = s9.number_input("Max presence points per species", min_value=3, max_value=5_000, value=int(genus_ssdm_records), step=25, key="ssdm_max_presence")
-        s10, s11 = st.columns(2)
-        ssdm_background = s10.number_input("Shared background cells per species", min_value=50, max_value=20_000, value=500, step=50, key="ssdm_background")
-        ssdm_hotspot_n = s11.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=20, step=1, key="ssdm_hotspot_n")
-        st.markdown("**Per-species SSDM bias-reduction preprocessing**")
+        # ── SSDM prediction extent (user decision — mirrors SDM) ──────────────
+        st.markdown("**SSDM prediction extent**")
         st.caption(
-            "Applied per species before fitting each individual SDM. "
-            "Auto uses exact coordinate deduplication plus moderate grid thinning, parallel to species SDM bias-reduction preprocessing."
+            "The extent defines where stacked suitability is predicted. "
+            "It is independent from the Step 2 survey area. "
+            "A broader extent generally improves individual species SDMs."
         )
-        ssdm_bias_mode = st.radio(
-            "Per-species SSDM bias-reduction preprocessing",
-            ["Auto (Recommended)", "Advanced / Custom", "Off"],
-            index=0,
-            horizontal=True,
-            key="ssdm_bias_reduction_mode",
-        )
-        if ssdm_bias_mode.startswith("Auto"):
-            ssdm_per_species_grid_deg = 0.05
-            ssdm_per_species_distance_m = 0
-            st.caption("Auto: exact coordinate deduplication + one record per 0.05-degree grid cell per species; distance thinning off.")
-        elif ssdm_bias_mode.startswith("Off"):
-            ssdm_per_species_grid_deg = 0.0
-            ssdm_per_species_distance_m = 0
-            st.caption("Off: exact coordinate deduplication only.")
-        else:
-            with st.expander("Advanced / Custom per-species thinning settings", expanded=False):
-                ps1, ps2 = st.columns(2)
-                ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg", help="One record per grid cell per species. Set 0 to disable.")
-                ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m", help="Minimum nearest-neighbour distance between retained presence points per species. Set 0 to disable.")
-        st.markdown("**SSDM environmental variables**")
-        ssdm_variables = st.multiselect(
-            "SSDM environmental variables",
-            TOPOGRAPHY_VARS + CLIMATE_VARS,
-            default=list(BALANCED_ECOLOGY_PRESET),
-            key="ssdm_environment_variables",
-            help="Balanced ecology variables are selected by default. Add or remove variables directly.",
-        )
-        st.caption("Shared VIF stepwise filtering is applied automatically before SSDM fitting (default threshold = 10).")
+        ssdm_area_mode = st.selectbox("SSDM prediction area", AREA_MODES, index=2, key="ssdm_area_mode")
+        _sb1, _sb2 = st.columns(2)
+        ssdm_buffer_km = _sb1.number_input("Buffer radius / hull buffer (km)", min_value=0.1, max_value=500.0, value=10.0, step=1.0, key="ssdm_buffer_km")
+        ssdm_margin_km = _sb2.number_input("Bounding-box margin (km)", min_value=0.0, max_value=500.0, value=20.0, step=5.0, key="ssdm_margin_km")
 
-        ssdm_algorithms = st.multiselect("SSDM algorithms", ALGORITHMS, default=["Random forest"], key="ssdm_algorithms")
+        st.divider()
+        # ── Environmental variables (fixed default + Advanced, mirrors SDM) ───
+        _SSDM_DEFAULT_ALGORITHMS = ["Random forest", "ExtraTrees"]
+        ssdm_resolution = "2.5m"           # fixed, same as species SDM
+        ssdm_variables = list(BALANCED_ECOLOGY_PRESET)
+        ssdm_algorithms = list(_SSDM_DEFAULT_ALGORITHMS)
+        ssdm_variable_strategy = "VIF stepwise"
+        ssdm_vif_threshold = 10.0
+        ssdm_corr_threshold = 0.80
+        ssdm_custom_variables = ssdm_variables
+        st.markdown("**Environmental variables**")
+        st.caption(
+            f"Default: balanced ecology preset — {', '.join(BALANCED_ECOLOGY_PRESET)}. "
+            "Override in Advanced below. Shared VIF stepwise (threshold 10) applied once on pooled data."
+        )
+
+        with st.expander("Advanced: variables & algorithms", expanded=False):
+            st.caption("Override scientific defaults. Same rules as species SDM.")
+            ssdm_variables = st.multiselect(
+                "SSDM environmental variables",
+                TOPOGRAPHY_VARS + CLIMATE_VARS,
+                default=list(BALANCED_ECOLOGY_PRESET),
+                key="ssdm_environment_variables",
+                help="Balanced ecology variables are selected by default.",
+            )
+            ssdm_algorithms = st.multiselect(
+                "SSDM algorithms",
+                ALGORITHMS,
+                default=list(_SSDM_DEFAULT_ALGORITHMS),
+                key="ssdm_algorithms",
+                help="Random Forest + ExtraTrees is the scientific default.",
+            )
+            ssdm_variable_strategy = st.selectbox(
+                "Advanced SSDM variable-selection strategy",
+                ["VIF stepwise", "Correlation filter", "Advanced custom selection"],
+                index=0,
+                key="ssdm_variable_strategy",
+            )
+            vc1, vc2 = st.columns(2)
+            ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
+            ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
+            ssdm_custom_variables = ssdm_variables
+            if ssdm_variable_strategy == "Advanced custom selection":
+                ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
+
+        # ── Per-species bias reduction (Auto default) ─────────────────────────
+        ssdm_per_species_grid_deg = 0.05   # Auto default
+        ssdm_per_species_distance_m = 0
+        with st.expander("Advanced: per-species bias reduction", expanded=False):
+            ssdm_bias_mode = st.radio(
+                "Per-species bias reduction",
+                ["Auto (Recommended)", "Advanced / Custom", "Off"],
+                index=0, horizontal=True, key="ssdm_bias_reduction_mode",
+            )
+            if ssdm_bias_mode.startswith("Auto"):
+                ssdm_per_species_grid_deg = 0.05
+                ssdm_per_species_distance_m = 0
+                st.caption("Auto: exact coordinate deduplication + one record per 0.05° grid cell per species.")
+            elif ssdm_bias_mode.startswith("Off"):
+                ssdm_per_species_grid_deg = 0.0
+                ssdm_per_species_distance_m = 0
+                st.caption("Off: exact coordinate deduplication only.")
+            else:
+                ps1, ps2 = st.columns(2)
+                ssdm_per_species_grid_deg = ps1.number_input("Per-species grid thinning (degrees, 0 = off)", min_value=0.0, max_value=5.0, value=0.05, step=0.01, format="%.2f", key="ssdm_per_species_grid_deg")
+                ssdm_per_species_distance_m = ps2.number_input("Per-species distance thinning (m, 0 = off)", min_value=0, max_value=100_000, value=0, step=500, key="ssdm_per_species_distance_m")
+
+        # ── Advanced model settings (mirrors SDM Advanced model settings) ─────
+        ssdm_min_records = max(10, int(min_records_for_sdm))
+        ssdm_max_species = 20
+        ssdm_max_presence = int(genus_ssdm_records)
+        ssdm_background = 500
+        ssdm_max_pixels = 30_000
+        ssdm_hotspot_n = 20
+        ssdm_binary_threshold = 0.50
+        with st.expander("Advanced model settings", expanded=False):
+            _am1, _am2 = st.columns(2)
+            ssdm_min_records = _am1.number_input("Minimum records per species", min_value=3, max_value=500, value=ssdm_min_records, step=1, key="ssdm_min_records")
+            ssdm_max_species = _am2.number_input("Max species to model", min_value=1, max_value=200, value=ssdm_max_species, step=1, key="ssdm_max_species")
+            _am3, _am4 = st.columns(2)
+            ssdm_max_presence = _am3.number_input("Max presence points per species", min_value=3, max_value=5_000, value=ssdm_max_presence, step=25, key="ssdm_max_presence")
+            ssdm_background = _am4.number_input("Shared background cells", min_value=50, max_value=20_000, value=ssdm_background, step=50, key="ssdm_background")
+            _am5, _am6, _am7 = st.columns(3)
+            ssdm_max_pixels = _am5.number_input("Max prediction cells", min_value=1_000, max_value=200_000, value=ssdm_max_pixels, step=5_000, key="ssdm_max_pixels")
+            ssdm_hotspot_n = _am6.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=ssdm_hotspot_n, step=1, key="ssdm_hotspot_n")
+            ssdm_binary_threshold = _am7.number_input("Binary suitability threshold", min_value=0.0, max_value=1.0, value=ssdm_binary_threshold, step=0.05, key="ssdm_binary_threshold")
 
         with st.expander("Advanced variable selection", expanded=False):
             st.caption(
