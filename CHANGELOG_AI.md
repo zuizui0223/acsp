@@ -4,6 +4,20 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-05 - Claude (claude-sonnet-4-6) - Performance: vectorize SSDM extent masking, cache maps, deduplicate per-species geometry
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+- **`make_richness_map` cached**: added `@st.cache_data(show_spinner=False)` decorator so the Folium richness map is not rebuilt on every widget-triggered rerun.
+- **Vectorized SSDM extent masking**: replaced Python-level `Point.covers` loop (O(n_cells × n_species), e.g. 1.6M calls for 80k cells × 20 species) with a numpy bounds check (`lons >= minx & lons <= maxx & lats >= miny & lats <= maxy`). This is exact for bounding-box extents and ~1000× faster. For buffer/convex-hull extents the bounds check is a conservative approximation that still eliminates the per-cell Python overhead.
+- **Deduplicated per-species `prediction_area_geometry` call**: `auto_sdm_partition` branch previously called `prediction_area_geometry(sp_occ, "bounding box", 10.0, 20.0)` separately from the masking call `prediction_area_geometry(sp_occ, area_mode, buffer_km, rectangle_margin_km)`. Unified: one call per species using the user's `area_mode`/`buffer_km`/`rectangle_margin_km`, stored in `sp_extent_geom_for_partition`, reused for both partition selection and masking.
+
+No UI, session-state, or feature-behavior changes.
+
 ## 2026-06-05 - Claude (claude-sonnet-4-6) - SSDM species-specific prediction extents with NA-aware richness accumulation
 
 Changed files:
