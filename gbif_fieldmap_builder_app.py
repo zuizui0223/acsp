@@ -275,29 +275,52 @@ def candidate_season_summary(candidate_occ: pd.DataFrame) -> dict:
         fl_doys = fl["_obs_doy"].dropna().astype(float).tolist()
         if fl_doys:
             result["flowering_doy_median"] = round(float(np.median(fl_doys)), 1)
-        # Recommend window from flowering records
         window_months = fl_months
+        window_counts = fl["_obs_month"].value_counts().to_dict()
         confidence = "high" if fl_count >= 5 else "medium" if fl_count >= 2 else "low"
     else:
-        # Fallback to all dated records
         window_months = months
+        window_counts = dated["_obs_month"].value_counts().to_dict()
         confidence = "medium" if len(dated) >= 5 else "low"
         result["flowering_months"] = ""
     if window_months:
-        result["recommended_survey_window"] = _months_to_window_str(window_months)
+        result["recommended_survey_window"] = _months_to_window_str(window_months, counts=window_counts)
     result["season_confidence"] = confidence
     return result
 
 
-def _months_to_window_str(months: list) -> str:
-    """Convert list of month ints to a compact human-readable window like 'Apr-Jun'."""
+def _months_to_window_str(months: list, counts: Optional[dict] = None) -> str:
+    """Convert month list to a compact human-readable peak window like 'May–Aug'.
+
+    When counts (month → n_records) are provided, the window is derived from the
+    central 80 % of observations (10th–90th percentile by cumulative record count),
+    so outlier months with very few records do not widen the window artificially.
+    Without counts, falls back to first–last month.
+    """
     _MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     if not months:
         return "unknown"
     months_s = sorted(set(int(m) for m in months if 1 <= int(m) <= 12))
     if len(months_s) == 1:
         return _MONTH_ABBR[months_s[0] - 1]
-    return f"{_MONTH_ABBR[months_s[0] - 1]}-{_MONTH_ABBR[months_s[-1] - 1]}"
+    if counts:
+        total = sum(counts.get(m, 0) for m in months_s)
+        if total > 0:
+            lo = total * 0.10
+            hi = total * 0.90
+            cum = 0
+            peak_start = months_s[0]
+            peak_end = months_s[-1]
+            found_start = False
+            for m in months_s:
+                cum += counts.get(m, 0)
+                if not found_start and cum >= lo:
+                    peak_start = m
+                    found_start = True
+                if cum <= hi:
+                    peak_end = m
+            return f"{_MONTH_ABBR[peak_start - 1]}–{_MONTH_ABBR[peak_end - 1]}"
+    return f"{_MONTH_ABBR[months_s[0] - 1]}–{_MONTH_ABBR[months_s[-1] - 1]}"
 
 
 def init_session_state() -> None:
@@ -3367,7 +3390,12 @@ def genus_diversity_panel() -> None:
             _gc_ph_fl = _gc_ph_dated[_gc_ph_dated["_phenology_state"] == "flowering"] if "_phenology_state" in _gc_ph_dated.columns else pd.DataFrame()
             _gc_ph_all_m = sorted(_gc_ph_dated["_obs_month"].dropna().astype(int).unique().tolist())
             _gc_ph_fl_m = sorted(_gc_ph_fl["_obs_month"].dropna().astype(int).unique().tolist()) if not _gc_ph_fl.empty else []
-            _gc_ph_window = _months_to_window_str(_gc_ph_fl_m if _gc_ph_fl_m else _gc_ph_all_m)
+            _gc_all_counts_d = _gc_ph_dated["_obs_month"].value_counts().to_dict()
+            if _gc_ph_fl_m:
+                _gc_fl_counts_d = _gc_ph_fl["_obs_month"].value_counts().to_dict()
+                _gc_ph_window = _months_to_window_str(_gc_ph_fl_m, counts=_gc_fl_counts_d)
+            else:
+                _gc_ph_window = _months_to_window_str(_gc_ph_all_m, counts=_gc_all_counts_d)
             _gc_pc1, _gc_pc2 = st.columns([3, 1])
             with _gc_pc1:
                 _gc_month_counts = _gc_ph_dated["_obs_month"].value_counts().sort_index()
@@ -4197,7 +4225,12 @@ def main() -> None:
             _ph_fl = _ph_dated[_ph_dated["_phenology_state"] == "flowering"] if "_phenology_state" in _ph_dated.columns else pd.DataFrame()
             _ph_all_months = sorted(_ph_dated["_obs_month"].dropna().astype(int).unique().tolist())
             _ph_fl_months = sorted(_ph_fl["_obs_month"].dropna().astype(int).unique().tolist()) if not _ph_fl.empty else []
-            _ph_window = _months_to_window_str(_ph_fl_months if _ph_fl_months else _ph_all_months)
+            _ph_month_counts_d = _ph_dated["_obs_month"].value_counts().to_dict()
+            if _ph_fl_months:
+                _ph_fl_counts_d = _ph_fl["_obs_month"].value_counts().to_dict()
+                _ph_window = _months_to_window_str(_ph_fl_months, counts=_ph_fl_counts_d)
+            else:
+                _ph_window = _months_to_window_str(_ph_all_months, counts=_ph_month_counts_d)
             _ph_col1, _ph_col2 = st.columns([3, 1])
             with _ph_col1:
                 _ph_month_counts = _ph_dated["_obs_month"].value_counts().sort_index()
