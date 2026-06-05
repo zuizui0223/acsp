@@ -3053,10 +3053,6 @@ def genus_diversity_panel() -> None:
     genus_map_records = FAST_MAP_RECORDS
     genus_candidate_records = FAST_CANDIDATE_RECORDS
     genus_ssdm_records = FAST_SSDM_RECORDS_PER_SPECIES
-    st.sidebar.caption(
-        f"Raw genus records are kept. Defaults: fetch up to {genus_fetch_cap:,}; map about {genus_map_records:,}; "
-        f"richness candidates about {genus_candidate_records:,}; SSDM about {genus_ssdm_records:,} per species."
-    )
     genus_name = st.sidebar.text_input("Genus name", value="", placeholder="e.g. Cirsium", key="genus_name_input_no_autofill")
     country_options = ["", "JP", "US", "GB", "CN", "KR", "TW", "DE", "FR", "IT", "ES", "AU", "NZ", "CA", "BR", "IN", "ID", "TH", "VN"]
     selected_country = st.sidebar.selectbox("Country code filter (optional)", country_options, index=1, key="genus_country_code_filter", help="Leave blank for worldwide. Two-letter ISO country code.")
