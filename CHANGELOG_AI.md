@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-09 - Codex (OpenAI) - Reduce candidate-map click lag
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Removed redundant immediate `st.rerun()` calls after species-mode candidate marker click toggles and rectangle group selections.
+- Applied the same redundant-rerun removal to genus-mode hotspot marker click toggles and rectangle group selections.
+- Kept selection state updates in session state so the selected-site summary can update during the same Streamlit pass instead of forcing a second full map rebuild.
+
+Features preserved:
+- Click-to-toggle candidate selection, rectangle group selection, selected-site session state, selected-site summaries, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and clear-selection buttons remain available.
+
+Known risks / TODO:
+- In some Streamlit/Folium sessions, selected-marker outline redraw may appear on the next map rerun rather than through an extra forced rerun; this is intentional to reduce click lag.
+
 ## 2026-06-09 - Codex (OpenAI) - Remove selected-candidate best-time panel
 
 Changed files:

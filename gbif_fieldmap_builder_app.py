@@ -3529,7 +3529,6 @@ def genus_diversity_panel() -> None:
                     else:
                         selected.append(sid)
                     st.session_state.genus_selected_site_ids = selected
-                    st.rerun()
         raw_drawings = (genus_map_data or {}).get("all_drawings") or (genus_map_data or {}).get("last_active_drawing")
         features = extract_drawn_features(raw_drawings)
         if features:
@@ -3540,7 +3539,6 @@ def genus_diversity_panel() -> None:
                 if rect_ids:
                     existing = set(st.session_state.genus_selected_site_ids)
                     st.session_state.genus_selected_site_ids = sorted(existing | set(map(int, rect_ids)))
-                    st.rerun()
 
         html_bytes = genus_map.get_root().render().encode("utf-8")
         selected_ids_now = list(st.session_state.get("genus_selected_site_ids", []))
@@ -4863,7 +4861,6 @@ def main() -> None:
                     else:
                         selected.append(sid)
                     st.session_state.sl_selected_site_ids = selected
-                    st.rerun()
         raw_drawings = (main_map_data or {}).get("all_drawings") or (main_map_data or {}).get("last_active_drawing")
         features = extract_drawn_features(raw_drawings)
         if features:
@@ -4874,7 +4871,6 @@ def main() -> None:
                 if rect_ids:
                     existing = set(st.session_state.sl_selected_site_ids)
                     st.session_state.sl_selected_site_ids = sorted(existing | set(map(int, rect_ids)))
-                    st.rerun()
 
     html_bytes = fmap.get_root().render().encode("utf-8")
 
