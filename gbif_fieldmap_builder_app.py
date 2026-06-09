@@ -3152,6 +3152,39 @@ def _priority_marker_style(row: Any) -> tuple[int, str]:
         return 7, "#7f7f7f"
 
 
+def make_selected_site_overlay(sites: pd.DataFrame, selected_ids: Optional[tuple], name: str = "selected survey sites") -> Optional[FeatureGroup]:
+    if sites is None or sites.empty or not selected_ids:
+        return None
+    selected_set = set(int(s) for s in selected_ids)
+    selected = sites[sites["site_id"].astype(int).isin(selected_set)].copy()
+    if selected.empty:
+        return None
+    fg = FeatureGroup(name=name, show=True)
+    for _, row in selected.iterrows():
+        sid = int(row["site_id"])
+        marker_radius, _color = _priority_marker_style(row)
+        folium.CircleMarker(
+            (float(row["latitude"]), float(row["longitude"])),
+            radius=marker_radius + 5,
+            color="#00cc44",
+            fill=False,
+            weight=3,
+            tooltip=f"SELECTED | site {sid}",
+        ).add_to(fg)
+    return fg
+
+
+def st_folium_with_overlay(fmap: folium.Map, selected_overlay: Optional[FeatureGroup] = None, **kwargs):
+    if selected_overlay is None:
+        return st_folium(fmap, **kwargs)
+    try:
+        return st_folium(fmap, feature_group_to_add=selected_overlay, **kwargs)
+    except TypeError as exc:
+        if "feature_group_to_add" not in str(exc):
+            raise
+        return st_folium(fmap, **kwargs)
+
+
 @st.cache_data(show_spinner=False)
 def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], occurrence_buffer_m: float, survey_range_m: float, layers: dict[str, bool], show_images: bool = True, selected_ids: Optional[tuple] = None, add_draw: bool = False) -> folium.Map:
     center = (float(occ["_latitude"].mean()), float(occ["_longitude"].mean())) if not occ.empty else (35.5, 135.5)
@@ -3547,9 +3580,12 @@ def genus_diversity_panel() -> None:
         if not selected_rows_for_map.empty:
             map_hotspots = pd.concat([map_hotspots, selected_rows_for_map], ignore_index=True, sort=False).drop_duplicates(subset=["site_id"], keep="first")
 
-        genus_map = make_genus_candidate_selection_map(grid, map_hotspots, richness_metric, selected_ids=tuple(sorted(st.session_state.genus_selected_site_ids)), add_draw=True)
-        genus_map_data = st_folium(
+        _genus_sel_ids_for_map = tuple(sorted(st.session_state.genus_selected_site_ids))
+        genus_map = make_genus_candidate_selection_map(grid, map_hotspots, richness_metric, selected_ids=(), add_draw=True)
+        genus_selected_overlay = make_selected_site_overlay(map_hotspots, _genus_sel_ids_for_map, name="selected hotspot sites")
+        genus_map_data = st_folium_with_overlay(
             genus_map,
+            genus_selected_overlay,
             width=None,
             height=720,
             returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],
@@ -4869,9 +4905,11 @@ def main() -> None:
     # Selected sites show a green outer ring.
     _sel_ids_for_map = tuple(sorted(st.session_state.get("sl_selected_site_ids", [])))
     _sites_for_map = map_candidates if not all_candidates.empty else all_candidates
-    fmap = build_map(occ_candidate_input, _sites_for_map, overlay, None, 0.0, float(survey_range_m), layers, bool(show_occurrence_images), selected_ids=_sel_ids_for_map, add_draw=not all_candidates.empty)
-    main_map_data = st_folium(
+    fmap = build_map(occ_candidate_input, _sites_for_map, overlay, None, 0.0, float(survey_range_m), layers, bool(show_occurrence_images), selected_ids=(), add_draw=not all_candidates.empty)
+    selected_overlay = make_selected_site_overlay(_sites_for_map, _sel_ids_for_map)
+    main_map_data = st_folium_with_overlay(
         fmap,
+        selected_overlay,
         width=None,
         height=720,
         returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],

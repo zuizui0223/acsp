@@ -4,6 +4,25 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-09 - Codex (OpenAI) - Keep candidate map cached during selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Moved selected-site green rings into a lightweight Folium overlay passed to `st_folium` separately from the cached base candidate map.
+- Species-mode candidate selection no longer passes changing selected-site IDs into `build_map`, so marker clicks and double-clicks do not invalidate the heavy occurrence/candidate map cache.
+- Applied the same selected-overlay pattern to genus-mode hotspot selection maps.
+- Added a guarded fallback for Streamlit/Folium environments that do not support `feature_group_to_add`.
+
+Features preserved:
+- Candidate marker click selection, rectangle group selection, selected-site green outlines where supported, selected-site summaries, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and clear-selection buttons remain available.
+
+Known risks / TODO:
+- If a deployed `streamlit-folium` version lacks `feature_group_to_add`, the app falls back to the cached base map without the lightweight selected-ring overlay rather than crashing.
+
 ## 2026-06-09 - Codex (OpenAI) - Speed up candidate generation before SDM
 
 Changed files:
