@@ -1220,7 +1220,6 @@ def target_occurrence_set_panel(
                 st.session_state[f"{key_prefix}_last_draw_sig"] = draw_sig
                 st.session_state[f"{key_prefix}_rect_features"] = features
                 reset_model_outputs()
-                st.rerun()
 
     # ── Retrieve stored rectangle ──────────────────────────────────────────────
     stored_features = st.session_state.get(f"{key_prefix}_rect_features", []) or []
@@ -4240,7 +4239,6 @@ def main() -> None:
             st.session_state["target_last_draw_sig"] = _p1_sig
             st.session_state["target_rect_features"] = _p1_features
             reset_model_outputs()
-            st.rerun()
 
     # ── Best time to visit (shown right after fetch) ──────────────────────────
     if "_obs_month" in occ_raw.columns:

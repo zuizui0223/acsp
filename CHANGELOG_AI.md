@@ -4,6 +4,25 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-09 - Codex (OpenAI) - Reduce survey-area rectangle lag
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Pulled the latest GitHub `main` before making changes.
+- Removed redundant `st.rerun()` calls after survey-area rectangle drawings are stored in session state.
+- Species mode macro distribution rectangles and genus mode target-occurrence rectangles now save the drawn rectangle and continue through the same Streamlit rerun, instead of triggering an immediate second rerun.
+- This keeps rectangle selection behavior unchanged while reducing the visible pause after drawing a survey-area box.
+
+Features preserved:
+- Step 2 rectangle survey-area selection, clear-rectangle buttons, SDM/SSDM independence from Step 2, candidate generation, genus richness hotspots, species-mode candidates, optional SDM/SSDM, VIF diagnostics, spatial validation, maps, and downloads remain available.
+
+Known risks / TODO:
+- Candidate/richness generation still runs after the rectangle is accepted; if very large target areas remain slow, the next optimization should cache candidate-input/richness computations or add an explicit lightweight apply step.
+
 ## 2026-06-05 - Claude (claude-sonnet-4-6) - Add phenology/flowering-season support to fieldwork planning workflow
 
 Changed files:
