@@ -4,6 +4,25 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-09 - Codex (OpenAI) - Fix rectangle clearing on survey-site maps
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Connected existing map reset tokens to Streamlit/Folium component keys so clearing rectangles actually remounts the map instead of receiving stale browser-side drawing state.
+- Fixed the species known-distribution `Clear rectangle` button by incrementing `target_map_reset_token` and using it in the macro map key.
+- Added explicit `Clear selection rectangles` buttons for species candidate selection and genus hotspot selection maps.
+- Added reset-token updates for selection-map clears, data reloads, genus fetches, and mode switches so old drawn rectangles do not persist across workflows.
+
+Features preserved:
+- Step 2 survey-area rectangles, candidate-selection rectangles, click-to-toggle selection, bulk top-ranked selection, selected-site summaries, selected green outlines, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and lightweight selection maps remain available.
+
+Known risks / TODO:
+- Clearing a rectangle remounts the affected Folium map, which is intentional and should be more reliable than trying to mutate the existing browser-side drawing layer.
+
 ## 2026-06-09 - Codex (OpenAI) - Make selection maps lightweight by default
 
 Changed files:

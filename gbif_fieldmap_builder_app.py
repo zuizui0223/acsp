@@ -336,19 +336,23 @@ def init_session_state() -> None:
         "sl_selected_site_ids": [],
         "sl_last_draw_sig": "",
         "sl_reset_token": 0,
+        "target_map_reset_token": 0,
         "qc_rect_selected_ids": [],
         "qc_rect_features": [],
         "qc_last_draw_sig": "",
+        "qc_map_reset_token": 0,
         "target_rect_features": [],
         "target_last_draw_sig": "",
         "genus_target_rect_features": [],
         "genus_target_last_draw_sig": "",
+        "genus_target_map_reset_token": 0,
         "genus_raw_df": None,
         "genus_source_key": None,
         "genus_source_message": "No genus occurrence data loaded yet.",
         "genus_selected_site_ids": [],
         "genus_last_click_signature": "",
         "genus_last_draw_sig": "",
+        "genus_selection_map_reset_token": 0,
         "genus_ssdm_grid": None,
         "genus_ssdm_hotspots": None,
         "genus_ssdm_shape": None,
@@ -378,6 +382,7 @@ def clear_loaded_data() -> None:
     st.session_state.qc_last_draw_sig = ""
     st.session_state.target_rect_features = []
     st.session_state.target_last_draw_sig = ""
+    st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
     st.session_state.source_message = "No occurrence data loaded yet."
 
 
@@ -388,6 +393,8 @@ def clear_genus_data() -> None:
     st.session_state.genus_selected_site_ids = []
     st.session_state.genus_last_click_signature = ""
     st.session_state.genus_last_draw_sig = ""
+    st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
+    st.session_state.genus_target_map_reset_token = st.session_state.get("genus_target_map_reset_token", 0) + 1
     st.session_state.genus_ssdm_grid = None
     st.session_state.genus_ssdm_hotspots = None
     st.session_state.genus_ssdm_shape = None
@@ -1221,6 +1228,7 @@ def target_occurrence_set_panel(
             if st.button("Clear target rectangle", key=f"{key_prefix}_clear_target_rect"):
                 st.session_state[f"{key_prefix}_rect_features"] = []
                 st.session_state[f"{key_prefix}_last_draw_sig"] = ""
+                st.session_state[f"{key_prefix}_map_reset_token"] = st.session_state.get(f"{key_prefix}_map_reset_token", 0) + 1
                 reset_model_outputs()
                 st.rerun()
         with col_map:
@@ -1229,7 +1237,7 @@ def target_occurrence_set_panel(
                 width=None,
                 height=420,
                 returned_objects=["all_drawings", "last_active_drawing"],
-                key=f"{key_prefix}_target_occurrence_map",
+                key=f"{key_prefix}_target_occurrence_map_{st.session_state.get(f'{key_prefix}_map_reset_token', 0)}",
             )
         raw_drawings = (draw_data or {}).get("all_drawings") or (draw_data or {}).get("last_active_drawing")
         features = extract_drawn_features(raw_drawings)
@@ -3280,6 +3288,9 @@ def load_input_controls(default_fetch_cap: int = FAST_SPECIES_GBIF_FETCH_CAP) ->
                 st.session_state.restore_excluded_row_ids = []
                 st.session_state.target_rect_features = []
                 st.session_state.target_last_draw_sig = ""
+                st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
+                st.session_state.sl_last_draw_sig = ""
+                st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
                 reset_model_outputs()
         return
     name = st.sidebar.text_input("Taxon scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_taxon_scientific_name_input")
@@ -3332,6 +3343,9 @@ def load_input_controls(default_fetch_cap: int = FAST_SPECIES_GBIF_FETCH_CAP) ->
         st.session_state.restore_excluded_row_ids = []
         st.session_state.target_rect_features = []
         st.session_state.target_last_draw_sig = ""
+        st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
+        st.session_state.sl_last_draw_sig = ""
+        st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
         reset_model_outputs()
 
 
@@ -3400,9 +3414,11 @@ def genus_diversity_panel() -> None:
                 st.session_state.genus_source_message = msg
                 st.session_state.genus_target_rect_features = []
                 st.session_state.genus_target_last_draw_sig = ""
+                st.session_state.genus_target_map_reset_token = st.session_state.get("genus_target_map_reset_token", 0) + 1
                 st.session_state.genus_selected_site_ids = []
                 st.session_state.genus_last_click_signature = ""
                 st.session_state.genus_last_draw_sig = ""
+                st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
                 st.session_state.genus_ssdm_grid = None
                 st.session_state.genus_ssdm_hotspots = None
                 st.session_state.genus_ssdm_shape = None
@@ -3583,6 +3599,7 @@ def genus_diversity_panel() -> None:
             st.session_state.genus_selected_site_ids = []
             st.session_state.genus_last_click_signature = ""
             st.session_state.genus_last_draw_sig = ""
+            st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
             st.rerun()
         genus_show_grid_on_selection_map = st.checkbox(
             "Show richness grid on selection map (slower)",
@@ -3590,6 +3607,10 @@ def genus_diversity_panel() -> None:
             key="genus_show_grid_on_selection_map",
             help="Off keeps hotspot selection responsive. Turn on when you want to inspect observed richness cells behind the candidates.",
         )
+        if st.button("Clear selection rectangles", key="genus_clear_selection_rectangles", use_container_width=True):
+            st.session_state.genus_last_draw_sig = ""
+            st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
+            st.rerun()
 
         map_hotspots = genus_all_candidates.copy()
         type_mask = pd.Series(False, index=map_hotspots.index)
@@ -3632,7 +3653,7 @@ def genus_diversity_panel() -> None:
             width=None,
             height=720,
             returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],
-            key="genus_hotspot_selection_map",
+            key=f"genus_hotspot_selection_map_{st.session_state.get('genus_selection_map_reset_token', 0)}",
         )
         clicked = (genus_map_data or {}).get("last_object_clicked")
         clicked_tooltip = (genus_map_data or {}).get("last_object_clicked_tooltip") or ""
@@ -4268,11 +4289,14 @@ def main() -> None:
         st.session_state.qc_rect_features = []
         st.session_state.target_rect_features = []
         st.session_state.target_last_draw_sig = ""
+        st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
         st.session_state.genus_target_rect_features = []
         st.session_state.genus_target_last_draw_sig = ""
+        st.session_state.genus_target_map_reset_token = st.session_state.get("genus_target_map_reset_token", 0) + 1
         st.session_state.genus_selected_site_ids = []
         st.session_state.genus_last_click_signature = ""
         st.session_state.genus_last_draw_sig = ""
+        st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
     st.session_state["_last_analysis_mode"] = analysis_mode
 
     if analysis_mode == "Genus diversity / SSDM":
@@ -4344,6 +4368,7 @@ def main() -> None:
         if st.button("Clear rectangle", key="target_clear_target_rect"):
             st.session_state["target_rect_features"] = []
             st.session_state["target_last_draw_sig"] = ""
+            st.session_state["target_map_reset_token"] = st.session_state.get("target_map_reset_token", 0) + 1
             reset_model_outputs()
             st.rerun()
     with col_p1_map:
@@ -4351,7 +4376,7 @@ def main() -> None:
             make_macro_cluster_map(occ_raw),
             width=None, height=600,
             returned_objects=["all_drawings", "last_active_drawing"],
-            key="macro_cluster_map",
+            key=f"macro_cluster_map_{st.session_state.get('target_map_reset_token', 0)}",
         )
     _p1_raw = (p1_draw_data or {}).get("all_drawings") or (p1_draw_data or {}).get("last_active_drawing")
     _p1_features = extract_drawn_features(_p1_raw)
@@ -4918,6 +4943,7 @@ def main() -> None:
             st.session_state.sl_selected_site_ids = []
             st.session_state.last_route_click_signature = ""
             st.session_state.sl_last_draw_sig = ""
+            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
             st.rerun()
         show_occurrences_on_selection_map = st.checkbox(
             "Show candidate-input occurrence points on selection map (slower)",
@@ -4925,6 +4951,10 @@ def main() -> None:
             key="sl_show_occurrences_on_selection_map",
             help="Off keeps map selection responsive. Turn on to verify all occurrence points used for candidate generation on this same map.",
         )
+        if st.button("Clear selection rectangles", key="sl_clear_selection_rectangles", use_container_width=True):
+            st.session_state.sl_last_draw_sig = ""
+            st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
+            st.rerun()
 
         map_candidates = all_candidates.copy()
         type_mask = pd.Series(False, index=map_candidates.index)
@@ -4969,7 +4999,7 @@ def main() -> None:
         width=None,
         height=720,
         returned_objects=["last_object_clicked", "last_object_clicked_tooltip", "all_drawings", "last_active_drawing"],
-        key="main_map",
+        key=f"main_map_{st.session_state.get('sl_reset_token', 0)}",
     )
 
     if not all_candidates.empty:
