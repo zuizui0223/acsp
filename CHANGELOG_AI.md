@@ -4,6 +4,35 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-12 - Claude - Add ACSP candidate-SET selection algorithm
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest policy files (`AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`) and inspected the current candidate-generation, scoring, selection, and export code before editing.
+- Added **ACSP (Adaptive Complementarity-based Survey Prioritization)** — a candidate-*set* selection algorithm, not just new per-candidate scoring variables. It moves beyond independent weighted candidate scores to choose a survey set that jointly maximises detection potential, model support, environmental/geographic complementarity, exploration value, and sampling-gap coverage while reducing redundancy and excessive travel.
+- Implemented `acsp_select()` as a greedy marginal-gain set builder. For each unselected candidate the marginal gain is `base_score + coverage_gain + exploration_gain + sampling_gap_gain - redundancy_penalty - travel_penalty`. The existing `priority_score` is preserved and reused as `base_score`.
+- Added four selection modes (`ACSP_SELECTION_MODES`), each with its own component weight preset: **Simple top-ranked** (pure priority order), **Complementarity-based batch selection**, **Exploration-focused active survey**, and **Phylogeographic gap-filling**.
+- Component design, using only data already on the candidate dataframe (no new user uploads required):
+  - **Geographic complementarity** rewards candidates far from already-selected sites; redundancy penalty applies to candidates that are moderately close but not within the planned local cluster distance (same-cluster picks are allowed).
+  - **Environmental complementarity** is used when environmental/PCA predictor columns (e.g. `bio*`, `pca*`, `pc#`, `env_*`, elevation) are present on candidates, computed as standardized environmental-space distance to the selected set; it falls back to geographic complementarity when no environmental variables exist.
+  - **Exploration gain** rewards SDM-high/SSDM-high exploration candidates, high `sdm_suitability`, distance from known occurrence-supported sites (`distance_to_nearest_known_m`), and model uncertainty columns when available.
+  - **Sampling-gap gain** rewards under-sampled (low record-count) sites plus new region/island/richness-cluster coverage and, in genus mode, candidates whose `species_list` covers species not yet represented in the selected set.
+  - **Travel penalty** is a mild distance-based penalty for sites far from the selected set (no full routing).
+- Optional `selected_ids` (S0) seeds the set with already-selected/sampled sites, preserving the user's manual selection order before greedy complementarity filling continues.
+- Required computed columns are emitted on the selected set: `base_score`, `geographic_complementarity_gain`, `environmental_complementarity_gain` (when env predictors exist), `exploration_gain`, `sampling_gap_gain`, `redundancy_penalty`, `travel_penalty`, `marginal_gain_score`, `selection_step`, `selection_reason`, and `selection_algorithm`.
+- UI (map-first selection preserved): added an **"Auto-select by selected algorithm"** button with a selection-algorithm dropdown, a K input, and an optional "seed with current selection" toggle to both the single-species candidate selection panel and the genus hotspot selection panel. Selected sites now display `selection_step`, `marginal_gain_score`, and `selection_reason`. Manual click-to-toggle and rectangle selection remain fully available.
+- Exports: extended `EXPORT_CSV_COLS` so the selected-site CSV includes all marginal-gain columns, and added `selection_algorithm` and `selection_reason` (plus `selection_step`/`marginal_gain_score`) to the field-validation template.
+- Verified the algorithm in isolation across all four modes (distinct, sensible site sets), the S0 seeding path, the environmental-complementarity path, and empty-input handling; ran `python -m py_compile gbif_fieldmap_builder_app.py` successfully.
+
+Features preserved:
+- Existing `priority_score`, occurrence-supported candidates, SDM-high exploration candidates, genus richness hotspots, SSDM-high exploration candidates, manual map/rectangle selection, selected-site summaries, and all CSV/HTML/KML/validation exports remain available. ACSP is purely additive and off by default until the user clicks the auto-select button.
+
+Known risks / TODO:
+- ACSP runs a greedy O(K·n) loop over the filtered candidate pool; very large pools with large K may add a short delay. Environmental complementarity only activates when environmental/PCA columns are already attached to candidates (geographic complementarity is the documented fallback otherwise).
+
 ## 2026-06-09 - Codex (OpenAI) - Restore visible candidate maps and prioritize ranked output
 
 Changed files:

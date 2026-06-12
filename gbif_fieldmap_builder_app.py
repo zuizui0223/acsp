@@ -359,6 +359,8 @@ def init_session_state() -> None:
         "genus_ssdm_bounds": None,
         "genus_ssdm_model_summary": None,
         "_last_analysis_mode": None,
+        "acsp_result_species": None,
+        "acsp_result_genus": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -1951,6 +1953,393 @@ def add_priority_rank(sites: pd.DataFrame, observed_weight: float = 0.7, model_w
     rank = out.sort_values(sort_cols, ascending=False, na_position="last").reset_index(drop=True)
     rank["priority_rank"] = range(1, len(rank) + 1)
     return out.drop(columns=["priority_rank"], errors="ignore").merge(rank[["site_id", "priority_rank"]], on="site_id", how="left")
+
+
+# ── ACSP: Adaptive Complementarity-based Survey Prioritization ────────────────
+# A candidate-SET selection algorithm. Instead of ranking candidates only by
+# their independent priority_score, ACSP greedily builds a survey set whose
+# members jointly maximise detection potential, model support, environmental /
+# geographic complementarity, exploration value and sampling-gap coverage while
+# penalising redundancy and excessive travel. It uses only data already present
+# on the candidate dataframe (no new user uploads required) and degrades
+# gracefully when optional columns (SDM suitability, species lists, environment
+# predictors, region labels) are unavailable.
+
+ACSP_SELECTION_MODES = [
+    "Simple top-ranked",
+    "Complementarity-based batch selection",
+    "Exploration-focused active survey",
+    "Phylogeographic gap-filling",
+]
+
+# Per-mode component weights for the marginal-gain function.
+# marginal_gain = w_base*base_score + w_coverage*coverage_gain
+#               + w_exploration*exploration_gain + w_gap*sampling_gap_gain
+#               - w_redundancy*redundancy_penalty - w_travel*travel_penalty
+ACSP_MODE_WEIGHTS: dict[str, dict[str, float]] = {
+    "Simple top-ranked": {
+        "base": 1.0, "coverage": 0.0, "exploration": 0.0,
+        "gap": 0.0, "redundancy": 0.0, "travel": 0.0,
+    },
+    "Complementarity-based batch selection": {
+        "base": 1.0, "coverage": 0.8, "exploration": 0.3,
+        "gap": 0.4, "redundancy": 0.8, "travel": 0.15,
+    },
+    "Exploration-focused active survey": {
+        "base": 0.6, "coverage": 0.5, "exploration": 1.0,
+        "gap": 0.5, "redundancy": 0.5, "travel": 0.1,
+    },
+    "Phylogeographic gap-filling": {
+        "base": 0.6, "coverage": 0.6, "exploration": 0.3,
+        "gap": 1.0, "redundancy": 0.7, "travel": 0.1,
+    },
+}
+
+# Output columns added by ACSP (in addition to the original candidate columns).
+ACSP_GAIN_COLUMNS = [
+    "base_score",
+    "geographic_complementarity_gain",
+    "environmental_complementarity_gain",
+    "exploration_gain",
+    "sampling_gap_gain",
+    "redundancy_penalty",
+    "travel_penalty",
+    "marginal_gain_score",
+    "selection_step",
+    "selection_reason",
+    "selection_algorithm",
+]
+
+
+def _acsp_normalize(values: Any) -> np.ndarray:
+    """Min-max normalise to 0..1; non-finite entries map to 0; constant arrays map to 0."""
+    arr = pd.to_numeric(pd.Series(values), errors="coerce").to_numpy(dtype=float)
+    finite = np.isfinite(arr)
+    out = np.zeros_like(arr, dtype=float)
+    if not finite.any():
+        return out
+    lo = float(np.min(arr[finite]))
+    hi = float(np.max(arr[finite]))
+    if hi - lo <= 1e-12:
+        return out
+    out[finite] = (arr[finite] - lo) / (hi - lo)
+    return np.clip(out, 0.0, 1.0)
+
+
+def _acsp_point_distances_m(lat: float, lon: float, lats: np.ndarray, lons: np.ndarray) -> np.ndarray:
+    """Haversine distance (metres) from one point to arrays of points."""
+    lat_r = math.radians(float(lat))
+    lon_r = math.radians(float(lon))
+    lats_r = np.radians(lats)
+    lons_r = np.radians(lons)
+    dlat = lats_r - lat_r
+    dlon = lons_r - lon_r
+    a = np.sin(dlat / 2.0) ** 2 + math.cos(lat_r) * np.cos(lats_r) * np.sin(dlon / 2.0) ** 2
+    return 2.0 * EARTH_RADIUS_M * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+
+
+def _acsp_environment_columns(df: pd.DataFrame) -> list[str]:
+    """Detect usable numeric environmental / PCA predictor columns on candidates."""
+    usable: list[str] = []
+    for col in df.columns:
+        name = str(col).lower()
+        looks_env = (
+            name.startswith("pca")
+            or name.startswith("pc_")
+            or re.match(r"^pc\d+$", name) is not None
+            or name.startswith("env_")
+            or name.startswith("bio")
+            or name in {"elevation", "elev", "altitude"}
+        )
+        if not looks_env:
+            continue
+        series = pd.to_numeric(df[col], errors="coerce")
+        if series.notna().sum() >= 2 and float(series.std(skipna=True) or 0.0) > 0.0:
+            usable.append(col)
+    return usable
+
+
+def _acsp_region_labels(df: pd.DataFrame) -> Optional[pd.Series]:
+    """Return a per-candidate region/island/richness-cluster label Series if any such column exists."""
+    for col in ["region", "island", "richness_cluster", "cluster_label", "admin_area",
+                "province", "state", "biogeographic_region", "ecoregion"]:
+        if col in df.columns and df[col].notna().any():
+            return df[col].astype(str)
+    return None
+
+
+def _acsp_species_sets(df: pd.DataFrame) -> Optional[list[set]]:
+    """Parse per-candidate species lists (semicolon/comma separated) for coverage gap-filling."""
+    if "species_list" not in df.columns:
+        return None
+    sets: list[set] = []
+    any_species = False
+    for raw in df["species_list"].astype(str).tolist():
+        if raw in ("", "nan", "None"):
+            sets.append(set())
+            continue
+        parts = [p.strip() for chunk in raw.split(";") for p in chunk.split(",")]
+        species = {p for p in parts if p and p.lower() not in ("nan", "none")}
+        if species:
+            any_species = True
+        sets.append(species)
+    return sets if any_species else None
+
+
+def acsp_select(
+    candidates: pd.DataFrame,
+    k: int,
+    mode: str = "Complementarity-based batch selection",
+    selected_ids: Optional[list] = None,
+    *,
+    complementarity_scale_m: float = 25_000.0,
+    cluster_distance_m: float = 4_000.0,
+    redundancy_scale_m: float = 8_000.0,
+    travel_scale_m: float = 200_000.0,
+    weights: Optional[dict[str, float]] = None,
+) -> pd.DataFrame:
+    """Greedy Adaptive Complementarity-based Survey Prioritization.
+
+    Builds a survey set of (up to) ``k`` sites. ``selected_ids`` (S0) are treated
+    as already chosen and are placed first in the output (preserving the user's
+    manual selection order) before greedy complementarity filling continues.
+
+    Returns the selected candidates in selection order, with all ACSP gain
+    columns populated. Uses only columns already present on ``candidates``.
+    """
+    base_cols_present = candidates is not None and not candidates.empty
+    if not base_cols_present or int(k) <= 0:
+        empty = (candidates.head(0).copy() if candidates is not None else pd.DataFrame())
+        for col in ACSP_GAIN_COLUMNS:
+            if col not in empty.columns:
+                empty[col] = []
+        return empty
+
+    df = candidates.reset_index(drop=True).copy()
+    n = len(df)
+    k = min(int(k), n)
+    mode = mode if mode in ACSP_MODE_WEIGHTS else "Complementarity-based batch selection"
+    w = dict(ACSP_MODE_WEIGHTS[mode])
+    if weights:
+        w.update({key: float(val) for key, val in weights.items() if key in w})
+
+    lats = pd.to_numeric(df["latitude"], errors="coerce").to_numpy(dtype=float)
+    lons = pd.to_numeric(df["longitude"], errors="coerce").to_numpy(dtype=float)
+    base_score = pd.to_numeric(df.get("priority_score", pd.Series(0.0, index=df.index)), errors="coerce").fillna(0.0).clip(0.0, 1.0).to_numpy()
+
+    # ── Static (S-independent) component: exploration gain ───────────────────
+    cand_type = df.get("candidate_type", pd.Series("", index=df.index)).astype(str)
+    is_explore_type = cand_type.str.contains("exploration", case=False, na=False) | cand_type.str.startswith(("SDM-high", "SSDM-high"))
+    expl_parts: list[np.ndarray] = []
+    sdm_suit = pd.to_numeric(df.get("sdm_suitability", pd.Series(np.nan, index=df.index)), errors="coerce")
+    if sdm_suit.notna().any():
+        expl_parts.append(0.5 * _acsp_normalize(sdm_suit))
+    dist_known = pd.to_numeric(df.get("distance_to_nearest_known_m", pd.Series(np.nan, index=df.index)), errors="coerce")
+    if dist_known.notna().any():
+        expl_parts.append(0.3 * _acsp_normalize(dist_known))
+    uncertainty = None
+    for unc_col in ["model_uncertainty", "model_support_sd", "prediction_sd", "sdm_sd", "ensemble_sd"]:
+        if unc_col in df.columns and pd.to_numeric(df[unc_col], errors="coerce").notna().any():
+            uncertainty = pd.to_numeric(df[unc_col], errors="coerce")
+            break
+    if uncertainty is not None:
+        expl_parts.append(0.2 * _acsp_normalize(uncertainty))
+    exploration_gain = np.sum(expl_parts, axis=0) if expl_parts else np.zeros(n)
+    exploration_gain = exploration_gain + 0.2 * is_explore_type.to_numpy(dtype=float)
+    exploration_gain = np.clip(exploration_gain, 0.0, 1.0)
+
+    # ── Static sampling-gap component: under-sampled (few records) sites ──────
+    n_occ = pd.to_numeric(df.get("n_occurrences", pd.Series(0.0, index=df.index)), errors="coerce").fillna(0.0)
+    static_gap = 1.0 - _acsp_normalize(np.log1p(n_occ.to_numpy()))
+
+    # ── Optional environmental space (standardised) ──────────────────────────
+    env_cols = _acsp_environment_columns(df)
+    env_matrix = None
+    env_scale = 1.0
+    if env_cols:
+        raw_env = df[env_cols].apply(lambda s: pd.to_numeric(s, errors="coerce"))
+        col_means = raw_env.mean(axis=0)
+        col_stds = raw_env.std(axis=0).replace(0.0, np.nan)
+        env_matrix = ((raw_env - col_means) / col_stds).fillna(0.0).to_numpy(dtype=float)
+        env_scale = max(1e-6, math.sqrt(len(env_cols)))
+
+    # ── Dynamic novelty inputs (region / species coverage) ───────────────────
+    region_labels = _acsp_region_labels(df)
+    species_sets = _acsp_species_sets(df)
+
+    has_env = env_matrix is not None
+    forced_positions: list[int] = []
+    if selected_ids:
+        id_to_pos = {int(sid): pos for pos, sid in enumerate(df["site_id"].astype(int).tolist())}
+        seen: set[int] = set()
+        for sid in selected_ids:
+            try:
+                sid_int = int(sid)
+            except (TypeError, ValueError):
+                continue
+            pos = id_to_pos.get(sid_int)
+            if pos is not None and pos not in seen:
+                forced_positions.append(pos)
+                seen.add(pos)
+
+    selected_positions: list[int] = []
+    selected_set: set[int] = set()
+    selected_regions: set[str] = set()
+    selected_species: set = set()
+    records: list[dict[str, Any]] = []
+
+    def _component_values(i: int) -> dict[str, float]:
+        if selected_positions:
+            sel_lat = lats[selected_positions]
+            sel_lon = lons[selected_positions]
+            dists = _acsp_point_distances_m(lats[i], lons[i], sel_lat, sel_lon)
+            d_min = float(np.min(dists)) if dists.size else float("inf")
+            geo_gain = 1.0 - math.exp(-d_min / complementarity_scale_m)
+            if has_env:
+                env_d = np.sqrt(np.sum((env_matrix[selected_positions] - env_matrix[i]) ** 2, axis=1))
+                env_min = float(np.min(env_d)) if env_d.size else float("inf")
+                env_gain = 1.0 - math.exp(-env_min / env_scale)
+            else:
+                env_gain = float("nan")
+            redundancy = 0.0 if d_min < cluster_distance_m else math.exp(-d_min / redundancy_scale_m)
+            travel = float(np.clip(d_min / travel_scale_m, 0.0, 1.0))
+        else:
+            geo_gain = 0.0
+            env_gain = 0.0 if has_env else float("nan")
+            redundancy = 0.0
+            travel = 0.0
+        coverage = env_gain if (has_env and np.isfinite(env_gain)) else geo_gain
+
+        novelty_signals: list[float] = []
+        if region_labels is not None:
+            novelty_signals.append(0.0 if str(region_labels.iloc[i]) in selected_regions else 1.0)
+        if species_sets is not None:
+            cand_species = species_sets[i]
+            if cand_species:
+                novelty_signals.append(len(cand_species - selected_species) / len(cand_species))
+            else:
+                novelty_signals.append(0.0)
+        if novelty_signals:
+            sampling_gap = 0.4 * float(static_gap[i]) + 0.6 * float(np.mean(novelty_signals))
+        else:
+            sampling_gap = float(static_gap[i])
+
+        marginal = (
+            w["base"] * float(base_score[i])
+            + w["coverage"] * float(coverage)
+            + w["exploration"] * float(exploration_gain[i])
+            + w["gap"] * float(sampling_gap)
+            - w["redundancy"] * float(redundancy)
+            - w["travel"] * float(travel)
+        )
+        return {
+            "geo_gain": geo_gain,
+            "env_gain": env_gain,
+            "coverage": coverage,
+            "redundancy": redundancy,
+            "travel": travel,
+            "sampling_gap": sampling_gap,
+            "marginal": marginal,
+        }
+
+    def _selection_reason(step: int, comp: dict[str, float]) -> str:
+        contributions = {
+            "high priority/base score": w["base"] * float(base_score[i_sel]),
+            ("environmental complementarity" if has_env else "geographic complementarity"): w["coverage"] * float(comp["coverage"]),
+            "exploration value": w["exploration"] * float(exploration_gain[i_sel]),
+            "sampling-gap coverage": w["gap"] * float(comp["sampling_gap"]),
+        }
+        ranked = sorted(contributions.items(), key=lambda kv: kv[1], reverse=True)
+        drivers = [name for name, val in ranked if val > 1e-6][:2]
+        if not drivers:
+            reason = f"Step {step}: selected by {mode}"
+        else:
+            reason = f"Step {step}: " + " + ".join(drivers)
+        if comp["redundancy"] < 1e-6 and selected_positions:
+            reason += "; low redundancy with already-selected sites"
+        return reason
+
+    while len(selected_positions) < k:
+        remaining = [p for p in range(n) if p not in selected_set]
+        if not remaining:
+            break
+        next_forced = [p for p in forced_positions if p not in selected_set]
+        if next_forced:
+            i_sel = next_forced[0]
+            comp = _component_values(i_sel)
+        else:
+            best_i = None
+            best_comp = None
+            best_val = -float("inf")
+            for i in remaining:
+                comp_i = _component_values(i)
+                if comp_i["marginal"] > best_val:
+                    best_val = comp_i["marginal"]
+                    best_i = i
+                    best_comp = comp_i
+            i_sel = best_i
+            comp = best_comp
+        if i_sel is None:
+            break
+
+        step = len(selected_positions) + 1
+        records.append({
+            "_pos": i_sel,
+            "selection_step": step,
+            "base_score": round(float(base_score[i_sel]), 4),
+            "geographic_complementarity_gain": round(float(comp["geo_gain"]), 4),
+            "environmental_complementarity_gain": (round(float(comp["env_gain"]), 4) if np.isfinite(comp["env_gain"]) else np.nan),
+            "exploration_gain": round(float(exploration_gain[i_sel]), 4),
+            "sampling_gap_gain": round(float(comp["sampling_gap"]), 4),
+            "redundancy_penalty": round(float(comp["redundancy"]), 4),
+            "travel_penalty": round(float(comp["travel"]), 4),
+            "marginal_gain_score": round(float(comp["marginal"]), 4),
+            "selection_reason": _selection_reason(step, comp),
+            "selection_algorithm": mode,
+        })
+        selected_positions.append(i_sel)
+        selected_set.add(i_sel)
+        if region_labels is not None:
+            selected_regions.add(str(region_labels.iloc[i_sel]))
+        if species_sets is not None:
+            selected_species |= species_sets[i_sel]
+
+    if not records:
+        empty = df.head(0).copy()
+        for col in ACSP_GAIN_COLUMNS:
+            if col not in empty.columns:
+                empty[col] = []
+        return empty
+
+    result_rows = []
+    for rec in records:
+        pos = rec.pop("_pos")
+        row = df.iloc[pos].to_dict()
+        if not has_env and "environmental_complementarity_gain" in rec:
+            rec.pop("environmental_complementarity_gain")
+        row.update(rec)
+        result_rows.append(row)
+    result = pd.DataFrame(result_rows)
+    return result.reset_index(drop=True)
+
+
+def acsp_merge_columns(selected_df: pd.DataFrame, acsp_result: Optional[pd.DataFrame]) -> pd.DataFrame:
+    """Merge ACSP gain columns onto a selected-site dataframe by site_id (no-op if no ACSP result)."""
+    if selected_df is None or selected_df.empty or acsp_result is None or acsp_result.empty:
+        return selected_df
+    merge_cols = [c for c in ACSP_GAIN_COLUMNS if c in acsp_result.columns]
+    if not merge_cols:
+        return selected_df
+    right = acsp_result[["site_id"] + merge_cols].copy()
+    right["site_id"] = right["site_id"].astype(int)
+    out = selected_df.copy()
+    drop_existing = [c for c in merge_cols if c in out.columns]
+    if drop_existing:
+        out = out.drop(columns=drop_existing)
+    out["_merge_site_id"] = out["site_id"].astype(int)
+    out = out.merge(right, left_on="_merge_site_id", right_on="site_id", how="left", suffixes=("", "_acsp"))
+    out = out.drop(columns=["_merge_site_id"] + [c for c in out.columns if c.endswith("_acsp")], errors="ignore")
+    return out
 
 
 def make_google_maps_point_url(latitude: float, longitude: float) -> str:
@@ -3598,6 +3987,7 @@ def genus_diversity_panel() -> None:
         genus_travelmode = gi3.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0, key="genus_travelmode")
         if gi4.button("Clear selected hotspots", key="genus_clear_selected_hotspots", disabled=not st.session_state.genus_selected_site_ids):
             st.session_state.genus_selected_site_ids = []
+            st.session_state.acsp_result_genus = None
             st.session_state.genus_last_click_signature = ""
             st.session_state.genus_last_draw_sig = ""
             st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
@@ -3627,6 +4017,7 @@ def genus_diversity_panel() -> None:
             map_hotspots = map_hotspots[pd.to_numeric(map_hotspots["model_support_score"], errors="coerce").fillna(0.0) >= float(genus_min_model)]
         map_sort_cols = available_sort_cols(map_hotspots, ["priority_score", "model_support_score", "occurrence_support_score"])
         map_hotspots = map_hotspots.sort_values(map_sort_cols, ascending=False, na_position="last") if map_sort_cols else map_hotspots
+        genus_acsp_pool = map_hotspots.copy()
         map_hotspots = map_hotspots.head(int(genus_top_sites_shown)).copy()
         st.markdown(f"**Top-ranked hotspot output ({len(map_hotspots)})**")
         if map_hotspots.empty:
@@ -3647,6 +4038,29 @@ def genus_diversity_panel() -> None:
             ):
                 existing = set(map(int, st.session_state.get("genus_selected_site_ids", [])))
                 st.session_state.genus_selected_site_ids = sorted(existing | add_ids)
+
+        # ── ACSP: candidate-SET selection for genus hotspots ─────────────────
+        st.markdown("#### Auto-select a survey set (ACSP)")
+        st.caption(
+            "Adaptive Complementarity-based Survey Prioritization picks a *set* of hotspots that jointly "
+            "maximises detection potential, model support, geographic/environmental complementarity, "
+            "exploration value and species/sampling-gap coverage while reducing redundancy. "
+            "Phylogeographic gap-filling rewards hotspots covering species or regions not yet represented in the selected set."
+        )
+        gac1, gac2, gac3 = st.columns([2, 1, 1])
+        genus_acsp_mode = gac1.selectbox("Selection algorithm", ACSP_SELECTION_MODES, index=3, key="acsp_mode_genus")
+        genus_acsp_k = gac2.number_input("Sites to select (K)", 1, max(1, len(genus_acsp_pool)), min(10, max(1, len(genus_acsp_pool))), 1, key="acsp_k_genus")
+        genus_acsp_seed = gac3.checkbox("Seed with current selection", value=False, key="acsp_seed_genus", help="Keep already-selected hotspots as the starting set (S0) and fill the rest by complementarity.")
+        if st.button("Auto-select by selected algorithm", key="acsp_run_genus", use_container_width=True, disabled=genus_acsp_pool.empty):
+            genus_seed_ids = list(st.session_state.get("genus_selected_site_ids", [])) if genus_acsp_seed else None
+            genus_acsp_res = acsp_select(genus_acsp_pool, int(genus_acsp_k), genus_acsp_mode, selected_ids=genus_seed_ids)
+            if genus_acsp_res.empty:
+                st.warning("ACSP could not select any hotspots from the current candidate pool.")
+            else:
+                st.session_state.acsp_result_genus = genus_acsp_res
+                st.session_state.genus_selected_site_ids = [int(s) for s in genus_acsp_res["site_id"].tolist()]
+                st.session_state.genus_selection_map_reset_token = st.session_state.get("genus_selection_map_reset_token", 0) + 1
+                st.rerun()
 
         _genus_sel_ids_for_map = tuple(sorted(st.session_state.genus_selected_site_ids))
         genus_map = make_genus_candidate_selection_map(
@@ -3699,15 +4113,17 @@ def genus_diversity_panel() -> None:
         html_bytes = genus_map.get_root().render().encode("utf-8")
         selected_ids_now = list(st.session_state.get("genus_selected_site_ids", []))
         selected_hotspots = genus_all_candidates[genus_all_candidates["site_id"].astype(int).isin(selected_ids_now)].copy()
+        if not selected_hotspots.empty:
+            selected_hotspots = acsp_merge_columns(selected_hotspots, st.session_state.get("acsp_result_genus"))
         if not selected_hotspots.empty and selected_ids_now:
             order_map = {sid: i for i, sid in enumerate(selected_ids_now)}
             selected_hotspots = selected_hotspots.assign(_ord=selected_hotspots["site_id"].astype(int).map(order_map)).sort_values("_ord").drop(columns=["_ord"])
         st.markdown(f"**Selected hotspot sites ({len(selected_hotspots)})**")
         if selected_hotspots.empty:
-            st.info("No hotspots selected yet. Click candidate markers or draw a rectangle on the map above.")
+            st.info("No hotspots selected yet. Click candidate markers, draw a rectangle, or use ACSP auto-select above.")
         else:
             selected_hotspots["google_maps_point_url"] = selected_hotspots.apply(lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1)
-            sum_cols = [c for c in ["site_id", "priority_rank", "priority_score", "candidate_type", "observed_species_richness", "ssdm_predicted_richness", "google_maps_point_url"] if c in selected_hotspots.columns]
+            sum_cols = [c for c in ["site_id", "selection_step", "priority_rank", "priority_score", "candidate_type", "observed_species_richness", "ssdm_predicted_richness", "marginal_gain_score", "selection_reason", "google_maps_point_url"] if c in selected_hotspots.columns]
             cfg: dict[str, Any] = {}
             if "google_maps_point_url" in sum_cols:
                 cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="Open")
@@ -3720,6 +4136,7 @@ def genus_diversity_panel() -> None:
             gs5.download_button("Validation CSV", make_validation_template(selected_hotspots).to_csv(index=False).encode("utf-8"), "genus_field_validation_template.csv", "text/csv", use_container_width=True, key="genus_selected_hotspots_validation_csv_download")
             if gs6.button("Clear selected", key="genus_clear_selected_hotspots_summary"):
                 st.session_state.genus_selected_site_ids = []
+                st.session_state.acsp_result_genus = None
                 st.session_state.genus_last_click_signature = ""
                 st.session_state.genus_last_draw_sig = ""
                 st.rerun()
@@ -4157,7 +4574,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "exploration_gain", "sampling_gap_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -4254,7 +4671,8 @@ def _make_gmaps_url_with_end(ordered: pd.DataFrame, travelmode: str, start_locat
 
 def make_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
     cols = [
-        "site_id", "candidate_type", "priority_rank", "priority_score",
+        "site_id", "candidate_type", "selection_algorithm", "selection_reason", "selection_step", "marginal_gain_score",
+        "priority_rank", "priority_score",
         "occurrence_support_score", "model_support_score", "sdm_suitability", "ssdm_predicted_richness",
         "observed_species_richness", "species_richness", "species_list",
         "recommended_survey_window", "season_confidence", "flowering_record_count",
@@ -4952,6 +5370,7 @@ def main() -> None:
         travelmode = ic3.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0, key="sl_travelmode")
         if ic4.button("Clear selected sites", key="sl_clear_map_controls", disabled=not st.session_state.sl_selected_site_ids):
             st.session_state.sl_selected_site_ids = []
+            st.session_state.acsp_result_species = None
             st.session_state.last_route_click_signature = ""
             st.session_state.sl_last_draw_sig = ""
             st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
@@ -4982,6 +5401,7 @@ def main() -> None:
 
         sort_cols = available_sort_cols(map_candidates, ["priority_score", "sdm_suitability", "occurrence_support_score"])
         map_candidates = map_candidates.sort_values(sort_cols, ascending=False, na_position="last") if sort_cols else map_candidates
+        acsp_pool = map_candidates.copy()
         map_candidates = map_candidates.head(int(top_sites_shown)).copy()
         st.markdown(f"**Top-ranked candidate output ({len(map_candidates)})**")
         if map_candidates.empty:
@@ -5002,6 +5422,29 @@ def main() -> None:
             ):
                 existing = set(map(int, st.session_state.get("sl_selected_site_ids", [])))
                 st.session_state.sl_selected_site_ids = sorted(existing | add_ids)
+
+        # ── ACSP: candidate-SET selection algorithm ──────────────────────────
+        st.markdown("#### Auto-select a survey set (ACSP)")
+        st.caption(
+            "Adaptive Complementarity-based Survey Prioritization picks a *set* of sites that "
+            "jointly maximises detection potential, model support, environmental/geographic complementarity, "
+            "exploration value and sampling-gap coverage while reducing redundancy. "
+            "Manual map clicks and rectangle selection remain available."
+        )
+        ac1, ac2, ac3 = st.columns([2, 1, 1])
+        acsp_mode = ac1.selectbox("Selection algorithm", ACSP_SELECTION_MODES, index=1, key="acsp_mode_species")
+        acsp_k = ac2.number_input("Sites to select (K)", 1, max(1, len(acsp_pool)), min(10, max(1, len(acsp_pool))), 1, key="acsp_k_species")
+        acsp_seed = ac3.checkbox("Seed with current selection", value=False, key="acsp_seed_species", help="Keep already-selected sites as the starting set (S0) and fill the rest by complementarity.")
+        if st.button("Auto-select by selected algorithm", key="acsp_run_species", use_container_width=True, disabled=acsp_pool.empty):
+            seed_ids = list(st.session_state.get("sl_selected_site_ids", [])) if acsp_seed else None
+            acsp_res = acsp_select(acsp_pool, int(acsp_k), acsp_mode, selected_ids=seed_ids, cluster_distance_m=float(cluster_m))
+            if acsp_res.empty:
+                st.warning("ACSP could not select any sites from the current candidate pool.")
+            else:
+                st.session_state.acsp_result_species = acsp_res
+                st.session_state.sl_selected_site_ids = [int(s) for s in acsp_res["site_id"].tolist()]
+                st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
+                st.rerun()
 
         route_plan = pd.DataFrame()
 
@@ -5059,17 +5502,20 @@ def main() -> None:
     # ── Selected-sites compact summary (replaces Step 4) ─────────────────────
     _sel_ids_now = list(st.session_state.get("sl_selected_site_ids", []))
     _sel_df_summary = all_candidates[all_candidates["site_id"].astype(int).isin(_sel_ids_now)].copy() if not all_candidates.empty else pd.DataFrame()
+    _acsp_res_species = st.session_state.get("acsp_result_species")
+    if not _sel_df_summary.empty:
+        _sel_df_summary = acsp_merge_columns(_sel_df_summary, _acsp_res_species)
     if not _sel_df_summary.empty and _sel_ids_now:
         _ord_map = {sid: i for i, sid in enumerate(_sel_ids_now)}
         _sel_df_summary = _sel_df_summary.assign(_ord=_sel_df_summary["site_id"].astype(int).map(_ord_map)).sort_values("_ord").drop(columns=["_ord"])
     st.markdown(f"**Selected survey sites ({len(_sel_df_summary)})**")
     if _sel_df_summary.empty:
-        st.info("No sites selected yet. Click candidate markers or draw a rectangle on the map above.")
+        st.info("No sites selected yet. Click candidate markers, draw a rectangle, or use ACSP auto-select above.")
     else:
         _sel_df_summary["google_maps_point_url"] = _sel_df_summary.apply(
             lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
         )
-        _sum_cols = [c for c in ["site_id", "priority_rank", "priority_score", "candidate_type", "google_maps_point_url"] if c in _sel_df_summary.columns]
+        _sum_cols = [c for c in ["site_id", "selection_step", "priority_rank", "priority_score", "candidate_type", "marginal_gain_score", "selection_reason", "google_maps_point_url"] if c in _sel_df_summary.columns]
         _sum_cfg: dict[str, Any] = {}
         if "google_maps_point_url" in _sum_cols:
             _sum_cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="📍")
@@ -5091,6 +5537,7 @@ def main() -> None:
         )
         if _sb6.button("Clear selected sites", key="sl_clear_summary"):
             st.session_state.sl_selected_site_ids = []
+            st.session_state.acsp_result_species = None
             st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
             st.session_state.last_route_click_signature = ""
             st.session_state.sl_last_draw_sig = ""
