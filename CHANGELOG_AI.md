@@ -4,6 +4,18 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-13 - Claude - Rename app/tool to ACSP
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Renamed the user-facing application/tool name from "GBIF FieldMap Builder" to **"ACSP — Adaptive Complementarity-based Survey Prioritization"** across display strings: the module docstring header, `APP_TITLE`, the Streamlit page title and `st.title`, the page caption, the KML document `<name>`, and the README title/intro.
+- Left infrastructure identifiers unchanged to avoid breaking deployment and tooling: the source filename `gbif_fieldmap_builder_app.py`, `Procfile`, the GitHub repository slug `zuizui0223/gbif-fieldmap-builder`, and `APP_BUILD_ID`.
+- Ran `python -m py_compile gbif_fieldmap_builder_app.py` successfully.
+
 ## 2026-06-12 - Claude - Add ACSP candidate-SET selection algorithm
 
 Changed files:

@@ -1,5 +1,5 @@
 """
-GBIF FieldMap Builder
+ACSP — Adaptive Complementarity-based Survey Prioritization
 
 Streamlit app for field-survey planning from GBIF records or a coordinate CSV.
 
@@ -48,7 +48,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
 
-APP_TITLE = "GBIF FieldMap Builder"
+APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
 APP_BUILD_ID = "hard-exclusion-v2-20260529"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
@@ -4591,7 +4591,7 @@ def make_export_kml(sites: pd.DataFrame) -> str:
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>',
-        '  <name>GBIF FieldMap Builder survey sites</name>',
+        '  <name>ACSP — Adaptive Complementarity-based Survey Prioritization survey sites</name>',
     ]
     for _, r in sites.iterrows():
         name = f"Site {int(r['site_id'])}"
@@ -4697,8 +4697,8 @@ def make_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🗺️", layout="wide")
     init_session_state()
-    st.title("🗺️ GBIF FieldMap Builder")
-    st.caption("Occurrence-based survey ranges, rectangle coordinate QC, raster-style SDM predict maps, VIF diagnostics, spatial partition diagnostics, and route planning.")
+    st.title("🗺️ ACSP — Adaptive Complementarity-based Survey Prioritization")
+    st.caption("Adaptive Complementarity-based Survey Prioritization: occurrence-based survey ranges, rectangle coordinate QC, raster-style SDM predict maps, VIF diagnostics, spatial partition diagnostics, complementarity-based set selection, and route planning.")
 
     st.sidebar.caption(f"Build: {APP_BUILD_ID}")
     analysis_mode = st.sidebar.radio("Analysis mode", ["Single species survey planning", "Genus diversity / SSDM"], index=0, key="analysis_mode")

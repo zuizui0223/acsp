@@ -1,6 +1,6 @@
-# GBIF FieldMap Builder
+# ACSP — Adaptive Complementarity-based Survey Prioritization
 
-Interactive Streamlit app for building field survey planning maps from GBIF occurrence data.
+Interactive Streamlit app for building field survey planning maps from GBIF occurrence data, with ACSP (Adaptive Complementarity-based Survey Prioritization) candidate-set selection.
 
 ## Features
 
