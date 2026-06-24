@@ -1984,7 +1984,7 @@ ACSP_MODE_WEIGHTS: dict[str, dict[str, float]] = {
     },
     "Complementarity-based batch selection": {
         "base": 1.0, "coverage": 0.8, "exploration": 0.3,
-        "gap": 0.4, "redundancy": 0.8, "travel": 0.15,
+        "gap": 0.4, "redundancy": 0.8, "travel": 0.05,
     },
     "Exploration-focused active survey": {
         "base": 0.6, "coverage": 0.5, "exploration": 1.0,
@@ -2202,7 +2202,9 @@ def acsp_select(
                 env_gain = 1.0 - math.exp(-env_min / env_scale)
             else:
                 env_gain = float("nan")
-            redundancy = 0.0 if d_min < cluster_distance_m else math.exp(-d_min / redundancy_scale_m)
+            redundancy = math.exp(-d_min / redundancy_scale_m)
+            if d_min < cluster_distance_m:
+                redundancy = 1.0
             travel = float(np.clip(d_min / travel_scale_m, 0.0, 1.0))
         else:
             geo_gain = 0.0

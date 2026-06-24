@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-24 - Codex (OpenAI) - Fix ACSP redundancy penalty
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing; local tracked changes were clean and untracked generated files were preserved.
+- Fixed ACSP redundancy scoring so candidates inside `cluster_distance_m` receive a full redundancy penalty instead of no penalty.
+- Changed the redundancy decay to `exp(-d_min / redundancy_scale_m)` for sites outside the local cluster distance, so nearby already-covered areas are penalized more strongly and distant complementary sites are penalized less.
+- Lowered the `Complementarity-based batch selection` travel weight from `0.15` to `0.05`, keeping travel as a mild fieldwork practicality term rather than dominating complementarity.
+
+Features preserved:
+- ACSP selection modes, Simple top-ranked behavior, exploration-focused and phylogeographic modes, manual map/rectangle selection, selected-site summaries, CSV/HTML/KML/validation exports, optional SDM/SSDM, SDM-high/SSDM-high exploratory candidates, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Complementarity mode should now differ more clearly from Simple top-ranked when nearby candidates compete; real-world behavior still depends on candidate geography and selected K.
+
 ## 2026-06-13 - Claude - Fix slow progression after SDM predict map (vectorise hot loops)
 
 Changed files:
