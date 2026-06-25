@@ -4,6 +4,23 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-25 - Codex (OpenAI) - Fix duplicate SSDM variable-selection widget key
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Fixed the StreamlitDuplicateElementKey crash in genus mode by removing a duplicated SSDM variable-selection expander that reused `ssdm_variable_strategy`, `ssdm_corr_threshold`, `ssdm_vif_threshold`, and `ssdm_custom_final_variables`.
+- Preserved the SSDM variable-selection controls inside `Advanced: variables & algorithms` and moved the pooled-variable-selection explanation there.
+
+Features preserved:
+- Genus richness workflow, optional SSDM, shared variable selection, VIF/correlation/custom variable strategies, per-species bias reduction, validation settings, ACSP selection, map selection, and exports remain available.
+
+Known risks / TODO:
+- None known; this is a UI de-duplication fix for Streamlit widget keys.
+
 ## 2026-06-24 - Codex (OpenAI) - Fix ACSP redundancy penalty
 
 Changed files:

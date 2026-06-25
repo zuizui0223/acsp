@@ -4291,7 +4291,10 @@ def genus_diversity_panel() -> None:
         )
 
         with st.expander("Advanced: variables & algorithms", expanded=False):
-            st.caption("Override scientific defaults. Same rules as species SDM.")
+            st.caption(
+                "Override scientific defaults. Variable selection is run once on a pooled sample of all genus "
+                "occurrences and background points, then the retained variable set is used for every per-species model."
+            )
             ssdm_variables = st.multiselect(
                 "SSDM environmental variables",
                 TOPOGRAPHY_VARS + CLIMATE_VARS,
@@ -4361,24 +4364,6 @@ def genus_diversity_panel() -> None:
             ssdm_hotspot_n = _am6.number_input("SSDM hotspot candidates", min_value=1, max_value=200, value=ssdm_hotspot_n, step=1, key="ssdm_hotspot_n")
             ssdm_binary_threshold = _am7.number_input("Binary suitability threshold", min_value=0.0, max_value=1.0, value=ssdm_binary_threshold, step=0.05, key="ssdm_binary_threshold")
 
-        with st.expander("Advanced variable selection", expanded=False):
-            st.caption(
-                "Variable selection is run once on a pooled sample of all genus occurrences and background points. "
-                "The same retained variable set is used for every per-species model. "
-                "VIF stepwise is the default; change this only when you need a different diagnostic filter."
-            )
-            ssdm_variable_strategy = st.selectbox(
-                "Advanced SSDM variable-selection strategy",
-                ["VIF stepwise", "Correlation filter", "Advanced custom selection"],
-                index=0,
-                key="ssdm_variable_strategy",
-            )
-            vc1, vc2 = st.columns(2)
-            ssdm_corr_threshold = vc1.number_input("SSDM correlation threshold", min_value=0.50, max_value=0.99, value=0.80, step=0.05, format="%.2f", key="ssdm_corr_threshold")
-            ssdm_vif_threshold = vc2.number_input("SSDM VIF threshold", min_value=1.0, max_value=100.0, value=10.0, step=1.0, key="ssdm_vif_threshold")
-            ssdm_custom_variables = ssdm_variables
-            if ssdm_variable_strategy == "Advanced custom selection":
-                ssdm_custom_variables = st.multiselect("SSDM custom final variables", ssdm_variables, default=ssdm_variables, key="ssdm_custom_final_variables")
         st.markdown("**SSDM validation / partition**")
         st.caption("Validation: automatically selected per species using the same rules as species SDM (auto_sdm_partition).")
         ssdm_partition_override = "auto"  # default
