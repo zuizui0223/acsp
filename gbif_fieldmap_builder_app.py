@@ -4006,7 +4006,7 @@ def genus_diversity_panel() -> None:
         )
         has_exploratory = "candidate_type" in genus_all_candidates.columns and genus_all_candidates["candidate_type"].astype(str).str.startswith("SSDM-high").any()
         gc1, gc2, gc3 = st.columns(3)
-        genus_top_sites_shown = gc1.number_input("Top-ranked hotspots shown", 1, max(1, len(genus_all_candidates)), min(20, len(genus_all_candidates)), 1, key="genus_top_hotspots_shown")
+        genus_top_sites_shown = gc1.number_input("Top-ranked hotspots shown", min_value=1, value=20, step=1, key="genus_top_hotspots_shown")
         genus_min_priority = gc2.number_input("Minimum priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="genus_min_priority")
         genus_min_model = gc3.number_input("Minimum SSDM model support", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="genus_min_model_support", disabled=not has_ssdm_support, help="Available after SSDM is built.")
         gi1, gi2, gi3, gi4 = st.columns(4)
@@ -5364,7 +5364,7 @@ def main() -> None:
         has_suit = "sdm_suitability" in all_candidates.columns and all_candidates["sdm_suitability"].notna().any()
         has_sdm_high = "candidate_type" in all_candidates.columns and all_candidates["candidate_type"].astype(str).str.startswith("SDM-high").any()
         sc1, sc2, sc3 = st.columns(3)
-        top_sites_shown = sc1.number_input("Top-ranked sites shown", 1, max(1, len(all_candidates)), min(20, len(all_candidates)), 1, key="sl_top_sites_shown")
+        top_sites_shown = sc1.number_input("Top-ranked sites shown", min_value=1, value=20, step=1, key="sl_top_sites_shown")
         min_priority = sc2.number_input("Minimum priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_priority")
         min_suit = sc3.number_input(
             "Minimum SDM suitability",

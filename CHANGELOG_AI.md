@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-25 - Codex (OpenAI) - Remove top-ranked display count upper bounds
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Removed the dynamic upper bound from `Top-ranked hotspots shown` in genus mode so existing/session values no longer become invalid when the candidate count changes.
+- Applied the same upper-bound removal to species mode `Top-ranked sites shown` for consistency.
+- Values above the currently available candidate count simply show all matching candidates via the existing dataframe `head()` behavior.
+
+Features preserved:
+- Top-ranked output tables, hotspot/candidate maps, ACSP selection, manual click/rectangle selection, selected-site exports, optional SDM/SSDM, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Very large display counts can make Folium maps slower; users can lower the count manually when needed.
+
 ## 2026-06-25 - Codex (OpenAI) - Hide richness legend on ACSP selection map
 
 Changed files:
