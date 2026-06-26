@@ -4,6 +4,25 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-26 - Codex (OpenAI) - Update README for ACSP research workflow
+
+Changed files:
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Rewrote the README to reflect the current ACSP application rather than the older GBIF field-map builder description.
+- Documented the four-layer structure: known records, SDM/SSDM, Potential Survey Sites, and ACSP set selection/export.
+- Added concise descriptions of Habitat analogue, Under-surveyed analogue, Environmental contrast, app-provided terrain/access proxies, and field-validation learning.
+- Clarified that SDM/SSDM are macro-scale optional filters while local habitat analogue search supports field-scale discovery.
+- Added current implementation status and active development items.
+
+Features preserved:
+- No application code changed. Existing GBIF/CSV inputs, occurrence candidates, optional SDM/SSDM, Potential Survey Sites, ACSP modes, exports, and validation outputs are unchanged.
+
+Known risks / TODO:
+- README now describes the research direction more accurately, but app-provided NDVI/land-cover and richer online learning remain future work.
+
 ## 2026-06-26 - Codex (OpenAI) - Improve app-provided access and edge distance proxies
 
 Changed files:
