@@ -4,6 +4,27 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-26 - Codex (OpenAI) - Add automatic SDM remote-outlier QC
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added conservative automatic SDM-only remote spatial outlier screening for small far-away occurrence clusters.
+- Combined automatic SDM outlier exclusions with manual SDM QC rectangles so excluded records remain visible as red points but are not used for SDM training or SDM prediction extent generation.
+- Kept Step 2 survey-area selection independent from SDM and did not turn the survey-area rectangle into SDM QC.
+- Hid the automatic SDM QC toggle under Advanced settings with the recommended behavior enabled by default, reducing routine user decisions.
+- Changed the small/local SDM clustering message from a blocking-style warning to an informational local-range note, emphasizing SDM as broad model support and Potential Survey Sites / ACSP for fine-scale destinations.
+- Validated with `Campanula microdonta` in Japan: 87 clean fetched records, 1 remote western record at 33.635783 / 134.493324 automatically excluded from SDM, 86 records retained for SDM input.
+
+Features preserved:
+- GBIF and CSV occurrence inputs, Step 2 observed-candidate survey-area selection, occurrence-supported candidates, independent optional SDM workflow, manual SDM QC rectangles, VIF, spatial validation, predict map, SDM-high exploration candidates, Potential Survey Sites, ACSP selection, exports, genus/SSDM workflows, and field-validation outputs remain available.
+
+Known risks / TODO:
+- The automatic SDM QC is intentionally conservative and may keep ambiguous edge records rather than over-delete legitimate range-edge populations.
+- Field validation should calibrate the remote-cluster thresholds for island endemics, mainland disjunctions, and taxa with genuinely fragmented ranges.
+
 ## 2026-06-26 - Codex (OpenAI) - Update README for ACSP research workflow
 
 Changed files:

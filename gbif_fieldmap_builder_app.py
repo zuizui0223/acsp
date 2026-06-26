@@ -1717,6 +1717,90 @@ def haversine_dbscan(df: pd.DataFrame, lat_col: str, lon_col: str, threshold_m: 
     return pd.Series(labels, index=df.index, name="cluster_id")
 
 
+def auto_remote_spatial_outlier_qc(
+    occ: pd.DataFrame,
+    cluster_eps_m: float = 120_000.0,
+    min_records: int = 20,
+    min_samples: int = 3,
+    keep_fraction: float = 0.90,
+    min_remote_distance_m: float = 250_000.0,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """Conservatively remove remote minor clusters from SDM input only.
+
+    This catches cases such as an island endemic with a few mainland noise
+    records, while avoiding aggressive trimming of legitimate range-edge
+    records. Step 2 observed-candidate selection remains independent.
+    """
+    empty = occ.iloc[0:0].copy()
+    report: dict[str, Any] = {
+        "enabled": True,
+        "input_records": int(len(occ)),
+        "excluded_records": 0,
+        "cluster_eps_km": round(float(cluster_eps_m) / 1000.0, 1),
+        "min_remote_distance_km": round(float(min_remote_distance_m) / 1000.0, 1),
+        "reason": "not enough records for automatic outlier screening",
+    }
+    if occ.empty or len(occ) < int(min_records) or "_row_id" not in occ.columns:
+        return occ.copy().reset_index(drop=True), empty, report
+
+    work = occ.dropna(subset=["_latitude", "_longitude"]).copy().reset_index(drop=True)
+    if len(work) < int(min_records):
+        return occ.copy().reset_index(drop=True), empty, report
+
+    labels = haversine_dbscan(work, "_latitude", "_longitude", float(cluster_eps_m), int(min_samples))
+    work["_auto_sdm_cluster"] = labels.values
+    cluster_counts = work.loc[work["_auto_sdm_cluster"] >= 0, "_auto_sdm_cluster"].value_counts()
+    if cluster_counts.empty:
+        report["reason"] = "no stable spatial cluster detected"
+        return occ.copy().reset_index(drop=True), empty, report
+
+    clustered_total = int(cluster_counts.sum())
+    keep_target = max(1, int(math.ceil(clustered_total * float(keep_fraction))))
+    keep_clusters: set[int] = set()
+    cumulative = 0
+    for cluster_id, count in cluster_counts.sort_values(ascending=False).items():
+        keep_clusters.add(int(cluster_id))
+        cumulative += int(count)
+        if cumulative >= keep_target:
+            break
+
+    kept = work[work["_auto_sdm_cluster"].isin(keep_clusters)].copy()
+    if kept.empty:
+        report["reason"] = "no primary cluster retained"
+        return occ.copy().reset_index(drop=True), empty, report
+
+    tree = BallTree(np.radians(kept[["_latitude", "_longitude"]].to_numpy(dtype=float)), metric="haversine")
+    dist_rad, _ = tree.query(np.radians(work[["_latitude", "_longitude"]].to_numpy(dtype=float)), k=1)
+    work["_auto_nearest_kept_m"] = dist_rad[:, 0] * EARTH_RADIUS_M
+
+    cluster_size = work["_auto_sdm_cluster"].map(cluster_counts).fillna(1).astype(int)
+    minor_cluster_limit = max(3, int(math.ceil(len(work) * 0.08)))
+    remote_minor = (
+        (~work["_auto_sdm_cluster"].isin(keep_clusters))
+        & (cluster_size <= minor_cluster_limit)
+        & (work["_auto_nearest_kept_m"] >= float(min_remote_distance_m))
+    )
+    excluded_ids = set(work.loc[remote_minor, "_row_id"].astype(int))
+    if not excluded_ids:
+        report["reason"] = "no remote minor cluster detected"
+        report["kept_clusters"] = sorted(keep_clusters)
+        return occ.copy().reset_index(drop=True), empty, report
+
+    included = occ[~occ["_row_id"].astype(int).isin(excluded_ids)].copy().reset_index(drop=True)
+    excluded = occ[occ["_row_id"].astype(int).isin(excluded_ids)].copy().reset_index(drop=True)
+    excl_meta = work.loc[work["_row_id"].astype(int).isin(excluded_ids), ["_row_id", "_auto_sdm_cluster", "_auto_nearest_kept_m"]].copy()
+    excluded = excluded.merge(excl_meta, on="_row_id", how="left")
+    excluded["sdm_qc_reason"] = "Auto remote spatial outlier"
+    report.update({
+        "input_records": int(len(occ)),
+        "included_records": int(len(included)),
+        "excluded_records": int(len(excluded)),
+        "kept_clusters": sorted(keep_clusters),
+        "reason": "remote minor cluster excluded from SDM input",
+    })
+    return included, excluded, report
+
+
 def prediction_area_geometry(occ: pd.DataFrame, mode: str, buffer_km: float, rectangle_margin_km: float, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0):
     if occ.empty:
         return None
@@ -5833,6 +5917,17 @@ def main() -> None:
         )
 
         # ── Bias reduction: spatially balanced cap only ────────────────────────
+        with st.expander("Advanced: SDM QC settings", expanded=False):
+            auto_sdm_outlier_qc = st.checkbox(
+                "Automatically ignore remote spatial outliers for SDM",
+                value=True,
+                key="sdm_auto_remote_outlier_qc",
+                help=(
+                    "Recommended. Conservatively removes small, far-away occurrence clusters from SDM training "
+                    "and SDM extent generation while preserving fetched records for transparency."
+                ),
+            )
+
         _sdm_br_n0 = len(occ_raw)
         if _sdm_br_n0 > int(sdm_ind_max_presence):
             occ_sdm_bias_reduced = spatially_balanced_cap(occ_raw, int(sdm_ind_max_presence))
@@ -5844,14 +5939,40 @@ def main() -> None:
         _sdm_br_n3 = _sdm_br_n0
 
         # ── Step 2: QC exclusion on the bias-reduced set (map only shows ~N pts) ─
-        _sdm_excl_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
-        _valid_excl_ids = _sdm_excl_ids & set(occ_sdm_bias_reduced["_row_id"].astype(int))
-        occ_sdm_train = occ_sdm_bias_reduced[~occ_sdm_bias_reduced["_row_id"].astype(int).isin(_valid_excl_ids)].copy().reset_index(drop=True)
-        _sdm_excl_raw = occ_sdm_bias_reduced[occ_sdm_bias_reduced["_row_id"].astype(int).isin(_valid_excl_ids)].copy()
-        # Keep only valid IDs in session state (stale IDs from previous bias settings are dropped)
-        if _valid_excl_ids != _sdm_excl_ids:
-            st.session_state.sdm_excluded_row_ids = _valid_excl_ids
+        if auto_sdm_outlier_qc:
+            _, _sdm_auto_excl_raw, _sdm_auto_qc_report = auto_remote_spatial_outlier_qc(occ_sdm_bias_reduced)
+        else:
+            _sdm_auto_excl_raw = occ_sdm_bias_reduced.iloc[0:0].copy()
+            _sdm_auto_qc_report = {
+                "enabled": False,
+                "input_records": int(len(occ_sdm_bias_reduced)),
+                "excluded_records": 0,
+                "reason": "automatic remote-outlier screening disabled",
+            }
+        _auto_excl_ids = set(_sdm_auto_excl_raw["_row_id"].astype(int)) if not _sdm_auto_excl_raw.empty else set()
+        _sdm_manual_excl_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
+        _valid_manual_excl_ids = _sdm_manual_excl_ids & set(occ_sdm_bias_reduced["_row_id"].astype(int))
+        _combined_excl_ids = _auto_excl_ids | _valid_manual_excl_ids
+        occ_sdm_train = occ_sdm_bias_reduced[~occ_sdm_bias_reduced["_row_id"].astype(int).isin(_combined_excl_ids)].copy().reset_index(drop=True)
+        _sdm_excl_raw = occ_sdm_bias_reduced[occ_sdm_bias_reduced["_row_id"].astype(int).isin(_combined_excl_ids)].copy()
+        if not _sdm_excl_raw.empty:
+            _sdm_excl_raw["sdm_qc_reason"] = np.where(
+                _sdm_excl_raw["_row_id"].astype(int).isin(_auto_excl_ids),
+                "Auto remote spatial outlier",
+                "Manual SDM QC rectangle",
+            )
+        # Keep only valid manual IDs in session state (stale IDs from previous bias settings are dropped)
+        if _valid_manual_excl_ids != _sdm_manual_excl_ids:
+            st.session_state.sdm_excluded_row_ids = _valid_manual_excl_ids
         occ_sdm_qc_included = occ_sdm_train  # alias for metrics compatibility
+        if _sdm_auto_qc_report.get("excluded_records", 0):
+            st.info(
+                "Automatic SDM QC excluded "
+                f"{int(_sdm_auto_qc_report['excluded_records']):,} remote occurrence record(s) from SDM training and extent generation. "
+                "They remain preserved in the fetched data, but are not used for the model."
+            )
+        elif auto_sdm_outlier_qc:
+            st.caption("Automatic SDM QC: no remote minor occurrence cluster detected.")
 
         st.divider()
         # ── SDM prediction extent controls ────────────────────────────────────
@@ -5874,9 +5995,9 @@ def main() -> None:
         st.markdown("**SDM setup map**")
         st.caption(
             f"Blue points = {len(occ_sdm_train):,} final SDM analysis points after bias reduction (all shown). "
-            "Red points = records excluded by SDM QC rectangles. "
+            "Red points = records excluded by automatic SDM QC or SDM QC rectangles. "
             "Orange outline = SDM prediction extent. "
-            "Draw a rectangle to exclude suspicious records from SDM training."
+            "Draw a rectangle only if you need to manually exclude additional suspicious SDM records."
         )
         if occ_sdm_train.empty and _sdm_excl_raw.empty:
             st.warning("Bias reduction removed all records. Reduce grid/distance thinning or increase the max presence cap.")
@@ -5901,7 +6022,7 @@ def main() -> None:
                     st.session_state.sdm_excluded_row_ids = _new_excl
                     reset_model_outputs()
                     st.rerun()
-            if _valid_excl_ids and st.button("Clear SDM QC exclusions", key="sdm_qc_clear"):
+            if _valid_manual_excl_ids and st.button("Clear manual SDM QC rectangles", key="sdm_qc_clear"):
                 st.session_state.sdm_excluded_row_ids = set()
                 st.session_state.sdm_qc_click_sig = ""
                 reset_model_outputs()
@@ -5993,7 +6114,7 @@ def main() -> None:
 
     # ── SDM preprocessing pipeline result ─────────────────────────────────────
     occ_for_sdm = occ_sdm_train.copy().reset_index(drop=True)
-    sdm_excluded_ids = set(map(int, st.session_state.sdm_excluded_row_ids))
+    sdm_excluded_ids = set(_combined_excl_ids)
     sdm_n_final = len(occ_for_sdm)
 
     # Preprocessing metrics display
@@ -6014,10 +6135,10 @@ def main() -> None:
     pm3.metric(
         "Final SDM presence points", f"{sdm_n_final:,}",
         delta=f"{sdm_n_final - _sdm_br_n4:,}" if sdm_n_final < _sdm_br_n4 else None,
-        help="After QC rectangle exclusions on the setup map.",
+        help="After automatic remote-outlier screening and any manual SDM QC rectangles on the setup map.",
     )
     if sdm_n_final == 0 and not occ_raw.empty:
-        st.warning("All records removed by cap or QC exclusions. Increase the cap or clear SDM QC exclusions.")
+        st.warning("All records removed by cap or SDM QC. Increase the cap, disable automatic SDM outlier screening, or clear manual SDM QC rectangles.")
     # Spatial clustering check for small datasets (all records used, no subsampling)
     if 0 < sdm_n_final <= _sdm_br_n0 and _sdm_br_n4 == _sdm_br_n0 and not occ_for_sdm.empty:
         _coords = occ_for_sdm[["_latitude", "_longitude"]].values
@@ -6025,11 +6146,10 @@ def main() -> None:
         _dists_deg = np.sqrt(((_coords - _centroid) ** 2).sum(axis=1))
         _median_dist = float(np.median(_dists_deg))
         if _median_dist < 1.5:
-            st.warning(
-                f"⚠️ **Possible spatial bias**: {sdm_n_final} records with median spread {_median_dist:.2f}° from centroid. "
-                "Records appear geographically clustered — SDM may overfit to this area. "
-                "Use the QC rectangle on the setup map to exclude suspicious clusters, "
-                "or collect records from a broader area for more reliable predictions."
+            st.info(
+                f"Local-range SDM note: {sdm_n_final} records have median spread {_median_dist:.2f} degrees from centroid. "
+                "This can be normal for island or range-restricted taxa. Automatic SDM QC checks for remote minor outliers; "
+                "use SDM as broad model support and rely on Potential Survey Sites / ACSP for fine-scale field destinations."
             )
 
     current_sdm_occurrence_row_ids = tuple(sorted(occ_for_sdm["_row_id"].astype(int).tolist())) if not occ_for_sdm.empty else ()
