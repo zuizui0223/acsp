@@ -4,6 +4,29 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-26 - Codex (OpenAI) - Improve ACSP for macro-SDM plus local habitat analogue planning
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Extended ACSP so the candidate-set algorithm can explicitly use local habitat-analogue evidence, low-survey-effort signals, access feasibility, and field-validation learning.
+- Added a new ACSP selection mode: `Habitat analogue survey`.
+- Added ACSP gain columns: `habitat_analogue_gain`, `validation_learning_gain`, and `access_gain`.
+- Updated the ACSP marginal-gain function to combine occurrence/model priority, geographic/environmental complementarity, exploration value, sampling-gap coverage, local habitat analogue support, validation-learning support, and access feasibility.
+- Expanded environmental complementarity detection so ACSP can use local terrain/vegetation/access variables such as elevation, slope, aspect, roughness, TPI, NDVI, distance to road/trail/coast/forest edge, habitat score, and Mahalanobis environmental distance.
+- Updated Potential Survey Site priority scoring so `Habitat analogue`, `Under-surveyed analogue`, and `Environmental contrast` candidates receive type-specific composite scores rather than all using a single proxy score.
+- Made species-mode ACSP default to `Habitat analogue survey` when potential survey cells are available.
+- Added new ACSP gain columns to selected-site summaries, candidate detail tables, and exports.
+
+Features preserved:
+- Occurrence-supported candidates, optional SDM and SDM-high exploration candidates, raster-style predict map, VIF/spatial validation, existing ACSP modes, map/rectangle selection, selected-site exports, genus/SSDM workflows, and validation outputs remain available.
+
+Known risks / TODO:
+- The new ACSP components depend on available candidate columns; when habitat/access/validation fields are absent, they degrade to zero and the older ACSP behavior is preserved.
+- Future validation should compare selected sets across Simple top-ranked, Complementarity, and Habitat analogue survey modes using real field outcomes.
+
 ## 2026-06-26 - Codex (OpenAI) - Make habitat analogue layers app-provided and add validation learning
 
 Changed files:

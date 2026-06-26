@@ -1983,6 +1983,7 @@ def add_priority_rank(sites: pd.DataFrame, observed_weight: float = 0.7, model_w
 ACSP_SELECTION_MODES = [
     "Simple top-ranked",
     "Complementarity-based batch selection",
+    "Habitat analogue survey",
     "Exploration-focused active survey",
     "Phylogeographic gap-filling",
 ]
@@ -1990,23 +1991,34 @@ ACSP_SELECTION_MODES = [
 # Per-mode component weights for the marginal-gain function.
 # marginal_gain = w_base*base_score + w_coverage*coverage_gain
 #               + w_exploration*exploration_gain + w_gap*sampling_gap_gain
+#               + w_habitat*habitat_analogue_gain + w_validation*validation_learning_gain
+#               + w_access*access_gain
 #               - w_redundancy*redundancy_penalty - w_travel*travel_penalty
 ACSP_MODE_WEIGHTS: dict[str, dict[str, float]] = {
     "Simple top-ranked": {
         "base": 1.0, "coverage": 0.0, "exploration": 0.0,
-        "gap": 0.0, "redundancy": 0.0, "travel": 0.0,
+        "gap": 0.0, "habitat": 0.0, "validation": 0.0, "access": 0.0,
+        "redundancy": 0.0, "travel": 0.0,
     },
     "Complementarity-based batch selection": {
         "base": 1.0, "coverage": 0.8, "exploration": 0.3,
-        "gap": 0.4, "redundancy": 0.8, "travel": 0.05,
+        "gap": 0.4, "habitat": 0.4, "validation": 0.4, "access": 0.2,
+        "redundancy": 0.8, "travel": 0.05,
+    },
+    "Habitat analogue survey": {
+        "base": 0.6, "coverage": 0.4, "exploration": 0.3,
+        "gap": 0.8, "habitat": 1.2, "validation": 0.6, "access": 0.3,
+        "redundancy": 0.6, "travel": 0.05,
     },
     "Exploration-focused active survey": {
         "base": 0.6, "coverage": 0.5, "exploration": 1.0,
-        "gap": 0.5, "redundancy": 0.5, "travel": 0.1,
+        "gap": 0.5, "habitat": 0.7, "validation": 0.4, "access": 0.1,
+        "redundancy": 0.5, "travel": 0.1,
     },
     "Phylogeographic gap-filling": {
         "base": 0.6, "coverage": 0.6, "exploration": 0.3,
-        "gap": 1.0, "redundancy": 0.7, "travel": 0.1,
+        "gap": 1.0, "habitat": 0.4, "validation": 0.3, "access": 0.1,
+        "redundancy": 0.7, "travel": 0.1,
     },
 }
 
@@ -2015,8 +2027,11 @@ ACSP_GAIN_COLUMNS = [
     "base_score",
     "geographic_complementarity_gain",
     "environmental_complementarity_gain",
+    "habitat_analogue_gain",
     "exploration_gain",
     "sampling_gap_gain",
+    "validation_learning_gain",
+    "access_gain",
     "redundancy_penalty",
     "travel_penalty",
     "marginal_gain_score",
@@ -2064,7 +2079,11 @@ def _acsp_environment_columns(df: pd.DataFrame) -> list[str]:
             or re.match(r"^pc\d+$", name) is not None
             or name.startswith("env_")
             or name.startswith("bio")
-            or name in {"elevation", "elev", "altitude"}
+            or name in {
+                "elevation", "elev", "altitude", "slope", "aspect", "roughness", "tpi", "ndvi",
+                "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m",
+                "habitat_score", "environmental_similarity", "mahalanobis_environment_distance",
+            }
         )
         if not looks_env:
             continue
@@ -2137,6 +2156,8 @@ def acsp_select(
     w = dict(ACSP_MODE_WEIGHTS[mode])
     if weights:
         w.update({key: float(val) for key, val in weights.items() if key in w})
+    for key in ["base", "coverage", "exploration", "gap", "habitat", "validation", "access", "redundancy", "travel"]:
+        w.setdefault(key, 0.0)
 
     lats = pd.to_numeric(df["latitude"], errors="coerce").to_numpy(dtype=float)
     lons = pd.to_numeric(df["longitude"], errors="coerce").to_numpy(dtype=float)
@@ -2163,9 +2184,36 @@ def acsp_select(
     exploration_gain = exploration_gain + 0.2 * is_explore_type.to_numpy(dtype=float)
     exploration_gain = np.clip(exploration_gain, 0.0, 1.0)
 
+    habitat_parts: list[np.ndarray] = []
+    for col, weight in [("habitat_score", 0.45), ("environmental_similarity", 0.35), ("analogue_score", 0.25), ("landcover_match_score", 0.15)]:
+        if col in df.columns and pd.to_numeric(df[col], errors="coerce").notna().any():
+            habitat_parts.append(weight * _acsp_normalize(df[col]))
+    if "mahalanobis_environment_distance" in df.columns and pd.to_numeric(df["mahalanobis_environment_distance"], errors="coerce").notna().any():
+        habitat_parts.append(0.25 * (1.0 - _acsp_normalize(df["mahalanobis_environment_distance"])))
+    habitat_analogue_gain = np.sum(habitat_parts, axis=0) if habitat_parts else np.zeros(n)
+    habitat_type = cand_type.str.contains("habitat analogue|under-surveyed analogue", case=False, na=False)
+    habitat_analogue_gain = np.clip(habitat_analogue_gain + 0.15 * habitat_type.to_numpy(dtype=float), 0.0, 1.0)
+
+    validation_learning_gain = np.zeros(n)
+    if "field_validation_support_score" in df.columns and pd.to_numeric(df["field_validation_support_score"], errors="coerce").notna().any():
+        validation_learning_gain = _acsp_normalize(df["field_validation_support_score"])
+
+    access_parts: list[np.ndarray] = []
+    if "access_score" in df.columns and pd.to_numeric(df["access_score"], errors="coerce").notna().any():
+        access_parts.append(0.6 * _acsp_normalize(df["access_score"]))
+    for dist_col, weight in [("distance_to_road_m", 0.25), ("distance_to_trail_m", 0.35)]:
+        if dist_col in df.columns and pd.to_numeric(df[dist_col], errors="coerce").notna().any():
+            access_parts.append(weight * (1.0 - _acsp_normalize(df[dist_col])))
+    access_gain = np.clip(np.sum(access_parts, axis=0), 0.0, 1.0) if access_parts else np.zeros(n)
+
     # ── Static sampling-gap component: under-sampled (few records) sites ──────
     n_occ = pd.to_numeric(df.get("n_occurrences", pd.Series(0.0, index=df.index)), errors="coerce").fillna(0.0)
     static_gap = 1.0 - _acsp_normalize(np.log1p(n_occ.to_numpy()))
+    for gap_col, weight in [("survey_gap_score", 0.5), ("environmental_novelty", 0.25)]:
+        if gap_col in df.columns and pd.to_numeric(df[gap_col], errors="coerce").notna().any():
+            static_gap = np.clip(0.7 * static_gap + weight * _acsp_normalize(df[gap_col]), 0.0, 1.0)
+    contrast_type = cand_type.str.contains("environmental contrast", case=False, na=False)
+    static_gap = np.clip(static_gap + 0.15 * contrast_type.to_numpy(dtype=float), 0.0, 1.0)
 
     # ── Optional environmental space (standardised) ──────────────────────────
     env_cols = _acsp_environment_columns(df)
@@ -2246,6 +2294,9 @@ def acsp_select(
             + w["coverage"] * float(coverage)
             + w["exploration"] * float(exploration_gain[i])
             + w["gap"] * float(sampling_gap)
+            + w["habitat"] * float(habitat_analogue_gain[i])
+            + w["validation"] * float(validation_learning_gain[i])
+            + w["access"] * float(access_gain[i])
             - w["redundancy"] * float(redundancy)
             - w["travel"] * float(travel)
         )
@@ -2256,6 +2307,9 @@ def acsp_select(
             "redundancy": redundancy,
             "travel": travel,
             "sampling_gap": sampling_gap,
+            "habitat": float(habitat_analogue_gain[i]),
+            "validation": float(validation_learning_gain[i]),
+            "access": float(access_gain[i]),
             "marginal": marginal,
         }
 
@@ -2265,6 +2319,9 @@ def acsp_select(
             ("environmental complementarity" if has_env else "geographic complementarity"): w["coverage"] * float(comp["coverage"]),
             "exploration value": w["exploration"] * float(exploration_gain[i_sel]),
             "sampling-gap coverage": w["gap"] * float(comp["sampling_gap"]),
+            "local habitat analogue": w["habitat"] * float(comp["habitat"]),
+            "field-validation learning": w["validation"] * float(comp["validation"]),
+            "access feasibility": w["access"] * float(comp["access"]),
         }
         ranked = sorted(contributions.items(), key=lambda kv: kv[1], reverse=True)
         drivers = [name for name, val in ranked if val > 1e-6][:2]
@@ -2306,8 +2363,11 @@ def acsp_select(
             "base_score": round(float(base_score[i_sel]), 4),
             "geographic_complementarity_gain": round(float(comp["geo_gain"]), 4),
             "environmental_complementarity_gain": (round(float(comp["env_gain"]), 4) if np.isfinite(comp["env_gain"]) else np.nan),
+            "habitat_analogue_gain": round(float(comp["habitat"]), 4),
             "exploration_gain": round(float(exploration_gain[i_sel]), 4),
             "sampling_gap_gain": round(float(comp["sampling_gap"]), 4),
+            "validation_learning_gain": round(float(comp["validation"]), 4),
+            "access_gain": round(float(comp["access"]), 4),
             "redundancy_penalty": round(float(comp["redundancy"]), 4),
             "travel_penalty": round(float(comp["travel"]), 4),
             "marginal_gain_score": round(float(comp["marginal"]), 4),
@@ -4013,12 +4073,23 @@ def make_potential_survey_site_candidates(
         pool["candidate_method"] = "Habitat-first grid cell"
         pool["n_occurrences"] = 0
         pool["occurrence_support_score"] = pd.to_numeric(pool[score_col], errors="coerce").fillna(0.0).clip(0, 1).round(3)
+        habitat_component = pd.to_numeric(pool.get("habitat_score", pool.get("analogue_score", 0.0)), errors="coerce").fillna(0.0).clip(0, 1)
+        gap_component = pd.to_numeric(pool.get("survey_gap_score", 0.0), errors="coerce").fillna(0.0).clip(0, 1)
+        contrast_component = pd.to_numeric(pool.get("environmental_novelty", 0.0), errors="coerce").fillna(0.0).clip(0, 1)
+        access_component = pd.to_numeric(pool.get("access_score", 0.0), errors="coerce").fillna(0.0).clip(0, 1)
         if "sdm_suitability" in pool.columns and pd.to_numeric(pool["sdm_suitability"], errors="coerce").notna().any():
             pool["sdm_suitability"] = pd.to_numeric(pool["sdm_suitability"], errors="coerce").clip(0, 1).round(3)
             pool["model_support_score"] = pool["sdm_suitability"].fillna(0.0)
         else:
             pool["sdm_suitability"] = np.nan
             pool["model_support_score"] = 0.0
+        macro_component = pd.to_numeric(pool.get("sdm_suitability", 0.0), errors="coerce").fillna(0.0).clip(0, 1)
+        if candidate_type == "Habitat analogue":
+            pool["priority_score"] = (0.65 * habitat_component + 0.15 * gap_component + 0.10 * access_component + 0.10 * macro_component).clip(0, 1).round(3)
+        elif candidate_type == "Under-surveyed analogue":
+            pool["priority_score"] = (0.45 * habitat_component + 0.35 * gap_component + 0.10 * access_component + 0.10 * macro_component).clip(0, 1).round(3)
+        else:
+            pool["priority_score"] = (0.40 * contrast_component + 0.25 * habitat_component + 0.20 * gap_component + 0.10 * access_component + 0.05 * macro_component).clip(0, 1).round(3)
         basis = str(pool["habitat_basis"].iloc[0]) if "habitat_basis" in pool.columns and len(pool) else "habitat-first proxy"
         explained = f"{reason} Habitat score basis: {basis}."
         pool["score_explanation"] = explained
@@ -5143,7 +5214,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "exploration_gain", "sampling_gap_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -6125,7 +6196,8 @@ def main() -> None:
             "Manual map clicks and rectangle selection remain available."
         )
         ac1, ac2, ac3 = st.columns([2, 1, 1])
-        acsp_mode = ac1.selectbox("Selection algorithm", ACSP_SELECTION_MODES, index=1, key="acsp_mode_species")
+        acsp_default_index = ACSP_SELECTION_MODES.index("Habitat analogue survey") if has_potential else ACSP_SELECTION_MODES.index("Complementarity-based batch selection")
+        acsp_mode = ac1.selectbox("Selection algorithm", ACSP_SELECTION_MODES, index=acsp_default_index, key="acsp_mode_species")
         acsp_k = ac2.number_input("Sites to select (K)", 1, max(1, len(acsp_pool)), min(10, max(1, len(acsp_pool))), 1, key="acsp_k_species")
         acsp_seed = ac3.checkbox("Seed with current selection", value=False, key="acsp_seed_species", help="Keep already-selected sites as the starting set (S0) and fill the rest by complementarity.")
         if st.button("Auto-select by selected algorithm", key="acsp_run_species", use_container_width=True, disabled=acsp_pool.empty):
@@ -6208,7 +6280,7 @@ def main() -> None:
         _sel_df_summary["google_maps_point_url"] = _sel_df_summary.apply(
             lambda r: make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])), axis=1
         )
-        _sum_cols = [c for c in ["site_id", "selection_step", "priority_rank", "priority_score", "candidate_type", "marginal_gain_score", "selection_reason", "google_maps_point_url"] if c in _sel_df_summary.columns]
+        _sum_cols = [c for c in ["site_id", "selection_step", "priority_rank", "priority_score", "candidate_type", "marginal_gain_score", "habitat_analogue_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "selection_reason", "google_maps_point_url"] if c in _sel_df_summary.columns]
         _sum_cfg: dict[str, Any] = {}
         if "google_maps_point_url" in _sum_cols:
             _sum_cfg["google_maps_point_url"] = st.column_config.LinkColumn("Google Maps", display_text="📍")
@@ -6242,7 +6314,7 @@ def main() -> None:
         if all_candidates.empty:
             st.info("No candidates generated yet.")
         else:
-            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "survey_gap_score", "access_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "score_explanation", "recommended_survey_window", "season_confidence", "flowering_record_count"] if c in all_candidates.columns]
+            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "survey_gap_score", "access_score", "habitat_analogue_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "score_explanation", "recommended_survey_window", "season_confidence", "flowering_record_count"] if c in all_candidates.columns]
             st.dataframe(all_candidates[all_cand_show_cols], width="stretch", hide_index=True)
             oc1, oc2 = st.columns(2)
             oc1.download_button(
