@@ -62,6 +62,7 @@ GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
 GBIF_REQUEST_HEADERS = {"User-Agent": "GBIF-FieldMap-Builder/1.0"}
 WC_BASE = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base"
 LAND_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson"
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 CACHE_DIR = Path(os.environ.get("GBIF_FIELDMAP_CACHE", "/tmp/gbif_fieldmap_builder"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -2666,6 +2667,105 @@ def extract_geojson_vertices(path: Optional[str]) -> np.ndarray:
     return np.array(coords, dtype=float) if coords else np.empty((0, 2), dtype=float)
 
 
+def write_vertices_geojson(vertices_lonlat: np.ndarray, path: Path) -> Optional[str]:
+    if vertices_lonlat.size == 0:
+        return None
+    coords = [[float(x), float(y)] for x, y in vertices_lonlat]
+    payload = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {}, "geometry": {"type": "LineString", "coordinates": coords}}]}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return str(path)
+
+
+@st.cache_data(show_spinner=False)
+def app_coastline_geojson_for_bounds(west: float, south: float, east: float, north: float) -> Optional[str]:
+    """Create a lightweight coastline-distance proxy from the app's built-in land boundary."""
+    try:
+        land = load_land_geometry()
+        roi = box(float(west), float(south), float(east), float(north)).buffer(0.25)
+        boundary = land.intersection(roi).boundary
+        coords: list[tuple[float, float]] = []
+        parts = boundary.geoms if hasattr(boundary, "geoms") else [boundary]
+        for part in parts:
+            if hasattr(part, "coords"):
+                coords.extend([(float(x), float(y)) for x, y in part.coords])
+        arr = np.array(coords, dtype=float) if coords else np.empty((0, 2), dtype=float)
+        digest = hashlib.sha1(f"{west:.4f},{south:.4f},{east:.4f},{north:.4f}".encode()).hexdigest()[:12]
+        return write_vertices_geojson(arr, CACHE_DIR / "app_layers" / f"coastline_{digest}.geojson")
+    except Exception:
+        return None
+
+
+def _overpass_to_vertices(payload: dict[str, Any]) -> np.ndarray:
+    nodes: dict[int, tuple[float, float]] = {}
+    coords: list[tuple[float, float]] = []
+    for element in payload.get("elements", []):
+        if element.get("type") == "node" and "lon" in element and "lat" in element:
+            nodes[int(element["id"])] = (float(element["lon"]), float(element["lat"]))
+    for element in payload.get("elements", []):
+        if element.get("type") == "node" and "lon" in element and "lat" in element:
+            coords.append((float(element["lon"]), float(element["lat"])))
+        elif "geometry" in element:
+            coords.extend([(float(p["lon"]), float(p["lat"])) for p in element.get("geometry", []) if "lon" in p and "lat" in p])
+        elif "nodes" in element:
+            coords.extend([nodes[nid] for nid in element.get("nodes", []) if nid in nodes])
+    return np.array(coords, dtype=float) if coords else np.empty((0, 2), dtype=float)
+
+
+@st.cache_data(show_spinner=False)
+def fetch_osm_vertices_geojson(kind: str, west: float, south: float, east: float, north: float) -> Optional[str]:
+    """Fetch lightweight app-provided OSM vertices for access/edge distance proxies."""
+    bbox = f"{float(south):.6f},{float(west):.6f},{float(north):.6f},{float(east):.6f}"
+    if kind == "roads":
+        selector = 'way["highway"]["highway"!~"path|footway|cycleway|bridleway|steps|track"]'
+    elif kind == "trails":
+        selector = 'way["highway"~"path|footway|bridleway|steps|track"]'
+    elif kind == "forest_edge":
+        selector = 'forest'
+    else:
+        return None
+    if kind in {"roads", "trails"}:
+        query = f"[out:json][timeout:25];({selector}({bbox}););out geom;"
+    else:
+        query = (
+            f"[out:json][timeout:25];("
+            f"way[\"landuse\"=\"forest\"]({bbox});"
+            f"way[\"natural\"=\"wood\"]({bbox});"
+            f"relation[\"landuse\"=\"forest\"]({bbox});"
+            f"relation[\"natural\"=\"wood\"]({bbox});"
+            f");out geom;"
+        )
+    digest = hashlib.sha1(f"{kind}:{bbox}:{selector}".encode()).hexdigest()[:12]
+    out_path = CACHE_DIR / "app_layers" / f"osm_{kind}_{digest}.geojson"
+    if out_path.exists() and out_path.stat().st_size > 0:
+        return str(out_path)
+    try:
+        response = requests.post(OVERPASS_URL, data={"data": query}, timeout=45, headers={"User-Agent": GBIF_REQUEST_HEADERS["User-Agent"]})
+        response.raise_for_status()
+        vertices = _overpass_to_vertices(response.json())
+        return write_vertices_geojson(vertices, out_path)
+    except Exception:
+        return None
+
+
+def app_provided_habitat_layers(bounds: tuple[float, float, float, float], include_osm: bool) -> dict[str, Optional[str]]:
+    west, south, east, north = bounds
+    layers: dict[str, Optional[str]] = {
+        "dem": None,
+        "ndvi": None,
+        "landcover": None,
+        "roads": None,
+        "trails": None,
+        "coastline": app_coastline_geojson_for_bounds(west, south, east, north),
+        "forest_edge": None,
+    }
+    if include_osm:
+        layers["roads"] = fetch_osm_vertices_geojson("roads", west, south, east, north)
+        layers["trails"] = fetch_osm_vertices_geojson("trails", west, south, east, north)
+        layers["forest_edge"] = fetch_osm_vertices_geojson("forest_edge", west, south, east, north)
+    return layers
+
+
 def nearest_vector_distance_m(points: pd.DataFrame, vertices_lonlat: np.ndarray, lat_col: str, lon_col: str) -> np.ndarray:
     if points.empty or vertices_lonlat.size == 0:
         return np.full(len(points), np.nan, dtype=float)
@@ -3796,6 +3896,12 @@ def make_potential_survey_site_candidates(
             if has_highres:
                 occ_env = extract_potential_layer_values(profile_points, highres_layers, "latitude", "longitude")
                 grid_env = extract_potential_layer_values(grid, highres_layers, "latitude", "longitude")
+                if not highres_layers.get("dem"):
+                    occ_topo = extract_environment(profile_points, POTENTIAL_ANALOGUE_PRESET, "latitude", "longitude", resolution)
+                    grid_topo = extract_environment(grid, POTENTIAL_ANALOGUE_PRESET, "latitude", "longitude", resolution)
+                    for topo_col in POTENTIAL_ANALOGUE_PRESET:
+                        occ_env[topo_col] = occ_topo[topo_col].to_numpy()
+                        grid_env[topo_col] = grid_topo[topo_col].to_numpy()
                 continuous_cols = [
                     "elevation", "slope", "aspect", "roughness", "tpi", "ndvi",
                     "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m",
@@ -3924,6 +4030,65 @@ def make_potential_survey_site_candidates(
         return pd.DataFrame()
     out = pd.concat(out_rows, ignore_index=True, sort=False)
     return out.reset_index(drop=True)
+
+
+def apply_field_validation_learning(candidates: pd.DataFrame, validation: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Lightweight feedback learning from field-validation results.
+
+    The model is intentionally simple and optional: it learns from previously
+    validated candidate rows and predicts a field-validation support score for
+    current candidates using already exported habitat/model/access columns.
+    """
+    if candidates is None or candidates.empty or validation is None or validation.empty:
+        return candidates, "No validation data supplied."
+    if "site_id" not in candidates.columns or "site_id" not in validation.columns:
+        return candidates, "Validation learning needs a site_id column matching exported candidates."
+    target_cols = [
+        "target_species_found", "target_taxa_found", "presence", "present",
+        "found", "detected", "newly_confirmed_population",
+    ]
+    target_col = next((c for c in target_cols if c in validation.columns), None)
+    if target_col is None:
+        return candidates, "Validation CSV needs a presence/result column such as target_species_found, found, or detected."
+    labels = validation[["site_id", target_col]].copy()
+    labels["site_id"] = pd.to_numeric(labels["site_id"], errors="coerce")
+    truth = labels[target_col].astype(str).str.lower().str.strip()
+    labels["_field_success"] = truth.isin(["1", "true", "yes", "y", "present", "found", "detected", "success"])
+    labels = labels.dropna(subset=["site_id"]).drop_duplicates("site_id")
+    train = candidates.merge(labels[["site_id", "_field_success"]], on="site_id", how="inner")
+    if len(train) < 6 or train["_field_success"].nunique() < 2:
+        return candidates, "Validation learning needs at least 6 matched candidate rows with both success and non-success outcomes."
+    feature_cols = [
+        "occurrence_support_score", "model_support_score", "sdm_suitability",
+        "habitat_score", "environmental_similarity", "mahalanobis_environment_distance",
+        "survey_gap_score", "access_score", "nearest_known_population_km",
+        "elevation", "slope", "aspect", "roughness", "tpi", "ndvi",
+        "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m",
+    ]
+    feature_cols = [c for c in feature_cols if c in candidates.columns and pd.to_numeric(candidates[c], errors="coerce").notna().any()]
+    if not feature_cols:
+        return candidates, "No numeric candidate features were available for validation learning."
+    X_train = train[feature_cols].apply(pd.to_numeric, errors="coerce")
+    X_all = candidates[feature_cols].apply(pd.to_numeric, errors="coerce")
+    y = train["_field_success"].astype(int)
+    model = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(max_iter=1000, class_weight="balanced")),
+    ])
+    try:
+        model.fit(X_train, y)
+        out = candidates.copy()
+        out["field_validation_support_score"] = model.predict_proba(X_all)[:, 1].round(3)
+        current_model = pd.to_numeric(out.get("model_support_score", pd.Series(0.0, index=out.index)), errors="coerce").fillna(0.0)
+        out["model_support_score"] = np.maximum(current_model, out["field_validation_support_score"])
+        note = f"Field-validation learning applied from {len(train):,} matched rows using {len(feature_cols):,} candidate features."
+        out["validation_learning_note"] = note
+        if "score_explanation" in out.columns:
+            out["score_explanation"] = out["score_explanation"].fillna("").astype(str) + " Field-validation support was added from previous survey outcomes."
+        return out, note
+    except Exception as exc:
+        return candidates, f"Validation learning failed: {exc}"
 
 
 def popup_html_site(row: pd.Series) -> str:
@@ -4978,7 +5143,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "exploration_gain", "sampling_gap_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "exploration_gain", "sampling_gap_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -5720,11 +5885,33 @@ def main() -> None:
             "This is a local habitat-analogue search: known-site terrain profiles are compared with grid cells using "
             "Mahalanobis environmental distance. SDM remains a separate broad climate-niche tool."
         )
-        with st.expander("High-resolution habitat layers", expanded=False):
+        _layer_bounds = (
+            float(occ_extent_selected["_longitude"].min()),
+            float(occ_extent_selected["_latitude"].min()),
+            float(occ_extent_selected["_longitude"].max()),
+            float(occ_extent_selected["_latitude"].max()),
+        )
+        with st.expander("App-provided local habitat layers", expanded=False):
             st.caption(
-                "Optional inputs for local field-scale habitat profiling. DEM/NDVI/land cover should be GeoTIFF. "
-                "Roads, trails, coastline, and forest edge should be GeoJSON line or polygon data. "
-                "If no layers are supplied, the app falls back to its built-in elevation raster."
+                "The app provides local terrain variables from its elevation raster and a coastline-distance proxy. "
+                "Optionally fetch OpenStreetMap roads, trails, and forest-edge proxies for the current survey area."
+            )
+            include_osm_layers = st.checkbox(
+                "Fetch app-provided OpenStreetMap access/edge layers for this survey area",
+                value=False,
+                key="potential_fetch_osm_layers",
+                help="Adds road, trail, and forest-edge distance proxies. Keep off for very large areas or when Overpass is slow.",
+            )
+            highres_layers = app_provided_habitat_layers(_layer_bounds, bool(include_osm_layers))
+            base_supplied = [name for name, path in highres_layers.items() if path]
+            st.caption(
+                "Active app-provided layers: built-in elevation/topography"
+                + (f", {', '.join(base_supplied)}" if base_supplied else "")
+            )
+        with st.expander("Optional: user-supplied layer overrides / additions", expanded=False):
+            st.caption(
+                "Use this only when you have better local layers than the app-provided defaults. "
+                "DEM/NDVI/land cover should be GeoTIFF. Roads, trails, coastline, and forest edge should be GeoJSON."
             )
             hr1, hr2, hr3 = st.columns(3)
             dem_upload = hr1.file_uploader("DEM GeoTIFF", type=["tif", "tiff"], key="potential_dem_upload")
@@ -5735,7 +5922,7 @@ def main() -> None:
             trails_upload = hv2.file_uploader("Trails GeoJSON", type=["geojson", "json"], key="potential_trails_upload")
             coast_upload = hv3.file_uploader("Coastline GeoJSON", type=["geojson", "json"], key="potential_coast_upload")
             forest_edge_upload = hv4.file_uploader("Forest edge GeoJSON", type=["geojson", "json"], key="potential_forest_edge_upload")
-            highres_layers = {
+            uploaded_layers = {
                 "dem": cache_uploaded_layer(dem_upload, "potential_dem"),
                 "ndvi": cache_uploaded_layer(ndvi_upload, "potential_ndvi"),
                 "landcover": cache_uploaded_layer(landcover_upload, "potential_landcover"),
@@ -5744,9 +5931,10 @@ def main() -> None:
                 "coastline": cache_uploaded_layer(coast_upload, "potential_coast"),
                 "forest_edge": cache_uploaded_layer(forest_edge_upload, "potential_forest_edge"),
             }
-            supplied_layers = [name for name, path in highres_layers.items() if path]
+            highres_layers.update({k: v for k, v in uploaded_layers.items() if v})
+            supplied_layers = [name for name, path in uploaded_layers.items() if path]
             if supplied_layers:
-                st.caption(f"Using high-resolution layer inputs: {', '.join(supplied_layers)}")
+                st.caption(f"Using user-supplied layer overrides/additions: {', '.join(supplied_layers)}")
         if "highres_layers" not in locals():
             highres_layers = {}
         pc1, pc2, pc3, pc4 = st.columns(4)
@@ -5791,6 +5979,24 @@ def main() -> None:
             pdl1.download_button("Potential candidates CSV", potential_candidates.to_csv(index=False).encode("utf-8"), "potential_survey_site_candidates.csv", "text/csv", use_container_width=True, key="potential_candidates_csv_download")
             pdl2.download_button("Potential candidates KML", make_export_kml(potential_candidates).encode("utf-8"), "potential_survey_site_candidates.kml", "application/vnd.google-earth.kml+xml", use_container_width=True, key="potential_candidates_kml_download")
             all_candidates = pd.concat([all_candidates, potential_candidates], ignore_index=True, sort=False)
+
+    with st.expander("Optional: learn from field-validation results", expanded=False):
+        st.caption(
+            "Upload a previous validation CSV exported from this app. "
+            "If it contains matching site_id values and a result column such as target_species_found, found, or detected, "
+            "the app learns a lightweight field-validation support score and can use it for re-ranking."
+        )
+        validation_upload = st.file_uploader("Field-validation CSV", type=["csv"], key="field_validation_learning_upload")
+        if validation_upload is not None:
+            try:
+                validation_df = read_uploaded_csv(validation_upload)
+                all_candidates, learning_msg = apply_field_validation_learning(all_candidates, validation_df)
+                if "applied" in learning_msg:
+                    st.success(learning_msg)
+                else:
+                    st.info(learning_msg)
+            except Exception as exc:
+                st.warning(f"Could not apply field-validation learning: {exc}")
 
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_m)) if not all_candidates.empty else all_candidates
     all_candidates = add_priority_rank(all_candidates, float(observed_weight), float(model_weight))
@@ -6036,7 +6242,7 @@ def main() -> None:
         if all_candidates.empty:
             st.info("No candidates generated yet.")
         else:
-            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "survey_gap_score", "access_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "score_explanation", "recommended_survey_window", "season_confidence", "flowering_record_count"] if c in all_candidates.columns]
+            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "survey_gap_score", "access_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "score_explanation", "recommended_survey_window", "season_confidence", "flowering_record_count"] if c in all_candidates.columns]
             st.dataframe(all_candidates[all_cand_show_cols], width="stretch", hide_index=True)
             oc1, oc2 = st.columns(2)
             oc1.download_button(

@@ -4,6 +4,28 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-26 - Codex (OpenAI) - Make habitat analogue layers app-provided and add validation learning
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Shifted `Potential Survey Sites` from an upload-first layer workflow to an app-provided local habitat layer workflow.
+- Added app-provided local topography as the default habitat analogue basis, using the app's elevation raster and derived terrain variables.
+- Added an app-provided coastline-distance proxy from the built-in land boundary.
+- Added optional OpenStreetMap fetches for roads, trails, and forest-edge proxies inside the current survey area.
+- Kept user-supplied DEM/NDVI/land-cover/vector inputs as optional overrides/additions rather than the main workflow.
+- Added optional field-validation learning: users can upload a previous validation CSV with `site_id` and a presence/result column, and the app learns a lightweight `field_validation_support_score` for candidate re-ranking.
+- Export columns now include `field_validation_support_score` and `validation_learning_note`.
+
+Features preserved:
+- Occurrence-supported candidates, optional SDM and SDM-high exploration candidates, raster-style predict map, VIF/spatial validation, ACSP selection, map/rectangle selection, selected-site exports, genus/SSDM workflows, and validation outputs remain available.
+
+Known risks / TODO:
+- OpenStreetMap access/edge layers depend on Overpass availability and are optional; failures leave those distance proxies missing without stopping candidate generation.
+- The validation-learning model is intentionally lightweight and needs enough matched field-validation rows with both success and non-success outcomes before it can re-rank candidates.
+
 ## 2026-06-26 - Codex (OpenAI) - Add high-resolution habitat layer inputs for Potential Survey Sites
 
 Changed files:
