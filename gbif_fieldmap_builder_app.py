@@ -362,6 +362,7 @@ def init_session_state() -> None:
         "_last_analysis_mode": None,
         "acsp_result_species": None,
         "acsp_result_genus": None,
+        "potential_survey_candidates": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -386,6 +387,7 @@ def clear_loaded_data() -> None:
     st.session_state.target_rect_features = []
     st.session_state.target_last_draw_sig = ""
     st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
+    st.session_state.potential_survey_candidates = None
     st.session_state.source_message = "No occurrence data loaded yet."
 
 
@@ -1236,6 +1238,7 @@ def target_occurrence_set_panel(
                 st.session_state[f"{key_prefix}_rect_features"] = []
                 st.session_state[f"{key_prefix}_last_draw_sig"] = ""
                 st.session_state[f"{key_prefix}_map_reset_token"] = st.session_state.get(f"{key_prefix}_map_reset_token", 0) + 1
+                st.session_state.potential_survey_candidates = None
                 reset_model_outputs()
                 st.rerun()
         with col_map:
@@ -1253,6 +1256,7 @@ def target_occurrence_set_panel(
             if draw_sig != st.session_state.get(f"{key_prefix}_last_draw_sig", ""):
                 st.session_state[f"{key_prefix}_last_draw_sig"] = draw_sig
                 st.session_state[f"{key_prefix}_rect_features"] = features
+                st.session_state.potential_survey_candidates = None
                 reset_model_outputs()
 
     # ── Retrieve stored rectangle ──────────────────────────────────────────────
@@ -3549,6 +3553,135 @@ def make_sdm_exploration_candidates(pred_table: pd.DataFrame, known_occ: pd.Data
     return pd.DataFrame(rows).sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
 
 
+def make_potential_survey_site_candidates(
+    occ: pd.DataFrame,
+    occurrence_candidates: pd.DataFrame,
+    cell_size_m: float,
+    max_candidates_per_type: int,
+    max_grid_cells: int,
+    start_site_id: int,
+) -> pd.DataFrame:
+    """Build habitat-first exploratory survey cells from the active survey area.
+
+    This MVP uses the active occurrence survey area as the spatial frame, then
+    ranks grid-cell centres by distance to known records and local record density.
+    It does not claim SDM probability; it creates fieldwork hypotheses.
+    """
+    if occ is None or occ.empty:
+        return pd.DataFrame()
+    work = occ.dropna(subset=["_latitude", "_longitude"]).copy()
+    if work.empty:
+        return pd.DataFrame()
+    center_lat = float(work["_latitude"].mean())
+    cell_m = max(50.0, float(cell_size_m))
+    lat_step = cell_m / 111_320.0
+    lon_step = cell_m / max(1.0, 111_320.0 * math.cos(math.radians(center_lat)))
+    lat_min, lat_max = float(work["_latitude"].min()), float(work["_latitude"].max())
+    lon_min, lon_max = float(work["_longitude"].min()), float(work["_longitude"].max())
+    lat_pad = max(lat_step, (lat_max - lat_min) * 0.05)
+    lon_pad = max(lon_step, (lon_max - lon_min) * 0.05)
+    lat_vals = np.arange(lat_min - lat_pad, lat_max + lat_pad + lat_step, lat_step)
+    lon_vals = np.arange(lon_min - lon_pad, lon_max + lon_pad + lon_step, lon_step)
+    if len(lat_vals) * len(lon_vals) > int(max_grid_cells):
+        stride = int(math.ceil(math.sqrt((len(lat_vals) * len(lon_vals)) / max(1, int(max_grid_cells)))))
+        lat_vals = lat_vals[::stride]
+        lon_vals = lon_vals[::stride]
+
+    known_coords = work[["_latitude", "_longitude"]].to_numpy(dtype=float)
+    if known_coords.shape[0] == 0:
+        return pd.DataFrame()
+    tree = BallTree(np.radians(known_coords), metric="haversine")
+    radius_m = max(cell_m * 1.5, 100.0)
+    rows: list[dict[str, Any]] = []
+    for lat in lat_vals:
+        for lon in lon_vals:
+            point = np.array([[float(lat), float(lon)]], dtype=float)
+            dist_rad, _idx = tree.query(np.radians(point), k=1)
+            d_nearest_m = float(dist_rad[0, 0] * EARTH_RADIUS_M)
+            nearby = tree.query_radius(np.radians(point), r=radius_m / EARTH_RADIUS_M, count_only=True)
+            nearby_count = int(nearby[0]) if np.ndim(nearby) else int(nearby)
+            rows.append({
+                "latitude": float(lat),
+                "longitude": float(lon),
+                "distance_to_nearest_known_m": d_nearest_m,
+                "target_record_density": nearby_count,
+            })
+    grid = pd.DataFrame(rows)
+    if grid.empty:
+        return pd.DataFrame()
+    grid = filter_to_land(grid, "latitude", "longitude", radius_m)
+    if grid.empty:
+        return pd.DataFrame()
+
+    max_dist = max(float(grid["distance_to_nearest_known_m"].quantile(0.95)), 1.0)
+    density = pd.to_numeric(grid["target_record_density"], errors="coerce").fillna(0.0)
+    max_density = max(float(density.max()), 1.0)
+    grid["nearest_known_population_km"] = (grid["distance_to_nearest_known_m"] / 1000.0).round(3)
+    grid["analogue_score"] = np.exp(-grid["distance_to_nearest_known_m"] / max(cell_m * 8.0, 1.0)).clip(0, 1)
+    grid["habitat_score"] = grid["analogue_score"]
+    grid["environmental_distance_to_known"] = (1.0 - grid["analogue_score"]).clip(0, 1)
+    grid["environmental_novelty"] = (grid["distance_to_nearest_known_m"] / max_dist).clip(0, 1)
+    grid["survey_effort_proxy"] = (density / max_density).clip(0, 1)
+    grid["survey_gap_score"] = (1.0 - grid["survey_effort_proxy"]).clip(0, 1)
+    grid["access_score"] = np.nan
+    grid["access_note"] = "Road/trail access not evaluated in this MVP; verify in Google Maps and field conditions."
+    grid["all_taxa_record_density"] = np.nan
+    grid["search_cell_radius_m"] = round(cell_m / 2.0, 1)
+
+    occurrence_points = occurrence_candidates[["latitude", "longitude"]].copy() if occurrence_candidates is not None and not occurrence_candidates.empty else pd.DataFrame(columns=["latitude", "longitude"])
+    if not occurrence_points.empty:
+        cand_tree = BallTree(np.radians(occurrence_points.to_numpy(dtype=float)), metric="haversine")
+        cand_dist_rad, _ = cand_tree.query(np.radians(grid[["latitude", "longitude"]].to_numpy(dtype=float)), k=1)
+        grid = grid[cand_dist_rad[:, 0] * EARTH_RADIUS_M >= max(cell_m, 100.0)].copy()
+    if grid.empty:
+        return pd.DataFrame()
+
+    pools = [
+        (
+            "Habitat-match",
+            grid[(grid["analogue_score"] >= float(grid["analogue_score"].quantile(0.65))) & (grid["distance_to_nearest_known_m"] >= cell_m)].copy(),
+            "analogue_score",
+            "High environmental analogue proxy near known habitat, but outside existing candidate centres.",
+        ),
+        (
+            "Survey-gap",
+            grid[(grid["survey_gap_score"] >= float(grid["survey_gap_score"].quantile(0.65))) & (grid["analogue_score"] >= float(grid["analogue_score"].quantile(0.35)))].copy(),
+            "survey_gap_score",
+            "Low local target-record density within the active survey area; field validation may learn whether this is unsurveyed or unsuitable.",
+        ),
+        (
+            "Environmental-test",
+            grid[grid["environmental_novelty"] >= float(grid["environmental_novelty"].quantile(0.75))].copy(),
+            "environmental_novelty",
+            "Environmentally/spatially novel exploratory cell intended to test niche boundaries or absence information.",
+        ),
+    ]
+    out_rows: list[pd.DataFrame] = []
+    next_sid = int(start_site_id)
+    for candidate_type, pool, score_col, reason in pools:
+        if pool.empty:
+            continue
+        pool = pool.sort_values([score_col, "survey_gap_score", "analogue_score"], ascending=False).head(int(max_candidates_per_type)).copy()
+        n = len(pool)
+        pool["site_id"] = range(next_sid, next_sid + n)
+        next_sid += n
+        pool["candidate_type"] = candidate_type
+        pool["candidate_method"] = "Habitat-first grid cell"
+        pool["n_occurrences"] = 0
+        pool["occurrence_support_score"] = pd.to_numeric(pool[score_col], errors="coerce").fillna(0.0).clip(0, 1).round(3)
+        pool["model_support_score"] = 0.0
+        pool["sdm_suitability"] = np.nan
+        pool["score_explanation"] = reason
+        pool["selection_reason"] = reason
+        pool["why_selected"] = reason
+        pool["bias_warning"] = "Potential survey cell, not a confirmed occurrence. Requires field validation."
+        out_rows.append(pool)
+    if not out_rows:
+        return pd.DataFrame()
+    out = pd.concat(out_rows, ignore_index=True, sort=False)
+    return out.reset_index(drop=True)
+
+
 def popup_html_site(row: pd.Series) -> str:
     survey_window = row.get('recommended_survey_window', '')
     fl_count = row.get('flowering_record_count', 0)
@@ -3563,6 +3696,9 @@ def popup_html_site(row: pd.Series) -> str:
     Priority score: {row.get('priority_score', '')}<br>
     Occurrence support: {row.get('occurrence_support_score', '')}<br>
     Occurrence records: {int(row.get('n_occurrences', 0))}<br>
+    Habitat analogue score: {row.get('analogue_score', '')}<br>
+    Survey gap score: {row.get('survey_gap_score', '')}<br>
+    Nearest known population: {row.get('nearest_known_population_km', '')} km<br>
     SDM suitability: {row.get('sdm_suitability', '')}<br>
     SSDM predicted richness: {row.get('ssdm_predicted_richness', '')}<br>
     Species richness: {row.get('observed_species_richness', row.get('species_richness', ''))}<br>
@@ -3580,6 +3716,8 @@ def _priority_marker_style(row: Any) -> tuple[int, str]:
     ctype_lower = ctype.lower()
     if ctype_lower.startswith("sdm-high") or ctype_lower.startswith("sdm_high") or ctype_lower.startswith("ssdm-high"):
         return 9, "#9467bd"
+    if ctype in {"Habitat-match", "Survey-gap", "Environmental-test"}:
+        return 9, {"Habitat-match": "#17becf", "Survey-gap": "#bcbd22", "Environmental-test": "#8c564b"}.get(ctype, "#17becf")
     rank = int(row.get("priority_rank", 99)) if str(row.get("priority_rank", "")).strip() not in ("", "nan") else 99
     if rank <= 3:
         return 14, "#d62728"
@@ -3703,6 +3841,7 @@ def load_input_controls(default_fetch_cap: int = FAST_SPECIES_GBIF_FETCH_CAP) ->
                 st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
                 st.session_state.sl_last_draw_sig = ""
                 st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
+                st.session_state.potential_survey_candidates = None
                 reset_model_outputs()
         return
     name = st.sidebar.text_input("Taxon scientific name", value="", placeholder="e.g. Campanula punctata", key="gbif_taxon_scientific_name_input")
@@ -3758,6 +3897,7 @@ def load_input_controls(default_fetch_cap: int = FAST_SPECIES_GBIF_FETCH_CAP) ->
         st.session_state.target_map_reset_token = st.session_state.get("target_map_reset_token", 0) + 1
         st.session_state.sl_last_draw_sig = ""
         st.session_state.sl_reset_token = st.session_state.get("sl_reset_token", 0) + 1
+        st.session_state.potential_survey_candidates = None
         reset_model_outputs()
 
 
@@ -4587,7 +4727,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "exploration_gain", "sampling_gap_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_score", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "search_cell_radius_m", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "exploration_gain", "sampling_gap_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -5323,6 +5463,40 @@ def main() -> None:
         if not exploration.empty:
             all_candidates = pd.concat([all_candidates, exploration], ignore_index=True, sort=False)
 
+    with st.expander("Optional: Potential Survey Sites (Habitat-first Discovery)", expanded=False):
+        st.caption(
+            "Generate exploratory grid-cell candidates that are not limited to known occurrence clusters. "
+            "This MVP uses the active survey area, known-record distance, and local record-density gap as transparent fieldwork proxies."
+        )
+        pc1, pc2, pc3 = st.columns(3)
+        potential_cell_m = pc1.selectbox("Search cell size", [100, 250, 500, 1000], index=1, format_func=lambda v: f"{v} m", key="potential_cell_size_m")
+        potential_per_type = pc2.number_input("Candidates per type", min_value=1, max_value=100, value=10, step=1, key="potential_candidates_per_type")
+        potential_max_cells = pc3.number_input("Max grid cells to evaluate", min_value=100, max_value=20_000, value=2_000, step=100, key="potential_max_grid_cells")
+        st.caption("Candidate types: Habitat-match, Survey-gap, and Environmental-test. These are exploratory cells and require field validation.")
+        if st.button("Build potential survey-site candidates", key="build_potential_survey_sites", use_container_width=True):
+            start_sid = int(all_candidates["site_id"].max()) + 1 if not all_candidates.empty and "site_id" in all_candidates.columns else 1
+            potential_candidates = make_potential_survey_site_candidates(
+                occ_extent_selected,
+                all_candidates,
+                float(potential_cell_m),
+                int(potential_per_type),
+                int(potential_max_cells),
+                start_sid,
+            )
+            st.session_state["potential_survey_candidates"] = potential_candidates
+            if potential_candidates.empty:
+                st.warning("No potential survey-site candidates were generated. Try a coarser cell size or a broader survey area.")
+            else:
+                st.success(f"Generated {len(potential_candidates):,} potential survey-site candidates.")
+        potential_candidates = st.session_state.get("potential_survey_candidates")
+        if isinstance(potential_candidates, pd.DataFrame) and not potential_candidates.empty:
+            show_cols = [c for c in ["site_id", "candidate_type", "occurrence_support_score", "analogue_score", "survey_gap_score", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "why_selected"] if c in potential_candidates.columns]
+            st.dataframe(potential_candidates[show_cols], width="stretch", hide_index=True)
+            pdl1, pdl2 = st.columns(2)
+            pdl1.download_button("Potential candidates CSV", potential_candidates.to_csv(index=False).encode("utf-8"), "potential_survey_site_candidates.csv", "text/csv", use_container_width=True, key="potential_candidates_csv_download")
+            pdl2.download_button("Potential candidates KML", make_export_kml(potential_candidates).encode("utf-8"), "potential_survey_site_candidates.kml", "application/vnd.google-earth.kml+xml", use_container_width=True, key="potential_candidates_kml_download")
+            all_candidates = pd.concat([all_candidates, potential_candidates], ignore_index=True, sort=False)
+
     all_candidates = filter_to_land(all_candidates, "latitude", "longitude", float(survey_range_m)) if not all_candidates.empty else all_candidates
     all_candidates = add_priority_rank(all_candidates, float(observed_weight), float(model_weight))
     all_candidates = order_sites(all_candidates, "Nearest-neighbor route")
@@ -5363,6 +5537,7 @@ def main() -> None:
         )
         has_suit = "sdm_suitability" in all_candidates.columns and all_candidates["sdm_suitability"].notna().any()
         has_sdm_high = "candidate_type" in all_candidates.columns and all_candidates["candidate_type"].astype(str).str.startswith("SDM-high").any()
+        has_potential = "candidate_type" in all_candidates.columns and all_candidates["candidate_type"].astype(str).isin(["Habitat-match", "Survey-gap", "Environmental-test"]).any()
         sc1, sc2, sc3 = st.columns(3)
         top_sites_shown = sc1.number_input("Top-ranked sites shown", min_value=1, value=20, step=1, key="sl_top_sites_shown")
         min_priority = sc2.number_input("Minimum priority score", 0.0, 1.0, 0.0, 0.05, format="%.2f", key="sl_min_priority")
@@ -5377,11 +5552,12 @@ def main() -> None:
             disabled=not has_suit,
             help="Available after SDM is built." if not has_suit else "Filter displayed candidates by SDM suitability.",
         )
-        ic1, ic2, ic3, ic4 = st.columns(4)
+        ic1, ic2, ic3, ic4, ic5 = st.columns(5)
         include_occurrence_candidates = ic1.checkbox("Include occurrence-supported candidates", value=True, key="sl_incl_occ")
         include_sdm_candidates = ic2.checkbox("Include SDM-high exploration candidates", value=True, key="sl_incl_sdm", disabled=not has_sdm_high)
-        travelmode = ic3.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0, key="sl_travelmode")
-        if ic4.button("Clear selected sites", key="sl_clear_map_controls", disabled=not st.session_state.sl_selected_site_ids):
+        include_potential_candidates = ic3.checkbox("Include potential survey cells", value=True, key="sl_incl_potential", disabled=not has_potential)
+        travelmode = ic4.selectbox("Google Maps travel mode", ["driving", "walking", "bicycling", "transit"], index=0, key="sl_travelmode")
+        if ic5.button("Clear selected sites", key="sl_clear_map_controls", disabled=not st.session_state.sl_selected_site_ids):
             st.session_state.sl_selected_site_ids = []
             st.session_state.acsp_result_species = None
             st.session_state.last_route_click_signature = ""
@@ -5405,7 +5581,9 @@ def main() -> None:
             type_mask |= map_candidates.get("candidate_type", pd.Series("", index=map_candidates.index)).astype(str).str.startswith("Occurrence")
         if include_sdm_candidates and has_sdm_high:
             type_mask |= map_candidates.get("candidate_type", pd.Series("", index=map_candidates.index)).astype(str).str.startswith("SDM-high")
-        if include_occurrence_candidates or (include_sdm_candidates and has_sdm_high):
+        if include_potential_candidates and has_potential:
+            type_mask |= map_candidates.get("candidate_type", pd.Series("", index=map_candidates.index)).astype(str).isin(["Habitat-match", "Survey-gap", "Environmental-test"])
+        if include_occurrence_candidates or (include_sdm_candidates and has_sdm_high) or (include_potential_candidates and has_potential):
             map_candidates = map_candidates[type_mask]
         if "priority_score" in map_candidates.columns:
             map_candidates = map_candidates[pd.to_numeric(map_candidates["priority_score"], errors="coerce").fillna(0.0) >= float(min_priority)]
@@ -5562,7 +5740,7 @@ def main() -> None:
         if all_candidates.empty:
             st.info("No candidates generated yet.")
         else:
-            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "latitude", "longitude", "score_explanation", "recommended_survey_window", "season_confidence", "flowering_record_count"] if c in all_candidates.columns]
+            all_cand_show_cols = [c for c in ["site_id", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "observed_weight", "model_weight", "candidate_type", "n_occurrences", "habitat_score", "analogue_score", "survey_gap_score", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "score_explanation", "recommended_survey_window", "season_confidence", "flowering_record_count"] if c in all_candidates.columns]
             st.dataframe(all_candidates[all_cand_show_cols], width="stretch", hide_index=True)
             oc1, oc2 = st.columns(2)
             oc1.download_button(

@@ -4,6 +4,27 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-26 - Codex (OpenAI) - Add Potential Survey Sites MVP
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Added an optional `Potential Survey Sites (Habitat-first Discovery)` expander in species mode.
+- Implemented an MVP grid-cell candidate generator that creates exploratory `Habitat-match`, `Survey-gap`, and `Environmental-test` candidates from the active survey area.
+- Added transparent fieldwork proxy columns: `habitat_score`, `analogue_score`, `environmental_distance_to_known`, `environmental_novelty`, `survey_effort_proxy`, `survey_gap_score`, `access_score`, `access_note`, `target_record_density`, `nearest_known_population_km`, `search_cell_radius_m`, and `why_selected`.
+- Potential candidates are appended to the existing candidate table and can flow into top-ranked output, map display, ACSP auto-selection, Google Maps links, CSV/KML/HTML exports, and field-validation CSVs.
+- Added a selection-map checkbox for including potential survey cells, and marker styling for the three new candidate types.
+- Cleared cached potential candidates when source data or the survey-area rectangle changes so stale exploratory cells are not reused.
+
+Features preserved:
+- Existing occurrence-supported candidates, optional SDM and SDM-high exploration candidates, ACSP selection, manual map/rectangle selection, selected-site summaries, CSV/HTML/KML/validation exports, genus/SSDM workflows, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- This is an MVP scaffold for Issue #23. It does not yet sample uploaded high-resolution GeoTIFF/vector layers or road/trail access data; `access_score` is left unset and `access_note` asks users to verify access externally.
+
 ## 2026-06-25 - Codex (OpenAI) - Remove top-ranked display count upper bounds
 
 Changed files:
