@@ -23,6 +23,27 @@ Features preserved:
 Known risks / TODO:
 - README now describes the research direction more accurately, but app-provided NDVI/land-cover and richer online learning remain future work.
 
+## 2026-06-26 - Codex (OpenAI) - Simplify and localize Potential Survey Sites
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added recommended fast local settings for Potential Survey Sites so ordinary users do not need to tune cell size, candidate count, or max grid cells.
+- Added adaptive effective cell-size reporting so outputs show both requested and actual search-cell sizes.
+- Reworked broad-area Potential Survey Sites generation: instead of coarsening a whole-country bounding box into very large cells, broad searches now create fine local search windows around occurrence-supported candidate centers.
+- Added output columns for requested search cell size, effective search cell size, and evaluated grid-cell count.
+- Hardened representative spatial capping so it also works on generated candidate grids that do not have occurrence-only fields such as `_year`, `_media_url`, or `_row_id`.
+- Random validation with `Viola grypoceras` in Japan used 429 fetched records, generated 5 occurrence candidates and 24 potential candidates, kept a 1,000 m effective local search cell, evaluated 957 grid cells, and selected a mixed Discovery-focused set.
+
+Features preserved:
+- GBIF/CSV input, occurrence-supported candidates, optional SDM and SDM-high exploration candidates, Potential Survey Sites, local habitat analogue scoring, ACSP modes, genus/SSDM workflows, exports, and field-validation outputs remain available.
+
+Known risks / TODO:
+- Local search windows are still based on app-provided elevation/topography and coastline/access proxies unless richer app-provided layers are added.
+- Recommended settings should be calibrated with field-validation outcomes and may need taxon- or island-specific presets later.
+
 ## 2026-06-26 - Codex (OpenAI) - Validate and fix mirrored genus / SSDM workflow
 
 Changed files:

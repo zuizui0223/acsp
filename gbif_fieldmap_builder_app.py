@@ -1495,8 +1495,16 @@ def occurrence_sort_for_representative(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df.copy()
     work = df.copy()
-    work["_year_sort"] = pd.to_numeric(work.get("_year"), errors="coerce").fillna(-9999)
-    work["_has_photo_sort"] = work.get("_media_url", "").astype(str).str.len() > 0
+    if "_year" in work.columns:
+        work["_year_sort"] = pd.to_numeric(work["_year"], errors="coerce").fillna(-9999)
+    else:
+        work["_year_sort"] = -9999
+    if "_media_url" in work.columns:
+        work["_has_photo_sort"] = work["_media_url"].astype(str).str.len() > 0
+    else:
+        work["_has_photo_sort"] = False
+    if "_row_id" not in work.columns:
+        work["_row_id"] = np.arange(len(work), dtype=int)
     return work.sort_values(["_has_photo_sort", "_year_sort", "_row_id"], ascending=[False, False, True]).reset_index(drop=True)
 
 
@@ -4014,7 +4022,8 @@ def make_potential_survey_site_candidates(
     work = occ.dropna(subset=["_latitude", "_longitude"]).copy()
     if work.empty:
         return pd.DataFrame()
-    cell_m = max(50.0, float(cell_size_m))
+    requested_cell_m = max(50.0, float(cell_size_m))
+    cell_m = requested_cell_m
 
     known_coords = work[["_latitude", "_longitude"]].to_numpy(dtype=float)
     if known_coords.shape[0] == 0:
@@ -4030,21 +4039,63 @@ def make_potential_survey_site_candidates(
         grid["macro_filter_basis"] = "SDM predict-map cells used as broad macro-scale filter"
     else:
         center_lat = float(work["_latitude"].mean())
-        lat_step = cell_m / 111_320.0
-        lon_step = cell_m / max(1.0, 111_320.0 * math.cos(math.radians(center_lat)))
         lat_min, lat_max = float(work["_latitude"].min()), float(work["_latitude"].max())
         lon_min, lon_max = float(work["_longitude"].min()), float(work["_longitude"].max())
-        lat_pad = max(lat_step, (lat_max - lat_min) * 0.05)
-        lon_pad = max(lon_step, (lon_max - lon_min) * 0.05)
-        lat_vals = np.arange(lat_min - lat_pad, lat_max + lat_pad + lat_step, lat_step)
-        lon_vals = np.arange(lon_min - lon_pad, lon_max + lon_pad + lon_step, lon_step)
-        if len(lat_vals) * len(lon_vals) > int(max_grid_cells):
-            stride = int(math.ceil(math.sqrt((len(lat_vals) * len(lon_vals)) / max(1, int(max_grid_cells)))))
-            lat_vals = lat_vals[::stride]
-            lon_vals = lon_vals[::stride]
-        grid = pd.DataFrame(
-            [{"latitude": float(lat), "longitude": float(lon)} for lat in lat_vals for lon in lon_vals]
-        )
+        lat_span_m = max(1.0, (lat_max - lat_min) * 111_320.0)
+        lon_span_m = max(1.0, (lon_max - lon_min) * 111_320.0 * max(0.2, math.cos(math.radians(center_lat))))
+        approx_cells = max(1.0, (lat_span_m / cell_m) * (lon_span_m / cell_m))
+        broad_local_search = approx_cells > float(max_grid_cells) * 4.0
+        if broad_local_search:
+            if occurrence_candidates is not None and not occurrence_candidates.empty:
+                center_df = occurrence_candidates[["latitude", "longitude"]].dropna().copy()
+            else:
+                center_df = work[["_latitude", "_longitude"]].rename(columns={"_latitude": "latitude", "_longitude": "longitude"}).dropna().copy()
+            max_centers = max(5, min(80, int(max_grid_cells) // 25))
+            center_df = spatially_balanced_cap(center_df.rename(columns={"latitude": "_latitude", "longitude": "_longitude"}), max_centers).rename(columns={"_latitude": "latitude", "_longitude": "longitude"})
+            local_radius_m = min(25_000.0, max(3_000.0, requested_cell_m * 8.0))
+            rows: list[dict[str, float]] = []
+            for _, center in center_df.iterrows():
+                c_lat = float(center["latitude"])
+                c_lon = float(center["longitude"])
+                lat_step = cell_m / 111_320.0
+                lon_step = cell_m / max(1.0, 111_320.0 * math.cos(math.radians(c_lat)))
+                lat_radius = local_radius_m / 111_320.0
+                lon_radius = local_radius_m / max(1.0, 111_320.0 * math.cos(math.radians(c_lat)))
+                for lat in np.arange(c_lat - lat_radius, c_lat + lat_radius + lat_step, lat_step):
+                    for lon in np.arange(c_lon - lon_radius, c_lon + lon_radius + lon_step, lon_step):
+                        if _acsp_point_distances_m(c_lat, c_lon, np.array([lat]), np.array([lon]))[0] <= local_radius_m:
+                            rows.append({"latitude": float(lat), "longitude": float(lon)})
+            grid = pd.DataFrame(rows)
+            if not grid.empty:
+                coord_precision = 5 if cell_m < 500 else 4
+                grid["_lat_key"] = grid["latitude"].round(coord_precision)
+                grid["_lon_key"] = grid["longitude"].round(coord_precision)
+                grid = grid.drop_duplicates(["_lat_key", "_lon_key"]).drop(columns=["_lat_key", "_lon_key"])
+                if len(grid) > int(max_grid_cells):
+                    grid = spatially_balanced_cap(grid.rename(columns={"latitude": "_latitude", "longitude": "_longitude"}), int(max_grid_cells)).rename(columns={"_latitude": "latitude", "_longitude": "longitude"})
+            grid["macro_filter_basis"] = f"Local search windows around occurrence-supported candidates ({local_radius_m / 1000.0:.1f} km radius) to keep broad-area searches fine and responsive"
+        elif approx_cells > float(max_grid_cells):
+            cell_m = cell_m * math.sqrt(approx_cells / max(1.0, float(max_grid_cells)))
+            if cell_m <= 250:
+                cell_m = math.ceil(cell_m / 25.0) * 25.0
+            elif cell_m <= 1000:
+                cell_m = math.ceil(cell_m / 50.0) * 50.0
+            else:
+                cell_m = math.ceil(cell_m / 100.0) * 100.0
+        if not broad_local_search:
+            lat_step = cell_m / 111_320.0
+            lon_step = cell_m / max(1.0, 111_320.0 * math.cos(math.radians(center_lat)))
+            lat_pad = max(lat_step, (lat_max - lat_min) * 0.05)
+            lon_pad = max(lon_step, (lon_max - lon_min) * 0.05)
+            lat_vals = np.arange(lat_min - lat_pad, lat_max + lat_pad + lat_step, lat_step)
+            lon_vals = np.arange(lon_min - lon_pad, lon_max + lon_pad + lon_step, lon_step)
+            if len(lat_vals) * len(lon_vals) > int(max_grid_cells):
+                stride = int(math.ceil(math.sqrt((len(lat_vals) * len(lon_vals)) / max(1, int(max_grid_cells)))))
+                lat_vals = lat_vals[::stride]
+                lon_vals = lon_vals[::stride]
+            grid = pd.DataFrame(
+                [{"latitude": float(lat), "longitude": float(lon)} for lat in lat_vals for lon in lon_vals]
+            )
     if grid.empty:
         return pd.DataFrame()
     grid = filter_to_land(grid, "latitude", "longitude", radius_m)
@@ -4147,6 +4198,11 @@ def make_potential_survey_site_candidates(
         grid["access_note"] = "Road/trail access not evaluated; verify in Google Maps and field conditions."
     grid["all_taxa_record_density"] = np.nan
     grid["search_cell_radius_m"] = round(cell_m / 2.0, 1)
+    grid["requested_search_cell_size_m"] = round(requested_cell_m, 1)
+    grid["effective_search_cell_size_m"] = round(cell_m, 1)
+    grid["effective_grid_cells_evaluated"] = int(len(grid))
+    if "macro_filter_basis" not in grid.columns:
+        grid["macro_filter_basis"] = "Local habitat analogue grid from the active survey-area occurrence set"
 
     occurrence_points = occurrence_candidates[["latitude", "longitude"]].copy() if occurrence_candidates is not None and not occurrence_candidates.empty else pd.DataFrame(columns=["latitude", "longitude"])
     if not occurrence_points.empty:
@@ -4207,7 +4263,8 @@ def make_potential_survey_site_candidates(
         else:
             pool["priority_score"] = (0.40 * contrast_component + 0.25 * habitat_component + 0.20 * gap_component + 0.10 * access_component + 0.05 * macro_component).clip(0, 1).round(3)
         basis = str(pool["habitat_basis"].iloc[0]) if "habitat_basis" in pool.columns and len(pool) else "habitat-first proxy"
-        explained = f"{reason} Habitat score basis: {basis}."
+        effective_cell = float(pool["effective_search_cell_size_m"].iloc[0]) if "effective_search_cell_size_m" in pool.columns and len(pool) else cell_m
+        explained = f"{reason} Effective search cell: {effective_cell:.0f} m. Habitat score basis: {basis}."
         pool["score_explanation"] = explained
         pool["selection_reason"] = explained
         pool["why_selected"] = explained
@@ -4217,6 +4274,25 @@ def make_potential_survey_site_candidates(
         return pd.DataFrame()
     out = pd.concat(out_rows, ignore_index=True, sort=False)
     return out.reset_index(drop=True)
+
+
+def recommended_potential_survey_settings(occ: pd.DataFrame) -> dict[str, int]:
+    """Choose simple, fast defaults for local habitat-analogue discovery."""
+    if occ is None or occ.empty:
+        return {"cell_m": 250, "max_cells": 1500, "per_type": 10}
+    lat_span = float(pd.to_numeric(occ["_latitude"], errors="coerce").max() - pd.to_numeric(occ["_latitude"], errors="coerce").min())
+    lon_span = float(pd.to_numeric(occ["_longitude"], errors="coerce").max() - pd.to_numeric(occ["_longitude"], errors="coerce").min())
+    center_lat = float(pd.to_numeric(occ["_latitude"], errors="coerce").mean())
+    lat_span_km = max(0.0, lat_span * 111.32)
+    lon_span_km = max(0.0, lon_span * 111.32 * max(0.2, math.cos(math.radians(center_lat))))
+    max_span_km = max(lat_span_km, lon_span_km)
+    if max_span_km <= 20:
+        return {"cell_m": 100, "max_cells": 2500, "per_type": 12}
+    if max_span_km <= 80:
+        return {"cell_m": 250, "max_cells": 2000, "per_type": 10}
+    if max_span_km <= 250:
+        return {"cell_m": 500, "max_cells": 1800, "per_type": 10}
+    return {"cell_m": 1000, "max_cells": 1500, "per_type": 8}
 
 
 def apply_field_validation_learning(candidates: pd.DataFrame, validation: pd.DataFrame) -> tuple[pd.DataFrame, str]:
@@ -5335,7 +5411,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "requested_search_cell_size_m", "effective_search_cell_size_m", "effective_grid_cells_evaluated", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -6101,11 +6177,29 @@ def main() -> None:
             "App-provided layers: elevation/topography and coastline proxy"
             + (f"; optional active layers: {', '.join(base_supplied)}" if base_supplied else "")
         )
-        pc1, pc2, pc3, pc4 = st.columns(4)
-        potential_cell_m = pc1.selectbox("Search cell size", [100, 250, 500, 1000], index=0, format_func=lambda v: f"{v} m", key="potential_cell_size_m")
-        profile_buffer_m = pc2.number_input("Known-site profile buffer (m)", min_value=10, max_value=1000, value=100, step=10, key="potential_profile_buffer_m")
-        potential_per_type = pc3.number_input("Candidates per type", min_value=1, max_value=100, value=10, step=1, key="potential_candidates_per_type")
-        potential_max_cells = pc4.number_input("Max grid cells to evaluate", min_value=100, max_value=20_000, value=2_000, step=100, key="potential_max_grid_cells")
+        recommended_potential = recommended_potential_survey_settings(occ_extent_selected)
+        use_recommended_potential = st.checkbox(
+            "Use recommended fast local settings",
+            value=True,
+            key="potential_use_recommended_settings",
+            help="Recommended keeps the local habitat search responsive while using the finest practical cell size for the selected survey area.",
+        )
+        if use_recommended_potential:
+            potential_cell_m = int(recommended_potential["cell_m"])
+            potential_per_type = int(recommended_potential["per_type"])
+            potential_max_cells = int(recommended_potential["max_cells"])
+            profile_buffer_m = 100
+            st.caption(
+                f"Recommended settings: requested cell {potential_cell_m:,} m; "
+                f"evaluate up to {potential_max_cells:,} grid cells; {potential_per_type} candidates per type. "
+                "The app may automatically coarsen the effective cell size for broad survey areas to avoid lag."
+            )
+        else:
+            pc1, pc2, pc3, pc4 = st.columns(4)
+            potential_cell_m = pc1.selectbox("Search cell size", [100, 250, 500, 1000], index=0, format_func=lambda v: f"{v} m", key="potential_cell_size_m")
+            profile_buffer_m = pc2.number_input("Known-site profile buffer (m)", min_value=10, max_value=1000, value=100, step=10, key="potential_profile_buffer_m")
+            potential_per_type = pc3.number_input("Candidates per type", min_value=1, max_value=100, value=10, step=1, key="potential_candidates_per_type")
+            potential_max_cells = pc4.number_input("Max grid cells to evaluate", min_value=100, max_value=20_000, value=2_000, step=100, key="potential_max_grid_cells")
         mc1, _mc2 = st.columns(2)
         use_sdm_macro_filter = mc1.checkbox(
             "Use SDM as broad filter",
@@ -6137,7 +6231,7 @@ def main() -> None:
                 st.success(f"Generated {len(potential_candidates):,} potential survey-site candidates.")
         potential_candidates = st.session_state.get("potential_survey_candidates")
         if isinstance(potential_candidates, pd.DataFrame) and not potential_candidates.empty:
-            show_cols = [c for c in ["site_id", "candidate_type", "habitat_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "sdm_suitability", "survey_gap_score", "access_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "environmental_novelty", "nearest_known_population_km", "search_cell_radius_m", "latitude", "longitude", "why_selected"] if c in potential_candidates.columns]
+            show_cols = [c for c in ["site_id", "candidate_type", "habitat_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "sdm_suitability", "survey_gap_score", "access_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "environmental_novelty", "nearest_known_population_km", "requested_search_cell_size_m", "effective_search_cell_size_m", "effective_grid_cells_evaluated", "search_cell_radius_m", "latitude", "longitude", "why_selected"] if c in potential_candidates.columns]
             st.dataframe(potential_candidates[show_cols], width="stretch", hide_index=True)
             pdl1, pdl2 = st.columns(2)
             pdl1.download_button("Potential candidates CSV", potential_candidates.to_csv(index=False).encode("utf-8"), "potential_survey_site_candidates.csv", "text/csv", use_container_width=True, key="potential_candidates_csv_download")
