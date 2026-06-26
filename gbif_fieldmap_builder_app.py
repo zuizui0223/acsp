@@ -2642,21 +2642,6 @@ def sample_raster_values_fast(points: pd.DataFrame, raster_path: str, lat_col: s
         return clean_environment_array(values)
 
 
-def cache_uploaded_layer(uploaded: Any, prefix: str) -> Optional[str]:
-    """Persist an uploaded layer in the app cache so rasterio can reopen it across reruns."""
-    if uploaded is None:
-        return None
-    data = uploaded.getvalue()
-    digest = hashlib.sha1(data).hexdigest()[:16]
-    suffix = Path(uploaded.name).suffix.lower() or ".dat"
-    layer_dir = CACHE_DIR / "uploaded_layers"
-    layer_dir.mkdir(parents=True, exist_ok=True)
-    path = layer_dir / f"{prefix}_{digest}{suffix}"
-    if not path.exists() or path.stat().st_size != len(data):
-        path.write_bytes(data)
-    return str(path)
-
-
 def _coords_in_raster_crs(src: rasterio.io.DatasetReader, points: pd.DataFrame, lat_col: str, lon_col: str) -> np.ndarray:
     coords = points[[lon_col, lat_col]].to_numpy(dtype=float)
     if src.crs is not None and str(src.crs).upper() not in {"EPSG:4326", "OGC:CRS84"}:
@@ -5962,52 +5947,18 @@ def main() -> None:
             float(occ_extent_selected["_longitude"].max()),
             float(occ_extent_selected["_latitude"].max()),
         )
-        with st.expander("App-provided local habitat layers", expanded=False):
-            st.caption(
-                "The app provides local terrain variables from its elevation raster and a coastline-distance proxy. "
-                "Optionally fetch OpenStreetMap roads, trails, and forest-edge proxies for the current survey area."
-            )
-            include_osm_layers = st.checkbox(
-                "Fetch app-provided OpenStreetMap access/edge layers for this survey area",
-                value=False,
-                key="potential_fetch_osm_layers",
-                help="Adds road, trail, and forest-edge distance proxies. Keep off for very large areas or when Overpass is slow.",
-            )
-            highres_layers = app_provided_habitat_layers(_layer_bounds, bool(include_osm_layers))
-            base_supplied = [name for name, path in highres_layers.items() if path]
-            st.caption(
-                "Active app-provided layers: built-in elevation/topography"
-                + (f", {', '.join(base_supplied)}" if base_supplied else "")
-            )
-        with st.expander("Optional: user-supplied layer overrides / additions", expanded=False):
-            st.caption(
-                "Use this only when you have better local layers than the app-provided defaults. "
-                "DEM/NDVI/land cover should be GeoTIFF. Roads, trails, coastline, and forest edge should be GeoJSON."
-            )
-            hr1, hr2, hr3 = st.columns(3)
-            dem_upload = hr1.file_uploader("DEM GeoTIFF", type=["tif", "tiff"], key="potential_dem_upload")
-            ndvi_upload = hr2.file_uploader("NDVI GeoTIFF", type=["tif", "tiff"], key="potential_ndvi_upload")
-            landcover_upload = hr3.file_uploader("Land cover GeoTIFF", type=["tif", "tiff"], key="potential_landcover_upload")
-            hv1, hv2, hv3, hv4 = st.columns(4)
-            roads_upload = hv1.file_uploader("Roads GeoJSON", type=["geojson", "json"], key="potential_roads_upload")
-            trails_upload = hv2.file_uploader("Trails GeoJSON", type=["geojson", "json"], key="potential_trails_upload")
-            coast_upload = hv3.file_uploader("Coastline GeoJSON", type=["geojson", "json"], key="potential_coast_upload")
-            forest_edge_upload = hv4.file_uploader("Forest edge GeoJSON", type=["geojson", "json"], key="potential_forest_edge_upload")
-            uploaded_layers = {
-                "dem": cache_uploaded_layer(dem_upload, "potential_dem"),
-                "ndvi": cache_uploaded_layer(ndvi_upload, "potential_ndvi"),
-                "landcover": cache_uploaded_layer(landcover_upload, "potential_landcover"),
-                "roads": cache_uploaded_layer(roads_upload, "potential_roads"),
-                "trails": cache_uploaded_layer(trails_upload, "potential_trails"),
-                "coastline": cache_uploaded_layer(coast_upload, "potential_coast"),
-                "forest_edge": cache_uploaded_layer(forest_edge_upload, "potential_forest_edge"),
-            }
-            highres_layers.update({k: v for k, v in uploaded_layers.items() if v})
-            supplied_layers = [name for name, path in uploaded_layers.items() if path]
-            if supplied_layers:
-                st.caption(f"Using user-supplied layer overrides/additions: {', '.join(supplied_layers)}")
-        if "highres_layers" not in locals():
-            highres_layers = {}
+        include_osm_layers = st.checkbox(
+            "Include app-provided access / edge layers",
+            value=False,
+            key="potential_fetch_osm_layers",
+            help="Adds OpenStreetMap road, trail, and forest-edge distance proxies for the current survey area. Keep off if Overpass is slow.",
+        )
+        highres_layers = app_provided_habitat_layers(_layer_bounds, bool(include_osm_layers))
+        base_supplied = [name for name, path in highres_layers.items() if path]
+        st.caption(
+            "App-provided layers: elevation/topography and coastline proxy"
+            + (f"; optional active layers: {', '.join(base_supplied)}" if base_supplied else "")
+        )
         pc1, pc2, pc3, pc4 = st.columns(4)
         potential_cell_m = pc1.selectbox("Search cell size", [100, 250, 500, 1000], index=0, format_func=lambda v: f"{v} m", key="potential_cell_size_m")
         profile_buffer_m = pc2.number_input("Known-site profile buffer (m)", min_value=10, max_value=1000, value=100, step=10, key="potential_profile_buffer_m")

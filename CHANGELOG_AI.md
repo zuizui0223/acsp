@@ -4,6 +4,24 @@ This file records changes made by AI coding agents such as Codex, Claude, ChatGP
 
 Each agent should update this file after editing code.
 
+## 2026-06-26 - Codex (OpenAI) - Simplify Potential Survey Sites layer UI
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed the `Optional: user-supplied layer overrides / additions` UI from Potential Survey Sites.
+- Simplified Potential Survey Sites so the visible workflow uses app-provided local habitat layers only.
+- Kept the optional OpenStreetMap access/edge layer checkbox as the only extra layer control.
+- Removed the unused uploaded-layer cache helper for the Potential Survey Sites workflow.
+
+Features preserved:
+- Researcher coordinate CSV upload, occurrence-supported candidates, optional SDM and SDM-high exploration candidates, local habitat analogue candidate generation, ACSP selection, field-validation learning, selected-site exports, genus/SSDM workflows, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Users can no longer override local habitat layers from the UI; future app-provided NDVI and land-cover sources should replace that need.
+
 ## 2026-06-26 - Codex (OpenAI) - Improve ACSP for macro-SDM plus local habitat analogue planning
 
 Changed files:
