@@ -29,7 +29,8 @@ def main() -> None:
     message, raw = fetch_gbif_occurrences_cached(args.species, args.cap, country_code, None, None)
     cleaned = clean_occurrences(raw, detect_occurrence_columns(raw))
     bundle = build_automatic_discover_bundle(
-        str(payload.get("scientificName") or args.species), cleaned, message, country_scope
+        str(payload.get("scientificName") or args.species), cleaned, message, country_scope,
+        taxon_metadata=payload,
     )
 
     plan_sizes = {name: len(plan) for name, plan in bundle["plans"].items()}
@@ -38,7 +39,7 @@ def main() -> None:
         assert set(plan["site_id"].astype(int)).issubset(eligible_ids), f"{name} contains an ineligible site"
     assert all(size > 0 for size in plan_sizes.values()), "all three plans must contain sites"
     assert bundle["all_candidates"]["site_id"].is_unique, "candidate site IDs must be unique"
-    assert int(bundle["trip_estimate"]["estimated_days"]) <= 2, "default plan must fit the two-day assumption"
+    assert bundle["trip_estimate"]["fits_target_days"], "default plan must fit each daily hub-return budget"
     if bundle.get("selected_region"):
         assert float(bundle["selected_region"]["diameter_km"]) <= 80.0, "selected hub is too broad for a short trip"
 
@@ -66,6 +67,7 @@ def main() -> None:
         "balanced_site_ids": bundle["plans"]["Balanced"]["site_id"].astype(int).tolist(),
         "proposal": bundle["proposal"],
         "trip_estimate": bundle["trip_estimate"],
+        "survey_protocol": bundle["survey_protocol"],
         "eligible_with_unknown_constraints": int(
             bundle["constraint_audit"].loc[bundle["constraint_audit"]["eligible"], "unknown_constraints"].astype(str).ne("").sum()
         ),

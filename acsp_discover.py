@@ -28,6 +28,128 @@ class ResolutionDecision:
     reason: str
 
 
+@dataclass(frozen=True)
+class SurveyProtocol:
+    """Conservative field-effort defaults inferred from coarse taxonomy."""
+
+    protocol_id: str
+    taxon_group: str
+    method: str
+    observation_unit: str
+    daily_window: str
+    daily_field_hours: float
+    search_minutes_per_cell: int
+    access_buffer_minutes_per_cell: int
+    minimum_repeat_visits: int
+    movement_caution: str
+    weather_caution: str
+    confidence: str
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "protocol_id": self.protocol_id,
+            "taxon_group": self.taxon_group,
+            "method": self.method,
+            "observation_unit": self.observation_unit,
+            "daily_window": self.daily_window,
+            "daily_field_hours": self.daily_field_hours,
+            "search_minutes_per_cell": self.search_minutes_per_cell,
+            "access_buffer_minutes_per_cell": self.access_buffer_minutes_per_cell,
+            "minimum_repeat_visits": self.minimum_repeat_visits,
+            "movement_caution": self.movement_caution,
+            "weather_caution": self.weather_caution,
+            "confidence": self.confidence,
+        }
+
+
+def infer_survey_protocol(taxon_metadata: Optional[Mapping[str, object]] = None) -> SurveyProtocol:
+    """Infer a transparent broad protocol; never pretend it is species-specific.
+
+    GBIF backbone fields are sufficient to avoid treating a plant, bird, fish,
+    and amphibian as the same field object.  They are not sufficient to choose
+    a publication-ready method, so every profile retains an explicit caution.
+    """
+    metadata = {str(key).lower(): str(value or "").strip().lower() for key, value in (taxon_metadata or {}).items()}
+    kingdom = metadata.get("kingdom", "")
+    clazz = metadata.get("class", "")
+
+    common = {
+        "observation_unit": "candidate cell",
+        "weather_caution": "Verify local weather, season, detectability, permissions, and safety before departure.",
+    }
+    if kingdom in {"plantae", "viridiplantae"}:
+        return SurveyProtocol(
+            "vascular-plant-reconnaissance", "plant", "slow visual search with voucher-quality photographs",
+            daily_window="daylight; match flowering or fruiting period", daily_field_hours=8.0,
+            search_minutes_per_cell=90, access_buffer_minutes_per_cell=20, minimum_repeat_visits=1,
+            movement_caution="Records represent stationary individuals, but coordinates may be generalized or cultivated.",
+            confidence="medium", **common,
+        )
+    if clazz == "aves":
+        return SurveyProtocol(
+            "bird-point-count-reconnaissance", "bird", "stationary point count plus habitat notes",
+            daily_window="dawn-focused detection window", daily_field_hours=5.5,
+            search_minutes_per_cell=30, access_buffer_minutes_per_cell=15, minimum_repeat_visits=2,
+            movement_caution="Mobile detections are not population locations; avoid interpreting one record as a stationary colony.",
+            weather_caution="Avoid strong wind and rain; repeated visits are normally needed for non-detection inference.",
+            observation_unit="point-count station", confidence="medium",
+        )
+    if clazz in {"amphibia", "reptilia"}:
+        group = "amphibian" if clazz == "amphibia" else "reptile"
+        return SurveyProtocol(
+            f"{group}-active-search-reconnaissance", group, "standardized timed active search",
+            daily_window="evening/night for amphibians; suitable thermal window for reptiles", daily_field_hours=6.0,
+            search_minutes_per_cell=60, access_buffer_minutes_per_cell=25, minimum_repeat_visits=2,
+            movement_caution="Detection is strongly conditional on microhabitat and activity period.",
+            weather_caution="Rainfall, temperature, and recent weather must be checked; a single non-detection is weak evidence.",
+            observation_unit="timed search reach", confidence="low",
+        )
+    if clazz in {"insecta", "arachnida"}:
+        return SurveyProtocol(
+            "terrestrial-arthropod-reconnaissance", "terrestrial arthropod", "standardized timed visual/net/trap reconnaissance",
+            daily_window="species activity window; often weather-limited", daily_field_hours=7.0,
+            search_minutes_per_cell=60, access_buffer_minutes_per_cell=20, minimum_repeat_visits=2,
+            movement_caution="Life stage, host association, and short activity periods can dominate apparent distribution.",
+            weather_caution="Wind, rain, temperature, and time of day can invalidate comparisons between sites.",
+            observation_unit="standardized search station", confidence="low",
+        )
+    if clazz == "mammalia":
+        return SurveyProtocol(
+            "mammal-sign-reconnaissance", "mammal", "timed sign/transect reconnaissance; camera design requires a separate deployment plan",
+            daily_window="species-dependent; many taxa require nocturnal or multi-day sampling", daily_field_hours=7.0,
+            search_minutes_per_cell=75, access_buffer_minutes_per_cell=25, minimum_repeat_visits=2,
+            movement_caution="Mobile detections and signs may represent large home ranges rather than local populations.",
+            weather_caution="Survey method, latency, and repeat effort must be set from the focal species ecology.",
+            observation_unit="sign/transect station", confidence="low",
+        )
+    if clazz in {"actinopterygii", "chondrichthyes", "myxini", "cephalaspidomorphi"}:
+        return SurveyProtocol(
+            "aquatic-fish-reconnaissance", "fish", "waterbody/reach reconnaissance before gear-specific sampling",
+            daily_window="daylight access window unless species protocol says otherwise", daily_field_hours=7.0,
+            search_minutes_per_cell=120, access_buffer_minutes_per_cell=35, minimum_repeat_visits=2,
+            movement_caution="Road distance is a poor proxy for connected aquatic distance; barriers and catchments must be verified.",
+            weather_caution="Flow, tide, water level, permits, biosecurity, and gear requirements can dominate feasibility.",
+            observation_unit="waterbody or stream reach", confidence="low",
+        )
+    if kingdom == "animalia":
+        return SurveyProtocol(
+            "animal-reconnaissance-generic", "other animal", "taxon-appropriate timed reconnaissance",
+            daily_window="species activity window", daily_field_hours=7.0,
+            search_minutes_per_cell=60, access_buffer_minutes_per_cell=20, minimum_repeat_visits=2,
+            movement_caution="Mobility and detectability are unknown at this taxonomic resolution.",
+            weather_caution="Choose a species-specific detection method before treating non-detection as absence.",
+            observation_unit="survey station", confidence="low",
+        )
+    return SurveyProtocol(
+        "unknown-taxon-reconnaissance", "unknown", "generic timed reconnaissance",
+        daily_window="verify from focal-species ecology", daily_field_hours=7.0,
+        search_minutes_per_cell=75, access_buffer_minutes_per_cell=25, minimum_repeat_visits=2,
+        movement_caution="Taxonomic metadata were insufficient to infer mobility or spatial independence.",
+        weather_caution="A species-specific method must be selected before interpreting non-detections.",
+        observation_unit="candidate station", confidence="low",
+    )
+
+
 PLAN_WEIGHTS: dict[str, dict[str, float]] = {
     "Balanced": {
         "discovery": 0.30, "learning": 0.15, "representation": 0.20,
@@ -579,7 +701,13 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
                     redundancy = math.exp(-nearest / 5_000.0)
                     travel = min(1.0, nearest / 100_000.0)
                 else:
-                    representation, redundancy, travel = 0.5, 0.0, 0.0
+                    representation, redundancy = 0.5, 0.0
+                    hub_distance = pd.to_numeric(
+                        pd.Series([scored.at[i, "distance_to_hub_m"]])
+                        if "distance_to_hub_m" in scored.columns else pd.Series([0.0]),
+                        errors="coerce",
+                    ).fillna(0.0).iloc[0]
+                    travel = min(1.0, float(hub_distance) / 50_000.0)
                 components = {
                     "discovery": float(scored.at[i, "discovery_value"]),
                     "learning": float(scored.at[i, "learning_value"]),

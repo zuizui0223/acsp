@@ -58,6 +58,7 @@ from acsp_discover import (
     build_acsp_discover_plans,
     choose_candidate_resolution,
     infer_default_survey_scope,
+    infer_survey_protocol,
     parse_field_results,
     preferred_survey_window,
     recommend_survey_regions,
@@ -5763,53 +5764,134 @@ def automatic_region_label(scope: pd.DataFrame) -> str:
     return f"Main recorded range around {center_lat:.3f}, {center_lon:.3f}"
 
 
-def estimate_default_short_trip(plan: pd.DataFrame, hub_latitude: float, hub_longitude: float) -> dict[str, Any]:
-    """Transparent default trip estimate when the user has not supplied logistics."""
+def estimate_default_short_trip(
+    plan: pd.DataFrame,
+    hub_latitude: float,
+    hub_longitude: float,
+    survey_protocol: Optional[dict[str, Any]] = None,
+    target_days: int = 2,
+) -> dict[str, Any]:
+    """Schedule hub-to-hub field days with taxon-aware search effort.
+
+    This remains a route proxy, but unlike the former total-hours calculation,
+    every field day starts and ends at the hub and must fit its own time budget.
+    """
+    protocol = survey_protocol or infer_survey_protocol().as_dict()
     assumptions = {
-        "daily_field_hours": 8.0,
+        "daily_field_hours": float(protocol["daily_field_hours"]),
+        "operational_reserve_fraction": 0.15,
+        "usable_daily_hours": round(float(protocol["daily_field_hours"]) * 0.85, 3),
         "average_road_speed_kmh": 35.0,
         "road_distance_factor": 1.35,
-        "search_minutes_per_cell": 90,
-        "access_buffer_minutes_per_cell": 20,
+        "search_minutes_per_cell": int(protocol["search_minutes_per_cell"]),
+        "access_buffer_minutes_per_cell": int(protocol["access_buffer_minutes_per_cell"]),
         "start_end": "recommended region hub",
+        "target_days": int(target_days),
+        "protocol_id": str(protocol["protocol_id"]),
+        "taxon_group": str(protocol["taxon_group"]),
     }
     if plan is None or plan.empty:
-        return {**assumptions, "route_order_site_ids": [], "estimated_road_km": 0.0, "total_hours": 0.0, "estimated_days": 0}
+        return {
+            **assumptions, "route_order_site_ids": [], "day_schedules": [],
+            "estimated_road_km": 0.0, "total_hours": 0.0, "estimated_days": 0,
+            "fits_target_days": True, "overtime_days": 0,
+        }
     remaining = set(range(len(plan)))
-    current_lat, current_lon = float(hub_latitude), float(hub_longitude)
     route_positions: list[int] = []
-    straight_km = 0.0
-    while remaining:
-        positions = np.array(sorted(remaining), dtype=int)
-        distances = _acsp_point_distances_m(
-            current_lat, current_lon,
-            pd.to_numeric(plan.iloc[positions]["latitude"], errors="coerce").to_numpy(dtype=float),
-            pd.to_numeric(plan.iloc[positions]["longitude"], errors="coerce").to_numpy(dtype=float),
-        )
-        next_pos = int(positions[int(np.argmin(distances))])
-        straight_km += float(np.min(distances)) / 1000.0
-        route_positions.append(next_pos)
-        remaining.remove(next_pos)
-        current_lat = float(plan.iloc[next_pos]["latitude"])
-        current_lon = float(plan.iloc[next_pos]["longitude"])
-    straight_km += float(_acsp_point_distances_m(
-        current_lat, current_lon, np.array([hub_latitude]), np.array([hub_longitude])
-    )[0]) / 1000.0
-    road_km = straight_km * assumptions["road_distance_factor"]
-    travel_hours = road_km / assumptions["average_road_speed_kmh"]
-    site_hours = len(plan) * (
+    day_schedules: list[dict[str, Any]] = []
+    total_straight_km = 0.0
+    service_hours = (
         assumptions["search_minutes_per_cell"] + assumptions["access_buffer_minutes_per_cell"]
     ) / 60.0
+    while remaining:
+        current_lat, current_lon = float(hub_latitude), float(hub_longitude)
+        day_positions: list[int] = []
+        day_straight_km = 0.0
+        day_elapsed_hours = 0.0
+        overtime = False
+        while remaining:
+            positions = np.array(sorted(remaining), dtype=int)
+            distances_km = _acsp_point_distances_m(
+                current_lat, current_lon,
+                pd.to_numeric(plan.iloc[positions]["latitude"], errors="coerce").to_numpy(dtype=float),
+                pd.to_numeric(plan.iloc[positions]["longitude"], errors="coerce").to_numpy(dtype=float),
+            ) / 1000.0
+            order = np.argsort(distances_km)
+            chosen: Optional[tuple[int, float, float]] = None
+            for candidate_index in order:
+                position = int(positions[int(candidate_index)])
+                leg_km = float(distances_km[int(candidate_index)])
+                candidate_lat = float(plan.iloc[position]["latitude"])
+                candidate_lon = float(plan.iloc[position]["longitude"])
+                return_km = float(_acsp_point_distances_m(
+                    candidate_lat, candidate_lon, np.array([hub_latitude]), np.array([hub_longitude])
+                )[0]) / 1000.0
+                projected_hours = day_elapsed_hours + (
+                    (leg_km + return_km) * assumptions["road_distance_factor"]
+                    / assumptions["average_road_speed_kmh"]
+                ) + service_hours
+                if projected_hours <= assumptions["usable_daily_hours"]:
+                    chosen = position, leg_km, return_km
+                    break
+            if chosen is None:
+                if day_positions:
+                    break
+                position = int(positions[int(order[0])])
+                leg_km = float(distances_km[int(order[0])])
+                candidate_lat = float(plan.iloc[position]["latitude"])
+                candidate_lon = float(plan.iloc[position]["longitude"])
+                return_km = float(_acsp_point_distances_m(
+                    candidate_lat, candidate_lon, np.array([hub_latitude]), np.array([hub_longitude])
+                )[0]) / 1000.0
+                chosen = position, leg_km, return_km
+                overtime = True
+            next_pos, leg_km, _return_km = chosen
+            day_straight_km += leg_km
+            day_elapsed_hours += (
+                leg_km * assumptions["road_distance_factor"] / assumptions["average_road_speed_kmh"]
+            ) + service_hours
+            day_positions.append(next_pos)
+            route_positions.append(next_pos)
+            remaining.remove(next_pos)
+            current_lat = float(plan.iloc[next_pos]["latitude"])
+            current_lon = float(plan.iloc[next_pos]["longitude"])
+        return_km = float(_acsp_point_distances_m(
+            current_lat, current_lon, np.array([hub_latitude]), np.array([hub_longitude])
+        )[0]) / 1000.0
+        day_straight_km += return_km
+        day_elapsed_hours += (
+            return_km * assumptions["road_distance_factor"] / assumptions["average_road_speed_kmh"]
+        )
+        overtime = overtime or day_elapsed_hours > assumptions["usable_daily_hours"]
+        total_straight_km += day_straight_km
+        day_schedules.append({
+            "day": len(day_schedules) + 1,
+            "site_ids": [int(plan.iloc[pos]["site_id"]) for pos in day_positions],
+            "straight_line_km": round(day_straight_km, 1),
+            "estimated_road_km": round(day_straight_km * assumptions["road_distance_factor"], 1),
+            "estimated_hours": round(day_elapsed_hours, 1),
+            "overtime": bool(overtime),
+        })
+    road_km = total_straight_km * assumptions["road_distance_factor"]
+    travel_hours = road_km / assumptions["average_road_speed_kmh"]
+    site_hours = len(plan) * service_hours
     total_hours = travel_hours + site_hours
+    repeat_visits = int(protocol.get("minimum_repeat_visits", 1))
     return {
         **assumptions,
         "route_order_site_ids": [int(plan.iloc[pos]["site_id"]) for pos in route_positions],
-        "straight_line_route_km": round(straight_km, 1),
+        "day_schedules": day_schedules,
+        "straight_line_route_km": round(total_straight_km, 1),
         "estimated_road_km": round(road_km, 1),
         "travel_hours": round(travel_hours, 1),
         "site_hours": round(site_hours, 1),
         "total_hours": round(total_hours, 1),
-        "estimated_days": max(1, int(math.ceil(total_hours / assumptions["daily_field_hours"]))),
+        "estimated_days": len(day_schedules),
+        "fits_target_days": len(day_schedules) <= int(target_days) and not any(day["overtime"] for day in day_schedules),
+        "overtime_days": sum(bool(day["overtime"]) for day in day_schedules),
+        "minimum_repeat_visits": repeat_visits,
+        "inference_ready_minimum_field_days": len(day_schedules) * repeat_visits,
+        "routing_confidence": "low; straight-line legs use a road-distance factor and do not model ferries, road topology, traffic, or trail time",
     }
 
 
@@ -5819,19 +5901,44 @@ def build_default_short_trip_plans(
     hub_longitude: float,
     target_days: int = 2,
     max_cells: int = 8,
+    survey_protocol: Optional[dict[str, Any]] = None,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, Any], int]:
     """Reduce plan size until the transparent default logistics fit the target days."""
     requested_k = min(int(max_cells), len(eligible_candidates))
-    minimum_k = min(3, requested_k)
+    protocol = survey_protocol or infer_survey_protocol().as_dict()
+    pool = eligible_candidates.copy().reset_index(drop=True)
+    hub_distances_m = _acsp_point_distances_m(
+        float(hub_latitude), float(hub_longitude),
+        pd.to_numeric(pool["latitude"], errors="coerce").to_numpy(dtype=float),
+        pd.to_numeric(pool["longitude"], errors="coerce").to_numpy(dtype=float),
+    ) if not pool.empty else np.array([], dtype=float)
+    pool["distance_to_hub_m"] = hub_distances_m
+    service_hours = (
+        int(protocol["search_minutes_per_cell"]) + int(protocol["access_buffer_minutes_per_cell"])
+    ) / 60.0
+    usable_daily_hours = float(protocol["daily_field_hours"]) * 0.85
+    individual_hours = (
+        2.0 * hub_distances_m / 1000.0 * 1.35 / 35.0 + service_hours
+    )
+    feasible_mask = individual_hours <= usable_daily_hours
+    individually_infeasible = int((~feasible_mask).sum())
+    feasible_pool = pool.loc[feasible_mask].copy().reset_index(drop=True)
+    if not feasible_pool.empty:
+        pool = feasible_pool
+    pool_start_k = min(requested_k, len(pool))
+    minimum_k = min(1, pool_start_k)
     plans: dict[str, pd.DataFrame] = {}
     trip_estimate: dict[str, Any] = {}
-    for plan_k in range(requested_k, minimum_k - 1, -1):
-        plans = build_acsp_discover_plans(eligible_candidates, plan_k)
+    for plan_k in range(pool_start_k, minimum_k - 1, -1):
+        plans = build_acsp_discover_plans(pool, plan_k)
         trip_estimate = estimate_default_short_trip(
-            plans.get("Balanced", pd.DataFrame()), float(hub_latitude), float(hub_longitude)
+            plans.get("Balanced", pd.DataFrame()), float(hub_latitude), float(hub_longitude),
+            survey_protocol=survey_protocol, target_days=target_days,
         )
-        if int(trip_estimate.get("estimated_days", 0)) <= int(target_days) or plan_k == minimum_k:
+        if bool(trip_estimate.get("fits_target_days")) or plan_k == minimum_k:
             break
+    trip_estimate["individually_infeasible_candidates_excluded"] = individually_infeasible if not feasible_pool.empty else 0
+    trip_estimate["candidate_pool_had_no_individually_feasible_site"] = bool(pool_start_k and feasible_pool.empty)
     return plans, trip_estimate, requested_k
 
 
@@ -5890,11 +5997,13 @@ def build_automatic_discover_bundle(
     country_scope: str,
     selected_region_id: Optional[int] = None,
     override_row_ids: Optional[list[int]] = None,
+    taxon_metadata: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Run the no-parameter ACSP-Discover path after occurrence retrieval."""
     if occ_raw is None or occ_raw.empty:
         raise ValueError("No valid coordinate records were available for automatic planning.")
     warnings: list[str] = []
+    survey_protocol = infer_survey_protocol(taxon_metadata).as_dict()
     enriched = enrich_occurrences_with_phenology(occ_raw)
     _default_scope, scope_audit, scope_summary = infer_default_survey_scope(enriched)
     region_cards, region_audit, distribution_summary = recommend_survey_regions(enriched, scope_audit)
@@ -5975,7 +6084,7 @@ def build_automatic_discover_bundle(
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
     plans, trip_estimate, requested_k = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=2, max_cells=8
+        eligible, hub_lat, hub_lon, target_days=2, max_cells=8, survey_protocol=survey_protocol
     )
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
@@ -5983,6 +6092,19 @@ def build_automatic_discover_bundle(
     if len(balanced) < requested_k:
         warnings.append(
             f"The default two-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} cells."
+        )
+    if not bool(trip_estimate.get("fits_target_days")):
+        warnings.append(
+            "Even the smallest candidate plan exceeds the proxy day budget; choose a closer hub or verify actual routing before fieldwork."
+        )
+    if int(survey_protocol.get("minimum_repeat_visits", 1)) > 1:
+        warnings.append(
+            f"The {survey_protocol['taxon_group']} protocol recommends at least "
+            f"{survey_protocol['minimum_repeat_visits']} visits before treating non-detection as evidence of absence."
+        )
+    if str(survey_protocol.get("confidence")) == "low":
+        warnings.append(
+            "The automatic taxon protocol is only a coarse reconnaissance profile; verify a focal-species method before inference-ready sampling."
         )
 
     recommended_window = preferred_survey_window(
@@ -6001,6 +6123,8 @@ def build_automatic_discover_bundle(
     return {
         "scientific_name": scientific_name,
         "country_scope": country_scope,
+        "taxon_metadata": dict(taxon_metadata or {}),
+        "survey_protocol": survey_protocol,
         "source_message": source_message,
         "occurrences": enriched,
         "scope": scope,
@@ -6057,7 +6181,8 @@ def render_automatic_discover() -> None:
                     detected = detect_occurrence_columns(raw)
                     cleaned = clean_occurrences(raw, detected)
                     bundle = build_automatic_discover_bundle(
-                        str(payload.get("scientificName") or query.strip()), cleaned, message, country_scope
+                        str(payload.get("scientificName") or query.strip()), cleaned, message, country_scope,
+                        taxon_metadata=payload,
                     )
                 st.session_state.automatic_discover_query = query.strip()
                 st.session_state.automatic_discover_bundle = bundle
@@ -6103,6 +6228,7 @@ def render_automatic_discover() -> None:
                         st.session_state.automatic_discover_bundle = build_automatic_discover_bundle(
                             bundle["scientific_name"], bundle["occurrences"], bundle["source_message"],
                             bundle["country_scope"], selected_region_id=int(region["region_id"]),
+                            taxon_metadata=bundle.get("taxon_metadata"),
                         )
                     st.session_state.automatic_region_draw_features = []
                     st.session_state.automatic_region_map_reset_token = st.session_state.get("automatic_region_map_reset_token", 0) + 1
@@ -6140,6 +6266,7 @@ def render_automatic_discover() -> None:
                 st.session_state.automatic_discover_bundle = build_automatic_discover_bundle(
                     bundle["scientific_name"], bundle["occurrences"], bundle["source_message"],
                     bundle["country_scope"], override_row_ids=override_ids,
+                    taxon_metadata=bundle.get("taxon_metadata"),
                 )
             st.session_state.automatic_region_map_reset_token = st.session_state.get("automatic_region_map_reset_token", 0) + 1
             st.rerun()
@@ -6164,13 +6291,33 @@ def render_automatic_discover() -> None:
     c5.metric("Discovery cells", proposal["discovery_cells"])
     c6.metric("Data quality", str(proposal["data_quality"]).title())
     trip_estimate = bundle.get("trip_estimate", {})
+    survey_protocol = bundle.get("survey_protocol", {})
     st.caption(
         f"Suggested season: {proposal['recommended_window']}. Default logistics estimate: "
         f"{float(trip_estimate.get('estimated_road_km', 0.0)):.0f} road-km proxy, "
         f"{float(trip_estimate.get('total_hours', 0.0)):.1f} total hours. "
-        "Assumes start/end at the region hub, 35 km/h average road speed, 90 survey minutes plus 20 access minutes per cell, and 8 field hours/day."
+        f"Each day starts/ends at the region hub; assumes 35 km/h, "
+        f"{int(trip_estimate.get('search_minutes_per_cell', 0))} survey minutes plus "
+        f"{int(trip_estimate.get('access_buffer_minutes_per_cell', 0))} access minutes per station, and "
+        f"{float(trip_estimate.get('daily_field_hours', 0.0)):.1f} field hours/day with a "
+        f"{float(trip_estimate.get('operational_reserve_fraction', 0.0)):.0%} operational reserve."
     )
     st.caption("Presence, flowering, access permission, actual roads/ferries, weather, and safety require current field verification.")
+    with st.expander("Taxon-aware survey protocol and daily schedule", expanded=False):
+        st.write({
+            "taxon_group": survey_protocol.get("taxon_group"),
+            "protocol": survey_protocol.get("protocol_id"),
+            "method": survey_protocol.get("method"),
+            "observation_unit": survey_protocol.get("observation_unit"),
+            "daily_window": survey_protocol.get("daily_window"),
+            "minimum_repeat_visits": survey_protocol.get("minimum_repeat_visits"),
+            "protocol_confidence": survey_protocol.get("confidence"),
+            "movement_caution": survey_protocol.get("movement_caution"),
+            "weather_caution": survey_protocol.get("weather_caution"),
+            "routing_confidence": trip_estimate.get("routing_confidence"),
+            "inference_ready_minimum_field_days": trip_estimate.get("inference_ready_minimum_field_days"),
+        })
+        st.dataframe(pd.DataFrame(trip_estimate.get("day_schedules", [])), width="stretch", hide_index=True)
     for warning in bundle.get("warnings", []):
         st.warning(warning)
 

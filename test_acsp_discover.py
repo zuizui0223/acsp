@@ -8,6 +8,7 @@ from acsp_discover import (
     build_acsp_discover_plans,
     choose_candidate_resolution,
     infer_default_survey_scope,
+    infer_survey_protocol,
     parse_field_results,
     preferred_survey_window,
     recommend_survey_regions,
@@ -16,6 +17,16 @@ from acsp_discover import (
 
 
 class DiscoverV1Tests(unittest.TestCase):
+    def test_taxonomy_changes_protocol_without_user_parameters(self):
+        plant = infer_survey_protocol({"kingdom": "Plantae", "class": "Magnoliopsida"})
+        bird = infer_survey_protocol({"kingdom": "Animalia", "class": "Aves"})
+        fish = infer_survey_protocol({"kingdom": "Animalia", "class": "Actinopterygii"})
+        self.assertEqual(plant.taxon_group, "plant")
+        self.assertEqual(bird.taxon_group, "bird")
+        self.assertEqual(bird.minimum_repeat_visits, 2)
+        self.assertLess(bird.daily_field_hours, plant.daily_field_hours)
+        self.assertIn("aquatic distance", fish.movement_caution)
+
     def test_resolution_never_overstates_inputs(self):
         decision = choose_candidate_resolution(10, 25, 310, 100)
         self.assertEqual(decision.cell_size_m, 500)

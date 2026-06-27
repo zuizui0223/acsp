@@ -3,10 +3,31 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from gbif_fieldmap_builder_app import build_automatic_discover_bundle, build_default_short_trip_plans
+from gbif_fieldmap_builder_app import (
+    build_automatic_discover_bundle,
+    build_default_short_trip_plans,
+    estimate_default_short_trip,
+)
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_each_survey_day_returns_to_hub(self):
+        plan = pd.DataFrame({
+            "site_id": [1, 2],
+            "latitude": [35.0, 35.0],
+            "longitude": [139.35, 138.65],
+        })
+        protocol = {
+            "protocol_id": "test", "taxon_group": "test", "daily_field_hours": 4.0,
+            "search_minutes_per_cell": 30, "access_buffer_minutes_per_cell": 0,
+            "minimum_repeat_visits": 1,
+        }
+        estimate = estimate_default_short_trip(plan, 35.0, 139.0, protocol, target_days=2)
+        self.assertEqual(len(estimate["day_schedules"]), 2)
+        self.assertEqual([len(day["site_ids"]) for day in estimate["day_schedules"]], [1, 1])
+        self.assertTrue(estimate["fits_target_days"])
+        self.assertGreater(estimate["straight_line_route_km"], 120.0)
+
     def test_short_trip_builder_reduces_unrealistic_eight_cell_plan(self):
         candidate_types = (
             ["Occurrence-supported survey range"] * 3

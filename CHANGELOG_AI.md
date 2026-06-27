@@ -1,5 +1,13 @@
 # AI Change Log
 
+## 2026-06-27 — Taxon-aware short-trip feasibility
+
+- Added broad GBIF-taxonomy survey profiles so plants, birds, mammals, amphibians/reptiles, arthropods, fish, and unknown taxa no longer share one field-effort assumption.
+- Replaced the single continuous trip estimate with day-by-day hub-return schedules.
+- Excluded sites that cannot individually fit the daily budget and included hub distance in first-site selection.
+- Added a 15% operational reserve and explicit repeat-visit requirements for inference-ready non-detection.
+- Random validation with `Egretta garzetta` exposed and then verified the fix for a distant first-site failure.
+
 This file records changes made by AI coding agents such as Codex, Claude, ChatGPT, or other assistants.
 
 Each agent should update this file after editing code.
