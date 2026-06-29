@@ -6,6 +6,7 @@ import pandas as pd
 
 from gbif_fieldmap_builder_app import (
     build_automatic_discover_bundle,
+    build_automatic_genus_bundle,
     build_default_short_trip_plans,
     decode_gsi_dem_rgb,
     estimate_default_short_trip,
@@ -91,6 +92,32 @@ class AutomaticHierarchyTests(unittest.TestCase):
         self.assertLessEqual(bundle["trip_estimate"]["estimated_days"], 2)
         self.assertTrue(bundle["warnings"])
         self.assertEqual(float(land_filter.call_args.args[3]), 0.0)
+
+    def test_automatic_genus_bundle_builds_observed_richness_plans(self):
+        rows = []
+        for species_index, species in enumerate(["Example alpha", "Example beta", "Example gamma"]):
+            for point_index in range(12):
+                rows.append({
+                    "_row_id": len(rows),
+                    "_latitude": 35.0 + (point_index % 4) * 0.025,
+                    "_longitude": 139.0 + (point_index // 4) * 0.04 + species_index * 0.002,
+                    "_event_date": "2024-05-01",
+                    "_year": 2024,
+                    "_species": species,
+                    "_media_url": "",
+                    "_gbif_id": str(len(rows)),
+                    "_locality": "Example area",
+                    "_coordinate_uncertainty_m": 30.0,
+                })
+        bundle = build_automatic_genus_bundle(
+            "Example", pd.DataFrame(rows), "synthetic genus records", "Test",
+            taxon_metadata={"rank": "GENUS"},
+        )
+        self.assertEqual(bundle["taxon_mode"], "genus")
+        self.assertEqual(len(bundle["species_summary"]), 3)
+        self.assertFalse(bundle["richness_grid"].empty)
+        self.assertFalse(bundle["all_candidates"].empty)
+        self.assertFalse(bundle["plans"]["Balanced"].empty)
 
 
 if __name__ == "__main__":

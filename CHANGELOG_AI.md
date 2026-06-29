@@ -1,5 +1,28 @@
 # AI Change Log
 
+## 2026-06-29 - Codex (OpenAI) - Unified taxon-name workflow with automatic Species/Genus routing
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed the visible `Species name only` versus `Advanced / manual` workflow choice. The app now has one taxon-name-first surface.
+- Renamed the sole input to `Species or genus scientific name` and uses the matched GBIF rank to route species-level taxa to occurrence/SDM planning and genera to observed-richness/SSDM planning.
+- Kept survey-area drawing optional. Without a drawing, ACSP uses its recommended compact region; a drawn reachable area rebuilds observed-data candidates inside that area.
+- Retained the advanced algorithms as automatic internals rather than deleting them: representative occurrence subsets, remote-outlier QC, environmental selection, spatial validation, ensemble SDM/SSDM, model-supported re-ranking, model-high exploration candidates, ACSP set selection, routing, and field-validation exports remain available.
+- Added one-click optional species SDM support with fixed lightweight defaults: at most 300 spatially representative presences, automatic remote-outlier QC, ecological representative variable selection, automatic spatial validation, Random Forest plus ExtraTrees, and a 40,000-cell prediction cap.
+- Added the mirrored automatic genus workflow: observed richness hotspots first, optional one-click SSDM, predicted-richness re-ranking, SSDM-high exploration hotspots, plan CSV, field-validation CSV, Google Maps routes, and the richness/candidate maps.
+- Kept SDM/SSDM optional so ordinary occurrence-supported planning remains fast and usable without modeling.
+
+Validation:
+- `python -m py_compile gbif_fieldmap_builder_app.py` passed.
+- 18 unit tests passed, including new synthetic genus richness and plan generation coverage.
+- `Campanula microdonta` matched `SPECIES`: 87 cleaned Japan records, 31 total observed/habitat candidates, and 5-site Balanced, Discovery, and Learning plans.
+- `Cirsium` matched `GENUS`: a 900-record retrieval produced 742 cleaned records, 6 modeled species labels, 53 observed-richness cells, 20 hotspots, and 3-site Balanced, Discovery, and Learning plans.
+- Local Streamlit browser check confirmed one input, no workflow selector, clean species proposal rendering, optional SDM action, plan exports, and no console errors.
+
 ## 2026-06-29 - Codex (OpenAI) - Reachable-area override and GSI high-resolution terrain
 
 Changed files:
