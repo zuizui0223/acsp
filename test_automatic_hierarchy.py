@@ -93,6 +93,19 @@ class AutomaticHierarchyTests(unittest.TestCase):
         self.assertTrue(bundle["warnings"])
         self.assertEqual(float(land_filter.call_args.args[3]), 0.0)
 
+        with (
+            patch("gbif_fieldmap_builder_app.app_provided_habitat_layers", return_value={}),
+            patch("gbif_fieldmap_builder_app.make_potential_survey_site_candidates", return_value=pd.DataFrame()),
+            patch("gbif_fieldmap_builder_app.filter_to_land", side_effect=lambda frame, *args, **kwargs: frame),
+        ):
+            custom = build_automatic_discover_bundle(
+                "Example species", occurrences, "synthetic records", "Test",
+                override_row_ids=occurrences["_row_id"].tolist(),
+                survey_bounds=(138.9, 34.9, 139.5, 35.1),
+            )
+        self.assertEqual(custom["target_days"], 1)
+        self.assertEqual(custom["trip_estimate"]["target_days"], 1)
+
     def test_automatic_genus_bundle_builds_observed_richness_plans(self):
         rows = []
         for species_index, species in enumerate(["Example alpha", "Example beta", "Example gamma"]):
@@ -111,13 +124,15 @@ class AutomaticHierarchyTests(unittest.TestCase):
                 })
         bundle = build_automatic_genus_bundle(
             "Example", pd.DataFrame(rows), "synthetic genus records", "Test",
-            taxon_metadata={"rank": "GENUS"},
+            override_row_ids=list(range(len(rows))),
+            taxon_metadata={"rank": "GENUS"}, survey_bounds=(138.9, 34.9, 139.3, 35.2),
         )
         self.assertEqual(bundle["taxon_mode"], "genus")
         self.assertEqual(len(bundle["species_summary"]), 3)
         self.assertFalse(bundle["richness_grid"].empty)
         self.assertFalse(bundle["all_candidates"].empty)
         self.assertFalse(bundle["plans"]["Balanced"].empty)
+        self.assertEqual(bundle["target_days"], 1)
 
 
 if __name__ == "__main__":

@@ -70,7 +70,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-unified-taxon-20260629"
+APP_BUILD_ID = "acsp-four-island-dayplan-20260629"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -6288,15 +6288,16 @@ def build_automatic_discover_bundle(
     eligible, constraint_audit = apply_discover_hard_constraints(all_candidates)
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
+    target_days = 1 if survey_bounds is not None else 2
     plans, trip_estimate, requested_k = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=2, max_cells=8, survey_protocol=survey_protocol
+        eligible, hub_lat, hub_lon, target_days=target_days, max_cells=8, survey_protocol=survey_protocol
     )
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
         raise ValueError("No candidate survived automatic hard-constraint screening.")
     if len(balanced) < requested_k:
         warnings.append(
-            f"The default two-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} cells."
+            f"The automatic {target_days}-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} cells."
         )
     if not bool(trip_estimate.get("fits_target_days")):
         warnings.append(
@@ -6348,6 +6349,7 @@ def build_automatic_discover_bundle(
         "potential_candidates": potential_candidates,
         "habitat_layer_source": str(habitat_layers.get("dem_source") or ""),
         "survey_bounds": tuple(map(float, survey_bounds)) if survey_bounds is not None else None,
+        "target_days": target_days,
         "all_candidates": all_candidates,
         "constraint_audit": constraint_audit,
         "plans": plans,
@@ -6403,8 +6405,9 @@ def build_automatic_genus_bundle(
     eligible, constraint_audit = apply_discover_hard_constraints(hotspots)
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
+    target_days = 1 if survey_bounds is not None else 2
     plans, trip_estimate, requested_k = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=2, max_cells=8,
+        eligible, hub_lat, hub_lon, target_days=target_days, max_cells=8,
         survey_protocol=infer_survey_protocol(taxon_metadata).as_dict(),
     )
     balanced = plans.get("Balanced", pd.DataFrame())
@@ -6412,7 +6415,7 @@ def build_automatic_genus_bundle(
         raise ValueError("No genus richness hotspot survived automatic planning constraints.")
     warnings_out = []
     if len(balanced) < requested_k:
-        warnings_out.append(f"The default two-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} hotspots.")
+        warnings_out.append(f"The automatic {target_days}-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} hotspots.")
     return {
         "taxon_mode": "genus",
         "scientific_name": scientific_name,
@@ -6430,6 +6433,7 @@ def build_automatic_genus_bundle(
         "selected_region_id": int(selected_region["region_id"]) if selected_region else None,
         "custom_override": bool(override_row_ids),
         "survey_bounds": tuple(map(float, survey_bounds)) if survey_bounds is not None else None,
+        "target_days": target_days,
         "candidate_input": candidate_input,
         "species_summary": species_summary,
         "richness_grid": richness_grid,
@@ -6487,7 +6491,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(bundle["scope"]["_longitude"].mean())
     plans, trip, _ = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=2, max_cells=8,
+        eligible, hub_lat, hub_lon, target_days=int(bundle.get("target_days", 2)), max_cells=8,
         survey_protocol=infer_survey_protocol(bundle.get("taxon_metadata")).as_dict(),
     )
     updated = dict(bundle)
@@ -6569,7 +6573,8 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(bundle["scope"]["_longitude"].mean())
     plans, trip, _ = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=2, max_cells=8, survey_protocol=bundle["survey_protocol"],
+        eligible, hub_lat, hub_lon, target_days=int(bundle.get("target_days", 2)), max_cells=8,
+        survey_protocol=bundle["survey_protocol"],
     )
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
@@ -6875,13 +6880,14 @@ def render_automatic_discover() -> None:
     st.caption(f"Record scope: {bundle['country_scope']}. {bundle['source_message']}")
     if bundle.get("habitat_layer_source"):
         st.caption(str(bundle["habitat_layer_source"]) + " · locally cached for terrain analogue scoring · [GSI Tiles](https://maps.gsi.go.jp/development/)")
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
     c1.metric("Recommended region", proposal["region"])
     c2.metric("Estimated days", proposal["estimated_days"])
-    c3.metric("Priority cells", proposal["priority_cells"])
-    c4.metric("Known revisits", proposal["known_anchors"])
-    c5.metric("Discovery cells", proposal["discovery_cells"])
-    c6.metric("Data quality", str(proposal["data_quality"]).title())
+    c3.metric("Eligible candidate pool", int(bundle["constraint_audit"]["eligible"].sum()))
+    c4.metric("Priority cells", proposal["priority_cells"])
+    c5.metric("Known revisits", proposal["known_anchors"])
+    c6.metric("Discovery cells", proposal["discovery_cells"])
+    c7.metric("Data quality", str(proposal["data_quality"]).title())
     trip_estimate = bundle.get("trip_estimate", {})
     survey_protocol = bundle.get("survey_protocol", {})
     st.caption(

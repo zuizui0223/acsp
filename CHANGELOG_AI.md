@@ -1,5 +1,30 @@
 # AI Change Log
 
+## 2026-06-29 - Codex (OpenAI) - Revalidate four-island plans and preserve one-day drawn-area missions
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Treat an explicitly drawn reachable survey area as a one-day mission; the automatic recommended region remains a two-day proposal.
+- Preserve that target-day choice after optional SDM/SSDM support re-ranks candidates.
+- Added `Eligible candidate pool` to the species proposal metrics so users can see the full usable pool separately from the selected one-day priority plan.
+- Applied the same one-day drawn-area rule to the mirrored genus workflow.
+
+Validation:
+- `Campanula microdonta` matched 300 GBIF coordinate records and retained 87 cleaned records.
+- Automatic SDM QC excluded one remote point at 33.635783, 134.493324; 86 records remained for the independent SDM workflow.
+- Izu Oshima: 22 eligible candidates; one-day Balanced plan 3 sites.
+- Toshima: 20 generated, 19 eligible candidates; one-day Balanced plan 3 sites.
+- Niijima: 20 eligible candidates; one-day Balanced plan 3 sites.
+- Kozushima: 21 eligible candidates; one-day Balanced plan 3 sites.
+- Every one-day Balanced plan selected one occurrence-supported anchor, one Survey-gap site, and one Environmental-test site.
+- All four areas used 100 m discovery cells and app-provided GSI terrain (DEM10B on the tested Oshima extent; DEM5A on Toshima, Niijima, and Kozushima).
+- Full SDM execution reached environmental-raster retrieval, then the external WorldClim host timed out; observed candidates and the verified automatic QC result remained available.
+- `python -m py_compile gbif_fieldmap_builder_app.py` and all 18 unit tests passed.
+
 ## 2026-06-29 - Codex (OpenAI) - Unified taxon-name workflow with automatic Species/Genus routing
 
 Changed files:
