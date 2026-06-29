@@ -1,5 +1,39 @@
 # AI Change Log
 
+## 2026-06-29 - Codex (OpenAI) - Reachable-area override and GSI high-resolution terrain
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Clarified the ordinary workflow: no range interaction is required because ACSP uses its recommended compact region; drawing a polygon/rectangle is now an optional reachable-area override.
+- Passed the drawn geographic bounds into Potential Survey Site generation instead of using the drawing only to filter occurrence rows.
+- Allowed a reachable-area override containing one known record, which makes sparse islands such as Niijima usable.
+- Added automatic app-provided terrain retrieval from documented GSI elevation PNG tiles, preferring DEM5A, then DEM5B, DEM5C, and DEM10B, with concurrent download, local tile/GeoTIFF caching, a compact-area tile cap, and visible GSI attribution.
+- Kept large areas responsive by declining or lowering high-resolution retrieval beyond the tile cap and retaining the existing coarse fallback.
+- Corrected raster-derived slope to account for pixel dimensions and return degrees.
+- Removed the user-facing DEM/NDVI/land-cover upload controls from Potential Survey Sites; app-provided terrain is loaded only when candidates are built, so a collapsed legacy panel no longer triggers heavy downloads.
+- Added a documented GSI RGB elevation decoder regression test.
+
+Validation:
+- `Campanula microdonta` / Japan: GBIF total 300; 87 cleaned fetched records.
+- With one reachable-area box per island, all four areas used GSI DEM5A and 100 m survey cells.
+- Izu Oshima: 2 known + 20 potential candidates; 22 unique eligible coordinates; one-day plan 3 sites.
+- Toshima: 2 known + 18 potential candidates; 19 unique eligible coordinates; one-day plan 3 sites.
+- Niijima: 1 known + 19 potential candidates; 20 unique eligible coordinates; one-day plan 3 sites.
+- Kozushima: 1 known + 20 potential candidates; 21 unique eligible coordinates; one-day plan 3 sites.
+- Each one-day plan contained one known anchor, one Survey-gap cell, and one Environmental-test cell.
+
+Features preserved:
+- GBIF/CSV inputs, observed candidates without SDM, independent optional SDM/SSDM, VIF, spatial validation, predict maps, model-high candidates, ACSP maps, exports, and field validation remain available.
+
+Known risks / TODO:
+- The first high-resolution run downloads GSI tiles and is slower; later runs reuse the local cache.
+- Multiple islands drawn together are still treated as one broad custom mission. Ferry-separated per-island day constraints remain the next Issue #23 hierarchy step.
+- GSI terrain is Japan-specific; other countries retain the existing coarse terrain fallback.
+
 ## 2026-06-29 - Codex (OpenAI) - Preserve small-island survey candidates
 
 Changed files:

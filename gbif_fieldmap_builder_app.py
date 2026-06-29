@@ -20,9 +20,11 @@ import os
 import re
 import time
 import urllib.parse
+import warnings
 import zipfile
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -37,6 +39,8 @@ from folium import FeatureGroup, LayerControl, Map
 from folium.plugins import Draw, MarkerCluster
 from geopy.distance import geodesic
 from rasterio.enums import Resampling
+from rasterio.errors import NotGeoreferencedWarning
+from rasterio.transform import from_origin
 from rasterio.windows import Window, from_bounds
 from rasterio.warp import transform as rio_transform
 from shapely.geometry import MultiPoint, Point, box, shape
@@ -66,7 +70,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-discover-hierarchy-v1-20260627"
+APP_BUILD_ID = "acsp-discover-gsi-terrain-20260629"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -76,6 +80,14 @@ GBIF_REQUEST_HEADERS = {"User-Agent": "GBIF-FieldMap-Builder/1.0"}
 WC_BASE = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base"
 LAND_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz"
+GSI_DEM_SOURCES = (
+    ("GSI DEM5A", "dem5a_png", 15),
+    ("GSI DEM5B", "dem5b_png", 15),
+    ("GSI DEM5C", "dem5c_png", 15),
+    ("GSI DEM10B", "dem_png", 14),
+)
+GSI_DEM_ATTRIBUTION = "Terrain: GSI Tiles (Geospatial Information Authority of Japan)"
 CACHE_DIR = Path(os.environ.get("GBIF_FIELDMAP_CACHE", "/tmp/gbif_fieldmap_builder"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1173,6 +1185,28 @@ def ids_inside_drawn_rectangles(df: pd.DataFrame, id_col: str, lat_col: str, lon
         picked = df[df[lat_col].between(min(lats), max(lats)) & df[lon_col].between(min(lngs), max(lngs))][id_col]
         ids.update(map(int, picked.tolist()))
     return sorted(ids)
+
+
+def drawn_features_bounds(features: list[dict[str, Any]]) -> Optional[tuple[float, float, float, float]]:
+    geometries = []
+    for feature in features:
+        try:
+            geometry = shape(feature.get("geometry", {}))
+            if not geometry.is_empty:
+                geometries.append(geometry)
+        except Exception:
+            continue
+    if not geometries:
+        return None
+    return tuple(map(float, unary_union(geometries).bounds))
+
+
+def expand_lonlat_bounds(bounds: tuple[float, float, float, float], distance_km: float) -> tuple[float, float, float, float]:
+    west, south, east, north = map(float, bounds)
+    center_lat = (south + north) / 2.0
+    lat_pad = max(0.0, float(distance_km)) / 111.32
+    lon_pad = lat_pad / max(0.2, math.cos(math.radians(center_lat)))
+    return west - lon_pad, south - lat_pad, east + lon_pad, north + lat_pad
 
 
 def make_exclusion_review_map(occ_map_display: pd.DataFrame, excluded_ids: set[int], add_draw: bool = False, show_images: bool = True) -> folium.Map:
@@ -2918,7 +2952,13 @@ def sample_uploaded_raster_values(points: pd.DataFrame, raster_path: str, lat_co
             elif derived == "tpi":
                 values[i] = center - np.nanmean(arr) if np.isfinite(center) else np.nan
             elif arr.shape[0] >= 2 and arr.shape[1] >= 2:
-                gy, gx = np.gradient(arr)
+                y_size = max(abs(float(src.transform.e)), 1e-9)
+                x_size = max(abs(float(src.transform.a)), 1e-9)
+                if src.crs and src.crs.is_geographic:
+                    reference_lat = float(pd.to_numeric(points[lat_col], errors="coerce").mean())
+                    y_size *= 111_320.0
+                    x_size *= 111_320.0 * max(0.2, math.cos(math.radians(reference_lat)))
+                gy, gx = np.gradient(arr, y_size, x_size)
                 if not (np.isfinite(gy).any() or np.isfinite(gx).any()):
                     continue
                 if derived == "aspect":
@@ -2928,7 +2968,7 @@ def sample_uploaded_raster_values(points: pd.DataFrame, raster_path: str, lat_co
                 else:
                     grad_mag = np.sqrt(gy ** 2 + gx ** 2)
                     if np.isfinite(grad_mag).any():
-                        values[i] = np.nanmean(grad_mag)
+                        values[i] = math.degrees(math.atan(float(np.nanmean(grad_mag))))
         return clean_environment_array(values)
 
 
@@ -3063,10 +3103,154 @@ def fetch_osm_vertices_geojson(kind: str, west: float, south: float, east: float
         return None
 
 
-def app_provided_habitat_layers(bounds: tuple[float, float, float, float], include_osm: bool) -> dict[str, Optional[str]]:
+def _xyz_tile(lon: float, lat: float, zoom: int) -> tuple[int, int]:
+    n = 2 ** int(zoom)
+    clipped_lat = min(85.05112878, max(-85.05112878, float(lat)))
+    x = int((float(lon) + 180.0) / 360.0 * n)
+    y = int((1.0 - math.asinh(math.tan(math.radians(clipped_lat))) / math.pi) / 2.0 * n)
+    return min(n - 1, max(0, x)), min(n - 1, max(0, y))
+
+
+def decode_gsi_dem_rgb(rgb: np.ndarray) -> np.ndarray:
+    """Decode GSI's documented 24-bit PNG elevation representation to metres."""
+    values = (
+        (rgb[0].astype(np.int64) << 16)
+        + (rgb[1].astype(np.int64) << 8)
+        + rgb[2].astype(np.int64)
+    )
+    elevation = np.where(values < 2 ** 23, values, values - 2 ** 24).astype(np.float32) * 0.01
+    elevation[values == 2 ** 23] = np.nan
+    return elevation
+
+
+def _gsi_tile_path(source: str, zoom: int, x: int, y: int) -> Path:
+    return CACHE_DIR / "gsi_dem_tiles" / source / str(zoom) / str(x) / f"{y}.png"
+
+
+def _fetch_gsi_tile(source: str, zoom: int, x: int, y: int) -> Optional[Path]:
+    path = _gsi_tile_path(source, zoom, x, y)
+    if path.exists() and path.stat().st_size > 0:
+        return path
+    try:
+        response = requests.get(
+            f"{GSI_TILE_BASE}/{source}/{zoom}/{x}/{y}.png",
+            timeout=20,
+            headers=GBIF_REQUEST_HEADERS,
+        )
+        if response.status_code != 200 or not response.content:
+            return None
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_suffix(f".{os.getpid()}.tmp")
+        temp_path.write_bytes(response.content)
+        temp_path.replace(path)
+        return path
+    except Exception:
+        return None
+
+
+def _read_gsi_tile(path: Optional[Path]) -> Optional[np.ndarray]:
+    if path is None:
+        return None
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", NotGeoreferencedWarning)
+            with rasterio.open(path) as src:
+                if src.count < 3:
+                    return None
+                elevation = decode_gsi_dem_rgb(src.read([1, 2, 3]))
+        return elevation if np.isfinite(elevation).any() else None
+    except Exception:
+        return None
+
+
+@st.cache_data(show_spinner=False)
+def build_gsi_dem_for_bounds(
+    bounds: tuple[float, float, float, float],
+    reference_coordinates: tuple[tuple[float, float], ...] = (),
+    max_tiles: int = 400,
+) -> tuple[Optional[str], str]:
+    """Cache the best available documented GSI DEM mosaic for a compact Japan survey area."""
+    west, south, east, north = map(float, bounds)
+    if east <= west or north <= south or east < 122.0 or west > 154.0 or north < 20.0 or south > 46.0:
+        return None, ""
+    references = reference_coordinates or (((south + north) / 2.0, (west + east) / 2.0),)
+    selected: Optional[tuple[str, str, int]] = None
+    for label, source, zoom in GSI_DEM_SOURCES:
+        probe_tiles = {_xyz_tile(lon, lat, zoom) for lat, lon in references[:8]}
+        if any(_read_gsi_tile(_fetch_gsi_tile(source, zoom, x, y)) is not None for x, y in probe_tiles):
+            selected = label, source, zoom
+            break
+    if selected is None:
+        return None, ""
+    label, source, zoom = selected
+    x0, y1 = _xyz_tile(west, south, zoom)
+    x1, y0 = _xyz_tile(east, north, zoom)
+    x_min, x_max = sorted((x0, x1)); y_min, y_max = sorted((y0, y1))
+    tile_count = (x_max - x_min + 1) * (y_max - y_min + 1)
+    if tile_count > int(max_tiles) and source != "dem_png":
+        label, source, zoom = GSI_DEM_SOURCES[-1]
+        x0, y1 = _xyz_tile(west, south, zoom); x1, y0 = _xyz_tile(east, north, zoom)
+        x_min, x_max = sorted((x0, x1)); y_min, y_max = sorted((y0, y1))
+        tile_count = (x_max - x_min + 1) * (y_max - y_min + 1)
+    if tile_count > int(max_tiles):
+        return None, ""
+
+    digest = hashlib.sha1(f"{source}:{zoom}:{x_min}:{x_max}:{y_min}:{y_max}".encode()).hexdigest()[:16]
+    out_path = CACHE_DIR / "app_layers" / f"gsi_{digest}.tif"
+    if out_path.exists() and out_path.stat().st_size > 0:
+        return str(out_path), f"{GSI_DEM_ATTRIBUTION}; {label}"
+
+    tile_keys = [(x, y) for y in range(y_min, y_max + 1) for x in range(x_min, x_max + 1)]
+    with ThreadPoolExecutor(max_workers=min(8, len(tile_keys))) as executor:
+        paths = list(executor.map(lambda key: _fetch_gsi_tile(source, zoom, key[0], key[1]), tile_keys))
+    mosaic = np.full(((y_max - y_min + 1) * 256, (x_max - x_min + 1) * 256), np.nan, dtype=np.float32)
+    for (x, y), path in zip(tile_keys, paths):
+        tile = _read_gsi_tile(path)
+        if tile is None:
+            continue
+        row = (y - y_min) * 256; col = (x - x_min) * 256
+        mosaic[row:row + 256, col:col + 256] = tile
+    if not np.isfinite(mosaic).any():
+        return None, ""
+
+    origin = 20_037_508.342789244
+    tile_span = 2.0 * origin / (2 ** zoom)
+    transform = from_origin(
+        -origin + x_min * tile_span,
+        origin - y_min * tile_span,
+        tile_span / 256.0,
+        tile_span / 256.0,
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = out_path.with_suffix(f".{os.getpid()}.tmp.tif")
+    with rasterio.open(
+        temp_path, "w", driver="GTiff", height=mosaic.shape[0], width=mosaic.shape[1],
+        count=1, dtype="float32", crs="EPSG:3857", transform=transform,
+        nodata=-9999.0, compress="deflate", tiled=True,
+    ) as dst:
+        dst.write(np.where(np.isfinite(mosaic), mosaic, -9999.0).astype(np.float32), 1)
+    temp_path.replace(out_path)
+    return str(out_path), f"{GSI_DEM_ATTRIBUTION}; {label}"
+
+
+def app_provided_habitat_layers(
+    bounds: tuple[float, float, float, float],
+    include_osm: bool,
+    reference_points: Optional[pd.DataFrame] = None,
+) -> dict[str, Optional[str]]:
     west, south, east, north = bounds
+    references: tuple[tuple[float, float], ...] = ()
+    if reference_points is not None and not reference_points.empty:
+        lat_col = "_latitude" if "_latitude" in reference_points.columns else "latitude"
+        lon_col = "_longitude" if "_longitude" in reference_points.columns else "longitude"
+        references = tuple(
+            (float(lat), float(lon))
+            for lat, lon in reference_points[[lat_col, lon_col]].dropna().head(8).to_numpy()
+        )
+    dem_path, dem_source = build_gsi_dem_for_bounds(bounds, references)
     layers: dict[str, Optional[str]] = {
-        "dem": None,
+        "dem": dem_path,
+        "dem_source": dem_source or None,
         "ndvi": None,
         "landcover": None,
         "roads": None,
@@ -4182,6 +4366,7 @@ def make_potential_survey_site_candidates(
     resolution: str = "2.5m",
     highres_layers: Optional[dict[str, Optional[str]]] = None,
     profile_buffer_m: float = 100.0,
+    search_bounds: Optional[tuple[float, float, float, float]] = None,
 ) -> pd.DataFrame:
     """Build habitat-first exploratory survey cells from the active survey area.
 
@@ -4238,8 +4423,11 @@ def make_potential_survey_site_candidates(
         grid["macro_filter_basis"] = "SDM predict-map cells used as broad macro-scale filter"
     else:
         center_lat = float(work["_latitude"].mean())
-        lat_min, lat_max = float(work["_latitude"].min()), float(work["_latitude"].max())
-        lon_min, lon_max = float(work["_longitude"].min()), float(work["_longitude"].max())
+        if search_bounds is not None:
+            lon_min, lat_min, lon_max, lat_max = map(float, search_bounds)
+        else:
+            lat_min, lat_max = float(work["_latitude"].min()), float(work["_latitude"].max())
+            lon_min, lon_max = float(work["_longitude"].min()), float(work["_longitude"].max())
         lat_span_m = max(1.0, (lat_max - lat_min) * 111_320.0)
         lon_span_m = max(1.0, (lon_max - lon_min) * 111_320.0 * max(0.2, math.cos(math.radians(center_lat))))
         approx_cells = max(1.0, (lat_span_m / cell_m) * (lon_span_m / cell_m))
@@ -4364,7 +4552,10 @@ def make_potential_survey_site_candidates(
             grid = grid.merge(scored, on=["latitude", "longitude"], how="inner")
             grid["habitat_score"] = grid["analogue_score"]
             basis_prefix = "High-resolution local habitat analogue" if has_highres else "Built-in elevation-raster local analogue"
-            grid["habitat_basis"] = f"{basis_prefix}: {float(profile_buffer_m):.0f} m known-site buffer profile; Mahalanobis distance ({', '.join(env_vars)})"
+            terrain_source = str(highres_layers.get("dem_source") or "").strip()
+            source_suffix = f"; {terrain_source}" if terrain_source else ""
+            grid["habitat_basis"] = f"{basis_prefix}: {float(profile_buffer_m):.0f} m known-site buffer profile; Mahalanobis distance ({', '.join(env_vars)}){source_suffix}"
+            grid["terrain_source"] = terrain_source
             missing = []
             for label, key in [("DEM", "dem"), ("NDVI", "ndvi"), ("land cover", "landcover"), ("road distance", "roads"), ("trail distance", "trails"), ("coast distance", "coastline"), ("forest-edge distance", "forest_edge")]:
                 if not highres_layers.get(key):
@@ -6007,6 +6198,7 @@ def build_automatic_discover_bundle(
     selected_region_id: Optional[int] = None,
     override_row_ids: Optional[list[int]] = None,
     taxon_metadata: Optional[dict[str, Any]] = None,
+    survey_bounds: Optional[tuple[float, float, float, float]] = None,
 ) -> dict[str, Any]:
     """Run the no-parameter ACSP-Discover path after occurrence retrieval."""
     if occ_raw is None or occ_raw.empty:
@@ -6059,12 +6251,15 @@ def build_automatic_discover_bundle(
         raise ValueError("Occurrence records could not be converted into survey candidates.")
 
     potential_candidates = pd.DataFrame()
+    habitat_layers: dict[str, Optional[str]] = {}
     try:
-        bounds = (
+        occurrence_bounds = (
             float(scope["_longitude"].min()), float(scope["_latitude"].min()),
             float(scope["_longitude"].max()), float(scope["_latitude"].max()),
         )
-        habitat_layers = app_provided_habitat_layers(bounds, include_osm=False)
+        candidate_bounds = tuple(map(float, survey_bounds)) if survey_bounds is not None else expand_lonlat_bounds(occurrence_bounds, 3.0)
+        layer_bounds = expand_lonlat_bounds(candidate_bounds, 0.5)
+        habitat_layers = app_provided_habitat_layers(layer_bounds, include_osm=False, reference_points=scope)
         settings = recommended_potential_survey_settings(scope)
         potential_candidates = make_potential_survey_site_candidates(
             scope,
@@ -6077,6 +6272,7 @@ def build_automatic_discover_bundle(
             resolution="2.5m",
             highres_layers=habitat_layers,
             profile_buffer_m=100.0,
+            search_bounds=candidate_bounds,
         )
         if potential_candidates.empty:
             warnings.append("No habitat-first cells survived the automatic local search; plans use known anchors only.")
@@ -6149,6 +6345,8 @@ def build_automatic_discover_bundle(
         "cluster_m": cluster_m,
         "known_candidates": known_candidates,
         "potential_candidates": potential_candidates,
+        "habitat_layer_source": str(habitat_layers.get("dem_source") or ""),
+        "survey_bounds": tuple(map(float, survey_bounds)) if survey_bounds is not None else None,
         "all_candidates": all_candidates,
         "constraint_audit": constraint_audit,
         "plans": plans,
@@ -6208,6 +6406,10 @@ def render_automatic_discover() -> None:
 
     distribution = bundle.get("distribution_summary", {})
     st.subheader("Known distribution and suggested survey regions")
+    st.caption(
+        "No area selection is required: the app already uses the recommended compact region. "
+        "Draw an area only when you want to limit candidates to places you can realistically reach."
+    )
     d1, d2, d3 = st.columns(3)
     d1.metric("Distribution regime", str(distribution.get("distribution_regime", "unknown")).title())
     d2.metric("Eligible range span", f"{float(distribution.get('total_span_km', 0.0)):.0f} km")
@@ -6260,7 +6462,7 @@ def render_automatic_discover() -> None:
     active_drawings = st.session_state.get("automatic_region_draw_features", [])
     map_action1, map_action2 = st.columns(2)
     if map_action1.button(
-        "Rebuild within drawn area",
+        "Use drawn reachable area",
         key="automatic_rebuild_drawn_area",
         disabled=not bool(active_drawings),
         use_container_width=True,
@@ -6268,30 +6470,40 @@ def render_automatic_discover() -> None:
         override_ids = ids_inside_drawn_rectangles(
             bundle["occurrences"], "_row_id", "_latitude", "_longitude", active_drawings
         )
-        if len(override_ids) < 3:
-            st.error("The drawn area contains fewer than three usable records. Draw a broader area.")
+        selected_bounds = drawn_features_bounds(active_drawings)
+        if len(override_ids) < 1 or selected_bounds is None:
+            st.error("The drawn area contains no usable occurrence record. Draw an area containing at least one known record.")
         else:
             with st.spinner("Rebuilding the proposal inside the drawn area..."):
                 st.session_state.automatic_discover_bundle = build_automatic_discover_bundle(
                     bundle["scientific_name"], bundle["occurrences"], bundle["source_message"],
                     bundle["country_scope"], override_row_ids=override_ids,
                     taxon_metadata=bundle.get("taxon_metadata"),
+                    survey_bounds=selected_bounds,
                 )
             st.session_state.automatic_region_map_reset_token = st.session_state.get("automatic_region_map_reset_token", 0) + 1
             st.rerun()
     if map_action2.button(
-        "Clear drawn area",
+        "Use automatic recommended region" if bundle.get("custom_override") else "Clear drawn area",
         key="automatic_clear_drawn_area",
-        disabled=not bool(active_drawings),
+        disabled=not bool(active_drawings) and not bool(bundle.get("custom_override")),
         use_container_width=True,
     ):
         st.session_state.automatic_region_draw_features = []
+        if bundle.get("custom_override"):
+            with st.spinner("Restoring the automatic recommended region..."):
+                st.session_state.automatic_discover_bundle = build_automatic_discover_bundle(
+                    bundle["scientific_name"], bundle["occurrences"], bundle["source_message"],
+                    bundle["country_scope"], taxon_metadata=bundle.get("taxon_metadata"),
+                )
         st.session_state.automatic_region_map_reset_token = st.session_state.get("automatic_region_map_reset_token", 0) + 1
         st.rerun()
 
     proposal = bundle["proposal"]
     st.subheader(f"Survey proposal — {bundle['scientific_name']}")
     st.caption(f"Record scope: {bundle['country_scope']}. {bundle['source_message']}")
+    if bundle.get("habitat_layer_source"):
+        st.caption(str(bundle["habitat_layer_source"]) + " · locally cached for terrain analogue scoring · [GSI Tiles](https://maps.gsi.go.jp/development/)")
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Recommended region", proposal["region"])
     c2.metric("Estimated days", proposal["estimated_days"])
@@ -7078,27 +7290,10 @@ def main() -> None:
             key="potential_fetch_osm_layers",
             help="Adds OpenStreetMap road, trail, and forest-edge distance proxies for the current survey area. Keep off if Overpass is slow.",
         )
-        highres_layers = app_provided_habitat_layers(_layer_bounds, bool(include_osm_layers))
-        st.markdown("**Optional local GeoTIFF evidence**")
+        potential_search_bounds = expand_lonlat_bounds(_layer_bounds, 3.0)
         st.caption(
-            "Upload rasters covering the active survey area. The coarsest supplied raster and the 75th percentile "
-            "of coordinate uncertainty set the minimum honest search-cell width. Without a local raster, the built-in "
-            "~4.5 km elevation fallback prevents false 100 m precision."
-        )
-        ul1, ul2, ul3 = st.columns(3)
-        dem_upload = ul1.file_uploader("DEM GeoTIFF", type=["tif", "tiff"], key="potential_dem_geotiff")
-        ndvi_upload = ul2.file_uploader("NDVI GeoTIFF", type=["tif", "tiff"], key="potential_ndvi_geotiff")
-        landcover_upload = ul3.file_uploader("Land-cover GeoTIFF", type=["tif", "tiff"], key="potential_landcover_geotiff")
-        uploaded_layer_paths = {
-            "dem": cache_uploaded_habitat_raster(dem_upload, "dem"),
-            "ndvi": cache_uploaded_habitat_raster(ndvi_upload, "ndvi"),
-            "landcover": cache_uploaded_habitat_raster(landcover_upload, "landcover"),
-        }
-        highres_layers.update({name: path for name, path in uploaded_layer_paths.items() if path})
-        base_supplied = [name for name, path in highres_layers.items() if path]
-        st.caption(
-            "App-provided layers: elevation/topography and coastline proxy"
-            + (f"; optional active layers: {', '.join(base_supplied)}" if base_supplied else "")
+            "When you build candidates, the app automatically retrieves and caches the best available GSI terrain for Japan. "
+            "No layer upload is needed."
         )
         recommended_potential = recommended_potential_survey_settings(occ_extent_selected)
         use_recommended_potential = st.checkbox(
@@ -7131,8 +7326,13 @@ def main() -> None:
             key="potential_use_sdm_macro_filter",
             help="Optional. Uses SDM predict-map cells as the macro-scale search frame, but local topographic analogue score remains the main habitat score.",
         )
-        st.caption("Candidate types: Habitat-match, Survey-gap, and Environmental-test. Local variables come from uploaded high-resolution layers when supplied.")
+        st.caption("Candidate types: Habitat-match, Survey-gap, and Environmental-test. Local terrain is supplied automatically when available.")
         if st.button("Build potential survey-site candidates", key="build_potential_survey_sites", use_container_width=True):
+            highres_layers = app_provided_habitat_layers(
+                expand_lonlat_bounds(potential_search_bounds, 0.5),
+                bool(include_osm_layers),
+                reference_points=occ_extent_selected,
+            )
             start_sid = int(all_candidates["site_id"].max()) + 1 if not all_candidates.empty and "site_id" in all_candidates.columns else 1
             potential_candidates = make_potential_survey_site_candidates(
                 occ_extent_selected,
@@ -7146,6 +7346,7 @@ def main() -> None:
                 resolution=resolution,
                 highres_layers=highres_layers,
                 profile_buffer_m=float(profile_buffer_m),
+                search_bounds=potential_search_bounds,
             )
             st.session_state["potential_survey_candidates"] = potential_candidates
             st.session_state.acsp_discover_plans = None

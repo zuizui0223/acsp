@@ -1,16 +1,25 @@
 import unittest
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 
 from gbif_fieldmap_builder_app import (
     build_automatic_discover_bundle,
     build_default_short_trip_plans,
+    decode_gsi_dem_rgb,
     estimate_default_short_trip,
 )
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_gsi_rgb_elevation_decode(self):
+        rgb = np.array([[[0, 128, 255]], [[0, 0, 255]], [[100, 0, 156]]], dtype=np.uint8)
+        decoded = decode_gsi_dem_rgb(rgb)
+        self.assertAlmostEqual(float(decoded[0, 0]), 1.0)
+        self.assertTrue(np.isnan(decoded[0, 1]))
+        self.assertAlmostEqual(float(decoded[0, 2]), -1.0)
+
     def test_each_survey_day_returns_to_hub(self):
         plan = pd.DataFrame({
             "site_id": [1, 2],
