@@ -72,7 +72,7 @@ class AutomaticHierarchyTests(unittest.TestCase):
         with (
             patch("gbif_fieldmap_builder_app.app_provided_habitat_layers", return_value={}),
             patch("gbif_fieldmap_builder_app.make_potential_survey_site_candidates", return_value=pd.DataFrame()),
-            patch("gbif_fieldmap_builder_app.filter_to_land", side_effect=lambda frame, *args, **kwargs: frame),
+            patch("gbif_fieldmap_builder_app.filter_to_land", side_effect=lambda frame, *args, **kwargs: frame) as land_filter,
         ):
             bundle = build_automatic_discover_bundle(
                 "Example species", occurrences, "synthetic records", "Test"
@@ -81,6 +81,7 @@ class AutomaticHierarchyTests(unittest.TestCase):
         self.assertEqual(len(bundle["region_cards"]), 1)
         self.assertLessEqual(bundle["trip_estimate"]["estimated_days"], 2)
         self.assertTrue(bundle["warnings"])
+        self.assertEqual(float(land_filter.call_args.args[3]), 0.0)
 
 
 if __name__ == "__main__":

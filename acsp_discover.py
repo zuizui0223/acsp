@@ -697,6 +697,8 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
                 if selected:
                     distances = _distances_m(lats[i], lons[i], lats[selected], lons[selected])
                     nearest = float(np.min(distances))
+                    if nearest < 1.0:
+                        continue
                     representation = 1.0 - math.exp(-nearest / 25_000.0)
                     redundancy = math.exp(-nearest / 5_000.0)
                     travel = min(1.0, nearest / 100_000.0)

@@ -4297,7 +4297,9 @@ def make_potential_survey_site_candidates(
             )
     if grid.empty:
         return pd.DataFrame()
-    grid = filter_to_land(grid, "latitude", "longitude", radius_m)
+    # A search cell may legitimately meet a coastline. Requiring its full
+    # analysis radius to be land erases candidates on small islands.
+    grid = filter_to_land(grid, "latitude", "longitude", 0.0)
     if grid.empty:
         return pd.DataFrame()
 
@@ -4343,6 +4345,8 @@ def make_potential_survey_site_candidates(
             sd = occ_env[env_vars].std(ddof=0).replace(0, 1.0).fillna(1.0)
             known_env = ((occ_env[env_vars] - mu) / sd).to_numpy(dtype=float)
             cand_env = ((grid_env[env_vars] - mu) / sd).to_numpy(dtype=float)
+            if known_env.shape[0] < 2 or cand_env.shape[0] < 1 or not np.isfinite(known_env).all() or not np.isfinite(cand_env).all():
+                raise RuntimeError("Too few valid environmental samples for a stable habitat profile")
             cov = np.cov(known_env, rowvar=False)
             cov = np.atleast_2d(cov) + np.eye(len(env_vars)) * 1e-6
             inv_cov = np.linalg.pinv(cov)
@@ -4473,6 +4477,11 @@ def make_potential_survey_site_candidates(
     if not out_rows:
         return pd.DataFrame()
     out = pd.concat(out_rows, ignore_index=True, sort=False)
+    out["candidate_roles"] = out.groupby(["latitude", "longitude"])["candidate_type"].transform(
+        lambda values: ", ".join(dict.fromkeys(values.astype(str)))
+    )
+    out = out.sort_values("priority_score", ascending=False).drop_duplicates(["latitude", "longitude"])
+    out["site_id"] = range(int(start_site_id), int(start_site_id) + len(out))
     return out.reset_index(drop=True)
 
 
@@ -6076,7 +6085,7 @@ def build_automatic_discover_bundle(
 
     all_candidates = pd.concat([known_candidates, potential_candidates], ignore_index=True, sort=False)
     try:
-        all_candidates = filter_to_land(all_candidates, "latitude", "longitude", 500.0)
+        all_candidates = filter_to_land(all_candidates, "latitude", "longitude", 0.0)
     except Exception as exc:
         warnings.append(f"Land-mask verification was unavailable: {exc}")
     all_candidates = add_priority_rank(all_candidates, 0.7, 0.3)

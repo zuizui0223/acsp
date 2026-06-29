@@ -68,6 +68,19 @@ class DiscoverV1Tests(unittest.TestCase):
         self.assertEqual(plans["Learning"].iloc[0].site_id, 3)
         self.assertTrue(all(len(plan) == 2 for plan in plans.values()))
 
+    def test_plans_never_count_one_coordinate_as_multiple_sites(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2, 3],
+            "candidate_type": ["Habitat-match", "Environmental-test", "Occurrence-supported survey range"],
+            "latitude": [34.33, 34.33, 34.38],
+            "longitude": [139.21, 139.21, 139.26],
+            "analogue_score": [0.8, 0.8, 0.5],
+            "environmental_novelty": [0.9, 0.9, 0.1],
+            "access_score": [0.5, 0.5, 0.5],
+        })
+        for plan in build_acsp_discover_plans(candidates, k=3).values():
+            self.assertFalse(plan.duplicated(["latitude", "longitude"]).any())
+
     def test_indeterminate_field_results_are_not_false_absences(self):
         validation = pd.DataFrame({
             "site_id": range(1, 6),

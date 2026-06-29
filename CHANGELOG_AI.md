@@ -1,5 +1,27 @@
 # AI Change Log
 
+## 2026-06-29 - Codex (OpenAI) - Preserve small-island survey candidates
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Fixed land filtering for Potential Survey Sites and automatic ACSP-Discover candidates so the candidate center must be on land, rather than requiring a 500 m to 7.5 km surrounding circle to be entirely land.
+- This preserves valid coastal and small-island candidates while still excluding candidate centers located in water.
+- Added a regression assertion that the automatic workflow applies center-only land filtering to its final candidate pool.
+- Collapsed overlapping Potential Survey Site roles at the same grid coordinate into one physical candidate, while retaining all matched roles in `candidate_roles`.
+- Added a selection-level guard so ACSP plans cannot count one coordinate as multiple survey sites even if another candidate source supplies duplicates.
+- Routed undersized or non-finite local environmental samples directly to the documented spatial fallback instead of emitting unstable covariance/SVD warnings.
+
+Features preserved:
+- Existing GBIF/CSV inputs, occurrence candidates, habitat-first candidates, optional SDM/SSDM, hard-constraint audit, route feasibility, maps, exports, and field-validation workflows remain available.
+
+Known risks / TODO:
+- Candidate cells that overlap a coastline still need their land fraction or clipped survey footprint reported in a future high-resolution terrain implementation.
+- Ferry barriers and island-specific start/end hubs remain explicit follow-up work under Issue #23.
+
 ## 2026-06-27 — Taxon-aware short-trip feasibility
 
 - Added broad GBIF-taxonomy survey profiles so plants, birds, mammals, amphibians/reptiles, arthropods, fish, and unknown taxa no longer share one field-effort assumption.
