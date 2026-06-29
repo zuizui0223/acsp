@@ -70,7 +70,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-four-island-dayplan-20260629"
+APP_BUILD_ID = "acsp-simple-sdm-30s-20260629"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -78,6 +78,7 @@ GBIF_SPECIES_SEARCH_URL = "https://api.gbif.org/v1/species/search"
 GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
 GBIF_REQUEST_HEADERS = {"User-Agent": "GBIF-FieldMap-Builder/1.0"}
 WC_BASE = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base"
+CHELSA_BIO_COG_BASE = "https://os.zhdk.cloud.switch.ch/chelsav2/GLOBAL/climatologies/1981-2010/bio"
 LAND_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz"
@@ -1199,6 +1200,51 @@ def drawn_features_bounds(features: list[dict[str, Any]]) -> Optional[tuple[floa
     if not geometries:
         return None
     return tuple(map(float, unary_union(geometries).bounds))
+
+
+def drawn_feature_geometries(features: Optional[list[dict[str, Any]]]) -> list[Any]:
+    geometries = []
+    for feature in features or []:
+        try:
+            geometry = shape(feature.get("geometry", {}))
+            if not geometry.is_empty:
+                geometries.append(geometry)
+        except Exception:
+            continue
+    return geometries
+
+
+def assign_survey_area_ids(
+    df: pd.DataFrame,
+    features: Optional[list[dict[str, Any]]],
+    lat_col: str = "latitude",
+    lon_col: str = "longitude",
+) -> pd.DataFrame:
+    out = df.copy()
+    geometries = drawn_feature_geometries(features)
+    if out.empty or not geometries:
+        out["survey_area_id"] = 1
+        return out
+    area_ids = []
+    for row in out.itertuples(index=False):
+        point = Point(float(getattr(row, lon_col)), float(getattr(row, lat_col)))
+        area_ids.append(next((i for i, geom in enumerate(geometries, start=1) if geom.covers(point)), np.nan))
+    out["survey_area_id"] = area_ids
+    return out.dropna(subset=["survey_area_id"]).assign(survey_area_id=lambda x: x["survey_area_id"].astype(int)).reset_index(drop=True)
+
+
+def simple_recommended_candidates(candidates: pd.DataFrame, per_area: int = 3, default_total: int = 8) -> pd.DataFrame:
+    """Return a transparent top-ranked set, with an equal quota per drawn area."""
+    if candidates is None or candidates.empty:
+        return pd.DataFrame()
+    ranked = candidates.sort_values(["priority_score", "site_id"], ascending=[False, True]).copy()
+    if "survey_area_id" in ranked.columns and ranked["survey_area_id"].nunique() > 1:
+        selected = ranked.groupby("survey_area_id", group_keys=False).head(int(per_area)).copy()
+        selected = selected.sort_values(["survey_area_id", "priority_score"], ascending=[True, False])
+    else:
+        selected = ranked.head(int(default_total)).copy()
+    selected["recommendation_rank"] = range(1, len(selected) + 1)
+    return selected.reset_index(drop=True)
 
 
 def expand_lonlat_bounds(bounds: tuple[float, float, float, float], distance_km: float) -> tuple[float, float, float, float]:
@@ -2826,6 +2872,11 @@ def download_file(url: str, dest: Path) -> Path:
 @st.cache_data(show_spinner=False)
 def get_worldclim_raster_path(var: str, resolution: str) -> str:
     var = var.lower(); resolution = resolution.lower()
+    if resolution == "30s-cog":
+        if not var.startswith("bio"):
+            raise ValueError(f"CHELSA 30-second COG supports BIO variables only: {var}")
+        n = int(var.replace("bio", ""))
+        return f"{CHELSA_BIO_COG_BASE}/CHELSA_bio{n}_1981-2010_V.2.1.tif"
     if var in set(TOPOGRAPHY_VARS):
         zip_name = f"wc2.1_{resolution}_elev.zip"; tif_name = f"wc2.1_{resolution}_elev.tif"
     elif var.startswith("bio"):
@@ -4367,6 +4418,7 @@ def make_potential_survey_site_candidates(
     highres_layers: Optional[dict[str, Optional[str]]] = None,
     profile_buffer_m: float = 100.0,
     search_bounds: Optional[tuple[float, float, float, float]] = None,
+    search_geometry: Any = None,
 ) -> pd.DataFrame:
     """Build habitat-first exploratory survey cells from the active survey area.
 
@@ -4488,6 +4540,12 @@ def make_potential_survey_site_candidates(
     # A search cell may legitimately meet a coastline. Requiring its full
     # analysis radius to be land erases candidates on small islands.
     grid = filter_to_land(grid, "latitude", "longitude", 0.0)
+    if search_geometry is not None and not grid.empty:
+        inside = [
+            bool(search_geometry.covers(Point(float(row.longitude), float(row.latitude))))
+            for row in grid.itertuples(index=False)
+        ]
+        grid = grid.loc[inside].reset_index(drop=True)
     if grid.empty:
         return pd.DataFrame()
 
@@ -6199,6 +6257,7 @@ def build_automatic_discover_bundle(
     override_row_ids: Optional[list[int]] = None,
     taxon_metadata: Optional[dict[str, Any]] = None,
     survey_bounds: Optional[tuple[float, float, float, float]] = None,
+    survey_features: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
     """Run the no-parameter ACSP-Discover path after occurrence retrieval."""
     if occ_raw is None or occ_raw.empty:
@@ -6249,31 +6308,62 @@ def build_automatic_discover_bundle(
     )
     if known_candidates.empty:
         raise ValueError("Occurrence records could not be converted into survey candidates.")
+    known_candidates = assign_survey_area_ids(known_candidates, survey_features)
 
     potential_candidates = pd.DataFrame()
-    habitat_layers: dict[str, Optional[str]] = {}
+    habitat_sources: list[str] = []
     try:
         occurrence_bounds = (
             float(scope["_longitude"].min()), float(scope["_latitude"].min()),
             float(scope["_longitude"].max()), float(scope["_latitude"].max()),
         )
-        candidate_bounds = tuple(map(float, survey_bounds)) if survey_bounds is not None else expand_lonlat_bounds(occurrence_bounds, 3.0)
-        layer_bounds = expand_lonlat_bounds(candidate_bounds, 0.5)
-        habitat_layers = app_provided_habitat_layers(layer_bounds, include_osm=False, reference_points=scope)
-        settings = recommended_potential_survey_settings(scope)
-        potential_candidates = make_potential_survey_site_candidates(
-            scope,
-            known_candidates,
-            float(settings["cell_m"]),
-            min(10, int(settings["per_type"])),
-            min(800, int(settings["max_cells"])),
-            int(known_candidates["site_id"].max()) + 1,
-            env_variables=POTENTIAL_ANALOGUE_PRESET,
-            resolution="2.5m",
-            highres_layers=habitat_layers,
-            profile_buffer_m=100.0,
-            search_bounds=candidate_bounds,
-        )
+        geometries = drawn_feature_geometries(survey_features)
+        area_specs = [(1, None, scope, known_candidates)]
+        if geometries:
+            area_specs = []
+            for area_id, geometry in enumerate(geometries, start=1):
+                occ_mask = [
+                    geometry.covers(Point(float(lon), float(lat)))
+                    for lat, lon in scope[["_latitude", "_longitude"]].to_numpy(dtype=float)
+                ]
+                area_scope = scope.loc[occ_mask].reset_index(drop=True)
+                area_known = known_candidates[known_candidates["survey_area_id"].eq(area_id)].reset_index(drop=True)
+                if not area_scope.empty and not area_known.empty:
+                    area_specs.append((area_id, geometry, area_scope, area_known))
+        potential_frames = []
+        next_site_id = int(known_candidates["site_id"].max()) + 1
+        for area_id, geometry, area_scope, area_known in area_specs:
+            candidate_bounds = (
+                tuple(map(float, geometry.bounds)) if geometry is not None
+                else tuple(map(float, survey_bounds)) if survey_bounds is not None
+                else expand_lonlat_bounds(occurrence_bounds, 3.0)
+            )
+            habitat_layers = app_provided_habitat_layers(
+                expand_lonlat_bounds(candidate_bounds, 0.5), include_osm=False, reference_points=area_scope,
+            )
+            if habitat_layers.get("dem_source"):
+                habitat_sources.append(str(habitat_layers["dem_source"]))
+            settings = recommended_potential_survey_settings(area_scope)
+            frame = make_potential_survey_site_candidates(
+                area_scope,
+                area_known,
+                float(settings["cell_m"]),
+                min(10, int(settings["per_type"])),
+                min(800, int(settings["max_cells"])),
+                next_site_id,
+                env_variables=POTENTIAL_ANALOGUE_PRESET,
+                resolution="2.5m",
+                highres_layers=habitat_layers,
+                profile_buffer_m=100.0,
+                search_bounds=candidate_bounds,
+                search_geometry=geometry,
+            )
+            if not frame.empty:
+                frame["survey_area_id"] = int(area_id)
+                potential_frames.append(frame)
+                next_site_id = int(frame["site_id"].max()) + 1
+        if potential_frames:
+            potential_candidates = pd.concat(potential_frames, ignore_index=True, sort=False)
         if potential_candidates.empty:
             warnings.append("No habitat-first cells survived the automatic local search; plans use known anchors only.")
     except Exception as exc:
@@ -6288,9 +6378,12 @@ def build_automatic_discover_bundle(
     eligible, constraint_audit = apply_discover_hard_constraints(all_candidates)
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
-    target_days = 1 if survey_bounds is not None else 2
+    target_days = (
+        max(1, len(drawn_feature_geometries(survey_features)))
+        if survey_features else 1 if survey_bounds is not None else 2
+    )
     plans, trip_estimate, requested_k = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=target_days, max_cells=8, survey_protocol=survey_protocol
+        eligible, hub_lat, hub_lon, target_days=target_days, max_cells=max(8, target_days * 3), survey_protocol=survey_protocol
     )
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
@@ -6347,10 +6440,15 @@ def build_automatic_discover_bundle(
         "cluster_m": cluster_m,
         "known_candidates": known_candidates,
         "potential_candidates": potential_candidates,
-        "habitat_layer_source": str(habitat_layers.get("dem_source") or ""),
+        "habitat_layer_source": "; ".join(dict.fromkeys(habitat_sources)),
         "survey_bounds": tuple(map(float, survey_bounds)) if survey_bounds is not None else None,
+        "survey_features": list(survey_features or []),
         "target_days": target_days,
         "all_candidates": all_candidates,
+        "candidate_pool_without_sdm": eligible.copy(),
+        "recommended_without_sdm": simple_recommended_candidates(
+            eligible, default_total=3 if survey_features else 8,
+        ),
         "constraint_audit": constraint_audit,
         "plans": plans,
         "proposal": proposal,
@@ -6369,6 +6467,7 @@ def build_automatic_genus_bundle(
     override_row_ids: Optional[list[int]] = None,
     taxon_metadata: Optional[dict[str, Any]] = None,
     survey_bounds: Optional[tuple[float, float, float, float]] = None,
+    survey_features: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
     """Build the automatic observed-richness survey proposal for a matched genus."""
     if occ_raw is None or occ_raw.empty:
@@ -6402,10 +6501,14 @@ def build_automatic_genus_bundle(
     if hotspots.empty:
         raise ValueError("Genus records could not be converted into observed richness hotspots.")
     hotspots = add_priority_rank(hotspots, 0.7, 0.3)
+    hotspots = assign_survey_area_ids(hotspots, survey_features)
     eligible, constraint_audit = apply_discover_hard_constraints(hotspots)
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
-    target_days = 1 if survey_bounds is not None else 2
+    target_days = (
+        max(1, len(drawn_feature_geometries(survey_features)))
+        if survey_features else 1 if survey_bounds is not None else 2
+    )
     plans, trip_estimate, requested_k = build_default_short_trip_plans(
         eligible, hub_lat, hub_lon, target_days=target_days, max_cells=8,
         survey_protocol=infer_survey_protocol(taxon_metadata).as_dict(),
@@ -6433,11 +6536,16 @@ def build_automatic_genus_bundle(
         "selected_region_id": int(selected_region["region_id"]) if selected_region else None,
         "custom_override": bool(override_row_ids),
         "survey_bounds": tuple(map(float, survey_bounds)) if survey_bounds is not None else None,
+        "survey_features": list(survey_features or []),
         "target_days": target_days,
         "candidate_input": candidate_input,
         "species_summary": species_summary,
         "richness_grid": richness_grid,
         "all_candidates": hotspots,
+        "candidate_pool_without_sdm": eligible.copy(),
+        "recommended_without_sdm": simple_recommended_candidates(
+            eligible, default_total=3 if survey_features else 8,
+        ),
         "constraint_audit": constraint_audit,
         "plans": plans,
         "trip_estimate": trip_estimate,
@@ -6450,9 +6558,9 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
     """Run the existing SSDM engine with fixed lightweight survey-planning defaults."""
     model_summary, grid, exploratory, grid_shape, grid_bounds, vif_diag = fit_stacked_species_sdms(
         occ=bundle["occurrences"],
-        variables=list(BALANCED_ECOLOGY_PRESET),
+        variables=["bio1", "bio4", "bio12", "bio15", "bio14"],
         algorithms=["Random forest", "ExtraTrees"],
-        resolution="2.5m",
+        resolution="30s-cog",
         area_mode="bounding box",
         buffer_km=10.0,
         rectangle_margin_km=20.0,
@@ -6467,7 +6575,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
         vif_threshold=10.0,
         variable_selection_strategy="Ecological preset / representative climate set",
         corr_threshold=0.80,
-        custom_variables=list(BALANCED_ECOLOGY_PRESET),
+        custom_variables=["bio1", "bio4", "bio12", "bio15", "bio14"],
         ssdm_partition_override="auto",
         per_species_grid_thin_deg=0.05,
         per_species_distance_thin_m=0.0,
@@ -6483,6 +6591,8 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
         start_id = int(observed["site_id"].max()) + 1
         exploratory["site_id"] = range(start_id, start_id + len(exploratory))
         exploratory = add_priority_rank(exploratory, 0.7, 0.3)
+        if bundle.get("survey_features"):
+            exploratory = assign_survey_area_ids(exploratory, bundle["survey_features"])
         candidates = pd.concat([observed, exploratory], ignore_index=True, sort=False)
     else:
         candidates = observed
@@ -6507,7 +6617,12 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
             "shape": grid_shape,
             "bounds": grid_bounds,
             "vif": vif_diag,
+            "environment_source": "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the SSDM extent",
         },
+        "candidate_pool_with_sdm": eligible.copy(),
+        "recommended_with_sdm": simple_recommended_candidates(
+            eligible, default_total=3 if bundle.get("survey_features") else 8,
+        ),
     })
     return updated
 
@@ -6521,7 +6636,8 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     qc_report.setdefault("included_records", int(len(occ_sdm)))
     if len(occ_sdm) < 5:
         raise RuntimeError("Too few records remained after automatic SDM quality control.")
-    variables = list(BALANCED_ECOLOGY_PRESET)
+    variables = ["bio1", "bio4", "bio12", "bio15", "bio14"]
+    resolution = "30s-cog"
     extent = prediction_area_geometry(occ_sdm, "bounding box", 10.0, 20.0)
     partition, partition_reason = auto_sdm_partition(len(occ_sdm), extent)
     if progress is not None:
@@ -6529,7 +6645,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     pb = build_presence_background(occ_sdm, 500, "bounding box", 10.0, 20.0, status=status)
     if status is not None:
         status.write("Extracting environmental variables...")
-    train = extract_environment(pb, variables, "latitude", "longitude", "2.5m", status)
+    train = extract_environment(pb, variables, "latitude", "longitude", resolution, status)
     train, dropped = clean_environment_table(train, variables, "Automatic SDM training environment", status)
     if train.empty or train["presence"].nunique() < 2:
         raise RuntimeError("Too few valid SDM rows remained after raster NoData cleaning.")
@@ -6549,7 +6665,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     if progress is not None:
         progress.progress(0.65)
     overlay, prediction = build_predict_map(
-        occ_sdm, kept, "2.5m", model, "bounding box", 10.0, 20.0, 40_000, status=status,
+        occ_sdm, kept, resolution, model, "bounding box", 10.0, 20.0, 40_000, status=status,
     )
     if progress is not None:
         progress.progress(0.82)
@@ -6557,7 +6673,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     observed = bundle["all_candidates"].copy()
     sampled = extract_environment(
         observed.rename(columns={"latitude": "_candidate_lat", "longitude": "_candidate_lon"}),
-        kept, "_candidate_lat", "_candidate_lon", "2.5m", status,
+        kept, "_candidate_lat", "_candidate_lon", resolution, status,
     ).rename(columns={"_candidate_lat": "latitude", "_candidate_lon": "longitude"})
     observed = predict_suitability(sampled, model)
     observed["model_support_score"] = pd.to_numeric(observed["sdm_suitability"], errors="coerce").clip(0, 1)
@@ -6566,6 +6682,8 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         prediction, occ_sdm, observed, 0.60, 0.90, 3000.0, 3000.0, 20,
         int(observed["site_id"].max()) + 1,
     )
+    if not exploration.empty and bundle.get("survey_features"):
+        exploration = assign_survey_area_ids(exploration, bundle["survey_features"])
     candidates = pd.concat([observed, exploration], ignore_index=True, sort=False) if not exploration.empty else observed
     candidates = add_priority_rank(candidates, 0.7, 0.3)
     eligible, audit = apply_discover_hard_constraints(candidates)
@@ -6602,7 +6720,12 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
             "excluded": excluded,
             "partition_reason": partition_reason,
             "exploration": exploration,
+            "environment_source": "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the QC-derived SDM extent",
         },
+        "candidate_pool_with_sdm": eligible.copy(),
+        "recommended_with_sdm": simple_recommended_candidates(
+            eligible, default_total=3 if bundle.get("survey_features") else 8,
+        ),
     })
     if progress is not None:
         progress.progress(1.0)
@@ -6637,7 +6760,7 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
         st.session_state.automatic_region_draw_features = features
     active = st.session_state.get("automatic_region_draw_features", [])
     a1, a2 = st.columns(2)
-    if a1.button("Use drawn reachable area", key="automatic_genus_use_area", disabled=not bool(active), use_container_width=True):
+    if a1.button("Use drawn survey areas", key="automatic_genus_use_area", disabled=not bool(active), use_container_width=True):
         ids = ids_inside_drawn_rectangles(bundle["occurrences"], "_row_id", "_latitude", "_longitude", active)
         bounds = drawn_features_bounds(active)
         if not ids or bounds is None:
@@ -6646,6 +6769,7 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
             st.session_state.automatic_discover_bundle = build_automatic_genus_bundle(
                 bundle["scientific_name"], bundle["occurrences"], bundle["source_message"], bundle["country_scope"],
                 override_row_ids=ids, taxon_metadata=bundle.get("taxon_metadata"), survey_bounds=bounds,
+                survey_features=active,
             )
             st.session_state.automatic_region_map_reset_token += 1
             st.rerun()
@@ -6671,10 +6795,18 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
             "genus_species_summary.csv", "text/csv", key="automatic_genus_species_summary_csv",
         )
 
+    render_simple_candidate_result(
+        bundle,
+        "Candidates without SSDM",
+        bundle.get("candidate_pool_without_sdm", pd.DataFrame()),
+        bundle.get("recommended_without_sdm", pd.DataFrame()),
+        "automatic_genus_without_ssdm",
+    )
+
     ssdm = bundle.get("ssdm_result")
     if ssdm is None:
-        st.caption("Observed richness candidates are ready without SSDM. SSDM is optional model support and uses fixed lightweight defaults.")
-        if st.button("Add optional SSDM support", key="automatic_run_ssdm", type="primary", use_container_width=True):
+        st.caption("SSDM is optional. It re-ranks observed richness candidates with predicted stacked richness.")
+        if st.button("Generate candidates with SSDM", key="automatic_run_ssdm", type="primary", use_container_width=True):
             status = st.empty(); progress = st.progress(0.0)
             try:
                 st.session_state.automatic_discover_bundle = add_automatic_ssdm_support(bundle, status=status, progress=progress)
@@ -6682,48 +6814,72 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
             except Exception as exc:
                 st.error(f"Automatic SSDM failed: {exc}")
     else:
-        st.success("SSDM predicted richness is available and has re-ranked observed hotspots.")
-        st_folium(
-            make_ssdm_map(ssdm["grid"], ssdm["hotspots"], "ssdm_continuous_richness", "Predicted SSDM richness", ssdm["shape"], ssdm["bounds"]),
-            width=None, height=560, returned_objects=[], key="automatic_ssdm_map",
+        st.success("SSDM predicted richness is available. The non-SSDM result remains above for comparison.")
+        render_simple_candidate_result(
+            bundle,
+            "Candidates with SSDM",
+            bundle.get("candidate_pool_with_sdm", pd.DataFrame()),
+            bundle.get("recommended_with_sdm", pd.DataFrame()),
+            "automatic_genus_with_ssdm",
+            overlay=make_ssdm_overlay(ssdm["grid"], "ssdm_continuous_richness", ssdm["shape"], ssdm["bounds"]),
         )
         with st.expander("SSDM model and VIF diagnostics", expanded=False):
+            st.write({"environment_source": ssdm.get("environment_source")})
             st.dataframe(ssdm["model_summary"], width="stretch", hide_index=True)
             if ssdm.get("vif") is not None and not ssdm["vif"].empty:
                 st.dataframe(ssdm["vif"], width="stretch", hide_index=True)
-
-    tabs = st.tabs(list(bundle["plans"].keys()))
-    for tab, (name, plan) in zip(tabs, bundle["plans"].items()):
-        with tab:
-            st.dataframe(plan, width="stretch", hide_index=True)
-            d1, d2, d3 = st.columns(3)
-            d1.download_button(
-                "Plan CSV", make_export_csv(plan).encode("utf-8"),
-                f"genus_{name.lower()}_plan.csv", "text/csv", key=f"automatic_genus_{name}_csv",
-                use_container_width=True,
-            )
-            d2.download_button(
-                "Field validation CSV", make_validation_template(plan).to_csv(index=False).encode("utf-8"),
-                f"genus_{name.lower()}_validation.csv", "text/csv",
-                key=f"automatic_genus_{name}_validation", use_container_width=True,
-            )
-            d3.link_button(
-                "Open in Google Maps", make_google_maps_route_url(plan, "driving"), use_container_width=True,
-            )
-    balanced = bundle["plans"].get("Balanced", pd.DataFrame())
-    if not balanced.empty:
-        st_folium(
-            make_genus_candidate_selection_map(bundle["richness_grid"], balanced, "Species richness", add_draw=False),
-            width=None, height=650, returned_objects=[], key="automatic_genus_candidate_map",
-        )
     for warning in bundle.get("warnings", []):
         st.warning(warning)
+
+
+def render_simple_candidate_result(
+    bundle: dict[str, Any],
+    title: str,
+    pool: pd.DataFrame,
+    recommended: pd.DataFrame,
+    key_prefix: str,
+    overlay: Optional[dict[str, Any]] = None,
+) -> None:
+    st.subheader(title)
+    area_count = int(recommended.get("survey_area_id", pd.Series([1])).nunique()) if not recommended.empty else 0
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Candidate pool", f"{len(pool):,}")
+    m2.metric("Survey areas", f"{area_count:,}")
+    m3.metric("Recommended sites", f"{len(recommended):,}")
+    if recommended.empty:
+        st.warning("No candidate survived the automatic constraints.")
+        return
+    show_cols = [c for c in [
+        "recommendation_rank", "survey_area_id", "site_id", "candidate_type", "priority_score",
+        "occurrence_support_score", "model_support_score", "sdm_suitability",
+        "why_selected", "latitude", "longitude",
+    ] if c in recommended.columns]
+    st.dataframe(recommended[show_cols], width="stretch", hide_index=True)
+    d1, d2, d3 = st.columns(3)
+    d1.download_button(
+        "Recommended sites CSV", make_export_csv(recommended).encode("utf-8"),
+        f"{key_prefix}_recommended_sites.csv", "text/csv", key=f"{key_prefix}_recommended_csv",
+        use_container_width=True,
+    )
+    d2.download_button(
+        "Full candidate pool CSV", make_export_csv(pool).encode("utf-8"),
+        f"{key_prefix}_candidate_pool.csv", "text/csv", key=f"{key_prefix}_pool_csv",
+        use_container_width=True,
+    )
+    d3.download_button(
+        "Field validation CSV", make_validation_template(recommended).to_csv(index=False).encode("utf-8"),
+        f"{key_prefix}_field_validation.csv", "text/csv", key=f"{key_prefix}_validation_csv",
+        use_container_width=True,
+    )
+    layers = {"predict": overlay is not None, "occ": True, "candidate_circles": True}
+    result_map = build_map(bundle["scope"], recommended, overlay, None, 0.0, 500.0, layers, False)
+    st_folium(result_map, width=None, height=650, returned_objects=[], key=f"{key_prefix}_map")
 
 
 def render_automatic_discover() -> None:
     """Single automatic product surface for species and genus survey planning."""
     st.title("🌿 ACSP-Discover")
-    st.caption("Enter a species or genus scientific name. ACSP detects the GBIF rank and opens species/SDM or genus/SSDM survey planning automatically.")
+    st.caption("Enter a species or genus name, optionally draw survey areas, then compare candidates without and with SDM/SSDM.")
     query = st.text_input(
         "Species or genus scientific name",
         value=st.session_state.get("automatic_discover_query") or "",
@@ -6773,7 +6929,7 @@ def render_automatic_discover() -> None:
 
     bundle = st.session_state.get("automatic_discover_bundle")
     if not isinstance(bundle, dict):
-        st.info("Only the taxon name is required. Survey area is optional; modeling, VIF, thinning, validation, and ranking use automatic scientific defaults.")
+        st.info("Only the taxon name is required. Survey-area drawing and SDM/SSDM are optional.")
         return
 
     if bundle.get("taxon_mode") == "genus":
@@ -6784,7 +6940,7 @@ def render_automatic_discover() -> None:
     st.subheader("Known distribution and suggested survey regions")
     st.caption(
         "No area selection is required: the app already uses the recommended compact region. "
-        "Draw an area only when you want to limit candidates to places you can realistically reach."
+        "Draw one or more areas only when you want to limit candidates to places you can realistically reach."
     )
     d1, d2, d3 = st.columns(3)
     d1.metric("Distribution regime", str(distribution.get("distribution_regime", "unknown")).title())
@@ -6793,7 +6949,7 @@ def render_automatic_discover() -> None:
     st.caption(str(distribution.get("distribution_regime_reason", "")))
 
     region_cards = bundle.get("region_cards", [])
-    if region_cards:
+    if False and region_cards:  # Legacy region-choice cards are hidden in the simplified workflow.
         card_columns = st.columns(len(region_cards))
         for column, region in zip(card_columns, region_cards):
             with column:
@@ -6838,7 +6994,7 @@ def render_automatic_discover() -> None:
     active_drawings = st.session_state.get("automatic_region_draw_features", [])
     map_action1, map_action2 = st.columns(2)
     if map_action1.button(
-        "Use drawn reachable area",
+        "Use drawn survey areas",
         key="automatic_rebuild_drawn_area",
         disabled=not bool(active_drawings),
         use_container_width=True,
@@ -6856,6 +7012,7 @@ def render_automatic_discover() -> None:
                     bundle["country_scope"], override_row_ids=override_ids,
                     taxon_metadata=bundle.get("taxon_metadata"),
                     survey_bounds=selected_bounds,
+                    survey_features=active_drawings,
                 )
             st.session_state.automatic_region_map_reset_token = st.session_state.get("automatic_region_map_reset_token", 0) + 1
             st.rerun()
@@ -6880,42 +7037,12 @@ def render_automatic_discover() -> None:
     st.caption(f"Record scope: {bundle['country_scope']}. {bundle['source_message']}")
     if bundle.get("habitat_layer_source"):
         st.caption(str(bundle["habitat_layer_source"]) + " · locally cached for terrain analogue scoring · [GSI Tiles](https://maps.gsi.go.jp/development/)")
-    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
-    c1.metric("Recommended region", proposal["region"])
-    c2.metric("Estimated days", proposal["estimated_days"])
-    c3.metric("Eligible candidate pool", int(bundle["constraint_audit"]["eligible"].sum()))
-    c4.metric("Priority cells", proposal["priority_cells"])
-    c5.metric("Known revisits", proposal["known_anchors"])
-    c6.metric("Discovery cells", proposal["discovery_cells"])
-    c7.metric("Data quality", str(proposal["data_quality"]).title())
-    trip_estimate = bundle.get("trip_estimate", {})
-    survey_protocol = bundle.get("survey_protocol", {})
-    st.caption(
-        f"Suggested season: {proposal['recommended_window']}. Default logistics estimate: "
-        f"{float(trip_estimate.get('estimated_road_km', 0.0)):.0f} road-km proxy, "
-        f"{float(trip_estimate.get('total_hours', 0.0)):.1f} total hours. "
-        f"Each day starts/ends at the region hub; assumes 35 km/h, "
-        f"{int(trip_estimate.get('search_minutes_per_cell', 0))} survey minutes plus "
-        f"{int(trip_estimate.get('access_buffer_minutes_per_cell', 0))} access minutes per station, and "
-        f"{float(trip_estimate.get('daily_field_hours', 0.0)):.1f} field hours/day with a "
-        f"{float(trip_estimate.get('operational_reserve_fraction', 0.0)):.0%} operational reserve."
-    )
-    st.caption("Presence, flowering, access permission, actual roads/ferries, weather, and safety require current field verification.")
-    with st.expander("Taxon-aware survey protocol and daily schedule", expanded=False):
-        st.write({
-            "taxon_group": survey_protocol.get("taxon_group"),
-            "protocol": survey_protocol.get("protocol_id"),
-            "method": survey_protocol.get("method"),
-            "observation_unit": survey_protocol.get("observation_unit"),
-            "daily_window": survey_protocol.get("daily_window"),
-            "minimum_repeat_visits": survey_protocol.get("minimum_repeat_visits"),
-            "protocol_confidence": survey_protocol.get("confidence"),
-            "movement_caution": survey_protocol.get("movement_caution"),
-            "weather_caution": survey_protocol.get("weather_caution"),
-            "routing_confidence": trip_estimate.get("routing_confidence"),
-            "inference_ready_minimum_field_days": trip_estimate.get("inference_ready_minimum_field_days"),
-        })
-        st.dataframe(pd.DataFrame(trip_estimate.get("day_schedules", [])), width="stretch", hide_index=True)
+    survey_area_count = max(1, len(drawn_feature_geometries(bundle.get("survey_features"))))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Survey areas", survey_area_count)
+    c2.metric("Suggested season", proposal["recommended_window"])
+    c3.metric("Data quality", str(proposal["data_quality"]).title())
+    st.caption("Presence, flowering, access permission, transport, weather, and safety require field verification.")
     for warning in bundle.get("warnings", []):
         st.warning(warning)
 
@@ -6941,13 +7068,16 @@ def render_automatic_discover() -> None:
             "acsp_discover_region_audit.csv", "text/csv", key="automatic_region_audit_download",
         )
 
+    without_pool = bundle.get("candidate_pool_without_sdm", pd.DataFrame())
+    without_recommended = bundle.get("recommended_without_sdm", pd.DataFrame())
+    render_simple_candidate_result(
+        bundle, "Candidates without SDM", without_pool, without_recommended, "automatic_without_sdm",
+    )
+
     sdm = bundle.get("sdm_result")
     if sdm is None:
-        st.caption(
-            "Occurrence-supported candidates are ready. Optional SDM adds broad climate support for re-ranking "
-            "and creates model-only exploration candidates; it is not required."
-        )
-        if st.button("Add optional SDM support", key="automatic_run_sdm", type="primary", use_container_width=True):
+        st.caption("SDM is optional. It re-ranks these candidates with independent broad-scale climate support.")
+        if st.button("Generate candidates with SDM", key="automatic_run_sdm", type="primary", use_container_width=True):
             status = st.empty()
             progress = st.progress(0.0)
             try:
@@ -6958,14 +7088,18 @@ def render_automatic_discover() -> None:
             except Exception as exc:
                 st.error(f"Automatic SDM failed: {exc}")
     else:
-        st.success("SDM suitability is available and has re-ranked the occurrence-supported candidates.")
-        sdm_layers = {"predict": True, "occ": True, "candidate_circles": False}
-        sdm_map = build_map(
-            bundle["scope"], pd.DataFrame(), sdm["overlay"], None, 0.0, 500.0, sdm_layers, False,
+        st.success("SDM suitability is available. The original non-SDM result remains above for comparison.")
+        render_simple_candidate_result(
+            bundle,
+            "Candidates with SDM",
+            bundle.get("candidate_pool_with_sdm", pd.DataFrame()),
+            bundle.get("recommended_with_sdm", pd.DataFrame()),
+            "automatic_with_sdm",
+            overlay=sdm["overlay"],
         )
-        st_folium(sdm_map, width=None, height=560, returned_objects=[], key="automatic_sdm_predict_map")
         with st.expander("SDM model, QC, and variable diagnostics", expanded=False):
             st.write({
+                "environment_source": sdm.get("environment_source"),
                 "presence_records_used": int(sdm["qc_report"].get("included_records", len(bundle["occurrences"]))),
                 "automatic_remote_outliers_excluded": int(sdm["qc_report"].get("excluded_records", 0)),
                 "variables_kept": sdm["variables"],
@@ -6974,38 +7108,6 @@ def render_automatic_discover() -> None:
             })
             st.dataframe(sdm["model"]["metrics"], width="stretch", hide_index=True)
             st.dataframe(sdm["variable_diagnostics"], width="stretch", hide_index=True)
-
-    tabs = st.tabs(list(ACSP_DISCOVER_PLAN_ORDER))
-    for tab, plan_name in zip(tabs, ACSP_DISCOVER_PLAN_ORDER):
-        with tab:
-            plan = bundle["plans"].get(plan_name, pd.DataFrame())
-            if plan.empty:
-                st.info("No eligible cells in this plan.")
-                continue
-            show_cols = [c for c in [
-                "plan_rank", "site_id", "candidate_type", "discovery_label", "learning_label", "access_label",
-                "effective_search_cell_size_m", "search_cell_radius_m", "recommended_survey_window",
-                "data_quality", "why_selected", "latitude", "longitude",
-            ] if c in plan.columns]
-            st.dataframe(plan[show_cols], width="stretch", hide_index=True)
-            d1, d2, d3 = st.columns(3)
-            d1.download_button(
-                "Plan CSV", make_export_csv(plan).encode("utf-8"), f"acsp_discover_{plan_name.lower()}.csv",
-                "text/csv", use_container_width=True, key=f"automatic_{plan_name.lower()}_csv",
-            )
-            d2.download_button(
-                "Field validation CSV", make_validation_template(plan).to_csv(index=False).encode("utf-8"),
-                f"acsp_discover_{plan_name.lower()}_validation.csv", "text/csv", use_container_width=True,
-                key=f"automatic_{plan_name.lower()}_validation",
-            )
-            route_url = make_google_maps_route_url(plan, "driving")
-            d3.link_button("Open in Google Maps", route_url, use_container_width=True)
-
-    st.subheader("Balanced plan map")
-    balanced = bundle["plans"]["Balanced"]
-    auto_layers = {"predict": False, "occ": True, "candidate_circles": True}
-    auto_map = build_map(bundle["scope"], balanced, None, None, 0.0, 500.0, auto_layers, False)
-    st_folium(auto_map, width=None, height=650, returned_objects=[], key="automatic_balanced_map")
 
     with st.expander("Constraint audit", expanded=False):
         st.dataframe(bundle["constraint_audit"], width="stretch", hide_index=True)

@@ -1,5 +1,33 @@
 # AI Change Log
 
+## 2026-06-29 - Codex (OpenAI) - Four-area planning, 30-second COG SDM, and two-result workflow
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Simplified the automatic product surface to the actual user decisions: enter a species/genus name, optionally draw one or more survey areas, and optionally generate model-supported candidates.
+- Removed the visible Balanced / Discovery / Learning outputs. The automatic workflow now shows only `Candidates without SDM/SSDM` and, after the optional model run, `Candidates with SDM/SSDM`.
+- Added equal, transparent top-ranked quotas: three recommended sites per drawn survey area. Full candidate pools remain downloadable.
+- Treats multiple rectangles/polygons as independent survey areas. Candidate grids, GSI terrain retrieval, habitat profiles, ranking quotas, and area IDs are calculated separately, avoiding candidate concentration in the record-richest island and excluding the sea/gaps between rectangles.
+- Replaced the automatic SDM/SSDM dependency on the 628 MB global WorldClim 2.5-minute ZIP with CHELSA V2.1 BIOCLIM 30-second Cloud-Optimized GeoTIFFs.
+- The app now derives the independent SDM extent after automatic occurrence QC and reads only the required raster windows via HTTP range requests; it does not download a global climate archive.
+- Automatic macro models use BIO1, BIO4, BIO12, BIO14, and BIO15 before ecological representative variable selection. Local 100 m terrain discovery remains a separate GSI-based step.
+- When survey areas are drawn, model-high exploration candidates are clipped back to those areas before recommendation.
+- Applied the same simplified output structure and 30-second COG source to genus/SSDM mode.
+- Hid legacy automatic-region choice cards; the default region is automatic and the only range interaction is optional map drawing.
+
+Four-island validation (`Campanula microdonta`):
+- GBIF total 300; cleaned records 87; four-area selected records 26.
+- Automatic SDM QC excluded the remote point at 33.635783, 134.493324 and retained 86 SDM records.
+- Without SDM candidate pools by area: Izu Oshima 22, Toshima 18, Niijima 20, Kozushima 21; three recommendations per area.
+- With SDM candidate pools by area: Izu Oshima 23, Toshima 18, Niijima 20, Kozushima 21; three recommendations per area.
+- The 12 recommended site IDs changed from `[1,6,7] / [28,31,32] / [44,46,47] / [63,64,65]` without SDM to `[1,12,11] / [37,38,28] / [55,56,45] / [67,71,80]` with SDM.
+- The full automatic SDM completed successfully with 2,145 land prediction cells. Ecological representative selection retained BIO1 and BIO12 for this run.
+- `python -m py_compile gbif_fieldmap_builder_app.py` passed and all 20 unit tests passed.
+
 ## 2026-06-29 - Codex (OpenAI) - Revalidate four-island plans and preserve one-day drawn-area missions
 
 Changed files:

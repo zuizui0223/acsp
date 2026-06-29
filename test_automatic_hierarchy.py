@@ -10,10 +10,27 @@ from gbif_fieldmap_builder_app import (
     build_default_short_trip_plans,
     decode_gsi_dem_rgb,
     estimate_default_short_trip,
+    get_worldclim_raster_path,
+    simple_recommended_candidates,
 )
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_automatic_climate_uses_remote_30_second_cog(self):
+        path = get_worldclim_raster_path("bio12", "30s-cog")
+        self.assertIn("CHELSA_bio12_1981-2010_V.2.1.tif", path)
+        self.assertTrue(path.startswith("https://"))
+
+    def test_simple_recommendations_keep_three_per_drawn_area(self):
+        candidates = pd.DataFrame({
+            "site_id": range(1, 17),
+            "survey_area_id": np.repeat([1, 2, 3, 4], 4),
+            "priority_score": np.tile([0.9, 0.8, 0.7, 0.6], 4),
+        })
+        selected = simple_recommended_candidates(candidates)
+        self.assertEqual(len(selected), 12)
+        self.assertEqual(selected.groupby("survey_area_id").size().to_dict(), {1: 3, 2: 3, 3: 3, 4: 3})
+
     def test_gsi_rgb_elevation_decode(self):
         rgb = np.array([[[0, 128, 255]], [[0, 0, 255]], [[100, 0, 156]]], dtype=np.uint8)
         decoded = decode_gsi_dem_rgb(rgb)
