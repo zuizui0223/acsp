@@ -57,11 +57,14 @@ from streamlit_folium import st_folium
 
 from acsp import (
     DEFAULT_ENSEMBLE_ALGORITHMS,
+    aggregate_candidates_to_zones,
     choose_spatial_partition,
+    compare_zone_rankings,
     make_classifier,
     model_performance_table,
     recommend_candidates,
     sdm_method_record,
+    zone_agreement_summary,
 )
 from acsp_discover import (
     PLAN_ORDER as ACSP_DISCOVER_PLAN_ORDER,
@@ -77,7 +80,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-fast-macro-climate-20260630"
+APP_BUILD_ID = "acsp-zone-proposals-issue25-20260630"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -1246,6 +1249,28 @@ def assign_survey_area_ids(
 def simple_recommended_candidates(candidates: pd.DataFrame, per_area: int = 3, default_total: int = 8) -> pd.DataFrame:
     """Return a transparent top-ranked set, with an equal quota per drawn area."""
     return recommend_candidates(candidates, per_area=per_area, default_total=default_total)
+
+
+def recommended_zone_rows(zones: pd.DataFrame, per_area: int = 3, default_total: int = 8) -> pd.DataFrame:
+    """Apply area quotas after candidate points have been consolidated."""
+    if zones is None or zones.empty:
+        return pd.DataFrame()
+    selected = recommend_candidates(
+        zones, per_area=per_area, default_total=default_total,
+        score_col="zone_score", id_col="zone_id",
+    )
+    return selected.rename(columns={"recommendation_rank": "recommended_zone_rank"})
+
+
+def zones_matching_plan(zones: pd.DataFrame, plan: pd.DataFrame) -> pd.DataFrame:
+    """Keep zones containing at least one travel-feasible plan site."""
+    if zones is None or zones.empty or plan is None or plan.empty:
+        return pd.DataFrame()
+    planned = set(plan["site_id"].astype(str))
+    mask = zones["zone_member_site_ids"].astype(str).map(
+        lambda value: bool(planned.intersection(value.split(";")))
+    )
+    return zones.loc[mask].copy().reset_index(drop=True)
 
 
 def model_connected_recommendations(candidates: pd.DataFrame, per_area: int = 3, default_total: int = 8) -> pd.DataFrame:
@@ -6750,6 +6775,11 @@ def build_automatic_discover_bundle(
         "estimated_days": int(trip_estimate["estimated_days"]),
         "recommended_window": recommended_window,
     })
+    initial_zones = aggregate_candidates_to_zones(eligible)
+    recommended_zones = recommended_zone_rows(
+        zones_matching_plan(initial_zones, balanced),
+        default_total=3 if survey_features else len(balanced),
+    )
     return {
         "taxon_mode": "species",
         "scientific_name": scientific_name,
@@ -6780,6 +6810,9 @@ def build_automatic_discover_bundle(
         "recommended_without_sdm": simple_recommended_candidates(
             eligible, default_total=3 if survey_features else 8,
         ),
+        "zones_without_sdm": initial_zones,
+        "recommended_zones": recommended_zones,
+        "zone_agreement_summary": zone_agreement_summary(initial_zones),
         "constraint_audit": constraint_audit,
         "plans": plans,
         "proposal": proposal,
@@ -6850,6 +6883,11 @@ def build_automatic_genus_bundle(
     warnings_out = []
     if len(balanced) < requested_k:
         warnings_out.append(f"The automatic {target_days}-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} hotspots.")
+    initial_zones = aggregate_candidates_to_zones(eligible)
+    recommended_zones = recommended_zone_rows(
+        zones_matching_plan(initial_zones, balanced),
+        default_total=3 if survey_features else len(balanced),
+    )
     return {
         "taxon_mode": "genus",
         "scientific_name": scientific_name,
@@ -6877,6 +6915,9 @@ def build_automatic_genus_bundle(
         "recommended_without_sdm": simple_recommended_candidates(
             eligible, default_total=3 if survey_features else 8,
         ),
+        "zones_without_sdm": initial_zones,
+        "recommended_zones": recommended_zones,
+        "zone_agreement_summary": zone_agreement_summary(initial_zones),
         "constraint_audit": constraint_audit,
         "plans": plans,
         "trip_estimate": trip_estimate,
@@ -6938,6 +6979,10 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
         survey_protocol=infer_survey_protocol(bundle.get("taxon_metadata")).as_dict(),
     )
     updated = dict(bundle)
+    model_zones = compare_zone_rankings(
+        bundle.get("zones_without_sdm", pd.DataFrame()),
+        aggregate_candidates_to_zones(eligible),
+    )
     updated.update({
         "all_candidates": candidates,
         "constraint_audit": audit,
@@ -6956,6 +7001,12 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
         "recommended_with_sdm": model_connected_recommendations(
             eligible, default_total=3 if bundle.get("survey_features") else 8,
         ),
+        "zones_with_sdm": model_zones,
+        "recommended_zones": recommended_zone_rows(
+            zones_matching_plan(model_zones, plans.get("Balanced", pd.DataFrame())),
+            default_total=3 if bundle.get("survey_features") else len(plans.get("Balanced", pd.DataFrame())),
+        ),
+        "zone_agreement_summary": zone_agreement_summary(model_zones),
     })
     return updated
 
@@ -7045,6 +7096,10 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         prediction_extent="QC-derived bounding box with a 20 km margin; independent of drawn survey areas",
     )
     updated = dict(bundle)
+    model_zones = compare_zone_rankings(
+        bundle.get("zones_without_sdm", pd.DataFrame()),
+        aggregate_candidates_to_zones(eligible),
+    )
     updated.update({
         "all_candidates": candidates,
         "constraint_audit": audit,
@@ -7069,6 +7124,12 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         "recommended_with_sdm": model_connected_recommendations(
             eligible, default_total=3 if bundle.get("survey_features") else 8,
         ),
+        "zones_with_sdm": model_zones,
+        "recommended_zones": recommended_zone_rows(
+            zones_matching_plan(model_zones, balanced),
+            default_total=3 if bundle.get("survey_features") else len(balanced),
+        ),
+        "zone_agreement_summary": zone_agreement_summary(model_zones),
     })
     if progress is not None:
         progress.progress(1.0)
@@ -7138,18 +7199,12 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
             "genus_species_summary.csv", "text/csv", key="automatic_genus_species_summary_csv",
         )
 
-    render_simple_candidate_result(
-        bundle,
-        "Candidates without SSDM",
-        bundle.get("candidate_pool_without_sdm", pd.DataFrame()),
-        bundle.get("recommended_without_sdm", pd.DataFrame()),
-        "automatic_genus_without_ssdm",
-    )
+    render_zone_proposal(bundle, "automatic_genus_zones")
 
     ssdm = bundle.get("ssdm_result")
     if ssdm is None:
-        st.caption("SSDM is optional. It re-ranks observed richness candidates with predicted stacked richness.")
-        if st.button("Generate candidates with SSDM", key="automatic_run_ssdm", type="primary", use_container_width=True):
+        st.caption("SSDM is optional evidence that updates these same survey zones.")
+        if st.button("Add broad-scale model support (optional)", key="automatic_run_ssdm", type="primary", use_container_width=True):
             status = st.empty(); progress = st.progress(0.0)
             try:
                 st.session_state.automatic_discover_bundle = add_automatic_ssdm_support(bundle, status=status, progress=progress)
@@ -7157,15 +7212,7 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
             except Exception as exc:
                 st.error(f"Automatic SSDM failed: {exc}")
     else:
-        st.success("SSDM predicted richness is available. The non-SSDM result remains above for comparison.")
-        render_simple_candidate_result(
-            bundle,
-            "Candidates with SSDM",
-            bundle.get("candidate_pool_with_sdm", pd.DataFrame()),
-            bundle.get("recommended_with_sdm", pd.DataFrame()),
-            "automatic_genus_with_ssdm",
-            overlay=make_ssdm_overlay(ssdm["grid"], "ssdm_continuous_richness", ssdm["shape"], ssdm["bounds"]),
-        )
+        st.success("SSDM support has updated the same survey-zone proposal.")
         with st.expander("SSDM model and VIF diagnostics", expanded=False):
             st.write({"environment_source": ssdm.get("environment_source")})
             st.dataframe(ssdm["model_summary"], width="stretch", hide_index=True)
@@ -7173,6 +7220,89 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
                 st.dataframe(ssdm["vif"], width="stretch", hide_index=True)
     for warning in bundle.get("warnings", []):
         st.warning(warning)
+
+
+def render_zone_proposal(
+    bundle: dict[str, Any],
+    key_prefix: str,
+    overlay: Optional[dict[str, Any]] = None,
+) -> None:
+    """Render one stable zone surface before and after optional model support."""
+    zones = bundle.get("recommended_zones", pd.DataFrame())
+    all_zones = bundle.get("zones_with_sdm", bundle.get("zones_without_sdm", pd.DataFrame()))
+    pool = bundle.get("candidate_pool_with_sdm", bundle.get("candidate_pool_without_sdm", pd.DataFrame()))
+    st.subheader("Recommended survey zones")
+    if zones is None or zones.empty:
+        st.warning("No practical survey zone survived the automatic constraints.")
+        return
+    summary = bundle.get("zone_agreement_summary", {})
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Recommended zones", len(zones))
+    m2.metric("Candidate points consolidated", int(zones["zone_member_count"].sum()))
+    m3.metric("Concordant top zones", int(summary.get("concordant_top_zones", 0)))
+    m4.metric("Model-led exploration", int(summary.get("model_led_top_zones", 0)))
+    show_cols = [column for column in [
+        "recommended_zone_rank", "zone_id", "primary_zone_role", "zone_score", "zone_member_count",
+        "zone_radius_m", "representative_site_id", "initial_rank", "model_rank", "rank_change",
+        "observed_support_score", "local_habitat_support_score", "model_support_score",
+        "agreement_score", "agreement_class", "zone_evidence_summary", "latitude", "longitude",
+    ] if column in zones.columns]
+    st.dataframe(zones[show_cols], width="stretch", hide_index=True)
+    if bool(summary.get("model_run")):
+        with st.expander("What changed after SDM/SSDM?", expanded=True):
+            st.write(summary)
+            st.caption(
+                "Disagreement is not automatically a model error: broad macro-climate support can differ from local habitat evidence or expose extrapolation and field-validation targets."
+            )
+    fmap = Map(
+        location=[float(zones["latitude"].mean()), float(zones["longitude"].mean())],
+        zoom_start=9, tiles="OpenStreetMap", control_scale=True,
+    )
+    colors = {
+        "Concordant — highest priority": "#1b9e77",
+        "Local evidence first": "#d95f02",
+        "Model-led exploration": "#7570b3",
+        "Model not run": "#2c7fb8",
+    }
+    for _, zone in zones.iterrows():
+        agreement = str(zone.get("agreement_class", "Model not run"))
+        color = colors.get(agreement, "#2c7fb8")
+        radius = max(250.0, float(zone.get("zone_radius_m", 0.0)) + 250.0)
+        popup = (
+            f"<b>{zone['zone_id']} · {zone.get('primary_zone_role', '')}</b><br>"
+            f"Rank: {zone.get('recommended_zone_rank', zone.get('zone_rank', ''))}<br>"
+            f"Evidence: {zone.get('zone_evidence_summary', '')}<br>"
+            f"Agreement: {agreement}"
+        )
+        folium.Circle(
+            [float(zone["latitude"]), float(zone["longitude"])], radius=radius,
+            color=color, fill=True, fill_color=color, fill_opacity=0.16, weight=3,
+            popup=folium.Popup(popup, max_width=460),
+        ).add_to(fmap)
+        folium.Marker(
+            [float(zone["latitude"]), float(zone["longitude"])],
+            tooltip=f"{zone['zone_id']} · {zone.get('primary_zone_role', '')}",
+        ).add_to(fmap)
+    st_folium(fmap, width=None, height=650, returned_objects=[], key=f"{key_prefix}_zone_map")
+    d1, d2 = st.columns(2)
+    d1.download_button(
+        "Recommended survey zones CSV", zones.to_csv(index=False).encode("utf-8"),
+        f"{key_prefix}_recommended_zones.csv", "text/csv", key=f"{key_prefix}_zones_csv",
+        use_container_width=True,
+    )
+    with st.expander("Candidate-point details and audit", expanded=False):
+        st.caption("Technical candidate types and point scores are retained here for reproducibility.")
+        st.download_button(
+            "All eligible zones CSV", all_zones.to_csv(index=False).encode("utf-8"),
+            f"{key_prefix}_all_zones.csv", "text/csv", key=f"{key_prefix}_all_zones_csv",
+            use_container_width=True,
+        )
+        st.dataframe(pool, width="stretch", hide_index=True)
+        d2.download_button(
+            "Full candidate-point CSV", make_export_csv(pool).encode("utf-8"),
+            f"{key_prefix}_candidate_points.csv", "text/csv", key=f"{key_prefix}_points_csv",
+            use_container_width=True,
+        )
 
 
 def render_simple_candidate_result(
@@ -7238,7 +7368,7 @@ def render_simple_candidate_result(
 def render_automatic_discover() -> None:
     """Single automatic product surface for species and genus survey planning."""
     st.title("🌿 ACSP-Discover")
-    st.caption("Enter a species or genus name, optionally draw survey areas, then compare candidates without and with SDM/SSDM.")
+    st.caption("Enter a species or genus name to get one ranked survey-zone proposal; broad-scale model support is optional.")
     query = st.text_input(
         "Species or genus scientific name",
         value=st.session_state.get("automatic_discover_query") or "",
@@ -7296,15 +7426,15 @@ def render_automatic_discover() -> None:
         return
 
     distribution = bundle.get("distribution_summary", {})
-    st.subheader("Known distribution and suggested survey regions")
+    st.subheader("Recorded distribution and reachable planning areas")
     st.caption(
         "No area selection is required: the app already uses the recommended compact region. "
         "Draw one or more areas only when you want to limit candidates to places you can realistically reach."
     )
     d1, d2, d3 = st.columns(3)
     d1.metric("Distribution regime", str(distribution.get("distribution_regime", "unknown")).title())
-    d2.metric("Eligible range span", f"{float(distribution.get('total_span_km', 0.0)):.0f} km")
-    d3.metric("Compact trip regions", int(distribution.get("stable_regions", 0)))
+    d2.metric("Recorded extent span", f"{float(distribution.get('total_span_km', 0.0)):.0f} km")
+    d3.metric("Compact fieldwork areas", int(distribution.get("stable_regions", 0)))
     st.caption(str(distribution.get("distribution_regime_reason", "")))
 
     region_cards = bundle.get("region_cards", [])
@@ -7427,16 +7557,15 @@ def render_automatic_discover() -> None:
             "acsp_discover_region_audit.csv", "text/csv", key="automatic_region_audit_download",
         )
 
-    without_pool = bundle.get("candidate_pool_without_sdm", pd.DataFrame())
-    without_recommended = bundle.get("recommended_without_sdm", pd.DataFrame())
-    render_simple_candidate_result(
-        bundle, "Candidates without SDM", without_pool, without_recommended, "automatic_without_sdm",
+    render_zone_proposal(
+        bundle, "automatic_zones",
+        overlay=bundle.get("sdm_result", {}).get("overlay") if bundle.get("sdm_result") else None,
     )
 
     sdm = bundle.get("sdm_result")
     if sdm is None:
-        st.caption("SDM is optional. It re-ranks these candidates with independent broad-scale climate support.")
-        if st.button("Generate candidates with SDM", key="automatic_run_sdm", type="primary", use_container_width=True):
+        st.caption("SDM is optional evidence that updates these same survey zones.")
+        if st.button("Add broad-scale model support (optional)", key="automatic_run_sdm", type="primary", use_container_width=True):
             status = st.empty()
             progress = st.progress(0.0)
             try:
@@ -7447,15 +7576,7 @@ def render_automatic_discover() -> None:
             except Exception as exc:
                 st.error(f"Automatic SDM failed: {exc}")
     else:
-        st.success("SDM suitability is available. The original non-SDM result remains above for comparison.")
-        render_simple_candidate_result(
-            bundle,
-            "Candidates with SDM",
-            bundle.get("candidate_pool_with_sdm", pd.DataFrame()),
-            bundle.get("recommended_with_sdm", pd.DataFrame()),
-            "automatic_with_sdm",
-            overlay=sdm["overlay"],
-        )
+        st.success("SDM support has updated the same survey-zone proposal above.")
         with st.expander("SDM model, QC, and variable diagnostics", expanded=False):
             method_record = sdm.get("method_record", {})
             st.write({

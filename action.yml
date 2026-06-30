@@ -1,5 +1,5 @@
 name: ACSP field-survey recommendation
-description: Rank a candidate CSV and select reproducible ACSP survey recommendations, with equal quotas across survey areas.
+description: Consolidate a candidate CSV into reproducible ranked survey zones, with equal quotas across survey areas.
 author: ACSP Developers
 
 inputs:
@@ -41,13 +41,13 @@ inputs:
 
 outputs:
   recommended-csv:
-    description: Path to the selected-candidate CSV.
+    description: Path to the recommended survey-zone CSV.
     value: ${{ steps.recommend.outputs.recommended-csv }}
   summary-json:
     description: Path to the machine-readable run summary JSON.
     value: ${{ steps.recommend.outputs.summary-json }}
   selected-count:
-    description: Number of candidates selected by ACSP.
+    description: Number of survey zones selected by ACSP.
     value: ${{ steps.recommend.outputs.selected-count }}
 
 runs:
@@ -70,7 +70,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        python -m acsp.cli recommend \
+        python -m acsp.cli zones \
           --input "${{ inputs.candidates-csv }}" \
           --output "${{ inputs.output-csv }}" \
           --summary-json "${{ inputs.summary-json }}" \
@@ -95,7 +95,7 @@ runs:
           echo "## ACSP field-survey recommendation"
           echo
           echo "- Input: \`${{ inputs.candidates-csv }}\`"
-          echo "- Recommended candidates: **$selected_count**"
+          echo "- Recommended survey zones: **$selected_count**"
           echo "- CSV: \`${{ inputs.output-csv }}\`"
           echo "- Summary: \`${{ inputs.summary-json }}\`"
         } >> "$GITHUB_STEP_SUMMARY"

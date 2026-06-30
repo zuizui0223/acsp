@@ -9,6 +9,24 @@ from acsp.cli import main
 
 
 class AcspCliTests(unittest.TestCase):
+    def test_zones_command_writes_zone_level_output(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2, 3], "priority_score": [0.9, 0.8, 0.7],
+            "latitude": [35.0, 35.002, 35.03], "longitude": [139.0, 139.002, 139.03],
+        })
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workdir = Path(temporary_directory)
+            input_csv = workdir / "candidates.csv"
+            output_csv = workdir / "zones.csv"
+            summary_json = workdir / "summary.json"
+            candidates.to_csv(input_csv, index=False)
+            main(["zones", "--input", str(input_csv), "--output", str(output_csv),
+                  "--summary-json", str(summary_json), "--merge-distance-m", "1000"])
+            zones = pd.read_csv(output_csv)
+            summary = json.loads(summary_json.read_text(encoding="utf-8"))
+        self.assertEqual(len(zones), 2)
+        self.assertEqual(summary["output_unit"], "survey_zone")
+
     def test_recommend_command_writes_ranked_csv_and_summary(self):
         candidates = pd.DataFrame(
             {
