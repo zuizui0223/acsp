@@ -1,0 +1,31 @@
+name: Generate field-survey recommendations
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recommend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ACSP
+        id: acsp
+        uses: zuizui0223/acsp@main
+        with:
+          candidates-csv: data/candidates.csv
+          output-csv: outputs/acsp-recommended.csv
+          summary-json: outputs/acsp-summary.json
+          per-area: "3"
+          default-total: "8"
+
+      - name: Upload ACSP results
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-recommendations
+          path: |
+            ${{ steps.acsp.outputs.recommended-csv }}
+            ${{ steps.acsp.outputs.summary-json }}
