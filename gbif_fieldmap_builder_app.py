@@ -77,7 +77,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-model-connected-candidates-20260630"
+APP_BUILD_ID = "acsp-fast-macro-climate-20260630"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -86,6 +86,9 @@ GBIF_OCCURRENCE_SEARCH_URL = "https://api.gbif.org/v1/occurrence/search"
 GBIF_REQUEST_HEADERS = {"User-Agent": "GBIF-FieldMap-Builder/1.0"}
 WC_BASE = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base"
 CHELSA_BIO_COG_BASE = "https://os.zhdk.cloud.switch.ch/chelsav2/GLOBAL/climatologies/1981-2010/bio"
+NASA_POWER_CLIMATOLOGY_URL = "https://power.larc.nasa.gov/api/temporal/climatology/regional"
+NASA_POWER_MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
+NASA_POWER_MONTH_DAYS = np.array([31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], dtype=float)
 LAND_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 GSI_TILE_BASE = "https://cyberjapandata.gsi.go.jp/xyz"
@@ -2921,6 +2924,128 @@ def download_file(url: str, dest: Path) -> Path:
     return dest
 
 
+def _power_query_bounds(bounds: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    """Expand small extents to NASA POWER's two-degree regional minimum."""
+    west, south, east, north = map(float, bounds)
+    west, east = max(-180.0, west), min(180.0, east)
+    south, north = max(-90.0, south), min(90.0, north)
+    if east - west < 2.0:
+        center = (west + east) / 2.0
+        west, east = max(-180.0, center - 1.0), min(180.0, center + 1.0)
+        if east - west < 2.0:
+            west, east = (-180.0, -178.0) if west <= -180.0 else (178.0, 180.0)
+    if north - south < 2.0:
+        center = (south + north) / 2.0
+        south, north = max(-90.0, center - 1.0), min(90.0, center + 1.0)
+        if north - south < 2.0:
+            south, north = (-90.0, -88.0) if south <= -90.0 else (88.0, 90.0)
+    return west, south, east, north
+
+
+def _power_tiles(bounds: tuple[float, float, float, float], tile_degrees: float = 8.0) -> list[tuple[float, float, float, float]]:
+    west, south, east, north = _power_query_bounds(bounds)
+    if east < west:
+        raise ValueError("Automatic macro-climate retrieval does not support dateline-crossing extents.")
+    x_edges = list(np.arange(west, east, tile_degrees)) + [east]
+    y_edges = list(np.arange(south, north, tile_degrees)) + [north]
+    tiles = [_power_query_bounds((x_edges[x], y_edges[y], x_edges[x + 1], y_edges[y + 1]))
+             for y in range(len(y_edges) - 1) for x in range(len(x_edges) - 1)]
+    if len(tiles) > 64:
+        raise RuntimeError("The automatic SDM climate extent is too broad. Limit the taxon/region or use the advanced SDM workflow.")
+    return tiles
+
+
+@st.cache_data(show_spinner=False, ttl=30 * 24 * 60 * 60)
+def fetch_power_climatology_parameter(
+    parameter: str, bounds: tuple[float, float, float, float], start_year: int = 1981, end_year: int = 2010,
+) -> pd.DataFrame:
+    params = {
+        "latitude-min": round(float(bounds[1]), 5), "latitude-max": round(float(bounds[3]), 5),
+        "longitude-min": round(float(bounds[0]), 5), "longitude-max": round(float(bounds[2]), 5),
+        "parameters": parameter, "community": "AG", "format": "JSON",
+        "start": int(start_year), "end": int(end_year),
+    }
+    last_error: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = requests.get(NASA_POWER_CLIMATOLOGY_URL, params=params, timeout=(10, 45))
+            response.raise_for_status()
+            payload = response.json()
+            rows = []
+            for feature in payload.get("features", []):
+                coordinates = feature.get("geometry", {}).get("coordinates", [])
+                values = feature.get("properties", {}).get("parameter", {}).get(parameter, {})
+                if len(coordinates) >= 2:
+                    rows.append({"longitude": float(coordinates[0]), "latitude": float(coordinates[1]), **values})
+            if not rows:
+                raise RuntimeError(f"NASA POWER returned no {parameter} climatology cells.")
+            return pd.DataFrame(rows)
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(1.5 * (2 ** attempt))
+    raise RuntimeError(f"NASA POWER {parameter} climatology request failed: {last_error}")
+
+
+@st.cache_data(show_spinner=False, ttl=30 * 24 * 60 * 60)
+def load_power_bioclim_grid(bounds: tuple[float, float, float, float]) -> pd.DataFrame:
+    """Derive the five automatic BIO predictors from fast NASA POWER normals."""
+    tiles = _power_tiles(tuple(round(float(v), 4) for v in bounds))
+
+    def fetch_tile(tile: tuple[float, float, float, float]) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return fetch_power_climatology_parameter("T2M", tile), fetch_power_climatology_parameter("PRECTOTCORR", tile)
+
+    with ThreadPoolExecutor(max_workers=min(4, max(1, len(tiles)))) as pool:
+        fetched = list(pool.map(fetch_tile, tiles))
+    temp = pd.concat([item[0] for item in fetched], ignore_index=True).drop_duplicates(["latitude", "longitude"])
+    precip = pd.concat([item[1] for item in fetched], ignore_index=True).drop_duplicates(["latitude", "longitude"])
+    temp = temp.sort_values(["latitude", "longitude"]).reset_index(drop=True)
+    precip = precip.sort_values(["latitude", "longitude"]).reset_index(drop=True)
+    if not temp[["latitude", "longitude"]].equals(precip[["latitude", "longitude"]]):
+        common = temp[["latitude", "longitude"]].merge(precip[["latitude", "longitude"]], how="inner")
+        temp = common.merge(temp, on=["latitude", "longitude"], how="left")
+        precip = common.merge(precip, on=["latitude", "longitude"], how="left")
+    temp_monthly = temp[list(NASA_POWER_MONTHS)].apply(pd.to_numeric, errors="coerce").replace(-999.0, np.nan)
+    precip_daily = precip[list(NASA_POWER_MONTHS)].apply(pd.to_numeric, errors="coerce").replace(-999.0, np.nan)
+    precip_monthly = precip_daily.to_numpy(dtype=float) * NASA_POWER_MONTH_DAYS
+    climate = temp[["latitude", "longitude"]].copy()
+    climate["bio1"] = temp_monthly.mean(axis=1).to_numpy(dtype=float)
+    climate["bio4"] = temp_monthly.std(axis=1, ddof=0).to_numpy(dtype=float) * 100.0
+    climate["bio12"] = np.nansum(precip_monthly, axis=1)
+    climate["bio14"] = np.nanmin(precip_monthly, axis=1)
+    precip_mean = np.nanmean(precip_monthly, axis=1)
+    climate["bio15"] = np.divide(
+        np.nanstd(precip_monthly, axis=1) * 100.0, precip_mean,
+        out=np.full(len(climate), np.nan), where=precip_mean > 0,
+    )
+    return climate.dropna(subset=["bio1", "bio4", "bio12", "bio14", "bio15"]).reset_index(drop=True)
+
+
+def attach_power_bioclim(
+    points: pd.DataFrame, variables: list[str], lat_col: str, lon_col: str, status=None,
+) -> pd.DataFrame:
+    out = points.copy()
+    if out.empty:
+        for var in variables:
+            out[var] = np.nan
+        return out
+    bounds = (float(out[lon_col].min()), float(out[lat_col].min()), float(out[lon_col].max()), float(out[lat_col].max()))
+    if status is not None:
+        status.write("Fetching cached NASA POWER 1981-2010 macro-climate normals...")
+    climate = load_power_bioclim_grid(bounds)
+    source = np.radians(climate[["latitude", "longitude"]].to_numpy(dtype=float))
+    target = np.radians(out[[lat_col, lon_col]].to_numpy(dtype=float))
+    k = min(4, len(climate))
+    distances, indices = BallTree(source, metric="haversine").query(target, k=k)
+    weights = 1.0 / np.maximum(distances, 1e-10) ** 2
+    weights /= weights.sum(axis=1, keepdims=True)
+    for var in variables:
+        if var not in climate.columns:
+            raise ValueError(f"NASA POWER automatic climate does not provide {var}.")
+        out[var] = np.sum(climate[var].to_numpy(dtype=float)[indices] * weights, axis=1)
+    return out
+
+
 @st.cache_data(show_spinner=False)
 def get_worldclim_raster_path(var: str, resolution: str) -> str:
     var = var.lower(); resolution = resolution.lower()
@@ -3482,6 +3607,8 @@ def extract_potential_layer_values(points: pd.DataFrame, layers: dict[str, Optio
 
 
 def extract_environment(points: pd.DataFrame, variables: list[str], lat_col: str, lon_col: str, resolution: str, status=None) -> pd.DataFrame:
+    if resolution == "power-climatology":
+        return attach_power_bioclim(points, variables, lat_col, lon_col, status)
     out = points.copy()
     for i, var in enumerate(variables, start=1):
         if status is not None:
@@ -4018,6 +4145,8 @@ def _build_prediction_grid_base(
     geom = prediction_area_geometry(occ, area_mode, buffer_km, rectangle_margin_km, excluded_occ, exclusion_buffer_km)
     if geom is None or geom.is_empty:
         raise RuntimeError("Prediction area could not be generated.")
+    if resolution == "power-climatology":
+        return _build_power_prediction_grid(geom, variables, max_pixels, status, status_msg)
     land = load_land_geometry()
     west, south, east, north = geom.bounds
     ref_var = "elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0]
@@ -4053,6 +4182,45 @@ def _build_prediction_grid_base(
     ])
     valid = finite & spatial
     return geom, env, valid, lon_grid.ravel(), lat_grid.ravel(), out_h, out_w, (west2, south2, east2, north2), stride
+
+
+def _build_power_prediction_grid(
+    geom: Any, variables: list[str], max_pixels: int, status, status_msg: str,
+) -> tuple[Any, pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, int, int, tuple[float, float, float, float], int]:
+    """Interpolate coarse macro-climate normals onto a land-clipped prediction grid."""
+    west, south, east, north = map(float, geom.bounds)
+    climate = load_power_bioclim_grid((west, south, east, north))
+    target_step = 0.05
+    raw_h = max(2, int(math.ceil(max(target_step, north - south) / target_step)))
+    raw_w = max(2, int(math.ceil(max(target_step, east - west) / target_step)))
+    stride = max(1, int(math.ceil(math.sqrt((raw_h * raw_w) / max(1, int(max_pixels))))))
+    out_h = max(2, int(math.ceil(raw_h / stride)))
+    out_w = max(2, int(math.ceil(raw_w / stride)))
+    if status is not None:
+        status.write(status_msg.format(out_w=out_w, out_h=out_h, stride=stride))
+        status.write("Climate source: NASA POWER 1981-2010 normals (native 0.5-degree latitude grid), interpolated for macro-scale prediction.")
+    lon_centers = np.linspace(west, east, out_w)
+    lat_centers = np.linspace(north, south, out_h)
+    lon_grid, lat_grid = np.meshgrid(lon_centers, lat_centers)
+    source = np.radians(climate[["latitude", "longitude"]].to_numpy(dtype=float))
+    target = np.radians(np.column_stack([lat_grid.ravel(), lon_grid.ravel()]))
+    k = min(4, len(climate))
+    distances, indices = BallTree(source, metric="haversine").query(target, k=k)
+    weights = 1.0 / np.maximum(distances, 1e-10) ** 2
+    weights /= weights.sum(axis=1, keepdims=True)
+    env = pd.DataFrame()
+    for var in variables:
+        if var not in climate.columns:
+            raise ValueError(f"NASA POWER automatic climate does not provide {var}.")
+        env[var] = np.sum(climate[var].to_numpy(dtype=float)[indices] * weights, axis=1)
+    finite = np.isfinite(env.to_numpy()).all(axis=1)
+    land = load_land_geometry()
+    spatial = np.array([
+        geom.covers(Point(float(lo), float(la))) and land.covers(Point(float(lo), float(la)))
+        for la, lo in zip(lat_grid.ravel(), lon_grid.ravel())
+    ])
+    valid = finite & spatial
+    return geom, env, valid, lon_grid.ravel(), lat_grid.ravel(), out_h, out_w, (west, south, east, north), stride
 
 
 def build_predict_map(occ: pd.DataFrame, variables: list[str], resolution: str, sdm_result: dict[str, Any], area_mode: str, buffer_km: float, rectangle_margin_km: float, max_pixels: int, excluded_occ: Optional[pd.DataFrame] = None, exclusion_buffer_km: float = 0.0, status=None) -> tuple[dict[str, Any], pd.DataFrame]:
@@ -6723,7 +6891,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
         occ=bundle["occurrences"],
         variables=["bio1", "bio4", "bio12", "bio15", "bio14"],
         algorithms=list(DEFAULT_ENSEMBLE_ALGORITHMS),
-        resolution="30s-cog",
+        resolution="power-climatology",
         area_mode="bounding box",
         buffer_km=10.0,
         rectangle_margin_km=20.0,
@@ -6782,7 +6950,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
             "shape": grid_shape,
             "bounds": grid_bounds,
             "vif": vif_diag,
-            "environment_source": "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the SSDM extent",
+            "environment_source": "NASA POWER MERRA-2 1981-2010 macro-climate normals; native 0.5-degree latitude grid, interpolated to the SSDM prediction grid",
         },
         "candidate_pool_with_sdm": eligible.copy(),
         "recommended_with_sdm": model_connected_recommendations(
@@ -6802,7 +6970,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     if len(occ_sdm) < 5:
         raise RuntimeError("Too few records remained after automatic SDM quality control.")
     variables = ["bio1", "bio4", "bio12", "bio15", "bio14"]
-    resolution = "30s-cog"
+    resolution = "power-climatology"
     extent = prediction_area_geometry(occ_sdm, "bounding box", 10.0, 20.0)
     partition, partition_reason = auto_sdm_partition(len(occ_sdm), extent)
     if progress is not None:
@@ -6863,7 +7031,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         "estimated_days": int(trip["estimated_days"]),
         "recommended_window": bundle["proposal"]["recommended_window"],
     })
-    environment_source = "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the QC-derived SDM extent"
+    environment_source = "NASA POWER MERRA-2 1981-2010 macro-climate normals; native 0.5-degree latitude grid, interpolated to the SDM prediction grid"
     method_record = sdm_method_record(
         n_source_records=len(occ_capped),
         n_qc_excluded=len(excluded),

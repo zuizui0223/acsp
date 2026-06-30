@@ -53,7 +53,7 @@ After prediction, ACSP uses the SDM in two distinct ways:
 
 The same logic applies to genus mode: observed richness hotspots are re-ranked by SSDM support, while spatially separated SSDM-high cells are added as model-only richness exploration sites.
 
-Macro-climate predictors are read from CHELSA V2.1 BIOCLIM 30-second Cloud-Optimized GeoTIFFs. Only raster windows intersecting the QC-derived SDM extent are read. The drawn observed-candidate survey areas do not automatically become the SDM extent.
+The one-click SDM/SSDM path derives five macro-climate predictors from cached NASA POWER MERRA-2 1981-2010 normals. Its native climate grid is about 0.5-degree latitude by 0.625-degree longitude and is interpolated only to draw and evaluate the prediction grid; interpolation does not create finer climate information. This fast macro filter is combined with the separate high-resolution local terrain/habitat candidate workflow. Advanced/manual SDM keeps the existing WorldClim/CHELSA choices. The drawn observed-candidate survey areas do not automatically become the SDM extent.
 
 Automatic validation uses occurrence count and minimum geographic span:
 

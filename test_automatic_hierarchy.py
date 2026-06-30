@@ -16,6 +16,8 @@ from gbif_fieldmap_builder_app import (
     decode_gsi_dem_rgb,
     estimate_default_short_trip,
     get_worldclim_raster_path,
+    _power_query_bounds,
+    attach_power_bioclim,
     make_sdm_exploration_candidates,
     make_ssdm_exploration_candidates,
     model_connected_recommendations,
@@ -25,6 +27,28 @@ from gbif_fieldmap_builder_app import (
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_power_query_expands_small_survey_extent(self):
+        west, south, east, north = _power_query_bounds((139.1, 34.1, 139.3, 34.3))
+        self.assertGreaterEqual(east - west, 2.0)
+        self.assertGreaterEqual(north - south, 2.0)
+
+    def test_power_climate_is_interpolated_to_requested_points(self):
+        climate = pd.DataFrame({
+            "latitude": [34.0, 34.0, 35.0, 35.0],
+            "longitude": [139.0, 140.0, 139.0, 140.0],
+            "bio1": [10.0, 12.0, 14.0, 16.0],
+            "bio4": [100.0, 120.0, 140.0, 160.0],
+            "bio12": [1000.0, 1200.0, 1400.0, 1600.0],
+            "bio14": [10.0, 12.0, 14.0, 16.0],
+            "bio15": [20.0, 22.0, 24.0, 26.0],
+        })
+        points = pd.DataFrame({"latitude": [34.0, 34.5], "longitude": [139.0, 139.5]})
+        with patch("gbif_fieldmap_builder_app.load_power_bioclim_grid", return_value=climate):
+            result = attach_power_bioclim(points, ["bio1", "bio12"], "latitude", "longitude")
+        self.assertAlmostEqual(result.loc[0, "bio1"], 10.0, places=5)
+        self.assertAlmostEqual(result.loc[1, "bio1"], 13.0, places=1)
+        self.assertTrue(np.isfinite(result[["bio1", "bio12"]].to_numpy()).all())
+
     def test_completed_sdm_grid_supplies_candidates_without_raster_reopen(self):
         candidates = pd.DataFrame({
             "site_id": [1, 2], "latitude": [35.001, 35.099], "longitude": [139.001, 139.099],

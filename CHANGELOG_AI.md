@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-06-30 - Codex (OpenAI) - Fast cached macro-climate SDM/SSDM
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Replaced the one-click SDM/SSDM dependency on slow remote CHELSA strip reads with cached NASA POWER MERRA-2 1981-2010 temperature and precipitation normals.
+- Derive BIO1, BIO4, BIO12, BIO14, and BIO15 from monthly normals, retrieve large regions in bounded tiles, retry transient requests, and preserve the existing CHELSA/WorldClim choices in advanced/manual SDM.
+- Interpolate the coarse macro-climate normals to a bounded display/prediction grid, then clip it to the independent QC-derived prediction geometry and land mask. The UI and method record explicitly report the native coarse climate resolution.
+- Reused the same environment path for species SDM and genus SSDM without changing ensemble algorithms, spatial validation, variable selection/VIF, observed candidates, model-supported re-ranking, or model-only exploration candidates.
+
+Validation:
+- `Lilium auratum` (Japan): 299 GBIF records; occurrence and habitat candidates in 16.6 seconds; four-model automatic SDM in 20.3 seconds; 6,659 prediction cells and 20 model-only exploration candidates; 41.3 seconds total including GBIF retrieval.
+- `Cirsium` (Japan): 569 fetched genus records; 20 observed-richness candidates; six species modeled; 4,832 SSDM cells and 20 model-only richness exploration candidates; SSDM completed in 55.7 seconds.
+- Izu-island test extent produced 327 valid land prediction cells, including small-island areas, instead of depending on coarse source-cell centers falling on land.
+- `python -m unittest test_automatic_hierarchy.py test_gbif_fetch_resilience.py test_acsp_package.py test_acsp_cli.py test_acsp_discover.py` passed 36 tests.
+- `python -m py_compile gbif_fieldmap_builder_app.py` passed.
+
+Scientific limitation:
+- NASA POWER is a fast macro-climate filter, not a high-resolution habitat layer. The interpolated prediction grid must not be interpreted as adding climate detail beyond the native POWER grid; fine-scale site discrimination remains the role of GSI terrain, habitat analogue, access, occurrence support, and field validation.
+
 ## 2026-06-30 - Codex (OpenAI) - Model-connected recommendations and clearer evidence maps
 
 Changed files:
