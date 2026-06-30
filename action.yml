@@ -1,0 +1,105 @@
+name: ACSP field-survey recommendation
+description: Rank a candidate CSV and select reproducible ACSP survey recommendations, with equal quotas across survey areas.
+author: ACSP Developers
+
+inputs:
+  candidates-csv:
+    description: Path to the input candidate CSV. It must include site_id and priority_score by default.
+    required: true
+  output-csv:
+    description: Path for the selected-candidate CSV.
+    required: false
+    default: acsp-recommended.csv
+  summary-json:
+    description: Path for the machine-readable run summary JSON.
+    required: false
+    default: acsp-summary.json
+  per-area:
+    description: Number of top candidates retained in each survey area when multiple areas are present.
+    required: false
+    default: "3"
+  default-total:
+    description: Number of top candidates retained if one or no survey area is present.
+    required: false
+    default: "8"
+  area-column:
+    description: Survey-area column name.
+    required: false
+    default: survey_area_id
+  score-column:
+    description: Priority-score column name.
+    required: false
+    default: priority_score
+  site-column:
+    description: Stable candidate-ID column name used to break score ties.
+    required: false
+    default: site_id
+  python-version:
+    description: Python version used by the action.
+    required: false
+    default: "3.11"
+
+outputs:
+  recommended-csv:
+    description: Path to the selected-candidate CSV.
+    value: ${{ steps.recommend.outputs.recommended-csv }}
+  summary-json:
+    description: Path to the machine-readable run summary JSON.
+    value: ${{ steps.recommend.outputs.summary-json }}
+  selected-count:
+    description: Number of candidates selected by ACSP.
+    value: ${{ steps.recommend.outputs.selected-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install ACSP
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m pip install --upgrade pip
+        python -m pip install "$GITHUB_ACTION_PATH"
+
+    - name: Run ACSP recommendation
+      id: recommend
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m acsp.cli recommend \
+          --input "${{ inputs.candidates-csv }}" \
+          --output "${{ inputs.output-csv }}" \
+          --summary-json "${{ inputs.summary-json }}" \
+          --per-area "${{ inputs.per-area }}" \
+          --default-total "${{ inputs.default-total }}" \
+          --area-column "${{ inputs.area-column }}" \
+          --score-column "${{ inputs.score-column }}" \
+          --site-column "${{ inputs.site-column }}"
+
+        selected_count="$(python - "${{ inputs.summary-json }}" <<'PY'
+        import json
+        import sys
+        with open(sys.argv[1], encoding="utf-8") as handle:
+            print(json.load(handle)["selected_count"])
+        PY
+        )"
+
+        printf 'recommended-csv=%s\n' "${{ inputs.output-csv }}" >> "$GITHUB_OUTPUT"
+        printf 'summary-json=%s\n' "${{ inputs.summary-json }}" >> "$GITHUB_OUTPUT"
+        printf 'selected-count=%s\n' "$selected_count" >> "$GITHUB_OUTPUT"
+        {
+          echo "## ACSP field-survey recommendation"
+          echo
+          echo "- Input: \`${{ inputs.candidates-csv }}\`"
+          echo "- Recommended candidates: **$selected_count**"
+          echo "- CSV: \`${{ inputs.output-csv }}\`"
+          echo "- Summary: \`${{ inputs.summary-json }}\`"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: map-pin
+  color: green
