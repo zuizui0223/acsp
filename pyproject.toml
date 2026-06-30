@@ -29,6 +29,7 @@ dependencies = [
 
 [project.scripts]
 acsp-fieldmap = "acsp.app:main"
+acsp-recommend = "acsp.cli:main"
 
 [project.license]
 text = "MIT"
