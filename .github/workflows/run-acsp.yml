@@ -1,0 +1,49 @@
+name: Run ACSP recommendation
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidates-csv:
+        description: Repository-relative path to a candidate CSV.
+        required: true
+        default: examples/acsp-candidates.csv
+        type: string
+      per-area:
+        description: Top candidates retained per survey area.
+        required: true
+        default: "3"
+        type: string
+      default-total:
+        description: Top candidates retained when no multi-area quota is applicable.
+        required: true
+        default: "8"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  recommend:
+    name: Generate ACSP recommendations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ACSP
+        id: acsp
+        uses: ./
+        with:
+          candidates-csv: ${{ inputs.candidates-csv }}
+          output-csv: outputs/acsp-recommended.csv
+          summary-json: outputs/acsp-summary.json
+          per-area: ${{ inputs.per-area }}
+          default-total: ${{ inputs.default-total }}
+
+      - name: Upload recommendations
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-recommendations
+          path: |
+            ${{ steps.acsp.outputs.recommended-csv }}
+            ${{ steps.acsp.outputs.summary-json }}
+          if-no-files-found: error
