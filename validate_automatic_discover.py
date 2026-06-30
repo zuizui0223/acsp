@@ -39,6 +39,9 @@ def main() -> None:
         assert set(plan["site_id"].astype(int)).issubset(eligible_ids), f"{name} contains an ineligible site"
     assert all(size > 0 for size in plan_sizes.values()), "all three plans must contain sites"
     assert bundle["all_candidates"]["site_id"].is_unique, "candidate site IDs must be unique"
+    zones = bundle["recommended_zones"]
+    assert zones["zone_id"].is_unique, "recommended survey zones must be unique"
+    assert zones["representative_site_id"].is_unique, "one representative must not stand for multiple final zones"
     assert bundle["trip_estimate"]["fits_target_days"], "default plan must fit each daily hub-return budget"
     if bundle.get("selected_region"):
         assert float(bundle["selected_region"]["diameter_km"]) <= 80.0, "selected hub is too broad for a short trip"
@@ -64,6 +67,15 @@ def main() -> None:
         ) if not bundle["potential_candidates"].empty else [],
         "candidate_types": bundle["all_candidates"]["candidate_type"].value_counts().to_dict(),
         "plan_sizes": plan_sizes,
+        "recommended_zone_count": int(len(zones)),
+        "recommended_zones": zones[[
+            "recommended_zone_rank", "zone_id", "primary_zone_role", "zone_score",
+            "zone_member_count", "zone_radius_m", "representative_site_id",
+            "latitude", "longitude",
+        ]].to_dict("records"),
+        "automatic_trip_days": int(bundle["target_days"]),
+        "reachability_reason": bundle["reachability_reason"],
+        "reachability_curve": bundle["reachability_curve"].to_dict("records"),
         "balanced_site_ids": bundle["plans"]["Balanced"]["site_id"].astype(int).tolist(),
         "proposal": bundle["proposal"],
         "trip_estimate": bundle["trip_estimate"],

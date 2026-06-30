@@ -1,5 +1,15 @@
 # AI Change Log
 
+## 2026-06-30 — Issue #25 zone-level proposals
+
+- Consolidated nearby candidate points into deterministic complete-link survey zones before final ranking.
+- Added representative sites, practical footprints, plain-language zone roles, and density-neutral evidence aggregation.
+- Added stable initial/model ranks, rank changes, agreement scores/classes, and compact SDM/SSDM agreement summaries.
+- Replaced the automatic split candidate panels with one Recommended survey zones surface.
+- Added zone CSV/API/CLI/R outputs and made the GitHub Action emit zone-level recommendations.
+- Replaced the fixed two-day assumption with an internal one-to-five-day feasibility curve and automatic knee selection.
+- Added candidate-to-candidate route insertion cost to final plan utility while retaining ecological complementarity.
+
 ## 2026-06-30 - Codex (OpenAI) - Fast cached macro-climate SDM/SSDM
 
 Changed files:

@@ -1,11 +1,12 @@
 # Run ACSP as a GitHub Action
 
-ACSP can run without the Streamlit interface when you already have a candidate CSV. The Action ranks candidates by `priority_score`, applies an equal quota across multiple `survey_area_id` values, and writes a selected-candidate CSV plus a JSON summary.
+ACSP can run without the Streamlit interface when you already have a candidate CSV. The Action consolidates nearby points into complete-link survey zones, ranks zones without rewarding dense grids, applies an equal quota across multiple `survey_area_id` values, and writes a zone CSV plus a JSON summary.
 
 ## Required CSV columns
 
 - `site_id`: stable candidate identifier used to break equal-score ties
 - `priority_score`: numeric priority score, larger values selected first
+- `latitude`, `longitude`: candidate coordinates used for zone aggregation
 
 `survey_area_id` is optional. When more than one non-empty area is present, the Action selects the top `per-area` rows within every area. Otherwise it selects the top `default-total` rows overall.
 
@@ -25,9 +26,9 @@ ACSP can run without the Streamlit interface when you already have a candidate C
 
 The Action exposes these outputs:
 
-- `recommended-csv`: selected-candidate CSV path
+- `recommended-csv`: recommended survey-zone CSV path
 - `summary-json`: run-summary JSON path
-- `selected-count`: number of selected candidates
+- `selected-count`: number of selected survey zones
 
 Use `examples/github-action-workflow.yml` as a complete workflow template. In this repository, open the **Actions** tab and run **Run ACSP recommendation** to execute `.github/workflows/run-acsp.yml`; it uses `examples/acsp-candidates.csv` unless another repository-relative CSV path is supplied.
 

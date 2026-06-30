@@ -9,7 +9,7 @@ from typing import Sequence
 
 import pandas as pd
 
-from .planning import recommend_candidates
+from .planning import recommend_candidates, recommend_survey_zones
 
 
 def _positive_int(value: str) -> int:
@@ -53,6 +53,22 @@ def _build_parser() -> argparse.ArgumentParser:
     recommend.add_argument("--extent", nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH"), help="Optional rectangular candidate extent.")
     recommend.add_argument("--latitude-column", default="latitude", help="Latitude column used with --extent.")
     recommend.add_argument("--longitude-column", default="longitude", help="Longitude column used with --extent.")
+    zones = subparsers.add_parser(
+        "zones",
+        help="Consolidate nearby candidate points and rank practical survey zones.",
+    )
+    zones.add_argument("--input", required=True, help="Input candidate CSV path.")
+    zones.add_argument("--output", required=True, help="Output CSV path for recommended zones.")
+    zones.add_argument("--summary-json", default="acsp-summary.json")
+    zones.add_argument("--per-area", type=_positive_int, default=3)
+    zones.add_argument("--default-total", type=_positive_int, default=8)
+    zones.add_argument("--area-column", default="survey_area_id")
+    zones.add_argument("--score-column", default="priority_score")
+    zones.add_argument("--site-column", default="site_id")
+    zones.add_argument("--extent", nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH"))
+    zones.add_argument("--latitude-column", default="latitude")
+    zones.add_argument("--longitude-column", default="longitude")
+    zones.add_argument("--merge-distance-m", type=float, default=None)
     return parser
 
 
@@ -65,17 +81,34 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
         raise FileNotFoundError(f"Candidate CSV was not found: {input_path}")
 
     candidates = pd.read_csv(input_path)
-    selected = recommend_candidates(
-        candidates,
-        per_area=args.per_area,
-        default_total=args.default_total,
-        area_col=args.area_column,
-        score_col=args.score_column,
-        id_col=args.site_column,
-        extent=args.extent,
-        latitude_col=args.latitude_column,
-        longitude_col=args.longitude_column,
-    )
+    if args.extent is not None:
+        from .planning import filter_candidates_to_extent
+        candidates_for_selection = filter_candidates_to_extent(
+            candidates, args.extent, args.latitude_column, args.longitude_column
+        )
+    else:
+        candidates_for_selection = candidates
+    if args.command == "zones":
+        selected = recommend_survey_zones(
+            candidates_for_selection,
+            per_area=args.per_area,
+            default_total=args.default_total,
+            merge_distance_m=args.merge_distance_m,
+            area_col=args.area_column,
+            latitude_col=args.latitude_column,
+            longitude_col=args.longitude_column,
+            id_col=args.site_column,
+            score_col=args.score_column,
+        )
+    else:
+        selected = recommend_candidates(
+            candidates_for_selection,
+            per_area=args.per_area,
+            default_total=args.default_total,
+            area_col=args.area_column,
+            score_col=args.score_column,
+            id_col=args.site_column,
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     selected.to_csv(output_path, index=False)
@@ -92,6 +125,7 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
         "output_csv": str(output_path),
         "input_candidate_count": int(len(candidates)),
         "selected_count": int(len(selected)),
+        "output_unit": "survey_zone" if args.command == "zones" else "candidate_point",
         "per_area": int(args.per_area),
         "default_total": int(args.default_total),
         "area_column": args.area_column,
@@ -109,7 +143,7 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
-    if args.command == "recommend":
+    if args.command in {"recommend", "zones"}:
         summary = run_recommendation(args)
         print(json.dumps(summary, ensure_ascii=False))
         return 0

@@ -63,7 +63,13 @@ jobs:
           set -euo pipefail
           test -s "${{ steps.acsp.outputs.recommended-csv }}"
           test -s "${{ steps.acsp.outputs.summary-json }}"
-          test "${{ steps.acsp.outputs.selected-count }}" = "6"
+          test "${{ steps.acsp.outputs.selected-count }}" = "4"
+          python - <<'PY'
+          import pandas as pd
+          zones = pd.read_csv("action-smoke/recommended.csv")
+          required = {"zone_id", "zone_score", "zone_rank", "zone_member_count", "representative_site_id"}
+          assert required.issubset(zones.columns), required - set(zones.columns)
+          PY
 
   r:
     name: R package

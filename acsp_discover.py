@@ -647,7 +647,12 @@ def _label(value: float) -> str:
     return "high" if value >= 0.67 else "medium" if value >= 0.34 else "low"
 
 
-def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str, pd.DataFrame]:
+def build_acsp_discover_plans(
+    candidates: pd.DataFrame,
+    k: int = 8,
+    hub_latitude: Optional[float] = None,
+    hub_longitude: Optional[float] = None,
+) -> dict[str, pd.DataFrame]:
     """Greedily build Balanced, Discovery and Learning plans from one pool."""
     scored = score_discovery_learning(candidates)
     if scored.empty or int(k) <= 0:
@@ -677,6 +682,7 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
             reducible = max(minimums, key=minimums.get)
             minimums[reducible] = max(0, minimums[reducible] - 1)
         selected: list[int] = []
+        route_order: list[int] = []
         records: list[dict[str, object]] = []
         while len(selected) < min(int(k), len(scored)):
             selected_counts = {
@@ -710,6 +716,22 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
                         errors="coerce",
                     ).fillna(0.0).iloc[0]
                     travel = min(1.0, float(hub_distance) / 50_000.0)
+                insertion_index = len(route_order)
+                marginal_route_m = travel * 100_000.0
+                if hub_latitude is not None and hub_longitude is not None:
+                    route_nodes = [(float(hub_latitude), float(hub_longitude))]
+                    route_nodes.extend((float(lats[position]), float(lons[position])) for position in route_order)
+                    route_nodes.append((float(hub_latitude), float(hub_longitude)))
+                    insertion_options: list[tuple[float, int]] = []
+                    for edge_index in range(len(route_nodes) - 1):
+                        start_lat, start_lon = route_nodes[edge_index]
+                        end_lat, end_lon = route_nodes[edge_index + 1]
+                        start_to_candidate = float(_distances_m(start_lat, start_lon, np.array([lats[i]]), np.array([lons[i]]))[0])
+                        candidate_to_end = float(_distances_m(lats[i], lons[i], np.array([end_lat]), np.array([end_lon]))[0])
+                        direct = float(_distances_m(start_lat, start_lon, np.array([end_lat]), np.array([end_lon]))[0])
+                        insertion_options.append((max(0.0, start_to_candidate + candidate_to_end - direct), edge_index))
+                    marginal_route_m, insertion_index = min(insertion_options)
+                    travel = min(1.0, marginal_route_m / 50_000.0)
                 components = {
                     "discovery": float(scored.at[i, "discovery_value"]),
                     "learning": float(scored.at[i, "learning_value"]),
@@ -718,6 +740,8 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
                     "accessibility": float(scored.at[i, "accessibility_score"]),
                     "travel": travel,
                     "redundancy": redundancy,
+                    "marginal_route_m": marginal_route_m,
+                    "insertion_index": float(insertion_index),
                 }
                 utility = sum(weights[key] * components[key] for key in ("discovery", "learning", "representation", "survey_gap", "accessibility"))
                 utility -= weights["travel"] * travel + weights["redundancy"] * redundancy
@@ -728,6 +752,7 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
                 break
             utility, i, components = best
             selected.append(i)
+            route_order.insert(int(components["insertion_index"]), i)
             positive = {
                 key: weights[key] * components[key]
                 for key in ("discovery", "learning", "representation", "survey_gap", "accessibility")
@@ -740,6 +765,7 @@ def build_acsp_discover_plans(candidates: pd.DataFrame, k: int = 8) -> dict[str,
                 "discover_utility": round(float(utility), 4),
                 "representation_value": round(components["representation"], 4),
                 "travel_cost": round(components["travel"], 4),
+                "marginal_route_km": round(components["marginal_route_m"] / 1000.0, 3),
                 "redundancy_penalty_v1": round(components["redundancy"], 4),
                 "discovery_label": _label(components["discovery"]),
                 "learning_label": _label(components["learning"]),

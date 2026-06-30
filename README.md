@@ -1,6 +1,6 @@
 # ACSP - Adaptive Complementarity-based Survey Prioritization
 
-ACSP converts occurrence records into ranked, field-ready survey-site candidates. It is a field-survey decision tool, not an all-record SDM platform.
+ACSP converts occurrence records into ranked, field-ready survey zones. It is a field-survey decision tool, not an all-record SDM platform.
 
 Development status: **alpha (0.1.0)**. Field validation and retrospective benchmark studies are still required before treating the rankings as a validated general method.
 
@@ -10,14 +10,11 @@ The automatic app asks users to make only three decisions:
 
 1. Enter a species or genus scientific name.
 2. Optionally draw one or more realistic survey areas.
-3. Optionally generate SDM/SSDM-supported candidates.
+3. Optionally add broad-scale SDM/SSDM support.
 
-The app then shows two directly comparable outputs:
+The app shows one ranked **Recommended survey zones** table and map. Nearby candidate points are consolidated with a complete-link distance rule before final ranking, preventing both duplicate practical visits and long single-link chains. Optional SDM/SSDM updates the same zone rows with initial rank, model rank, rank change, agreement score, and a plain-language agreement class. Technical point types and component scores remain in an audit expander and CSV.
 
-- **Candidates without SDM/SSDM**: observed occurrence and local habitat evidence.
-- **Candidates with SDM/SSDM**: the same field-planning framework enriched with model support and model-high exploratory sites.
-
-Every result map shows the complete eligible candidate pool as points. Observed/local and model-only exploratory candidates use separate map layers. Recommended sites are highlighted with a green outline and a 500 m survey buffer, avoiding overlapping buffers across the full pool. Tables and downloads contain explicit site IDs, survey-area IDs, support scores, coordinates, reasons, and field-validation templates.
+Trip duration is not fixed by the user. Internally, ACSP builds feasible one- through five-day alternatives, charges each added zone for its minimum insertion cost in the hub-return route, and chooses the knee of the resulting value-versus-duration curve. The primary screen shows only the selected practical zone set and a short reason; the curve remains reproducible diagnostic evidence.
 
 When several rectangles are drawn, ACSP treats them as independent survey areas. Candidate generation and recommendation quotas run separately in each area, preventing record-rich regions from taking every recommendation.
 
@@ -96,17 +93,19 @@ from acsp import (
     choose_spatial_partition,
     make_classifier,
     recommend_candidates,
+    recommend_survey_zones,
     sdm_method_record,
 )
 
 recommended = recommend_candidates(candidates, per_area=3)
+recommended_zones = recommend_survey_zones(candidates, per_area=3)
 island_extent = (139.30, 34.60, 139.50, 34.85)  # west, south, east, north
 recommended_in_extent = recommend_candidates(candidates, per_area=3, extent=island_extent)
 partition, reason = choose_spatial_partition(86, geographic_span_degrees=1.8)
 models = {name: make_classifier(name) for name in DEFAULT_ENSEMBLE_ALGORITHMS}
 ```
 
-Current Python APIs cover candidate quotas, classifier construction, equal-weight prediction, partition selection, ensemble-performance summaries, and method records. GBIF retrieval and raster orchestration remain app-level APIs for now.
+Current Python APIs cover candidate quotas, deterministic survey-zone aggregation, SDM rank/agreement comparison, classifier construction, equal-weight prediction, partition selection, ensemble-performance summaries, and method records. GBIF retrieval and raster orchestration remain app-level APIs for now.
 
 ## R package
 
@@ -117,6 +116,7 @@ remotes::install_github("zuizui0223/acsp", subdir = "r-acsp")
 library(acsp)
 
 recommended <- acsp_recommend(candidates, per_area = 3)
+zones <- acsp_zones(candidates)
 recommended_in_extent <- acsp_recommend(candidates, extent = c(139.30, 34.60, 139.50, 34.85))
 partition <- acsp_sdm_partition(86, geographic_span_degrees = 1.8)
 algorithms <- acsp_default_algorithms()
