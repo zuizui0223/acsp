@@ -6544,7 +6544,9 @@ def build_default_short_trip_plans(
     plans: dict[str, pd.DataFrame] = {}
     trip_estimate: dict[str, Any] = {}
     for plan_k in range(pool_start_k, minimum_k - 1, -1):
-        plans = build_acsp_discover_plans(pool, plan_k)
+        plans = build_acsp_discover_plans(
+            pool, plan_k, hub_latitude=float(hub_latitude), hub_longitude=float(hub_longitude)
+        )
         trip_estimate = estimate_default_short_trip(
             plans.get("Balanced", pd.DataFrame()), float(hub_latitude), float(hub_longitude),
             survey_protocol=survey_protocol, target_days=target_days,
@@ -6554,6 +6556,87 @@ def build_default_short_trip_plans(
     trip_estimate["individually_infeasible_candidates_excluded"] = individually_infeasible if not feasible_pool.empty else 0
     trip_estimate["candidate_pool_had_no_individually_feasible_site"] = bool(pool_start_k and feasible_pool.empty)
     return plans, trip_estimate, requested_k
+
+
+def select_automatic_trip_scale(
+    eligible_candidates: pd.DataFrame,
+    all_zones: pd.DataFrame,
+    hub_latitude: float,
+    hub_longitude: float,
+    survey_protocol: dict[str, Any],
+    maximum_days: int = 5,
+    maximum_cells: int = 20,
+) -> dict[str, Any]:
+    """Choose an internal trip scale from the knee of a feasibility curve."""
+    alternatives: list[dict[str, Any]] = []
+    for days in range(1, max(1, int(maximum_days)) + 1):
+        plans, trip, requested_k = build_default_short_trip_plans(
+            eligible_candidates,
+            float(hub_latitude),
+            float(hub_longitude),
+            target_days=days,
+            max_cells=min(int(maximum_cells), len(eligible_candidates)),
+            survey_protocol=survey_protocol,
+        )
+        balanced = plans.get("Balanced", pd.DataFrame())
+        reachable_zones = zones_matching_plan(all_zones, balanced)
+        zone_value = float(pd.to_numeric(reachable_zones.get("zone_score"), errors="coerce").fillna(0.0).sum()) if not reachable_zones.empty else 0.0
+        alternatives.append({
+            "days": days,
+            "plans": plans,
+            "trip": trip,
+            "requested_k": requested_k,
+            "zones": reachable_zones,
+            "zone_count": int(len(reachable_zones)),
+            "station_count": int(len(balanced)),
+            "zone_value": zone_value,
+        })
+    max_zones = max((item["zone_count"] for item in alternatives), default=0)
+    max_value = max((item["zone_value"] for item in alternatives), default=0.0)
+    minimum_useful = min(3, max_zones)
+    eligible_alternatives = [
+        item for item in alternatives
+        if item["zone_count"] >= minimum_useful and bool(item["trip"].get("fits_target_days"))
+    ] or [item for item in alternatives if bool(item["trip"].get("fits_target_days"))] or alternatives
+    denominator_days = max(1, len(alternatives) - 1)
+    for item in eligible_alternatives:
+        normalized_days = (item["days"] - 1) / denominator_days
+        normalized_value = item["zone_value"] / max_value if max_value > 0 else item["zone_count"] / max(1, max_zones)
+        item["knee_score"] = normalized_value - normalized_days
+    chosen = sorted(eligible_alternatives, key=lambda item: (-item["knee_score"], item["days"]))[0]
+    next_item = next((item for item in alternatives if item["days"] == chosen["days"] + 1), None)
+    extra_zones = (next_item["zone_count"] - chosen["zone_count"]) if next_item else 0
+    extra_value_fraction = (
+        max(0.0, next_item["zone_value"] - chosen["zone_value"]) / max_value
+        if next_item and max_value > 0 else 0.0
+    )
+    reason = (
+        f"Automatically selected {chosen['zone_count']} reachable zone(s) for a {chosen['days']}-day continuous trip. "
+        + (
+            f"One extra day adds {max(0, extra_zones)} lower-priority zone(s) and "
+            f"{extra_value_fraction:.0%} of the five-day evidence value. "
+            if next_item else "This is the five-day search limit. "
+        )
+        + "Selection uses the feasibility-curve knee, daily hub returns, survey effort, and route insertion cost between zones."
+    )
+    curve = pd.DataFrame([{
+        "continuous_trip_days": item["days"],
+        "reachable_zones": item["zone_count"],
+        "survey_stations": item["station_count"],
+        "estimated_road_km": item["trip"].get("estimated_road_km", 0.0),
+        "estimated_hours": item["trip"].get("total_hours", 0.0),
+        "zone_evidence_value": round(float(item["zone_value"]), 4),
+        "fits_daily_hub_returns": item["trip"].get("fits_target_days", False),
+    } for item in alternatives])
+    return {
+        "selected_days": int(chosen["days"]),
+        "plans": chosen["plans"],
+        "trip_estimate": chosen["trip"],
+        "requested_k": chosen["requested_k"],
+        "selected_zones": chosen["zones"],
+        "curve": curve,
+        "reason": reason,
+    }
 
 
 def make_region_overview_map(
@@ -6734,20 +6817,17 @@ def build_automatic_discover_bundle(
     eligible, constraint_audit = apply_discover_hard_constraints(all_candidates)
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
-    target_days = (
-        max(1, len(drawn_feature_geometries(survey_features)))
-        if survey_features else 1 if survey_bounds is not None else 2
+    initial_zones = aggregate_candidates_to_zones(eligible)
+    scale_decision = select_automatic_trip_scale(
+        eligible, initial_zones, hub_lat, hub_lon, survey_protocol,
     )
-    plans, trip_estimate, requested_k = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=target_days, max_cells=max(8, target_days * 3), survey_protocol=survey_protocol
-    )
+    target_days = int(scale_decision["selected_days"])
+    plans = scale_decision["plans"]
+    trip_estimate = scale_decision["trip_estimate"]
+    requested_k = int(scale_decision["requested_k"])
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
         raise ValueError("No candidate survived automatic hard-constraint screening.")
-    if len(balanced) < requested_k:
-        warnings.append(
-            f"The automatic {target_days}-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} cells."
-        )
     if not bool(trip_estimate.get("fits_target_days")):
         warnings.append(
             "Even the smallest candidate plan exceeds the proxy day budget; choose a closer hub or verify actual routing before fieldwork."
@@ -6775,7 +6855,6 @@ def build_automatic_discover_bundle(
         "estimated_days": int(trip_estimate["estimated_days"]),
         "recommended_window": recommended_window,
     })
-    initial_zones = aggregate_candidates_to_zones(eligible)
     recommended_zones = recommended_zone_rows(
         zones_matching_plan(initial_zones, balanced),
         default_total=3 if survey_features else len(balanced),
@@ -6813,6 +6892,8 @@ def build_automatic_discover_bundle(
         "zones_without_sdm": initial_zones,
         "recommended_zones": recommended_zones,
         "zone_agreement_summary": zone_agreement_summary(initial_zones),
+        "reachability_curve": scale_decision["curve"],
+        "reachability_reason": scale_decision["reason"],
         "constraint_audit": constraint_audit,
         "plans": plans,
         "proposal": proposal,
@@ -6869,21 +6950,19 @@ def build_automatic_genus_bundle(
     eligible, constraint_audit = apply_discover_hard_constraints(hotspots)
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(scope["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(scope["_longitude"].mean())
-    target_days = (
-        max(1, len(drawn_feature_geometries(survey_features)))
-        if survey_features else 1 if survey_bounds is not None else 2
+    genus_protocol = infer_survey_protocol(taxon_metadata).as_dict()
+    initial_zones = aggregate_candidates_to_zones(eligible)
+    scale_decision = select_automatic_trip_scale(
+        eligible, initial_zones, hub_lat, hub_lon, genus_protocol,
     )
-    plans, trip_estimate, requested_k = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=target_days, max_cells=8,
-        survey_protocol=infer_survey_protocol(taxon_metadata).as_dict(),
-    )
+    target_days = int(scale_decision["selected_days"])
+    plans = scale_decision["plans"]
+    trip_estimate = scale_decision["trip_estimate"]
+    requested_k = int(scale_decision["requested_k"])
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
         raise ValueError("No genus richness hotspot survived automatic planning constraints.")
     warnings_out = []
-    if len(balanced) < requested_k:
-        warnings_out.append(f"The automatic {target_days}-day feasibility assumption reduced the plan from {requested_k} to {len(balanced)} hotspots.")
-    initial_zones = aggregate_candidates_to_zones(eligible)
     recommended_zones = recommended_zone_rows(
         zones_matching_plan(initial_zones, balanced),
         default_total=3 if survey_features else len(balanced),
@@ -6893,6 +6972,7 @@ def build_automatic_genus_bundle(
         "scientific_name": scientific_name,
         "country_scope": country_scope,
         "taxon_metadata": dict(taxon_metadata or {}),
+        "survey_protocol": genus_protocol,
         "source_message": source_message,
         "occurrences": enriched,
         "scope": scope,
@@ -6918,6 +6998,8 @@ def build_automatic_genus_bundle(
         "zones_without_sdm": initial_zones,
         "recommended_zones": recommended_zones,
         "zone_agreement_summary": zone_agreement_summary(initial_zones),
+        "reachability_curve": scale_decision["curve"],
+        "reachability_reason": scale_decision["reason"],
         "constraint_audit": constraint_audit,
         "plans": plans,
         "trip_estimate": trip_estimate,
@@ -6974,20 +7056,23 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
     selected_region = bundle.get("selected_region")
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(bundle["scope"]["_longitude"].mean())
-    plans, trip, _ = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=int(bundle.get("target_days", 2)), max_cells=8,
-        survey_protocol=infer_survey_protocol(bundle.get("taxon_metadata")).as_dict(),
-    )
-    updated = dict(bundle)
     model_zones = compare_zone_rankings(
         bundle.get("zones_without_sdm", pd.DataFrame()),
         aggregate_candidates_to_zones(eligible),
     )
+    model_protocol = infer_survey_protocol(bundle.get("taxon_metadata")).as_dict()
+    scale_decision = select_automatic_trip_scale(
+        eligible, model_zones, hub_lat, hub_lon, model_protocol,
+    )
+    plans = scale_decision["plans"]
+    trip = scale_decision["trip_estimate"]
+    updated = dict(bundle)
     updated.update({
         "all_candidates": candidates,
         "constraint_audit": audit,
         "plans": plans,
         "trip_estimate": trip,
+        "target_days": int(scale_decision["selected_days"]),
         "ssdm_result": {
             "model_summary": model_summary,
             "grid": grid,
@@ -7007,6 +7092,8 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
             default_total=3 if bundle.get("survey_features") else len(plans.get("Balanced", pd.DataFrame())),
         ),
         "zone_agreement_summary": zone_agreement_summary(model_zones),
+        "reachability_curve": scale_decision["curve"],
+        "reachability_reason": scale_decision["reason"],
     })
     return updated
 
@@ -7069,10 +7156,15 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     selected_region = bundle.get("selected_region")
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(bundle["scope"]["_longitude"].mean())
-    plans, trip, _ = build_default_short_trip_plans(
-        eligible, hub_lat, hub_lon, target_days=int(bundle.get("target_days", 2)), max_cells=8,
-        survey_protocol=bundle["survey_protocol"],
+    model_zones = compare_zone_rankings(
+        bundle.get("zones_without_sdm", pd.DataFrame()),
+        aggregate_candidates_to_zones(eligible),
     )
+    scale_decision = select_automatic_trip_scale(
+        eligible, model_zones, hub_lat, hub_lon, bundle["survey_protocol"],
+    )
+    plans = scale_decision["plans"]
+    trip = scale_decision["trip_estimate"]
     balanced = plans.get("Balanced", pd.DataFrame())
     if balanced.empty:
         raise RuntimeError("No candidate remained after SDM-supported automatic planning.")
@@ -7096,15 +7188,12 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         prediction_extent="QC-derived bounding box with a 20 km margin; independent of drawn survey areas",
     )
     updated = dict(bundle)
-    model_zones = compare_zone_rankings(
-        bundle.get("zones_without_sdm", pd.DataFrame()),
-        aggregate_candidates_to_zones(eligible),
-    )
     updated.update({
         "all_candidates": candidates,
         "constraint_audit": audit,
         "plans": plans,
         "trip_estimate": trip,
+        "target_days": int(scale_decision["selected_days"]),
         "proposal": proposal,
         "sdm_result": {
             "model": model,
@@ -7130,6 +7219,8 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
             default_total=3 if bundle.get("survey_features") else len(balanced),
         ),
         "zone_agreement_summary": zone_agreement_summary(model_zones),
+        "reachability_curve": scale_decision["curve"],
+        "reachability_reason": scale_decision["reason"],
     })
     if progress is not None:
         progress.progress(1.0)
@@ -7232,6 +7323,8 @@ def render_zone_proposal(
     all_zones = bundle.get("zones_with_sdm", bundle.get("zones_without_sdm", pd.DataFrame()))
     pool = bundle.get("candidate_pool_with_sdm", bundle.get("candidate_pool_without_sdm", pd.DataFrame()))
     st.subheader("Recommended survey zones")
+    if bundle.get("reachability_reason"):
+        st.caption(str(bundle["reachability_reason"]))
     if zones is None or zones.empty:
         st.warning("No practical survey zone survived the automatic constraints.")
         return

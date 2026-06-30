@@ -14,6 +14,8 @@ The automatic app asks users to make only three decisions:
 
 The app shows one ranked **Recommended survey zones** table and map. Nearby candidate points are consolidated with a complete-link distance rule before final ranking, preventing both duplicate practical visits and long single-link chains. Optional SDM/SSDM updates the same zone rows with initial rank, model rank, rank change, agreement score, and a plain-language agreement class. Technical point types and component scores remain in an audit expander and CSV.
 
+Trip duration is not fixed by the user. Internally, ACSP builds feasible one- through five-day alternatives, charges each added zone for its minimum insertion cost in the hub-return route, and chooses the knee of the resulting value-versus-duration curve. The primary screen shows only the selected practical zone set and a short reason; the curve remains reproducible diagnostic evidence.
+
 When several rectangles are drawn, ACSP treats them as independent survey areas. Candidate generation and recommendation quotas run separately in each area, preventing record-rich regions from taking every recommendation.
 
 ## Occurrence and local candidate processing

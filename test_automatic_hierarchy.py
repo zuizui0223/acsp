@@ -4,6 +4,8 @@ from unittest.mock import patch, sentinel
 import numpy as np
 import pandas as pd
 from rasterio.errors import RasterioIOError
+from acsp import aggregate_candidates_to_zones
+from acsp_discover import build_acsp_discover_plans, infer_survey_protocol
 
 from gbif_fieldmap_builder_app import (
     add_priority_rank,
@@ -23,10 +25,44 @@ from gbif_fieldmap_builder_app import (
     model_connected_recommendations,
     open_raster_with_retry,
     simple_recommended_candidates,
+    select_automatic_trip_scale,
 )
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_route_insertion_cost_is_recorded_between_candidates(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2, 3],
+            "candidate_type": ["Habitat-match"] * 3,
+            "priority_score": [0.9, 0.8, 0.7],
+            "analogue_score": [0.9, 0.8, 0.7], "access_score": [0.8] * 3,
+            "latitude": [35.01, 35.02, 35.30], "longitude": [139.0] * 3,
+        })
+        plan = build_acsp_discover_plans(candidates, 3, 35.0, 139.0)["Balanced"]
+        self.assertIn("marginal_route_km", plan.columns)
+        self.assertGreater(plan.loc[plan["site_id"].eq(1), "marginal_route_km"].iloc[0], 0)
+        self.assertTrue((plan["marginal_route_km"] >= 0).all())
+
+    def test_feasibility_curve_selects_trip_scale_automatically(self):
+        candidates = pd.DataFrame({
+            "site_id": range(1, 9),
+            "candidate_type": ["Occurrence-supported survey range", "Habitat-match"] * 4,
+            "priority_score": [0.95 - i * 0.05 for i in range(8)],
+            "analogue_score": [0.8] * 8, "access_score": [0.8] * 8,
+            "latitude": [35.0 + i * 0.035 for i in range(8)],
+            "longitude": [139.0 + (i % 2) * 0.02 for i in range(8)],
+        })
+        zones = aggregate_candidates_to_zones(candidates, merge_distance_m=1000)
+        decision = select_automatic_trip_scale(
+            candidates, zones, 35.0, 139.0,
+            infer_survey_protocol({"kingdom": "Plantae"}).as_dict(),
+        )
+        self.assertIn(decision["selected_days"], range(1, 6))
+        self.assertEqual(len(decision["curve"]), 5)
+        self.assertTrue(decision["trip_estimate"]["fits_target_days"])
+        self.assertIn("feasibility-curve knee", decision["reason"])
+        self.assertIn("five-day evidence value", decision["reason"])
+
     def test_power_query_expands_small_survey_extent(self):
         west, south, east, north = _power_query_bounds((139.1, 34.1, 139.3, 34.3))
         self.assertGreaterEqual(east - west, 2.0)
@@ -249,7 +285,9 @@ class AutomaticHierarchyTests(unittest.TestCase):
             )
         self.assertEqual(bundle["distribution_summary"]["distribution_regime"], "narrow/local")
         self.assertEqual(len(bundle["region_cards"]), 1)
-        self.assertLessEqual(bundle["trip_estimate"]["estimated_days"], 2)
+        self.assertLessEqual(bundle["trip_estimate"]["estimated_days"], 5)
+        self.assertEqual(bundle["target_days"], bundle["trip_estimate"]["estimated_days"])
+        self.assertEqual(len(bundle["reachability_curve"]), 5)
         self.assertTrue(bundle["warnings"])
         self.assertEqual(float(land_filter.call_args.args[3]), 0.0)
 
@@ -263,8 +301,9 @@ class AutomaticHierarchyTests(unittest.TestCase):
                 override_row_ids=occurrences["_row_id"].tolist(),
                 survey_bounds=(138.9, 34.9, 139.5, 35.1),
             )
-        self.assertEqual(custom["target_days"], 1)
-        self.assertEqual(custom["trip_estimate"]["target_days"], 1)
+        self.assertIn(custom["target_days"], range(1, 6))
+        self.assertEqual(custom["target_days"], custom["trip_estimate"]["estimated_days"])
+        self.assertEqual(custom["trip_estimate"]["target_days"], custom["target_days"])
 
     def test_automatic_genus_bundle_builds_observed_richness_plans(self):
         rows = []
