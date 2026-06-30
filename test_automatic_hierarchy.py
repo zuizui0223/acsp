@@ -6,6 +6,8 @@ import pandas as pd
 from rasterio.errors import RasterioIOError
 
 from gbif_fieldmap_builder_app import (
+    add_priority_rank,
+    add_sdm_grid_support_to_candidates,
     build_automatic_discover_bundle,
     build_automatic_genus_bundle,
     build_default_short_trip_plans,
@@ -14,12 +16,82 @@ from gbif_fieldmap_builder_app import (
     decode_gsi_dem_rgb,
     estimate_default_short_trip,
     get_worldclim_raster_path,
+    make_sdm_exploration_candidates,
+    make_ssdm_exploration_candidates,
+    model_connected_recommendations,
     open_raster_with_retry,
     simple_recommended_candidates,
 )
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_completed_sdm_grid_supplies_candidates_without_raster_reopen(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2], "latitude": [35.001, 35.099], "longitude": [139.001, 139.099],
+        })
+        prediction = pd.DataFrame({
+            "latitude": [35.0, 35.1], "longitude": [139.0, 139.1], "sdm_suitability": [0.2, 0.9],
+        })
+        supported = add_sdm_grid_support_to_candidates(candidates, prediction)
+        self.assertEqual(supported["sdm_suitability"].tolist(), [0.2, 0.9])
+        self.assertEqual(supported["model_support_score"].tolist(), [0.2, 0.9])
+
+    def test_joint_observed_and_model_support_receives_agreement_bonus(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2],
+            "candidate_type": ["Occurrence-supported survey range"] * 2,
+            "occurrence_support_score": [0.80, 0.80],
+            "sdm_suitability": [0.90, 0.20],
+        })
+        ranked = add_priority_rank(candidates)
+        high = ranked.set_index("site_id").loc[1]
+        low = ranked.set_index("site_id").loc[2]
+        self.assertGreater(high["priority_score"], low["priority_score"])
+        self.assertGreater(high["observed_model_agreement_score"], low["observed_model_agreement_score"])
+        self.assertEqual(high["candidate_evidence"], "Observed + model")
+        reranked = add_priority_rank(ranked)
+        self.assertEqual(ranked.sort_values("site_id")["priority_score"].tolist(), reranked.sort_values("site_id")["priority_score"].tolist())
+
+    def test_model_connected_recommendations_reserve_exploration_slot(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2, 3, 4],
+            "candidate_type": ["Occurrence-supported survey range"] * 3 + ["SDM-high model-only exploratory site"],
+            "priority_score": [0.90, 0.80, 0.70, 0.40],
+            "observed_model_agreement_score": [0.9, 0.8, 0.7, 0.0],
+            "model_support_score": [0.9, 0.8, 0.7, 0.99],
+            "occurrence_support_score": [0.9, 0.8, 0.7, 0.0],
+        })
+        selected = model_connected_recommendations(candidates, default_total=3)
+        self.assertEqual(len(selected), 3)
+        self.assertIn(4, selected["site_id"].tolist())
+        self.assertIn("Model-only high prediction", selected.loc[selected["site_id"].eq(4), "recommendation_basis"].iloc[0])
+
+    def test_sdm_exploration_cells_are_spatially_separated(self):
+        prediction = pd.DataFrame({
+            "latitude": [35.00, 35.01, 35.04, 35.08],
+            "longitude": [139.00, 139.01, 139.04, 139.08],
+            "sdm_suitability": [0.99, 0.98, 0.97, 0.96],
+        })
+        known = pd.DataFrame({"_latitude": [34.8], "_longitude": [138.8]})
+        observed = pd.DataFrame({"latitude": [34.81], "longitude": [138.81]})
+        exploratory = make_sdm_exploration_candidates(
+            prediction, known, observed, 0.5, 0.0, 1000.0, 3000.0, 10, 100,
+        )
+        self.assertGreaterEqual(len(exploratory), 3)
+        self.assertTrue(exploratory["candidate_type"].str.contains("model-only").all())
+
+    def test_ssdm_exploration_uses_full_grid_and_avoids_observed_hotspot(self):
+        grid = pd.DataFrame({
+            "latitude": [35.00, 35.01, 35.05, 35.10, 35.15] * 2,
+            "longitude": [139.00, 139.01, 139.05, 139.10, 139.15] * 2,
+            "ssdm_continuous_richness": np.linspace(2.0, 4.0, 10),
+            "n_species_evaluated": [3] * 10,
+        })
+        observed = pd.DataFrame({"latitude": [34.8], "longitude": [138.8]})
+        exploratory = make_ssdm_exploration_candidates(grid, observed, max_candidates=4)
+        self.assertFalse(exploratory.empty)
+        self.assertTrue(exploratory["candidate_type"].str.contains("model-only").all())
+
     def test_correlation_filter_works_with_read_only_pandas_arrays(self):
         environment = pd.DataFrame({
             "bio1": [1.0, 2.0, 3.0, 4.0],
@@ -36,7 +108,7 @@ class AutomaticHierarchyTests(unittest.TestCase):
             "site_id": [1, 2, 3],
             "latitude": [35.0, 35.01, 35.02],
             "longitude": [139.0, 139.01, 139.02],
-            "candidate_type": ["Habitat-match"] * 3,
+            "candidate_type": ["Occurrence-supported survey range", "SDM-high model-only exploratory site", "Habitat-match"],
             "priority_score": [0.9, 0.8, 0.7],
         })
         fmap = build_map(
@@ -47,6 +119,9 @@ class AutomaticHierarchyTests(unittest.TestCase):
         html = fmap.get_root().render()
         self.assertEqual(html.count("L.circle("), 1)
         self.assertGreaterEqual(html.count("L.circleMarker("), 4)
+        self.assertIn("Observed / local candidate points", html)
+        self.assertIn("Model-only exploratory points", html)
+        self.assertIn("Recommended 500 m survey ranges", html)
 
     def test_remote_raster_open_retries_transient_failures(self):
         with (

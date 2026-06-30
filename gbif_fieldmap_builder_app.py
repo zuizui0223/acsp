@@ -77,7 +77,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-readonly-map-extent-20260630"
+APP_BUILD_ID = "acsp-model-connected-candidates-20260630"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -1245,6 +1245,43 @@ def simple_recommended_candidates(candidates: pd.DataFrame, per_area: int = 3, d
     return recommend_candidates(candidates, per_area=per_area, default_total=default_total)
 
 
+def model_connected_recommendations(candidates: pd.DataFrame, per_area: int = 3, default_total: int = 8) -> pd.DataFrame:
+    """Recommend joint-support sites while reserving one slot for model-only exploration."""
+    if candidates is None or candidates.empty:
+        return pd.DataFrame()
+
+    def select_group(group: pd.DataFrame, quota: int) -> pd.DataFrame:
+        ranked = group.sort_values(
+            available_sort_cols(group, ["priority_score", "observed_model_agreement_score", "model_support_score", "occurrence_support_score"]),
+            ascending=False,
+            na_position="last",
+        ).copy()
+        selected = ranked.head(int(quota)).copy()
+        candidate_type = ranked.get("candidate_type", pd.Series("", index=ranked.index)).astype(str)
+        exploratory = ranked[candidate_type.str.contains("model-only|sdm-high|ssdm-high|exploratory", case=False, na=False)]
+        if int(quota) >= 3 and not exploratory.empty and not selected.index.isin(exploratory.index).any():
+            selected = pd.concat([selected.head(int(quota) - 1), exploratory.head(1)], axis=0)
+        selected["recommendation_basis"] = np.where(
+            selected.get("candidate_type", pd.Series("", index=selected.index)).astype(str).str.contains("model-only|sdm-high|ssdm-high|exploratory", case=False, na=False),
+            "Model-only high prediction retained for field validation",
+            "Observed support strengthened by SDM/SSDM",
+        )
+        return selected
+
+    area_col = "survey_area_id"
+    if area_col in candidates.columns and candidates[area_col].nunique() > 1:
+        selected = pd.concat(
+            [select_group(group, int(per_area)) for _, group in candidates.groupby(area_col, sort=True)],
+            ignore_index=True,
+        )
+        selected = selected.sort_values([area_col, "priority_score"], ascending=[True, False], na_position="last")
+    else:
+        selected = select_group(candidates, int(default_total))
+    selected = selected.reset_index(drop=True)
+    selected["recommendation_rank"] = range(1, len(selected) + 1)
+    return selected
+
+
 def expand_lonlat_bounds(bounds: tuple[float, float, float, float], distance_km: float) -> tuple[float, float, float, float]:
     west, south, east, north = map(float, bounds)
     center_lat = (south + north) / 2.0
@@ -2239,17 +2276,34 @@ def add_priority_rank(sites: pd.DataFrame, observed_weight: float = 0.7, model_w
         ssdm_score = pd.to_numeric(out["ssdm_model_support_score"], errors="coerce")
         model = model.where(model.notna(), ssdm_score)
     model = model.clip(0, 1)
-    base_priority = pd.to_numeric(out.get("priority_score", observed), errors="coerce").fillna(observed).clip(0, 1)
-    bonus = (base_priority - observed).clip(lower=0, upper=0.20)
+    base_priority = pd.to_numeric(
+        out.get("observed_base_priority_score", out.get("priority_score", observed)), errors="coerce"
+    ).fillna(observed).clip(0, 1)
     model_filled = model.fillna(0.0)
+    model_available = pd.Series(False, index=out.index)
+    for col in ["sdm_suitability", "ssdm_predicted_richness", "ssdm_model_support_score"]:
+        if col in out.columns:
+            model_available |= pd.to_numeric(out[col], errors="coerce").notna()
+    agreement = np.sqrt(observed * model_filled).where(model_available, 0.0)
+    agreement_bonus = (0.15 * agreement).clip(0.0, 0.15)
+    candidate_type = out.get("candidate_type", pd.Series("", index=out.index)).astype(str)
+    model_only = candidate_type.str.contains("model-only|sdm-high|ssdm-high|exploratory", case=False, na=False) & observed.le(0.0)
+    evidence_bonus = (base_priority - observed).clip(lower=0, upper=0.10).where(~model_only, 0.0)
+    exploration_bonus = (0.20 * model_filled).where(model_only, 0.0)
+    out["observed_base_priority_score"] = base_priority.round(3)
     out["occurrence_support_score"] = observed.round(3)
     out["model_support_score"] = model_filled.round(3)
+    out["model_support_available"] = model_available
+    out["observed_model_agreement_score"] = agreement.round(3)
+    out["model_agreement_bonus"] = agreement_bonus.round(3)
+    out["model_only_exploration_bonus"] = exploration_bonus.round(3)
+    out["candidate_evidence"] = np.where(model_only, "Model-only exploratory", np.where(model_available, "Observed + model", "Observed only"))
     out["observed_weight"] = round(observed_w, 3)
     out["model_weight"] = round(model_w, 3)
-    out["priority_score"] = (observed_w * observed + model_w * model_filled + bonus).clip(0, 1).round(3)
+    out["priority_score"] = (observed_w * observed + model_w * model_filled + evidence_bonus + agreement_bonus + exploration_bonus).clip(0, 1).round(3)
     out["score_explanation"] = [
-        f"priority = {observed_w:.2f}*observed({obs:.3f}) + {model_w:.2f}*model({mod:.3f}) + bonus({bon:.3f}); SDM/SSDM model support is optional and does not replace observed-data candidates"
-        for obs, mod, bon in zip(observed, model_filled, bonus)
+        f"priority = {observed_w:.2f}*observed({obs:.3f}) + {model_w:.2f}*model({mod:.3f}) + evidence({evidence:.3f}) + agreement({agree:.3f}) + exploration({explore:.3f}); model-only sites require field validation"
+        for obs, mod, evidence, agree, explore in zip(observed, model_filled, evidence_bonus, agreement_bonus, exploration_bonus)
     ]
     sort_cols = available_sort_cols(out, ["priority_score", "model_support_score", "occurrence_support_score"])
     if not sort_cols:
@@ -4154,6 +4208,25 @@ def add_grid_model_support_to_candidates(candidates: pd.DataFrame, grid: pd.Data
     return out
 
 
+def add_sdm_grid_support_to_candidates(candidates: pd.DataFrame, prediction: pd.DataFrame) -> pd.DataFrame:
+    """Attach suitability from the completed SDM grid without reopening climate rasters."""
+    if candidates is None or candidates.empty or prediction is None or prediction.empty:
+        return candidates.copy()
+    required = {"latitude", "longitude", "sdm_suitability"}
+    if not required.issubset(prediction.columns):
+        return candidates.copy()
+    out = candidates.copy()
+    grid = prediction.dropna(subset=["latitude", "longitude", "sdm_suitability"])
+    if grid.empty:
+        return out
+    tree = BallTree(np.radians(grid[["latitude", "longitude"]].to_numpy(dtype=float)), metric="haversine")
+    _, indices = tree.query(np.radians(out[["latitude", "longitude"]].to_numpy(dtype=float)), k=1)
+    suitability = pd.to_numeric(grid["sdm_suitability"], errors="coerce").to_numpy(dtype=float)[indices[:, 0]]
+    out["sdm_suitability"] = np.clip(suitability, 0.0, 1.0).round(3)
+    out["model_support_score"] = out["sdm_suitability"]
+    return out
+
+
 def fit_stacked_species_sdms(
     occ: pd.DataFrame,
     variables: list[str],
@@ -4377,6 +4450,45 @@ def fit_stacked_species_sdms(
     return pd.DataFrame(summary_rows), out_grid, hotspots, shape, bounds, vif_diag
 
 
+def spatially_separated_model_cells(
+    cells: pd.DataFrame,
+    score_col: str,
+    reference_points: Optional[pd.DataFrame],
+    min_reference_distance_m: float,
+    min_spacing_m: float,
+    max_candidates: int,
+) -> pd.DataFrame:
+    """Greedily retain high-scoring model cells without single-link cluster collapse."""
+    if cells is None or cells.empty or score_col not in cells.columns:
+        return pd.DataFrame()
+    ranked = cells.dropna(subset=["latitude", "longitude", score_col]).sort_values(score_col, ascending=False).copy()
+    if ranked.empty:
+        return ranked
+    coords = ranked[["latitude", "longitude"]].to_numpy(dtype=float)
+    if reference_points is not None and not reference_points.empty:
+        refs = reference_points[["latitude", "longitude"]].apply(pd.to_numeric, errors="coerce").dropna().to_numpy(dtype=float)
+        if len(refs):
+            tree = BallTree(np.radians(refs), metric="haversine")
+            distance_rad, _ = tree.query(np.radians(coords), k=1)
+            ranked["distance_to_nearest_known_m"] = distance_rad[:, 0] * EARTH_RADIUS_M
+            ranked = ranked[ranked["distance_to_nearest_known_m"] >= float(min_reference_distance_m)].copy()
+            coords = ranked[["latitude", "longitude"]].to_numpy(dtype=float)
+    if ranked.empty:
+        return ranked
+    available = np.ones(len(ranked), dtype=bool)
+    selected_positions: list[int] = []
+    lats, lons = coords[:, 0], coords[:, 1]
+    for position in range(len(ranked)):
+        if not available[position]:
+            continue
+        selected_positions.append(position)
+        if len(selected_positions) >= int(max_candidates):
+            break
+        distances = _acsp_point_distances_m(float(lats[position]), float(lons[position]), lats, lons)
+        available &= distances >= float(min_spacing_m)
+    return ranked.iloc[selected_positions].reset_index(drop=True)
+
+
 def make_sdm_exploration_candidates(pred_table: pd.DataFrame, known_occ: pd.DataFrame, occurrence_candidates: pd.DataFrame, min_suitability: float, quantile_cutoff: float, min_distance_known_m: float, cluster_distance_m: float, max_candidates: int, start_site_id: int) -> pd.DataFrame:
     if pred_table is None or pred_table.empty:
         return pd.DataFrame()
@@ -4389,27 +4501,48 @@ def make_sdm_exploration_candidates(pred_table: pd.DataFrame, known_occ: pd.Data
     # Vectorised nearest-known-distance via BallTree (haversine). Replaces the previous
     # O(pred × known) geopy nested loop, which recomputed millions of geodesic distances
     # on every Streamlit rerun once SDM was active and made the app crawl.
-    known_coords = pd.concat([
-        pd.to_numeric(known["latitude"], errors="coerce"),
-        pd.to_numeric(known["longitude"], errors="coerce"),
-    ], axis=1).dropna().to_numpy(dtype=float)
-    pred_coords = pred[["latitude", "longitude"]].to_numpy(dtype=float)
-    if known_coords.shape[0] == 0:
-        dmin_m = np.full(pred_coords.shape[0], np.inf)
-    else:
-        tree = BallTree(np.radians(known_coords), metric="haversine")
-        dist_rad, _ = tree.query(np.radians(pred_coords), k=1)
-        dmin_m = dist_rad[:, 0] * EARTH_RADIUS_M
-    pred["distance_to_nearest_known_m"] = np.round(dmin_m).astype(float)
-    pred = pred[dmin_m >= float(min_distance_known_m)].copy()
+    pred = spatially_separated_model_cells(
+        pred, "sdm_suitability", known, float(min_distance_known_m), float(cluster_distance_m), int(max_candidates)
+    )
     if pred.empty:
         return pd.DataFrame()
-    pred["exploration_cluster"] = haversine_dbscan(pred, "latitude", "longitude", cluster_distance_m, 1)
     rows = []
-    for i, (_, group) in enumerate(pred.groupby("exploration_cluster"), start=0):
-        best = group.sort_values("sdm_suitability", ascending=False).iloc[0]
-        rows.append({"site_id": start_site_id + i, "candidate_type": "SDM-high exploration survey range", "cluster_id": int(best["exploration_cluster"]), "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "occurrence_support_score": 0.0, "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best["distance_to_nearest_known_m"]), "candidate_method": "Raster predict-map suitability maximum", "selection_reason": "High SDM suitability and away from known records/candidate ranges.", "bias_warning": "Exploratory SDM candidate. Field validation is required."})
+    for i, (_, best) in enumerate(pred.iterrows(), start=0):
+        rows.append({"site_id": start_site_id + i, "candidate_type": "SDM-high model-only exploratory site", "cluster_id": i + 1, "latitude": float(best["latitude"]), "longitude": float(best["longitude"]), "n_occurrences": 0, "occurrence_support_score": 0.0, "model_support_score": round(float(best["sdm_suitability"]), 3), "priority_score": round(float(best["sdm_suitability"]), 3), "sdm_suitability": round(float(best["sdm_suitability"]), 3), "distance_to_nearest_known_m": float(best.get("distance_to_nearest_known_m", np.nan)), "candidate_method": "Spatially separated raster suitability maximum", "selection_reason": "Model-only high suitability away from known records and observed candidates.", "bias_warning": "Exploratory SDM candidate. No occurrence support; field validation is required."})
     return pd.DataFrame(rows).sort_values("sdm_suitability", ascending=False).head(int(max_candidates)).reset_index(drop=True)
+
+
+def make_ssdm_exploration_candidates(grid: pd.DataFrame, observed_candidates: pd.DataFrame, max_candidates: int = 20) -> pd.DataFrame:
+    """Create spatially separated model-only richness candidates from the full SSDM grid."""
+    if grid is None or grid.empty or "ssdm_continuous_richness" not in grid.columns:
+        return pd.DataFrame()
+    work = grid.dropna(subset=["ssdm_continuous_richness"]).copy()
+    if "n_species_evaluated" in work.columns:
+        covered = work[work["n_species_evaluated"] >= 2]
+        if not covered.empty:
+            work = covered
+    if work.empty:
+        return pd.DataFrame()
+    cutoff = float(work["ssdm_continuous_richness"].quantile(0.90))
+    work = work[work["ssdm_continuous_richness"] >= cutoff].copy()
+    selected = spatially_separated_model_cells(
+        work, "ssdm_continuous_richness", observed_candidates, 3000.0, 3000.0, int(max_candidates)
+    )
+    if selected.empty:
+        return pd.DataFrame()
+    max_richness = max(float(pd.to_numeric(grid["ssdm_continuous_richness"], errors="coerce").max()), 1e-9)
+    selected["site_id"] = range(1, len(selected) + 1)
+    selected["candidate_type"] = "SSDM-high model-only exploratory richness site"
+    selected["n_occurrences"] = 0
+    selected["observed_species_richness"] = np.nan
+    selected["ssdm_predicted_richness"] = pd.to_numeric(selected["ssdm_continuous_richness"], errors="coerce").round(4)
+    selected["occurrence_support_score"] = 0.0
+    selected["model_support_score"] = (selected["ssdm_predicted_richness"] / max_richness).clip(0, 1).round(3)
+    selected["candidate_method"] = "Spatially separated stacked-richness maximum"
+    selected["selection_reason"] = "Model-only high predicted richness away from observed richness hotspots."
+    selected["bias_warning"] = "Exploratory SSDM-high candidate. No observed richness support; field validation is required."
+    selected["google_maps_url"] = [make_google_maps_point_url(float(r["latitude"]), float(r["longitude"])) for _, r in selected.iterrows()]
+    return selected.reset_index(drop=True)
 
 
 def make_potential_survey_site_candidates(
@@ -4870,6 +5003,18 @@ def _priority_marker_style(row: Any) -> tuple[int, str]:
         return 7, "#7f7f7f"
 
 
+def add_candidate_evidence_legend(fmap: folium.Map) -> None:
+    legend = """
+    <div style="position:fixed;bottom:28px;right:28px;z-index:9999;background:rgba(255,255,255,0.94);padding:9px 11px;border:1px solid #999;border-radius:4px;font-size:11px;color:#222;line-height:1.55;">
+      <div style="font-weight:700;margin-bottom:4px;">Survey candidates</div>
+      <div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#4c78a8;margin-right:6px;"></span>Observed / local candidate</div>
+      <div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#9467bd;margin-right:6px;"></span>Model-only exploratory</div>
+      <div><span style="display:inline-block;width:12px;height:12px;border:2px solid #00a843;border-radius:50%;margin-right:5px;vertical-align:-2px;"></span>Recommended 500 m range</div>
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(legend))
+
+
 def make_selected_site_overlay(sites: pd.DataFrame, selected_ids: Optional[tuple], name: str = "selected survey sites") -> Optional[FeatureGroup]:
     if sites is None or sites.empty or not selected_ids:
         return None
@@ -4921,13 +5066,18 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
     selected_set = set(int(s) for s in (selected_ids or []))
     range_set = None if range_ids is None else set(int(s) for s in range_ids)
     if layers.get("candidate_circles") and sites is not None and not sites.empty:
-        fg = FeatureGroup(name="candidate sites", show=True)
+        fg_observed = FeatureGroup(name="Observed / local candidate points", show=True)
+        fg_model = FeatureGroup(name="Model-only exploratory points", show=True)
+        fg_recommended = FeatureGroup(name="Recommended 500 m survey ranges", show=True)
         for _, row in sites.iterrows():
             ctype = str(row.get("candidate_type", ""))
             marker_radius, color = _priority_marker_style(row)
+            if range_set is not None:
+                marker_radius = min(marker_radius, 7)
             rank = row.get("priority_rank", "")
             rank_label = f"Rank {rank} | " if str(rank).strip() not in ("", "nan") else ""
-            is_sdm_high = ctype.lower().startswith("sdm-high") or ctype.lower().startswith("sdm_high")
+            is_sdm_high = any(token in ctype.lower() for token in ["sdm-high", "sdm_high", "ssdm-high", "model-only", "exploratory"])
+            marker_group = fg_model if is_sdm_high else fg_observed
             weight = 2
             dash = "10 5" if is_sdm_high else None
             tooltip_text = f"{rank_label}{ctype} | site {int(row['site_id'])}"
@@ -4936,16 +5086,20 @@ def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str
             sid = int(row["site_id"])
             if range_set is None or sid in range_set:
                 range_color = "#00a843" if sid in selected_set else color
-                folium.Circle(loc, radius=survey_range_m, color=range_color, fill=True, fill_color=range_color, fill_opacity=0.12, weight=3 if sid in selected_set else weight, popup=folium.Popup(popup_html, max_width=460)).add_to(fg)
+                folium.Circle(loc, radius=survey_range_m, color=range_color, fill=True, fill_color=range_color, fill_opacity=0.10, weight=3 if sid in selected_set else weight, popup=folium.Popup(popup_html, max_width=460)).add_to(fg_recommended)
             # Priority marker dot
             kwargs: dict[str, Any] = dict(radius=marker_radius, color=color, fill=True, fill_color=color, fill_opacity=0.85, weight=2 if not is_sdm_high else 2, tooltip=tooltip_text, popup=folium.Popup(popup_html, max_width=460))
             if dash:
                 kwargs["dash_array"] = dash
-            folium.CircleMarker(loc, **kwargs).add_to(fg)
+            folium.CircleMarker(loc, **kwargs).add_to(marker_group)
             # Selected-site outer ring
             if sid in selected_set:
-                folium.CircleMarker(loc, radius=marker_radius + 5, color="#00cc44", fill=False, weight=3, tooltip=f"SELECTED | site {sid}").add_to(fg)
-        fg.add_to(fmap)
+                folium.CircleMarker(loc, radius=marker_radius + 4, color="#00cc44", fill=False, weight=3, tooltip=f"RECOMMENDED | site {sid}").add_to(fg_recommended)
+        fg_observed.add_to(fmap)
+        fg_model.add_to(fmap)
+        fg_recommended.add_to(fmap)
+        if range_set is not None:
+            add_candidate_evidence_legend(fmap)
     if add_draw:
         Draw(export=False, draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False}, edit_options={"edit": False, "remove": True}).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
@@ -5875,7 +6029,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
             f"{body}</body></html>")
 
 
-EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "plan_name", "plan_rank", "discover_utility", "discovery_value", "learning_value", "accessibility_score", "representation_value", "discovery_label", "learning_label", "access_label", "data_quality", "constraint_status", "priority_rank", "priority_score", "occurrence_support_score", "model_support_score", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "requested_search_cell_size_m", "effective_search_cell_size_m", "resolution_decision_reason", "resolution_data_quality", "effective_grid_cells_evaluated", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "plan_name", "plan_rank", "discover_utility", "discovery_value", "learning_value", "accessibility_score", "representation_value", "discovery_label", "learning_label", "access_label", "data_quality", "constraint_status", "priority_rank", "priority_score", "observed_base_priority_score", "candidate_evidence", "recommendation_basis", "occurrence_support_score", "model_support_score", "model_support_available", "observed_model_agreement_score", "model_agreement_bonus", "model_only_exploration_bonus", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "requested_search_cell_size_m", "effective_search_cell_size_m", "resolution_decision_reason", "resolution_data_quality", "effective_grid_cells_evaluated", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -5973,8 +6127,8 @@ def _make_gmaps_url_with_end(ordered: pd.DataFrame, travelmode: str, start_locat
 def make_validation_template(sites: pd.DataFrame) -> pd.DataFrame:
     cols = [
         "site_id", "candidate_type", "selection_algorithm", "selection_reason", "selection_step", "marginal_gain_score",
-        "priority_rank", "priority_score",
-        "occurrence_support_score", "model_support_score", "sdm_suitability", "ssdm_predicted_richness",
+        "priority_rank", "priority_score", "candidate_evidence", "recommendation_basis",
+        "occurrence_support_score", "model_support_score", "observed_model_agreement_score", "model_agreement_bonus", "sdm_suitability", "ssdm_predicted_richness",
         "observed_species_richness", "species_richness", "species_list",
         "recommended_survey_window", "season_confidence", "flowering_record_count",
         "latitude", "longitude", "google_maps_url",
@@ -6565,7 +6719,7 @@ def build_automatic_genus_bundle(
 
 def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=None) -> dict[str, Any]:
     """Run the existing SSDM engine with fixed lightweight survey-planning defaults."""
-    model_summary, grid, exploratory, grid_shape, grid_bounds, vif_diag = fit_stacked_species_sdms(
+    model_summary, grid, _legacy_exploratory, grid_shape, grid_bounds, vif_diag = fit_stacked_species_sdms(
         occ=bundle["occurrences"],
         variables=["bio1", "bio4", "bio12", "bio15", "bio14"],
         algorithms=list(DEFAULT_ENSEMBLE_ALGORITHMS),
@@ -6595,6 +6749,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
     )
     observed = add_grid_model_support_to_candidates(bundle["all_candidates"], grid)
     observed = add_priority_rank(observed, 0.7, 0.3)
+    exploratory = make_ssdm_exploration_candidates(grid, observed, max_candidates=20)
     if exploratory is not None and not exploratory.empty:
         exploratory = exploratory.copy()
         start_id = int(observed["site_id"].max()) + 1
@@ -6605,6 +6760,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
         candidates = pd.concat([observed, exploratory], ignore_index=True, sort=False)
     else:
         candidates = observed
+    candidates = add_priority_rank(candidates, 0.7, 0.3)
     eligible, audit = apply_discover_hard_constraints(candidates)
     selected_region = bundle.get("selected_region")
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
@@ -6629,7 +6785,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
             "environment_source": "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the SSDM extent",
         },
         "candidate_pool_with_sdm": eligible.copy(),
-        "recommended_with_sdm": simple_recommended_candidates(
+        "recommended_with_sdm": model_connected_recommendations(
             eligible, default_total=3 if bundle.get("survey_features") else 8,
         ),
     })
@@ -6680,13 +6836,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     if progress is not None:
         progress.progress(0.82)
 
-    observed = bundle["all_candidates"].copy()
-    sampled = extract_environment(
-        observed.rename(columns={"latitude": "_candidate_lat", "longitude": "_candidate_lon"}),
-        kept, "_candidate_lat", "_candidate_lon", resolution, status,
-    ).rename(columns={"_candidate_lat": "latitude", "_candidate_lon": "longitude"})
-    observed = predict_suitability(sampled, model)
-    observed["model_support_score"] = pd.to_numeric(observed["sdm_suitability"], errors="coerce").clip(0, 1)
+    observed = add_sdm_grid_support_to_candidates(bundle["all_candidates"], prediction)
     observed = add_priority_rank(observed, 0.7, 0.3)
     exploration = make_sdm_exploration_candidates(
         prediction, occ_sdm, observed, 0.60, 0.90, 3000.0, 3000.0, 20,
@@ -6748,7 +6898,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
             "method_record": method_record,
         },
         "candidate_pool_with_sdm": eligible.copy(),
-        "recommended_with_sdm": simple_recommended_candidates(
+        "recommended_with_sdm": model_connected_recommendations(
             eligible, default_total=3 if bundle.get("survey_features") else 8,
         ),
     })
@@ -6867,16 +7017,27 @@ def render_simple_candidate_result(
 ) -> None:
     st.subheader(title)
     area_count = int(recommended.get("survey_area_id", pd.Series([1])).nunique()) if not recommended.empty else 0
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Candidate pool", f"{len(pool):,}")
-    m2.metric("Survey areas", f"{area_count:,}")
-    m3.metric("Recommended sites", f"{len(recommended):,}")
+    model_available = bool(pool.get("model_support_available", pd.Series(False, index=pool.index)).fillna(False).astype(bool).any())
+    if model_available:
+        evidence = pool.get("candidate_evidence", pd.Series("", index=pool.index)).astype(str)
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Candidate pool", f"{len(pool):,}")
+        m2.metric("Observed + model", f"{evidence.eq('Observed + model').sum():,}")
+        m3.metric("Model-only added", f"{evidence.eq('Model-only exploratory').sum():,}")
+        m4.metric("Recommended sites", f"{len(recommended):,}")
+        st.caption(f"{area_count:,} survey area(s). Existing candidates are re-ranked by model agreement; spatially separate model-only sites are added for field validation.")
+    else:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Candidate pool", f"{len(pool):,}")
+        m2.metric("Survey areas", f"{area_count:,}")
+        m3.metric("Recommended sites", f"{len(recommended):,}")
     if recommended.empty:
         st.warning("No candidate survived the automatic constraints.")
         return
     show_cols = [c for c in [
         "recommendation_rank", "survey_area_id", "site_id", "candidate_type", "priority_score",
-        "occurrence_support_score", "model_support_score", "sdm_suitability",
+        "candidate_evidence", "recommendation_basis", "occurrence_support_score", "model_support_score",
+        "observed_model_agreement_score", "model_agreement_bonus", "sdm_suitability", "ssdm_predicted_richness",
         "why_selected", "latitude", "longitude",
     ] if c in recommended.columns]
     st.dataframe(recommended[show_cols], width="stretch", hide_index=True)

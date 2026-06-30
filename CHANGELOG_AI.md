@@ -1,5 +1,36 @@
 # AI Change Log
 
+## 2026-06-30 - Codex (OpenAI) - Model-connected recommendations and clearer evidence maps
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Added explicit observed/model agreement scoring so existing candidates supported by both occurrence evidence and SDM/SSDM move upward transparently.
+- Added spatial non-maximum suppression for model-only exploration cells, avoiding the previous single-link DBSCAN behavior that could collapse a continuous high-suitability region into one candidate.
+- Added model-connected recommendation quotas: ordinary priority ranking remains primary, with one best model-only exploratory site retained when at least three slots are available.
+- Rebuilt automatic SSDM exploratory candidates from the full richness grid and applied a final global re-ranking after observed and model-only candidates are combined.
+- Removed the second CHELSA extraction pass for existing candidate coordinates by sampling suitability from the completed SDM prediction grid.
+- Split result-map layers into observed/local points, model-only exploratory points, and recommended 500 m survey ranges; added a compact evidence legend.
+- Added export fields for candidate evidence, model agreement, agreement bonus, exploration bonus, and recommendation basis.
+
+Validation:
+- Reproducible random seed `20260630` selected species `Lilium auratum` and genus `Viola`.
+- Random species extent `(138.73423, 36.92800, 140.13423, 38.32800)` retained 17 records and produced 13 candidates / 3 recommendations without SDM.
+- Random genus extent `(139.12806, 35.43241, 139.42806, 35.73241)` retained 94 records and produced 16 observed-richness candidates / 3 recommendations without SSDM.
+- Unit coverage verifies agreement re-ranking, idempotent re-ranking, model-only quota retention, spatially separated SDM/SSDM exploration, completed-grid candidate support, and separated map layers.
+- End-to-end remote SDM attempts did not finish within eight minutes. Inspection found the current CHELSA GeoTIFF endpoint exposes full-width strips and no internal overviews, so remote regional reads remain an external performance risk. No successful AUC claim is made for this validation run.
+
+Features preserved:
+- Occurrence-only candidates, optional independent SDM/SSDM, automatic QC, variable selection/VIF, spatial validation, raster prediction maps, model-only exploration, full candidate downloads, and field-validation exports remain available.
+
+Known risks / TODO:
+- Replace or pre-cache the current remote CHELSA source with a genuinely tiled/overviewed regional source before claiming consistently fast one-click SDM on Streamlit Cloud.
+- Model-only recommendation reservation is a transparent heuristic and should be compared with pure top-ranked selection during field validation.
+
 ## 2026-06-30 - Codex (OpenAI) - Automatic SDM read-only fix, clearer candidate maps, and package extents
 
 Changed files:

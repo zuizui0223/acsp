@@ -17,7 +17,7 @@ The app then shows two directly comparable outputs:
 - **Candidates without SDM/SSDM**: observed occurrence and local habitat evidence.
 - **Candidates with SDM/SSDM**: the same field-planning framework enriched with model support and model-high exploratory sites.
 
-Every result map shows the complete eligible candidate pool as points. Recommended sites are highlighted with a green outline and a 500 m survey buffer, avoiding overlapping buffers across the full pool. Tables and downloads contain explicit site IDs, survey-area IDs, support scores, coordinates, reasons, and field-validation templates.
+Every result map shows the complete eligible candidate pool as points. Observed/local and model-only exploratory candidates use separate map layers. Recommended sites are highlighted with a green outline and a 500 m survey buffer, avoiding overlapping buffers across the full pool. Tables and downloads contain explicit site IDs, survey-area IDs, support scores, coordinates, reasons, and field-validation templates.
 
 When several rectangles are drawn, ACSP treats them as independent survey areas. Candidate generation and recommendation quotas run separately in each area, preventing record-rich regions from taking every recommendation.
 
@@ -45,6 +45,13 @@ The automatic species SDM currently fits four probability-producing model famili
 4. Gradient boosting
 
 Final suitability is the equal-weight mean of the four predicted probabilities. ACSP also reports the best individual model; it does not silently replace the ensemble with that model.
+
+After prediction, ACSP uses the SDM in two distinct ways:
+
+- Existing occurrence/local candidates receive suitability as model support. Candidates with both strong observed support and strong model support receive a transparent agreement bonus and can move upward in the recommendation.
+- High-suitability cells away from known records and existing candidates are added as spatially separated `model-only exploratory` sites. When at least three recommendation slots are available, the best such site is retained for field validation without replacing the observed candidate workflow.
+
+The same logic applies to genus mode: observed richness hotspots are re-ranked by SSDM support, while spatially separated SSDM-high cells are added as model-only richness exploration sites.
 
 Macro-climate predictors are read from CHELSA V2.1 BIOCLIM 30-second Cloud-Optimized GeoTIFFs. Only raster windows intersecting the QC-derived SDM extent are read. The drawn observed-candidate survey areas do not automatically become the SDM extent.
 
