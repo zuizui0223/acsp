@@ -1,0 +1,36 @@
+name: Package checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e .
+      - run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/planning.py acsp/modeling.py acsp/sdm.py
+      - run: python -m unittest test_acsp_package.py test_acsp_discover.py test_automatic_hierarchy.py test_gbif_fetch_resilience.py
+
+  r:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: r-acsp
+          extra-packages: any::rcmdcheck
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          working-directory: r-acsp

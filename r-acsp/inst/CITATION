@@ -1,0 +1,10 @@
+citHeader("To cite acsp in publications use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "acsp: Adaptive Complementarity-based Survey Prioritization",
+  author = person("ACSP", "Developers"),
+  year = "2026",
+  note = "R package version 0.1.0",
+  url = "https://github.com/zuizui0223/acsp"
+)

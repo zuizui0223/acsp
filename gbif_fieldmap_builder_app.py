@@ -39,14 +39,13 @@ from folium import FeatureGroup, LayerControl, Map
 from folium.plugins import Draw, MarkerCluster
 from geopy.distance import geodesic
 from rasterio.enums import Resampling
-from rasterio.errors import NotGeoreferencedWarning
+from rasterio.errors import NotGeoreferencedWarning, RasterioIOError
 from rasterio.transform import from_origin
 from rasterio.windows import Window, from_bounds
 from rasterio.warp import transform as rio_transform
 from shapely.geometry import MultiPoint, Point, box, shape
 from shapely.ops import unary_union
 from sklearn.cluster import DBSCAN
-from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import roc_auc_score
@@ -57,7 +56,9 @@ from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
 
 from acsp import (
+    DEFAULT_ENSEMBLE_ALGORITHMS,
     choose_spatial_partition,
+    make_classifier,
     model_performance_table,
     recommend_candidates,
     sdm_method_record,
@@ -76,7 +77,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-pool-metadata-packages-20260630"
+APP_BUILD_ID = "acsp-four-model-publication-20260630"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -2926,10 +2927,23 @@ def clean_environment_table(df: pd.DataFrame, variables: list[str], label: str, 
     return out, dropped
 
 
+def open_raster_with_retry(path: str, attempts: int = 4):
+    """Open local or remote rasters, retrying transient COG DNS/HTTP failures."""
+    last_error: Optional[Exception] = None
+    for attempt in range(1, int(attempts) + 1):
+        try:
+            return rasterio.open(path)
+        except RasterioIOError as exc:
+            last_error = exc
+            if attempt < int(attempts):
+                time.sleep(min(8.0, 1.5 * (2 ** (attempt - 1))))
+    raise RuntimeError(f"Environmental raster could not be opened after {attempts} attempts: {path}. {last_error}")
+
+
 def sample_raster_values_fast(points: pd.DataFrame, raster_path: str, lat_col: str, lon_col: str, derived: Optional[str] = None) -> np.ndarray:
     if points.empty:
         return np.array([], dtype=float)
-    with rasterio.open(raster_path) as src:
+    with open_raster_with_retry(raster_path) as src:
         coords = points[[lon_col, lat_col]].to_numpy(dtype=float)
         rc = np.array([src.index(float(lon), float(lat)) for lon, lat in coords], dtype=int)
         rows, cols = rc[:, 0], rc[:, 1]
@@ -3766,15 +3780,7 @@ def build_presence_background(occ: pd.DataFrame, n_background: int, area_mode: s
 
 
 def make_model(name: str):
-    if name == "Logistic regression":
-        return Pipeline([("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler()), ("model", LogisticRegression(max_iter=1000, class_weight="balanced"))])
-    if name == "Random forest":
-        return Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", RandomForestClassifier(n_estimators=300, random_state=42, class_weight="balanced_subsample"))])
-    if name == "ExtraTrees":
-        return Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", ExtraTreesClassifier(n_estimators=300, random_state=42, class_weight="balanced"))])
-    if name == "Gradient boosting":
-        return Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", GradientBoostingClassifier(random_state=42))])
-    raise ValueError(name)
+    return make_classifier(name)
 
 
 def assign_spatial_folds(data: pd.DataFrame, method: str, k: int, checkerboard_deg: float) -> pd.Series:
@@ -3934,7 +3940,7 @@ def add_sdm_predict_legend(fmap: folium.Map) -> None:
 
 def read_window_array(path: str, bounds: tuple[float, float, float, float], out_shape: tuple[int, int]) -> tuple[np.ndarray, tuple[float, float, float, float]]:
     west, south, east, north = bounds
-    with rasterio.open(path) as src:
+    with open_raster_with_retry(path) as src:
         window = from_bounds(west, south, east, north, transform=src.transform).round_offsets().round_lengths()
         window = Window(max(0, window.col_off), max(0, window.row_off), min(src.width - max(0, window.col_off), window.width), min(src.height - max(0, window.row_off), window.height))
         actual_bounds = src.window_bounds(window)
@@ -3959,7 +3965,7 @@ def _build_prediction_grid_base(
     land = load_land_geometry()
     west, south, east, north = geom.bounds
     ref_var = "elevation" if any(v in {"elevation", "slope", "roughness"} for v in variables) else variables[0]
-    with rasterio.open(get_worldclim_raster_path(ref_var, resolution)) as src:
+    with open_raster_with_retry(get_worldclim_raster_path(ref_var, resolution)) as src:
         window = from_bounds(west, south, east, north, transform=src.transform).round_offsets().round_lengths()
         raw_h = max(1, int(window.height))
         raw_w = max(1, int(window.width))
@@ -5564,7 +5570,7 @@ def genus_diversity_panel() -> None:
 
         st.divider()
         # ── Environmental variables (fixed default + Advanced, mirrors SDM) ───
-        _SSDM_DEFAULT_ALGORITHMS = ["Random forest", "ExtraTrees"]
+        _SSDM_DEFAULT_ALGORITHMS = list(DEFAULT_ENSEMBLE_ALGORITHMS)
         ssdm_resolution = "2.5m"           # fixed, same as species SDM
         ssdm_variables = list(BALANCED_ECOLOGY_PRESET)
         ssdm_algorithms = list(_SSDM_DEFAULT_ALGORITHMS)
@@ -6558,7 +6564,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
     model_summary, grid, exploratory, grid_shape, grid_bounds, vif_diag = fit_stacked_species_sdms(
         occ=bundle["occurrences"],
         variables=["bio1", "bio4", "bio12", "bio15", "bio14"],
-        algorithms=["Random forest", "ExtraTrees"],
+        algorithms=list(DEFAULT_ENSEMBLE_ALGORITHMS),
         resolution="30s-cog",
         area_mode="bounding box",
         buffer_km=10.0,
@@ -6660,7 +6666,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         variable_diag["rows_dropped_before_selection"] = int(dropped)
     if status is not None:
         status.write(f"Fitting the ensemble SDM with {partition} validation...")
-    model = fit_sdm(train, kept, ["Random forest", "ExtraTrees"], partition, 5, 0.05)
+    model = fit_sdm(train, kept, list(DEFAULT_ENSEMBLE_ALGORITHMS), partition, 5, 0.05)
     performance = model_performance_table(model["metrics"], model["models"].keys())
     if progress is not None:
         progress.progress(0.65)
@@ -7582,9 +7588,8 @@ def main() -> None:
             "Covers temperature level, seasonality, precipitation amount/seasonality, "
             "dryness, and elevation. Override in Advanced below."
         )
-        # Default algorithms: Random Forest + ExtraTrees — well-calibrated for SDM,
-        # complementary bias-variance trade-off, no hyperparameter tuning required.
-        _DEFAULT_ALGORITHMS = ["Random forest", "ExtraTrees"]
+        # Fixed cross-family ensemble keeps the automatic workflow reproducible.
+        _DEFAULT_ALGORITHMS = list(DEFAULT_ENSEMBLE_ALGORITHMS)
         # Fixed defaults — no user decision required
         variables = list(BALANCED_ECOLOGY_PRESET)
         variable_strategy = "VIF stepwise"

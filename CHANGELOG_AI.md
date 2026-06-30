@@ -1,5 +1,49 @@
 # AI Change Log
 
+## 2026-06-30 - Codex (OpenAI) - Four-model ensembles and publication-ready repository metadata
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- acsp/__init__.py
+- acsp/modeling.py
+- pyproject.toml
+- r-acsp/R/modeling.R
+- r-acsp/NAMESPACE
+- r-acsp/man/acsp_default_algorithms.Rd
+- r-acsp/README.md
+- r-acsp/inst/CITATION
+- test_acsp_package.py
+- README.md
+- LICENSE
+- CITATION.cff
+- .github/workflows/package-checks.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Expanded automatic species SDM and per-species SSDM from two tree ensembles to four model families: Logistic regression, Random forest, ExtraTrees, and Gradient boosting.
+- Final suitability remains an explicit equal-weight probability ensemble; diagnostics identify the best individual model without replacing the ensemble.
+- Moved supported classifier construction and equal-weight prediction into the reusable Python package and made the Streamlit compatibility factory use that API.
+- Added the matching default algorithm specification to the R package.
+- Expanded Python package metadata with scikit-learn dependency, MIT license, repository URLs, development extras, and publication classifiers.
+- Added root MIT license, `CITATION.cff`, R package citation metadata, and GitHub Actions checks for Python 3.10-3.12 plus R package checking.
+- Rewrote the GitHub README to describe the current two-result workflow, full candidate maps, four-model 30-second SDM, reporting outputs, Python/R package APIs, validation status, citation, and publication path.
+- Added shared remote-raster open retries for transient CHELSA COG DNS/HTTP failures.
+
+Validation:
+- Python editable package build/install succeeded with the expanded four-model API.
+- Local classifier tests fit Logistic regression, Random forest, ExtraTrees, and Gradient boosting and verified equal-weight ensemble probabilities.
+- `python -m py_compile gbif_fieldmap_builder_app.py` passed and all 24 Python tests passed.
+- The `Campanula microdonta` end-to-end rerun reached environmental extraction but could not complete the new four-model AUC comparison because the external CHELSA COG endpoint remained unavailable after four retries. The previously completed two-model validation remains documented below; no unverified four-model AUC is reported.
+- R is not installed in the current Windows environment, so R package checking is delegated to the added GitHub Actions workflow.
+
+Features preserved:
+- Occurrence-only candidates, independent optional SDM/SSDM, QC, variable selection/VIF, spatial partition diagnostics, full candidate maps, model-high exploration candidates, exports, and field-validation outputs remain available.
+
+Known risks / TODO:
+- Four algorithms increase optional SDM/SSDM runtime relative to the previous two-model ensemble.
+- PyPI/CRAN/Zenodo publication still requires final author metadata, release review, and repository-owner credentials.
+- R CMD check is delegated to GitHub Actions because R is not installed in the current Windows environment.
+
 ## 2026-06-30 - Codex (OpenAI) - Full candidate maps, publication metadata, and Python/R packages
 
 Changed files:

@@ -1,8 +1,9 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, sentinel
 
 import numpy as np
 import pandas as pd
+from rasterio.errors import RasterioIOError
 
 from gbif_fieldmap_builder_app import (
     build_automatic_discover_bundle,
@@ -11,11 +12,24 @@ from gbif_fieldmap_builder_app import (
     decode_gsi_dem_rgb,
     estimate_default_short_trip,
     get_worldclim_raster_path,
+    open_raster_with_retry,
     simple_recommended_candidates,
 )
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_remote_raster_open_retries_transient_failures(self):
+        with (
+            patch(
+                "gbif_fieldmap_builder_app.rasterio.open",
+                side_effect=[RasterioIOError("first"), RasterioIOError("second"), sentinel.dataset],
+            ) as mocked,
+            patch("gbif_fieldmap_builder_app.time.sleep"),
+        ):
+            opened = open_raster_with_retry("https://example.test/a.tif")
+        self.assertIs(opened, sentinel.dataset)
+        self.assertEqual(mocked.call_count, 3)
+
     def test_automatic_climate_uses_remote_30_second_cog(self):
         path = get_worldclim_raster_path("bio12", "30s-cog")
         self.assertIn("CHELSA_bio12_1981-2010_V.2.1.tif", path)

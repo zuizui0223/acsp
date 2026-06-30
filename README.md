@@ -1,197 +1,164 @@
 # ACSP - Adaptive Complementarity-based Survey Prioritization
 
-ACSP is a Streamlit app for turning occurrence records into ranked, field-ready survey-site sets.
+ACSP converts occurrence records into ranked, field-ready survey-site candidates. It is a field-survey decision tool, not an all-record SDM platform.
 
-The app is no longer just a GBIF map builder. It integrates known records, optional SDM/SSDM prediction, local habitat-analogue discovery, accessibility proxies, and field-validation feedback to help researchers decide where to survey next.
+Development status: **alpha (0.1.0)**. Field validation and retrospective benchmark studies are still required before treating the rankings as a validated general method.
 
-## Reusable packages
+## Main workflow
 
-The repository includes early ACSP methods packages for Python and R. They expose survey-area quotas, occurrence-count/spatial-span partition selection, and manuscript-ready SDM method records without depending on Streamlit.
+The automatic app asks users to make only three decisions:
 
-Python development install:
+1. Enter a species or genus scientific name.
+2. Optionally draw one or more realistic survey areas.
+3. Optionally generate SDM/SSDM-supported candidates.
+
+The app then shows two directly comparable outputs:
+
+- **Candidates without SDM/SSDM**: observed occurrence and local habitat evidence.
+- **Candidates with SDM/SSDM**: the same field-planning framework enriched with model support and model-high exploratory sites.
+
+Every result map shows the complete eligible candidate pool. Recommended sites are highlighted with a green outline. Tables and downloads contain explicit site IDs, survey-area IDs, support scores, coordinates, reasons, and field-validation templates.
+
+When several rectangles are drawn, ACSP treats them as independent survey areas. Candidate generation and recommendation quotas run separately in each area, preventing record-rich regions from taking every recommendation.
+
+## Occurrence and local candidate processing
+
+- GBIF scientific-name matching and paginated occurrence retrieval.
+- Coordinate cleaning, exact deduplication, and representative working subsets.
+- Conservative automatic removal of remote minor clusters from SDM input.
+- Flexible latitude/longitude detection for the retained detailed CSV workflow code.
+- Occurrence-supported candidate ranges.
+- App-provided GSI terrain for Japan.
+- Local habitat candidates using elevation, slope, aspect, roughness, and topographic position.
+- Habitat-match, Survey-gap, and Environmental-test candidates.
+- Full candidate-pool CSV and field-validation CSV exports.
+
+Observed candidate generation remains available without SDM.
+
+## Automatic SDM ensemble
+
+The automatic species SDM currently fits four probability-producing model families:
+
+1. Logistic regression
+2. Random forest
+3. ExtraTrees
+4. Gradient boosting
+
+Final suitability is the equal-weight mean of the four predicted probabilities. ACSP also reports the best individual model; it does not silently replace the ensemble with that model.
+
+Macro-climate predictors are read from CHELSA V2.1 BIOCLIM 30-second Cloud-Optimized GeoTIFFs. Only raster windows intersecting the QC-derived SDM extent are read. The drawn observed-candidate survey areas do not automatically become the SDM extent.
+
+Automatic validation uses occurrence count and minimum geographic span:
+
+| Condition | Validation design |
+|---|---|
+| fewer than 15 presences | jackknife |
+| fewer than 30, or minimum extent span below 2 degrees | random 75/25 holdout |
+| 30-49 presences | random 5-fold CV |
+| 50 or more presences with adequate span | four-quadrant spatial block CV |
+
+The app exports:
+
+- AUC and warning for every ensemble member
+- best individual model and AUC
+- ensemble members and weights
+- source, excluded, and retained occurrence counts
+- background-point count
+- partition method and selection reason
+- retained environmental variables
+- environment source and independent prediction extent
+- manuscript-ready methods text
+
+High AUC from random partitioning is explicitly flagged as potentially optimistic.
+
+## Genus and SSDM
+
+Genus names route to the observed-richness/SSDM workflow. Observed richness candidates work without SSDM. The optional SSDM stacks capped per-species SDMs over a shared prediction grid and reports per-species model status, AUC, partition, retained variables, and predicted richness.
+
+## Python package
+
+The installable Python distribution is named `acsp-survey`; its import package is `acsp`.
 
 ```bash
 python -m pip install -e .
 ```
 
 ```python
-from acsp import choose_spatial_partition, recommend_candidates
+from acsp import (
+    DEFAULT_ENSEMBLE_ALGORITHMS,
+    choose_spatial_partition,
+    make_classifier,
+    recommend_candidates,
+    sdm_method_record,
+)
 
 recommended = recommend_candidates(candidates, per_area=3)
 partition, reason = choose_spatial_partition(86, geographic_span_degrees=1.8)
+models = {name: make_classifier(name) for name in DEFAULT_ENSEMBLE_ALGORITHMS}
 ```
 
-R development install:
+Current Python APIs cover candidate quotas, classifier construction, equal-weight prediction, partition selection, ensemble-performance summaries, and method records. GBIF retrieval and raster orchestration remain app-level APIs for now.
+
+## R package
+
+An early base-R package is provided in [`r-acsp`](r-acsp).
 
 ```r
 remotes::install_local("r-acsp")
 library(acsp)
 
-recommended <- acsp_recommend(candidates, per_area=3)
-partition <- acsp_sdm_partition(86, geographic_span_degrees=1.8)
+recommended <- acsp_recommend(candidates, per_area = 3)
+partition <- acsp_sdm_partition(86, geographic_span_degrees = 1.8)
+algorithms <- acsp_default_algorithms()
 ```
 
-## Automatic workflow
+The R package currently mirrors recommendation quotas, partition selection, default ensemble specification, and method-record generation. Full raster SDM/SSDM fitting is a planned package extension.
 
-The main screen asks for a species or genus name. ACSP fetches a representative GBIF subset, applies occurrence QC, and builds observed-data candidates. Users may draw one or more survey areas; each area receives an independent candidate pool and recommendation quota.
-
-The app shows two directly comparable results:
-
-1. `Candidates without SDM/SSDM`, based on observed records and local habitat evidence.
-2. `Candidates with SDM/SSDM`, generated only after the optional model action.
-
-Both maps show the full candidate pool and highlight recommended sites. SDM/SSDM diagnostics report spatial validation, ensemble members, best individual model, environmental variables, QC counts, and exportable method metadata. Researcher-owned CSV input and the detailed legacy analysis functions remain in the codebase for compatibility.
-
-For widespread taxa, the app no longer mixes nationwide sites into one trip. Region recommendations use compact approximately 40 km-radius hubs. Every field day now begins and ends at the selected hub, uses a 35 km/h average road speed, a 1.35 road-distance factor, and keeps a 15% operational reserve for navigation, parking, breaks, and delay. Search time, access time, usable daily hours, repeat visits, and interpretation cautions are inferred from broad GBIF taxonomy (for example plant, bird, amphibian, arthropod, mammal, or fish). Candidate count is reduced until each day fits. These are transparent reconnaissance defaults, not a road-routing or species-method guarantee.
-
-The Known distribution map remains available in the ordinary result flow. Users can choose another suggested region or draw a rectangle/polygon and rebuild within their own study area without making map drawing a prerequisite for receiving an answer.
-
-## Core Idea
-
-ACSP is designed for field-survey planning, not as a full all-record SDM platform.
-
-The central workflow is:
-
-1. Organize known occurrence records.
-2. Generate occurrence-supported survey candidates.
-3. Optionally use SDM/SSDM as a broad macro-scale filter.
-4. Search for local habitat analogues and informative contrast sites.
-5. Select a complementary set of survey sites under fieldwork constraints.
-6. Export sites, visit them, and feed validation results back into the ranking.
-
-## Four App Layers
-
-### 1. Known Records
-
-- GBIF occurrence download or researcher-owned coordinate CSV upload.
-- Flexible latitude/longitude column detection.
-- Coordinate QC and exclusion of suspect records.
-- Date, year, and flowering-season summaries when available.
-- DBSCAN-based occurrence cluster candidates.
-- Known-distribution and survey-area maps.
-
-This layer identifies occurrence-supported sites where the species is already known or strongly supported by records.
-
-### 2. SDM / SSDM
-
-- Optional single-species ensemble SDM.
-- Optional genus-level SSDM for stacked species distribution modeling.
-- WorldClim/environmental predictors with VIF and correlation diagnostics.
-- Spatial validation options: block, checkerboard, random holdout, random k-fold, and jackknife.
-- Raster-style SDM predict maps.
-- SDM-high and SSDM-high exploratory candidates.
-
-This layer is a macro-scale filter. SDM/SSDM support can re-rank candidates or identify model-only exploration sites, but occurrence-supported candidates remain usable without SDM.
-
-### 3. Potential Survey Sites
-
-Potential Survey Sites is a local habitat-discovery layer.
-
-It builds grid-cell candidates beyond known occurrence clusters:
-
-- `Habitat-match`: environmentally similar to known sites but not yet recorded.
-- `Survey-gap`: similar habitat with low local record density.
-- `Environmental-test`: deliberately different or edge-like habitat to test limits and learn absence/contrast information.
-
-The app builds a local known-site habitat profile from variables such as:
-
-- elevation
-- slope
-- aspect
-- terrain roughness
-- topographic position index
-- coastline distance proxy
-- optional OpenStreetMap road, trail, and forest-edge distance proxies
-
-Candidate cells are scored with interpretable local metrics such as Mahalanobis environmental distance, environmental similarity, survey-gap score, environmental novelty, and accessibility proxies.
-
-Local DEM, NDVI, and land-cover GeoTIFFs can be uploaded directly. ACSP-Discover prevents false precision by choosing a cell width no finer than the coarsest supplied raster, the 75th percentile of coordinate uncertainty, or the practical field-search scale. Without a local raster, the built-in approximately 4.5 km elevation layer limits the effective cell width accordingly.
-
-SDM remains separate: it can be used as a broad search-frame filter, while local habitat analogue scoring remains the main Potential Survey Sites logic.
-
-### 4. ACSP Set Selection and Export
-
-ACSP selects survey-site sets, not only individual high-score points.
-
-The greedy marginal-gain selection considers:
-
-- base occurrence/model priority
-- geographic complementarity
-- environmental complementarity
-- exploration value
-- sampling-gap coverage
-- local habitat-analogue support
-- field-validation learning support
-- access feasibility
-- redundancy penalty
-- travel penalty
-
-The default v1 result presents three plans made from the same eligible pool:
-
-- `Balanced`: balances discovery, learning, representation, access, and movement.
-- `Discovery`: prioritizes likely new populations and feasible access.
-- `Learning`: prioritizes uncertainty, environmental boundaries, and representation.
-
-Known hard constraints are applied before scoring, with a downloadable exclusion/unknown-data audit. Advanced legacy modes remain available for comparison, including:
-
-- `Simple top-ranked`
-- `Complementarity-based batch selection`
-- `Habitat analogue survey`
-- `Exploration-focused active survey`
-- `Phylogeographic gap-filling`
-
-Outputs include selected-site tables, Google Maps links, CSV, KML, HTML, and field-validation CSV templates.
-
-## Field-Validation Learning
-
-ACSP can ingest a previous validation CSV with matching `site_id` values and a standard `result` field (`found`, `not_found`, `flowering_absent`, `inaccessible`, or `uncertain_id`), as well as older result columns such as `target_species_found`, `found`, or `detected`. Only determinate `found`/`not_found` outcomes train the presence-support model.
-
-When enough positive and negative outcomes are available, the app learns a lightweight `field_validation_support_score` and uses it as one optional component in future ranking.
-
-This is currently a practical re-ranking tool, not a full online occupancy model.
-
-## Current Scientific Status
-
-Implemented and usable:
-
-- occurrence-supported candidate generation
-- optional SDM/SSDM support
-- local habitat analogue candidates
-- under-surveyed and environmental-contrast candidates
-- app-provided terrain and access/edge proxies
-- ACSP complementary set selection
-- field-validation score feedback
-- fieldwork-oriented exports
-
-Still under active development:
-
-- app-provided NDVI and land-cover sources
-- stronger survey-effort modeling using broader all-taxa records
-- explicit discovery-value vs learning-value modes
-- real travel-time routing and ferry/day constraints
-- richer field-result modeling for detectability, access failure, and flowering state
-- retrospective validation experiments against hidden occurrence records
-
-## Local Install
+## Install and run the app
 
 ```bash
 python -m pip install -r requirements.txt
-```
-
-## Run Locally
-
-```bash
 python -m streamlit run gbif_fieldmap_builder_app.py
 ```
 
-## Streamlit Community Cloud
+Streamlit Community Cloud:
 
-Use:
-
-- Repository: `zuizui0223/acsp` or the redirected legacy repository
+- Repository: `zuizui0223/acsp`
 - Branch: `main`
-- Main file path: `gbif_fieldmap_builder_app.py`
+- Main file: `gbif_fieldmap_builder_app.py`
 
-## Notes
+## Repository structure
 
-Google Maps links are provided for field verification. ACSP does not guarantee road access, ferry feasibility, trail safety, permission, or detectability. Field validation remains part of the intended workflow.
+- `gbif_fieldmap_builder_app.py`: Streamlit application and raster/GBIF orchestration
+- `acsp/`: reusable Python package
+- `r-acsp/`: reusable R package
+- `acsp_discover.py`: retained survey-protocol and legacy set-selection methods
+- `test_*.py`: regression and package tests
+- `CITATION.cff`: software citation metadata
+- `.github/workflows/package-checks.yml`: Python and R package CI
+
+## Validation and publication path
+
+The method should be benchmarked against random sampling, occurrence-only ranking, SDM-high ranking, and environmental-representativeness baselines. Recommended evaluation metrics include new-population recovery, discoveries per field day, environmental coverage, geographic independence, and improvement after field feedback.
+
+For a reproducible paper or report:
+
+1. archive the exact GitHub release used;
+2. export the candidate pools and SDM method CSV;
+3. report automatic QC exclusions and partition warnings;
+4. retain field-validation outcomes; and
+5. cite the archived release using `CITATION.cff`.
+
+Python and R package checks run in GitHub Actions. PyPI, CRAN, and DOI/Zenodo publication require final author metadata, release review, and repository-owner credentials.
+
+## Current limitations
+
+- Straight-line map links do not model roads, ferries, cliffs, permissions, or trail time.
+- Presence-only SDM AUC can be optimistic, especially under random holdout.
+- Local access and detectability require field verification.
+- App-provided NDVI, land cover, and stronger all-taxa survey-effort layers remain future work.
+- The R package does not yet expose full raster SDM/SSDM fitting.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

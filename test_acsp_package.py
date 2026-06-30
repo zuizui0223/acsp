@@ -1,16 +1,33 @@
 import unittest
 
 import pandas as pd
+import numpy as np
 
 from acsp import (
+    DEFAULT_ENSEMBLE_ALGORITHMS,
     choose_spatial_partition,
     model_performance_table,
+    make_classifier,
+    predict_equal_weight_ensemble,
     recommend_candidates,
     sdm_method_record,
 )
 
 
 class AcspPackageTests(unittest.TestCase):
+    def test_all_default_classifiers_produce_an_ensemble_probability(self):
+        X = pd.DataFrame({"bio1": np.linspace(0, 1, 24), "bio12": np.tile([0.1, 0.9], 12)})
+        y = np.array([0] * 12 + [1] * 12)
+        models = {}
+        for name in DEFAULT_ENSEMBLE_ALGORITHMS:
+            model = make_classifier(name)
+            model.fit(X, y)
+            models[name] = model
+        prediction = predict_equal_weight_ensemble(models, X)
+        self.assertEqual(set(models), set(DEFAULT_ENSEMBLE_ALGORITHMS))
+        self.assertEqual(len(prediction), len(X))
+        self.assertTrue(np.all((prediction >= 0) & (prediction <= 1)))
+
     def test_area_quota(self):
         candidates = pd.DataFrame({
             "site_id": range(1, 9),

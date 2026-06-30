@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use ACSP in research, cite this software and archive the exact release used."
+title: "ACSP: Adaptive Complementarity-based Survey Prioritization"
+type: software
+authors:
+  - name: "ACSP Developers"
+version: 0.1.0
+date-released: 2026-06-30
+license: MIT
+repository-code: "https://github.com/zuizui0223/acsp"
+url: "https://github.com/zuizui0223/acsp"
+keywords:
+  - field survey planning
+  - species distribution model
+  - biodiversity
+  - GBIF
+  - spatial prioritization
