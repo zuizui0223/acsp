@@ -26,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip build
           python -m pip install -e .
       - name: Compile Python sources
-        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py
+        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/cli.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py
       - name: Run Python tests
         run: python -m unittest discover -v
       - name: Build Python wheel
@@ -37,10 +37,33 @@ jobs:
           .wheel-venv/bin/python -m pip install --upgrade pip
           .wheel-venv/bin/python -m pip install dist/*.whl
           pushd /tmp
-          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
+          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp.cli; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
           popd
-      - name: Verify packaged app command
-        run: acsp-fieldmap --help
+      - name: Verify packaged app and recommendation commands
+        run: |
+          acsp-fieldmap --help
+          acsp-recommend --help
+
+  github-action:
+    name: ACSP GitHub Action smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the local ACSP Action
+        id: acsp
+        uses: ./
+        with:
+          candidates-csv: examples/acsp-candidates.csv
+          output-csv: action-smoke/recommended.csv
+          summary-json: action-smoke/summary.json
+          per-area: "3"
+      - name: Confirm Action outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "${{ steps.acsp.outputs.recommended-csv }}"
+          test -s "${{ steps.acsp.outputs.summary-json }}"
+          test "${{ steps.acsp.outputs.selected-count }}" = "6"
 
   r:
     name: R package
