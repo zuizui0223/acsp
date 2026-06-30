@@ -1,5 +1,49 @@
 # AI Change Log
 
+## 2026-06-30 - Codex (OpenAI) - Full candidate maps, publication metadata, and Python/R packages
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- acsp/__init__.py
+- acsp/planning.py
+- acsp/sdm.py
+- pyproject.toml
+- r-acsp/DESCRIPTION
+- r-acsp/NAMESPACE
+- r-acsp/LICENSE
+- r-acsp/R/recommend.R
+- r-acsp/R/sdm.R
+- r-acsp/man/*.Rd
+- r-acsp/README.md
+- README.md
+- .gitignore
+- test_acsp_package.py
+- CHANGELOG_AI.md
+
+Summary:
+- Changed both without-model and with-model maps to display the complete eligible candidate pool. Recommended sites remain distinguishable with the existing green selected-site outline.
+- Added model-performance reporting for each ensemble member, equal ensemble weights, the best individual model, validation AUC, and AUC warnings.
+- Added a manuscript-ready SDM method record containing occurrence counts before/after QC, background count, automatically selected partition and reason, predictors, 30-second CHELSA source, independent prediction extent, ensemble definition, best model, AUC, and a methods-text paragraph.
+- Added CSV downloads for the SDM method record and model-performance table.
+- Added the installable `acsp-survey` Python package with candidate recommendation, spatial-partition selection, ensemble-performance summarization, and method-record APIs. The Streamlit app now uses these package functions through compatibility wrappers.
+- Added the initial base-R `acsp` package under `r-acsp`, with matching recommendation, partition, and method-record functions plus package metadata and manual pages.
+- Updated README instructions for Python and R development installs and the simplified two-result app workflow.
+
+Validation:
+- Python editable package build/install succeeded as `acsp-survey 0.1.0`.
+- `Campanula microdonta` four-area rerun retained candidate pools of 22/18/20/21 without SDM and 23/18/20/21 with SDM; each area retained three recommendations.
+- The fitted ensemble used Random forest and ExtraTrees at equal 0.5 weights. Random forest was the best individual model (AUC 0.970); ExtraTrees AUC was 0.926.
+- Automatic validation selected random 75/25 holdout because 86 post-QC records had a minimum SDM extent span of 1.80 degrees. High/random-split AUC cautions are exported.
+- `python -m py_compile gbif_fieldmap_builder_app.py` passed and all 22 Python tests passed.
+- R is not installed in the current environment, so `R CMD check` could not be run; the R package uses base R only and received static structure/documentation checks.
+
+Features preserved:
+- Full observed candidate generation, optional independent SDM/SSDM, 30-second COG prediction maps, spatial QC, VIF/variable selection, model-only exploration candidates, map exports, and field-validation outputs remain available.
+
+Known risks / TODO:
+- The initial R package mirrors the reusable ranking and reporting core; GBIF retrieval, raster SDM fitting, and full SSDM fitting are not yet exposed as R package APIs.
+- AUC 0.970 from random holdout is potentially optimistic and must be reported with the exported validation warning rather than treated as definitive transferability evidence.
+
 ## 2026-06-29 - Codex (OpenAI) - Four-area planning, 30-second COG SDM, and two-result workflow
 
 Changed files:

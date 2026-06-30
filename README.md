@@ -4,20 +4,43 @@ ACSP is a Streamlit app for turning occurrence records into ranked, field-ready 
 
 The app is no longer just a GBIF map builder. It integrates known records, optional SDM/SSDM prediction, local habitat-analogue discovery, accessibility proxies, and field-validation feedback to help researchers decide where to survey next.
 
-## Species-name-only workflow
+## Reusable packages
 
-The default screen asks only for a scientific name. After `Create survey proposal`, ACSP automatically:
+The repository includes early ACSP methods packages for Python and R. They expose survey-area quotas, occurrence-count/spatial-span partition selection, and manuscript-ready SDM method records without depending on Streamlit.
 
-1. matches the taxon and fetches a representative GBIF subset (Japan first, worldwide fallback when Japan has no records);
-2. separates the main recorded range, stable disjunct ranges, and possible remote noise without deleting the audit trail;
-3. classifies the distribution as narrow/local, regional, disjunct, or widespread;
-4. creates compact short-trip region cards (recommended, discovery, and range contrast) before selecting sites;
-5. chooses thinning and candidate-grouping scales within the selected region;
-6. creates occurrence-supported, Habitat-match, Survey-gap, and Environmental-test candidates;
-7. applies hard constraints before scoring; and
-8. returns Balanced, Discovery, and Learning plans, a map, Google Maps route, plan CSV, validation CSV, and QC audits.
+Python development install:
 
-Balanced plans reserve available capacity for at least two known anchors, three discovery candidates, and one learning candidate when eight cells are requested. Advanced/manual workflow preserves the existing controls, optional SDM/SSDM, and researcher CSV inputs.
+```bash
+python -m pip install -e .
+```
+
+```python
+from acsp import choose_spatial_partition, recommend_candidates
+
+recommended = recommend_candidates(candidates, per_area=3)
+partition, reason = choose_spatial_partition(86, geographic_span_degrees=1.8)
+```
+
+R development install:
+
+```r
+remotes::install_local("r-acsp")
+library(acsp)
+
+recommended <- acsp_recommend(candidates, per_area=3)
+partition <- acsp_sdm_partition(86, geographic_span_degrees=1.8)
+```
+
+## Automatic workflow
+
+The main screen asks for a species or genus name. ACSP fetches a representative GBIF subset, applies occurrence QC, and builds observed-data candidates. Users may draw one or more survey areas; each area receives an independent candidate pool and recommendation quota.
+
+The app shows two directly comparable results:
+
+1. `Candidates without SDM/SSDM`, based on observed records and local habitat evidence.
+2. `Candidates with SDM/SSDM`, generated only after the optional model action.
+
+Both maps show the full candidate pool and highlight recommended sites. SDM/SSDM diagnostics report spatial validation, ensemble members, best individual model, environmental variables, QC counts, and exportable method metadata. Researcher-owned CSV input and the detailed legacy analysis functions remain in the codebase for compatibility.
 
 For widespread taxa, the app no longer mixes nationwide sites into one trip. Region recommendations use compact approximately 40 km-radius hubs. Every field day now begins and ends at the selected hub, uses a 35 km/h average road speed, a 1.35 road-distance factor, and keeps a 15% operational reserve for navigation, parking, breaks, and delay. Search time, access time, usable daily hours, repeat visits, and interpretation cautions are inferred from broad GBIF taxonomy (for example plant, bird, amphibian, arthropod, mammal, or fish). Candidate count is reduced until each day fits. These are transparent reconnaissance defaults, not a road-routing or species-method guarantee.
 

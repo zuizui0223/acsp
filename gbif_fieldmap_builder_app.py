@@ -56,6 +56,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from streamlit_folium import st_folium
 
+from acsp import (
+    choose_spatial_partition,
+    model_performance_table,
+    recommend_candidates,
+    sdm_method_record,
+)
 from acsp_discover import (
     PLAN_ORDER as ACSP_DISCOVER_PLAN_ORDER,
     apply_hard_constraints as apply_discover_hard_constraints,
@@ -70,7 +76,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-simple-sdm-30s-20260629"
+APP_BUILD_ID = "acsp-pool-metadata-packages-20260630"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -1235,16 +1241,7 @@ def assign_survey_area_ids(
 
 def simple_recommended_candidates(candidates: pd.DataFrame, per_area: int = 3, default_total: int = 8) -> pd.DataFrame:
     """Return a transparent top-ranked set, with an equal quota per drawn area."""
-    if candidates is None or candidates.empty:
-        return pd.DataFrame()
-    ranked = candidates.sort_values(["priority_score", "site_id"], ascending=[False, True]).copy()
-    if "survey_area_id" in ranked.columns and ranked["survey_area_id"].nunique() > 1:
-        selected = ranked.groupby("survey_area_id", group_keys=False).head(int(per_area)).copy()
-        selected = selected.sort_values(["survey_area_id", "priority_score"], ascending=[True, False])
-    else:
-        selected = ranked.head(int(default_total)).copy()
-    selected["recommendation_rank"] = range(1, len(selected) + 1)
-    return selected.reset_index(drop=True)
+    return recommend_candidates(candidates, per_area=per_area, default_total=default_total)
 
 
 def expand_lonlat_bounds(bounds: tuple[float, float, float, float], distance_km: float) -> tuple[float, float, float, float]:
@@ -3477,6 +3474,8 @@ def auto_sdm_partition(n_occ: int, extent_geom) -> tuple[str, str]:
     if extent_geom is not None and not extent_geom.is_empty:
         minx, miny, maxx, maxy = extent_geom.bounds
         geo_spread_deg = min(maxx - minx, maxy - miny)
+
+    return choose_spatial_partition(int(n_occ), geo_spread_deg)
 
     if n_occ < 15:
         return (
@@ -6662,6 +6661,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     if status is not None:
         status.write(f"Fitting the ensemble SDM with {partition} validation...")
     model = fit_sdm(train, kept, ["Random forest", "ExtraTrees"], partition, 5, 0.05)
+    performance = model_performance_table(model["metrics"], model["models"].keys())
     if progress is not None:
         progress.progress(0.65)
     overlay, prediction = build_predict_map(
@@ -6703,6 +6703,19 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
         "estimated_days": int(trip["estimated_days"]),
         "recommended_window": bundle["proposal"]["recommended_window"],
     })
+    environment_source = "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the QC-derived SDM extent"
+    method_record = sdm_method_record(
+        n_source_records=len(occ_capped),
+        n_qc_excluded=len(excluded),
+        n_presence_used=len(occ_sdm),
+        n_background=500,
+        partition_method=partition,
+        partition_reason=partition_reason,
+        variables=kept,
+        performance=performance,
+        environment_source=environment_source,
+        prediction_extent="QC-derived bounding box with a 20 km margin; independent of drawn survey areas",
+    )
     updated = dict(bundle)
     updated.update({
         "all_candidates": candidates,
@@ -6720,7 +6733,9 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
             "excluded": excluded,
             "partition_reason": partition_reason,
             "exploration": exploration,
-            "environment_source": "CHELSA V2.1 BIOCLIM 30-second COG, window-read over the QC-derived SDM extent",
+            "environment_source": environment_source,
+            "model_performance": performance,
+            "method_record": method_record,
         },
         "candidate_pool_with_sdm": eligible.copy(),
         "recommended_with_sdm": simple_recommended_candidates(
@@ -6871,8 +6886,12 @@ def render_simple_candidate_result(
         f"{key_prefix}_field_validation.csv", "text/csv", key=f"{key_prefix}_validation_csv",
         use_container_width=True,
     )
+    st.caption("All candidate-pool sites are shown on the map; recommended sites have a green outline.")
     layers = {"predict": overlay is not None, "occ": True, "candidate_circles": True}
-    result_map = build_map(bundle["scope"], recommended, overlay, None, 0.0, 500.0, layers, False)
+    selected_ids = tuple(pd.to_numeric(recommended["site_id"], errors="coerce").dropna().astype(int).tolist())
+    result_map = build_map(
+        bundle["scope"], pool, overlay, None, 0.0, 500.0, layers, False, selected_ids=selected_ids,
+    )
     st_folium(result_map, width=None, height=650, returned_objects=[], key=f"{key_prefix}_map")
 
 
@@ -7098,6 +7117,7 @@ def render_automatic_discover() -> None:
             overlay=sdm["overlay"],
         )
         with st.expander("SDM model, QC, and variable diagnostics", expanded=False):
+            method_record = sdm.get("method_record", {})
             st.write({
                 "environment_source": sdm.get("environment_source"),
                 "presence_records_used": int(sdm["qc_report"].get("included_records", len(bundle["occurrences"]))),
@@ -7106,6 +7126,24 @@ def render_automatic_discover() -> None:
                 "partition_reason": sdm["partition_reason"],
                 "prediction_cells": int(len(sdm["prediction"])),
             })
+            if method_record:
+                st.write("Manuscript-ready SDM method summary")
+                st.caption(str(method_record.get("methods_text", "")))
+                st.dataframe(pd.DataFrame([method_record]), width="stretch", hide_index=True)
+                m1, m2 = st.columns(2)
+                m1.download_button(
+                    "SDM method CSV", pd.DataFrame([method_record]).to_csv(index=False).encode("utf-8"),
+                    "sdm_method_summary.csv", "text/csv", key="automatic_sdm_method_csv",
+                    use_container_width=True,
+                )
+                m2.download_button(
+                    "Model performance CSV", sdm.get("model_performance", pd.DataFrame()).to_csv(index=False).encode("utf-8"),
+                    "sdm_model_performance.csv", "text/csv", key="automatic_sdm_performance_csv",
+                    use_container_width=True,
+                )
+            if sdm.get("model_performance") is not None:
+                st.write("Ensemble members and best individual model")
+                st.dataframe(sdm["model_performance"], width="stretch", hide_index=True)
             st.dataframe(sdm["model"]["metrics"], width="stretch", hide_index=True)
             st.dataframe(sdm["variable_diagnostics"], width="stretch", hide_index=True)
 

@@ -1,0 +1,11 @@
+Package: acsp
+Type: Package
+Title: Adaptive Candidate Selection for Field Surveys
+Version: 0.1.0
+Authors@R: person("ACSP", "Developers", role = c("aut", "cre"), email = "acsp@example.org")
+Description: Transparent candidate ranking, survey-area quotas, spatial
+    validation selection, and SDM method reporting for field-survey planning.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
