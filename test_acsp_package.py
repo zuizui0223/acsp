@@ -47,6 +47,16 @@ class AcspPackageTests(unittest.TestCase):
         self.assertEqual(scored["integrated_support_score"].nunique(), 1)
         self.assertTrue(scored["distance_excluded_validation_score"].all())
 
+    def test_distance_excluded_score_rejects_spatial_habitat_fallback(self):
+        candidates = pd.DataFrame({
+            "latitude": [35.0, 35.1], "longitude": [139.0, 139.1],
+            "analogue_score": [0.9, 0.2],
+            "occurrence_derived_habitat_score": [True, False],
+        })
+        scored = integrated_candidate_scores(candidates, exclude_occurrence_derived=True)
+        self.assertFalse(bool(scored.loc[0, "component_local_habitat_available"]))
+        self.assertTrue(bool(scored.loc[1, "component_local_habitat_available"]))
+
     def test_spatial_block_recovery_is_reproducible_and_uses_training_only(self):
         occurrences = pd.DataFrame({
             "record_id": range(8),
@@ -99,6 +109,11 @@ class AcspPackageTests(unittest.TestCase):
         self.assertAlmostEqual(sum(calibration["selected_weights"].values()), 1.0, places=5)
         self.assertFalse(calibration["recommend_production_change"])
         self.assertIn("calibration_informative", calibration)
+        self.assertEqual(calibration["field_only_components"], ["access", "field_validation"])
+        self.assertNotIn("access", calibration["selected_weights"])
+        self.assertGreaterEqual(
+            calibration["greedy_same_pool_oracle_recall"], calibration["selected_heldout_recall"]
+        )
         self.assertFalse(search.empty)
 
     def test_stratified_random_taxa_is_seeded_and_spans_count_strata(self):

@@ -1,8 +1,17 @@
+from pathlib import Path
+import tempfile
 import unittest
 
 import pandas as pd
 
-from benchmark_izu_random_taxa import ISLAND_BOUNDS, _coverage_at_radius, island_features, island_wkt
+from benchmark_izu_random_taxa import (
+    ISLAND_BOUNDS,
+    _coverage_at_radius,
+    _fold_completion,
+    _read_candidate_files,
+    island_features,
+    island_wkt,
+)
 
 
 class IzuBenchmarkTests(unittest.TestCase):
@@ -20,6 +29,21 @@ class IzuBenchmarkTests(unittest.TestCase):
         self.assertEqual(_coverage_at_radius(candidates, 2)["covered_heldout_ids"].iloc[0], "0")
         self.assertEqual(_coverage_at_radius(candidates, 5)["covered_heldout_ids"].iloc[0], "0;1")
         self.assertEqual(_coverage_at_radius(candidates, 10)["covered_heldout_ids"].iloc[0], "0;1;2")
+
+    def test_zero_valid_repeats_are_not_reported_as_success(self):
+        failed = pd.DataFrame({"status": ["no_distance_free_candidates"] * 5})
+        partial = pd.DataFrame({"status": ["ok", "no_candidates"]})
+        self.assertEqual(_fold_completion(failed, 5)["status"], "failed")
+        self.assertEqual(_fold_completion(partial, 2)["status"], "partial")
+
+    def test_empty_candidate_checkpoint_is_ignored_safely(self):
+        with tempfile.TemporaryDirectory() as directory:
+            empty = Path(directory) / "empty.csv"
+            valid = Path(directory) / "valid.csv"
+            empty.write_text("", encoding="utf-8")
+            pd.DataFrame({"benchmark_taxon": ["Plantus test"], "latitude": [34.5]}).to_csv(valid, index=False)
+            combined = _read_candidate_files([empty, valid])
+        self.assertEqual(combined["benchmark_taxon"].tolist(), ["Plantus test"])
 
 
 if __name__ == "__main__":

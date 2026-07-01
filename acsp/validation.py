@@ -22,6 +22,8 @@ CALIBRATABLE_DISTANCE_FREE_COMPONENTS = (
     "field_validation",
 )
 
+RETROSPECTIVE_GBIF_COMPONENTS = ("local_habitat", "macro_model")
+
 
 def _resolve_occurrence_coordinate_columns(
     occurrences: pd.DataFrame, latitude_col: str, longitude_col: str
@@ -555,27 +557,41 @@ def calibrate_candidate_weights(
     multiple taxa. Access and detectability still require prospective field data.
     """
     required = {taxon_col, "repeat", "covered_heldout_ids", "all_heldout_ids"}
-    required.update(f"component_{name}_score" for name in CALIBRATABLE_DISTANCE_FREE_COMPONENTS)
+    required.update(f"component_{name}_score" for name in RETROSPECTIVE_GBIF_COMPONENTS)
     missing = required.difference(benchmark_candidates.columns)
     if missing:
         raise ValueError(f"Benchmark candidates are missing: {', '.join(sorted(missing))}")
     taxa = benchmark_candidates[taxon_col].dropna().astype(str).drop_duplicates().to_numpy()
     if len(taxa) < 4:
         raise ValueError("At least four benchmark taxa are required for taxon-held-out weight calibration.")
+    active_components = []
+    unavailable_components = []
+    for name in RETROSPECTIVE_GBIF_COMPONENTS:
+        values = pd.to_numeric(benchmark_candidates[f"component_{name}_score"], errors="coerce").dropna()
+        if len(values) and values.nunique() > 1:
+            active_components.append(name)
+        else:
+            unavailable_components.append(name)
+    if not active_components:
+        raise ValueError("No varying retrospective evidence component is available for weight calibration.")
     rng = np.random.default_rng(int(random_state))
     shuffled = rng.permutation(taxa)
     n_train = min(len(taxa) - 2, max(2, int(round(len(taxa) * float(train_fraction)))))
     train_taxa = set(shuffled[:n_train])
     eval_taxa = set(shuffled[n_train:])
-    defaults = np.array([0.25, 0.15, 0.10, 0.05], dtype=float)
+    production_defaults = {"local_habitat": 0.25, "macro_model": 0.15}
+    defaults = np.array([production_defaults[name] for name in active_components], dtype=float)
     defaults /= defaults.sum()
-    weight_vectors = np.vstack([defaults, rng.dirichlet(np.ones(len(defaults)), size=max(1, int(search_draws)))])
+    if len(defaults) == 1:
+        weight_vectors = defaults.reshape(1, 1)
+    else:
+        weight_vectors = np.vstack([defaults, rng.dirichlet(np.ones(len(defaults)), size=max(1, int(search_draws)))])
 
     def score_weights(weights: np.ndarray, selected_taxa: set[str]) -> float:
         recalls = []
         subset = benchmark_candidates[benchmark_candidates[taxon_col].astype(str).isin(selected_taxa)]
         for _, fold in subset.groupby([taxon_col, "repeat"], sort=False):
-            values = fold[[f"component_{name}_score" for name in CALIBRATABLE_DISTANCE_FREE_COMPONENTS]].apply(pd.to_numeric, errors="coerce").to_numpy(float)
+            values = fold[[f"component_{name}_score" for name in active_components]].apply(pd.to_numeric, errors="coerce").to_numpy(float)
             available = np.isfinite(values)
             denominator = available @ weights
             scores = np.divide(np.nan_to_num(values) @ weights, denominator, out=np.zeros(len(fold)), where=denominator > 0)
@@ -603,11 +619,27 @@ def calibrate_candidate_weights(
             recalls.append(float(np.mean(fold_recalls)))
         return float(np.mean(recalls)) if recalls else float("nan")
 
+    def greedy_same_pool_oracle_score(selected_taxa: set[str]) -> float:
+        """Estimate the candidate-pool ceiling without using evidence scores."""
+        recalls = []
+        subset = benchmark_candidates[benchmark_candidates[taxon_col].astype(str).isin(selected_taxa)]
+        for _, fold in subset.groupby([taxon_col, "repeat"], sort=False):
+            all_ids = set(filter(None, str(fold["all_heldout_ids"].iloc[0]).split(";")))
+            if not all_ids:
+                continue
+            remaining = [set(filter(None, str(value).split(";"))) for value in fold["covered_heldout_ids"]]
+            recovered: set[str] = set()
+            for _ in range(min(max(1, int(top_k)), len(remaining))):
+                best = max(range(len(remaining)), key=lambda index: len(remaining[index] - recovered))
+                recovered.update(remaining.pop(best))
+            recalls.append(len(recovered) / len(all_ids))
+        return float(np.mean(recalls)) if recalls else float("nan")
+
     rows = []
     for index, weights in enumerate(weight_vectors):
         rows.append({
             "weight_set": index,
-            **{f"weight_{name}": float(value) for name, value in zip(CALIBRATABLE_DISTANCE_FREE_COMPONENTS, weights)},
+            **{f"weight_{name}": float(value) for name, value in zip(active_components, weights)},
             "calibration_taxa_recall": score_weights(weights, train_taxa),
             "heldout_taxa_recall": score_weights(weights, eval_taxa),
         })
@@ -618,12 +650,20 @@ def calibrate_candidate_weights(
     calibration_informative = bool(np.isfinite(calibration_range) and calibration_range > 1e-9)
     heldout_lift = float(best["heldout_taxa_recall"] - default["heldout_taxa_recall"])
     random_heldout = random_same_pool_score(eval_taxa)
-    local_only = score_weights(np.array([1.0, 0.0, 0.0, 0.0]), eval_taxa)
-    macro_only = score_weights(np.array([0.0, 1.0, 0.0, 0.0]), eval_taxa)
+    greedy_oracle = greedy_same_pool_oracle_score(eval_taxa)
+    local_only = score_weights(
+        np.array([1.0 if name == "local_habitat" else 0.0 for name in active_components]), eval_taxa
+    ) if "local_habitat" in active_components else float("nan")
+    macro_only = score_weights(
+        np.array([1.0 if name == "macro_model" else 0.0 for name in active_components]), eval_taxa
+    ) if "macro_model" in active_components else float("nan")
     summary = {
         "design": "seeded taxon-held-out calibration with within-taxon spatial-block recovery",
         "calibration_taxa": sorted(train_taxa), "heldout_evaluation_taxa": sorted(eval_taxa),
-        "selected_weights": {name: round(float(best[f"weight_{name}"]), 6) for name in CALIBRATABLE_DISTANCE_FREE_COMPONENTS},
+        "selected_weights": {name: round(float(best[f"weight_{name}"]), 6) for name in active_components},
+        "calibrated_components": active_components,
+        "unavailable_retrospective_components": unavailable_components,
+        "field_only_components": ["access", "field_validation"],
         "selected_calibration_recall": round(float(best["calibration_taxa_recall"]), 6),
         "selected_heldout_recall": round(float(best["heldout_taxa_recall"]), 6),
         "default_heldout_recall": round(float(default["heldout_taxa_recall"]), 6),
@@ -631,13 +671,14 @@ def calibrate_candidate_weights(
         "calibration_informative": calibration_informative,
         "calibration_recall_range": round(calibration_range, 6),
         "random_same_pool_heldout_recall": round(float(random_heldout), 6),
-        "local_only_heldout_recall": round(float(local_only), 6),
-        "macro_only_heldout_recall": round(float(macro_only), 6),
+        "greedy_same_pool_oracle_recall": round(float(greedy_oracle), 6),
+        "local_only_heldout_recall": None if not np.isfinite(local_only) else round(float(local_only), 6),
+        "macro_only_heldout_recall": None if not np.isfinite(macro_only) else round(float(macro_only), 6),
         "recommend_production_change": bool(
-            calibration_informative and len(taxa) >= 10 and heldout_lift > 0.02
+            calibration_informative and len(active_components) > 1 and len(taxa) >= 10 and heldout_lift > 0.02
             and float(best["heldout_taxa_recall"]) > random_heldout
         ),
-        "limitation": "GBIF recovery cannot calibrate accessibility or detectability; confirm those terms with prospective field validation.",
+        "limitation": "GBIF recovery calibrates only varying local-habitat and macro-model evidence. Accessibility, detectability, and field-validation weights require prospective field data.",
         "random_state": int(random_state),
     }
     return search, summary

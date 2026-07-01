@@ -4975,6 +4975,7 @@ def make_potential_survey_site_candidates(
             terrain_source = str(highres_layers.get("dem_source") or "").strip()
             source_suffix = f"; {terrain_source}" if terrain_source else ""
             grid["habitat_basis"] = f"{basis_prefix}: {float(profile_buffer_m):.0f} m known-site buffer profile; Mahalanobis distance ({', '.join(env_vars)}){source_suffix}"
+            grid["occurrence_derived_habitat_score"] = False
             grid["terrain_source"] = terrain_source
             missing = []
             for label, key in [("DEM", "dem"), ("NDVI", "ndvi"), ("land cover", "landcover"), ("road distance", "roads"), ("trail distance", "trails"), ("coast distance", "coastline"), ("forest-edge distance", "forest_edge")]:
@@ -4993,6 +4994,7 @@ def make_potential_survey_site_candidates(
         grid["habitat_score"] = grid["analogue_score"]
         grid["environmental_distance_to_known"] = (1.0 - grid["analogue_score"]).clip(0, 1)
         grid["habitat_basis"] = f"Spatial fallback; local topographic analogue scoring failed: {exc}"
+        grid["occurrence_derived_habitat_score"] = True
         grid["missing_layer_note"] = "Local environmental analogue scoring was unavailable; current score uses distance from known records only."
 
     if "environmental_distance_to_known" not in grid.columns:
@@ -6946,7 +6948,37 @@ def build_automatic_discover_bundle(
                 search_geometry=geometry,
             )
             if not frame.empty:
+                frame["candidate_generation_stage"] = "standard"
+            if len(frame) < 6:
+                # Sparse taxa and small islands can lose all cells to the
+                # occurrence-cluster centre buffer. The candidate builder still
+                # enforces one-cell separation from individual training records.
+                relaxed = make_potential_survey_site_candidates(
+                    area_scope,
+                    None,
+                    float(settings["cell_m"]),
+                    min(12, max(6, int(settings["per_type"]))),
+                    min(1600, max(800, int(settings["max_cells"]))),
+                    next_site_id,
+                    env_variables=POTENTIAL_ANALOGUE_PRESET,
+                    resolution="2.5m",
+                    highres_layers=habitat_layers,
+                    profile_buffer_m=100.0,
+                    search_bounds=candidate_bounds,
+                    search_geometry=geometry,
+                )
+                if not relaxed.empty:
+                    relaxed["candidate_generation_stage"] = "relaxed_candidate_center_buffer"
+                    frame = pd.concat([frame, relaxed], ignore_index=True, sort=False).drop_duplicates(
+                        ["latitude", "longitude"], keep="first"
+                    )
+            if not frame.empty:
                 frame["survey_area_id"] = int(area_id)
+                relaxed_mask = frame["candidate_generation_stage"].eq("relaxed_candidate_center_buffer")
+                frame["candidate_generation_caution"] = "Standard habitat-first candidate generation."
+                frame.loc[relaxed_mask, "candidate_generation_caution"] = (
+                    "Candidate-centre exclusion was relaxed because the standard pass returned fewer than six cells; individual known-record separation remains enforced."
+                )
                 potential_frames.append(frame)
                 next_site_id = int(frame["site_id"].max()) + 1
         if potential_frames:
