@@ -14,10 +14,12 @@ from gbif_fieldmap_builder_app import (
     build_automatic_genus_bundle,
     build_default_short_trip_plans,
     build_map,
+    candidate_points_in_zones,
     correlation_filter_variables,
     decode_gsi_dem_rgb,
     estimate_default_short_trip,
     get_worldclim_raster_path,
+    ids_inside_drawn_rectangles,
     _power_query_bounds,
     attach_power_bioclim,
     make_sdm_exploration_candidates,
@@ -30,6 +32,29 @@ from gbif_fieldmap_builder_app import (
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_polygon_selection_does_not_use_only_its_bounding_box(self):
+        records = pd.DataFrame({
+            "_row_id": [1, 2], "_latitude": [0.25, 0.75], "_longitude": [0.25, 0.75],
+        })
+        triangle = [{
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [0, 1], [0, 0]]]},
+            "properties": {},
+        }]
+        self.assertEqual(ids_inside_drawn_rectangles(records, "_row_id", "_latitude", "_longitude", triangle), [1])
+
+    def test_zone_member_points_remain_available_for_mapping(self):
+        zones = pd.DataFrame({
+            "zone_id": ["1-Z001"], "recommended_zone_rank": [1],
+            "representative_site_id": [2], "zone_member_site_ids": ["1;2"],
+        })
+        candidates = pd.DataFrame({
+            "site_id": [1, 2, 3], "latitude": [35.0, 35.01, 36.0], "longitude": [139.0, 139.01, 140.0],
+        })
+        points = candidate_points_in_zones(zones, candidates)
+        self.assertEqual(points["site_id"].tolist(), [1, 2])
+        self.assertEqual(points.loc[points["is_zone_representative"], "site_id"].tolist(), [2])
+
     def test_multi_island_days_never_mix_survey_areas(self):
         plan = pd.DataFrame({
             "site_id": [1, 2, 3, 4],

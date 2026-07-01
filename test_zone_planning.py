@@ -22,6 +22,7 @@ class SurveyZoneTests(unittest.TestCase):
         self.assertEqual(len(zones), 1)
         self.assertEqual(zones.iloc[0]["zone_member_count"], 2)
         self.assertEqual(zones.iloc[0]["representative_site_id"], 2)
+        self.assertEqual(zones.iloc[0]["zone_merge_threshold_m"], 1000.0)
 
     def test_complete_link_prevents_chain_merging(self):
         candidates = pd.DataFrame({
@@ -66,6 +67,20 @@ class SurveyZoneTests(unittest.TestCase):
         zones = recommend_survey_zones(candidates, merge_distance_m=1000)
         self.assertEqual(len(zones), 2)
         self.assertIn("recommended_zone_rank", zones.columns)
+
+    def test_zone_reports_when_evidence_maxima_come_from_different_points(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2], "priority_score": [0.9, 0.7],
+            "occurrence_support_score": [1.0, 0.1],
+            "habitat_score": [0.1, 1.0],
+            "model_support_score": [0.2, 0.9],
+            "latitude": [35.0, 35.002], "longitude": [139.0, 139.002],
+        })
+        zone = aggregate_candidates_to_zones(candidates, merge_distance_m=1000).iloc[0]
+        self.assertIn("combined across", zone["zone_evidence_scope"])
+        self.assertEqual(zone["observed_source_site_id"], 1)
+        self.assertEqual(zone["local_source_site_id"], 2)
+        self.assertEqual(zone["model_source_site_id"], 2)
 
 
 if __name__ == "__main__":

@@ -93,6 +93,7 @@ def aggregate_candidates_to_zones(
     )
     assignments: dict[int, tuple[object, int]] = {}
     zone_members: dict[tuple[object, int], list[int]] = {}
+    zone_thresholds: dict[tuple[object, int], float] = {}
     for area, group in work.groupby(area_col, sort=True, dropna=False):
         radius = pd.to_numeric(group.get("search_cell_radius_m", pd.Series(dtype=float)), errors="coerce").dropna()
         threshold = float(merge_distance_m) if merge_distance_m is not None else (
@@ -125,6 +126,7 @@ def aggregate_candidates_to_zones(
             assignments[index] = (area, zone_index + 1)
         for zone_index, indices in enumerate(area_zones, start=1):
             zone_members[(area, zone_index)] = indices
+            zone_thresholds[(area, zone_index)] = threshold
 
     rows: list[dict[str, object]] = []
     for (area, zone_number), indices in zone_members.items():
@@ -143,6 +145,14 @@ def aggregate_candidates_to_zones(
         access = float(members["_access_support"].max())
         priority = float(members["_priority_unit"].max())
         zone_score = 0.45 * priority + 0.20 * observed + 0.15 * local + 0.15 * model + 0.05 * access
+        evidence_sources = {
+            "priority": members.loc[members["_priority_unit"].idxmax(), id_col],
+            "observed": members.loc[members["_observed_support"].idxmax(), id_col],
+            "local": members.loc[members["_local_support"].idxmax(), id_col],
+            "model": members.loc[members["_model_support"].idxmax(), id_col],
+            "access": members.loc[members["_access_support"].idxmax(), id_col],
+        }
+        distinct_evidence_sources = {str(value) for value in evidence_sources.values()}
         roles = sorted({_plain_role(value) for value in members.get("candidate_type", pd.Series("", index=members.index))})
         safe_area = re.sub(r"[^A-Za-z0-9_-]+", "-", str(area)).strip("-") or "1"
         row = {
@@ -151,6 +161,7 @@ def aggregate_candidates_to_zones(
             "zone_score": round(zone_score, 6),
             "zone_member_count": int(len(members)),
             "zone_radius_m": round(float(distances.max()) if len(distances) else 0.0, 1),
+            "zone_merge_threshold_m": round(float(zone_thresholds[(area, zone_number)]), 1),
             "representative_site_id": representative[id_col],
             "latitude": float(representative[latitude_col]),
             "longitude": float(representative[longitude_col]),
@@ -160,6 +171,17 @@ def aggregate_candidates_to_zones(
                 f"Observed {observed:.2f}; local habitat {local:.2f}; model {model:.2f}; "
                 f"access {access:.2f}; {len(members)} candidate point(s)."
             ),
+            "zone_evidence_scope": (
+                "All maximum evidence components come from one candidate point."
+                if len(distinct_evidence_sources) == 1 else
+                f"Maximum evidence components are combined across {len(distinct_evidence_sources)} candidate points within this zone."
+            ),
+            "zone_score_method": "Density-neutral weighted maxima across candidate points within the complete-link zone.",
+            "priority_source_site_id": evidence_sources["priority"],
+            "observed_source_site_id": evidence_sources["observed"],
+            "local_source_site_id": evidence_sources["local"],
+            "model_source_site_id": evidence_sources["model"],
+            "access_source_site_id": evidence_sources["access"],
             "observed_support_score": round(observed, 6),
             "local_habitat_support_score": round(local, 6),
             "model_support_score": round(model, 6),

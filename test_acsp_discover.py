@@ -166,6 +166,19 @@ class DiscoverV1Tests(unittest.TestCase):
         self.assertEqual([region["card_role"] for region in regions], ["Recommended", "Discovery", "Range contrast"])
         self.assertTrue(all(float(region["diameter_km"]) <= 80.0 for region in regions))
 
+    def test_region_center_radius_covers_members_from_medoid(self):
+        occurrences = pd.DataFrame({
+            "_row_id": [1, 2, 3],
+            "_latitude": [35.00, 35.09, 35.35],
+            "_longitude": [139.0, 139.0, 139.0],
+        })
+        audit = occurrences.copy()
+        audit["scope_class"] = "main_range"
+        regions, _, _ = recommend_survey_regions(occurrences, audit)
+        region = regions[0]
+        self.assertGreater(region["center_radius_km"], region["diameter_km"] / 2.0)
+        self.assertLessEqual(region["center_radius_km"], region["diameter_km"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -345,6 +345,7 @@ def recommend_survey_regions(
         medoid_local = int(np.argmin(sub.sum(axis=1))) if len(members) > 1 else 0
         medoid_index = members[medoid_local]
         member_rows = eligible.iloc[members]
+        center_radius_m = float(sub[medoid_local].max()) if sub.size else 0.0
         raw_regions.append({
             "region_id": region_id,
             "center_latitude": float(eligible.iloc[medoid_index][latitude_col]),
@@ -352,6 +353,7 @@ def recommend_survey_regions(
             "record_count": int(len(members)),
             "record_share": round(len(members) / max(1, len(eligible)), 4),
             "diameter_km": round(float(np.max(sub)) / 1000.0, 1) if sub.size else 0.0,
+            "center_radius_km": round(center_radius_m / 1000.0, 1),
             "member_row_ids": member_rows["_row_id"].astype(int).tolist(),
             "lat_min": float(member_rows[latitude_col].min()),
             "lat_max": float(member_rows[latitude_col].max()),

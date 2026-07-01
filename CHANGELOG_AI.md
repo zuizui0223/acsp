@@ -1,5 +1,32 @@
 # AI Change Log
 
+## 2026-07-01 - Codex (OpenAI) - Zone auditability and survey-area clarity
+
+Changed files:
+- acsp/planning.py
+- acsp_discover.py
+- gbif_fieldmap_builder_app.py
+- README.md
+- test_acsp_discover.py
+- test_automatic_hierarchy.py
+- test_zone_planning.py
+- CHANGELOG_AI.md
+
+Summary:
+- Fixed polygon survey-area selection so records are tested against the actual polygon instead of only its bounding box.
+- Fixed automatic survey-area maps to read remote-noise classifications from the region audit, show those excluded points in red, focus initially on the active working area, and keep alternative occurrence regions in an optional layer.
+- Replaced the inaccurate `diameter / 2` display radius with the actual maximum medoid-to-member radius so the suggested-area circle covers its assigned records.
+- Kept every candidate point belonging to a recommended zone visible on the zone map, with representative and alternative points distinguished, while retaining full point CSV exports.
+- Added zone merge thresholds, score-method text, evidence-source site IDs, and an explicit warning when evidence maxima come from different points in the same zone.
+- Simplified the first map wording to `Known distribution and survey area` and clarified that this area affects observed-data candidates but not the independent SDM/SSDM extent.
+
+Features preserved:
+- Occurrence-supported candidates, high-resolution habitat candidates, optional SDM/SSDM re-ranking, model-only exploration, complete-link zone aggregation, multi-area logistics, raw and working records, VIF/spatial validation, prediction maps, and exports remain available.
+
+Known risks / TODO:
+- Zone scoring remains an interpretable density-neutral heuristic based on component maxima. It is now auditable, but representative-point scoring, robust quantiles, and the current approach still require retrospective and field comparison.
+- Deterministic greedy complete-link assignment prevents chain zones but is not a globally optimal clustering solution; sensitivity to merge thresholds should be included in method validation.
+
 ## 2026-06-30 — Issue #25 zone-level proposals
 
 - Consolidated nearby candidate points into deterministic complete-link survey zones before final ranking.

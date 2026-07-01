@@ -80,7 +80,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-zone-proposals-issue25-20260630"
+APP_BUILD_ID = "acsp-zone-audit-20260701"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -1187,18 +1187,44 @@ def ids_inside_drawn_rectangles(df: pd.DataFrame, id_col: str, lat_col: str, lon
     """Return sorted list of integer IDs whose lat/lon fall inside any drawn rectangle/polygon."""
     ids: set[int] = set()
     for feat in features:
-        geom = feat.get("geometry", {})
-        if geom.get("type") not in ("Polygon", "Rectangle"):
+        try:
+            geometry = shape(feat.get("geometry", {}))
+        except Exception:
             continue
-        coords = geom.get("coordinates", [])
-        if not coords:
+        if geometry.is_empty or geometry.geom_type not in ("Polygon", "MultiPolygon"):
             continue
-        ring = coords[0]
-        lats = [float(c[1]) for c in ring]
-        lngs = [float(c[0]) for c in ring]
-        picked = df[df[lat_col].between(min(lats), max(lats)) & df[lon_col].between(min(lngs), max(lngs))][id_col]
-        ids.update(map(int, picked.tolist()))
+        west, south, east, north = geometry.bounds
+        nearby = df[df[lat_col].between(south, north) & df[lon_col].between(west, east)]
+        for row in nearby[[id_col, lat_col, lon_col]].itertuples(index=False, name=None):
+            row_id, latitude, longitude = row
+            if geometry.covers(Point(float(longitude), float(latitude))):
+                ids.add(int(row_id))
     return sorted(ids)
+
+
+def candidate_points_in_zones(zones: pd.DataFrame, candidates: pd.DataFrame) -> pd.DataFrame:
+    """Return candidate points retained inside the displayed recommended zones."""
+    if zones is None or zones.empty or candidates is None or candidates.empty or "site_id" not in candidates.columns:
+        return pd.DataFrame()
+    memberships: dict[str, dict[str, Any]] = {}
+    for _, zone in zones.iterrows():
+        for site_id in str(zone.get("zone_member_site_ids", "")).split(";"):
+            key = site_id.strip()
+            if key:
+                memberships[key] = {
+                    "zone_id": zone.get("zone_id"),
+                    "recommended_zone_rank": zone.get("recommended_zone_rank", zone.get("zone_rank")),
+                    "representative_site_id": str(zone.get("representative_site_id", "")),
+                }
+    if not memberships:
+        return pd.DataFrame()
+    out = candidates[candidates["site_id"].astype(str).isin(memberships)].copy()
+    out["zone_id"] = out["site_id"].astype(str).map(lambda value: memberships[value]["zone_id"])
+    out["recommended_zone_rank"] = out["site_id"].astype(str).map(lambda value: memberships[value]["recommended_zone_rank"])
+    out["is_zone_representative"] = out["site_id"].astype(str).map(
+        lambda value: value == memberships[value]["representative_site_id"]
+    )
+    return out.reset_index(drop=True)
 
 
 def drawn_features_bounds(features: list[dict[str, Any]]) -> Optional[tuple[float, float, float, float]]:
@@ -1359,7 +1385,13 @@ def make_exclusion_review_map(occ_map_display: pd.DataFrame, excluded_ids: set[i
     return fmap
 
 
-def make_target_selection_map(occ_map_display: pd.DataFrame, richness_grid: Optional[pd.DataFrame] = None, richness_metric: str = "Species richness") -> folium.Map:
+def make_target_selection_map(
+    occ_map_display: pd.DataFrame,
+    richness_grid: Optional[pd.DataFrame] = None,
+    richness_metric: str = "Species richness",
+    active_row_ids: Optional[set[int]] = None,
+    active_features: Optional[list[dict[str, Any]]] = None,
+) -> folium.Map:
     center = (float(occ_map_display["_latitude"].mean()), float(occ_map_display["_longitude"].mean())) if not occ_map_display.empty else (35.5, 135.5)
     fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
     if richness_grid is not None and not richness_grid.empty:
@@ -1370,20 +1402,31 @@ def make_target_selection_map(occ_map_display: pd.DataFrame, richness_grid: Opti
             name=f"observed richness grid: {richness_metric}",
             opacity=0.34,
         )
-    fg = FeatureGroup(name="target selection occurrences", show=True)
+    active_ids = set(active_row_ids or [])
+    fg = FeatureGroup(name="Occurrences in active survey area", show=True)
+    fg_other = FeatureGroup(name="Occurrences outside active survey area", show=False)
     for _, row in occ_map_display.iterrows():
         rid = int(row["_row_id"])
+        active = not active_ids or rid in active_ids
+        color = "#1f77b4" if active else "#a6a6a6"
         folium.CircleMarker(
             (row["_latitude"], row["_longitude"]),
             radius=4,
-            color="#1f77b4",
+            color=color,
             fill=True,
-            fill_color="#1f77b4",
-            fill_opacity=0.65,
+            fill_color=color,
+            fill_opacity=0.65 if active else 0.35,
             weight=1,
             tooltip=f"row {rid}",
-        ).add_to(fg)
+        ).add_to(fg if active else fg_other)
     fg.add_to(fmap)
+    fg_other.add_to(fmap)
+    if active_features:
+        folium.GeoJson(
+            {"type": "FeatureCollection", "features": active_features},
+            name="User-drawn survey areas",
+            style_function=lambda _feature: {"color": "#00a676", "weight": 4, "fillOpacity": 0.08},
+        ).add_to(fmap)
     Draw(
         export=False,
         draw_options={"rectangle": True, "polyline": False, "circle": False, "marker": False, "circlemarker": False, "polygon": False},
@@ -1391,7 +1434,15 @@ def make_target_selection_map(occ_map_display: pd.DataFrame, richness_grid: Opti
     ).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
-        fmap.fit_bounds([[occ_map_display["_latitude"].min(), occ_map_display["_longitude"].min()], [occ_map_display["_latitude"].max(), occ_map_display["_longitude"].max()]], padding=(30, 30))
+        visible = occ_map_display[
+            occ_map_display["_row_id"].astype(int).isin(active_ids)
+        ] if active_ids else occ_map_display
+        if visible.empty:
+            visible = occ_map_display
+        fmap.fit_bounds([
+            [visible["_latitude"].min(), visible["_longitude"].min()],
+            [visible["_latitude"].max(), visible["_longitude"].max()],
+        ], padding=(30, 30))
     except Exception:
         pass
     return fmap
@@ -6718,33 +6769,53 @@ def make_region_overview_map(
     occurrences: pd.DataFrame,
     region_cards: list[dict[str, Any]],
     selected_region_id: Optional[int],
+    region_audit: Optional[pd.DataFrame] = None,
+    active_features: Optional[list[dict[str, Any]]] = None,
 ) -> folium.Map:
     center = [float(occurrences["_latitude"].mean()), float(occurrences["_longitude"].mean())]
     fmap = Map(location=center, zoom_start=6, tiles="OpenStreetMap", control_scale=True)
     display = spatially_balanced_cap(occurrences, min(500, len(occurrences)))
+    scope_lookup = pd.Series(dtype=object)
+    if region_audit is not None and not region_audit.empty and {"_row_id", "scope_class"}.issubset(region_audit.columns):
+        scope_lookup = region_audit.drop_duplicates("_row_id").set_index("_row_id")["scope_class"]
     records_group = FeatureGroup(name="Known distribution", show=True)
+    noise_group = FeatureGroup(name="Possible remote noise (not used for suggested area)", show=True)
     for _, row in display.iterrows():
-        scope_class = str(row.get("_scope_class", ""))
+        scope_class = str(scope_lookup.get(row.get("_row_id"), "unclassified"))
         color = "#d62728" if scope_class == "possible_remote_noise" else "#4c78a8"
         folium.CircleMarker(
             (float(row["_latitude"]), float(row["_longitude"])), radius=3,
             color=color, fill=True, fill_opacity=0.55, weight=1,
-        ).add_to(records_group)
+            tooltip="Possible remote noise; excluded from automatic area" if scope_class == "possible_remote_noise" else "Known occurrence",
+        ).add_to(noise_group if scope_class == "possible_remote_noise" else records_group)
     records_group.add_to(fmap)
-    colors = ["#2ca02c", "#ff7f0e", "#9467bd"]
-    for index, region in enumerate(region_cards):
+    noise_group.add_to(fmap)
+    active_regions = FeatureGroup(name="App-suggested survey area", show=True)
+    alternative_regions = FeatureGroup(name="Other occurrence regions", show=False)
+    for region in region_cards:
         region_id = int(region["region_id"])
         selected = selected_region_id is not None and region_id == int(selected_region_id)
-        color = colors[min(index, len(colors) - 1)]
-        radius_m = max(5_000.0, float(region.get("diameter_km", 0.0)) * 500.0)
+        color = "#2ca02c" if selected else "#8c8c8c"
+        radius_m = max(5_000.0, float(region.get("center_radius_km", region.get("diameter_km", 0.0))) * 1000.0)
         folium.Circle(
             (float(region["center_latitude"]), float(region["center_longitude"])),
             radius=radius_m,
             color=color,
             fill=True,
-            fill_opacity=0.18 if selected else 0.08,
+            fill_opacity=0.18 if selected else 0.04,
             weight=5 if selected else 2,
-            tooltip=f"{region['card_role']} region {region_id}: {region['record_count']} records",
+            tooltip=(
+                f"App-suggested survey area: {region['record_count']} records"
+                if selected else f"Other occurrence region: {region['record_count']} records"
+            ),
+        ).add_to(active_regions if selected else alternative_regions)
+    active_regions.add_to(fmap)
+    alternative_regions.add_to(fmap)
+    if active_features:
+        folium.GeoJson(
+            {"type": "FeatureCollection", "features": active_features},
+            name="User-drawn survey areas",
+            style_function=lambda _feature: {"color": "#00a676", "weight": 4, "fillOpacity": 0.08},
         ).add_to(fmap)
     Draw(
         export=False,
@@ -6753,10 +6824,26 @@ def make_region_overview_map(
     ).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
     try:
-        fmap.fit_bounds([
-            [float(occurrences["_latitude"].min()), float(occurrences["_longitude"].min())],
-            [float(occurrences["_latitude"].max()), float(occurrences["_longitude"].max())],
-        ], padding=(30, 30))
+        selected_region = next(
+            (region for region in region_cards if selected_region_id is not None and int(region["region_id"]) == int(selected_region_id)),
+            None,
+        )
+        if active_features:
+            west, south, east, north = drawn_features_bounds(active_features) or (
+                float(occurrences["_longitude"].min()), float(occurrences["_latitude"].min()),
+                float(occurrences["_longitude"].max()), float(occurrences["_latitude"].max()),
+            )
+        elif selected_region is not None:
+            west, south, east, north = (
+                float(selected_region["lon_min"]), float(selected_region["lat_min"]),
+                float(selected_region["lon_max"]), float(selected_region["lat_max"]),
+            )
+        else:
+            west, south, east, north = (
+                float(occurrences["_longitude"].min()), float(occurrences["_latitude"].min()),
+                float(occurrences["_longitude"].max()), float(occurrences["_latitude"].max()),
+            )
+        fmap.fit_bounds([[south, west], [north, east]], padding=(30, 30))
     except Exception:
         pass
     return fmap
@@ -7313,12 +7400,18 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
     m2.metric("Species labels", f"{len(bundle['species_summary']):,}")
     m3.metric("Observed hotspots", f"{len(bundle['all_candidates']):,}")
     m4.metric("Distribution", str(distribution.get("distribution_regime", "unknown")).title())
+    st.subheader("Known distribution and survey area")
     st.caption(
-        "The recommended compact region is already active. Draw a rectangle or polygon only to limit planning to an area you can reach."
+        "Blue records are currently used to generate observed-richness candidates. "
+        "Optionally draw one or more areas you can visit; this does not set the SSDM extent."
     )
 
     display = limit_occurrence_display(bundle["occurrences"], set(), min(FAST_MAP_RECORDS, len(bundle["occurrences"])))
-    genus_map = make_target_selection_map(display, bundle.get("richness_grid"), "Species richness")
+    active_scope_ids = set(pd.to_numeric(bundle["scope"]["_row_id"], errors="coerce").dropna().astype(int))
+    genus_map = make_target_selection_map(
+        display, bundle.get("richness_grid"), "Species richness",
+        active_row_ids=active_scope_ids, active_features=bundle.get("survey_features"),
+    )
     map_data = st_folium(
         genus_map, width=None, height=560,
         returned_objects=["all_drawings", "last_active_drawing"],
@@ -7344,7 +7437,7 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
             st.session_state.automatic_region_map_reset_token += 1
             st.rerun()
     if a2.button(
-        "Use automatic recommended region" if bundle.get("custom_override") else "Clear drawn area",
+        "Use app-suggested survey area" if bundle.get("custom_override") else "Clear drawn area",
         key="automatic_genus_clear_area",
         disabled=not bool(active) and not bool(bundle.get("custom_override")),
         use_container_width=True,
@@ -7406,14 +7499,16 @@ def render_zone_proposal(
     summary = bundle.get("zone_agreement_summary", {})
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Recommended zones", len(zones))
-    m2.metric("Candidate points consolidated", int(zones["zone_member_count"].sum()))
+    m2.metric("Points in recommended zones", int(zones["zone_member_count"].sum()))
     m3.metric("Concordant top zones", int(summary.get("concordant_top_zones", 0)))
     m4.metric("Model-led exploration", int(summary.get("model_led_top_zones", 0)))
     show_cols = [column for column in [
         "recommended_zone_rank", "zone_id", "primary_zone_role", "zone_score", "zone_member_count",
-        "zone_radius_m", "representative_site_id", "initial_rank", "model_rank", "rank_change",
+        "zone_radius_m", "zone_merge_threshold_m", "representative_site_id", "initial_rank", "model_rank", "rank_change",
         "observed_support_score", "local_habitat_support_score", "model_support_score",
-        "agreement_score", "agreement_class", "zone_evidence_summary", "latitude", "longitude",
+        "agreement_score", "agreement_class", "zone_evidence_summary", "zone_evidence_scope", "zone_score_method",
+        "priority_source_site_id", "observed_source_site_id", "local_source_site_id",
+        "model_source_site_id", "access_source_site_id", "latitude", "longitude",
     ] if column in zones.columns]
     st.dataframe(zones[show_cols], width="stretch", hide_index=True)
     if bool(summary.get("model_run")):
@@ -7432,6 +7527,28 @@ def render_zone_proposal(
         "Model-led exploration": "#7570b3",
         "Model not run": "#2c7fb8",
     }
+    member_points = candidate_points_in_zones(zones, pool)
+    member_group = FeatureGroup(name="Candidate points retained within recommended zones", show=True)
+    for _, point in member_points.iterrows():
+        representative = bool(point.get("is_zone_representative", False))
+        popup = (
+            f"<b>{point.get('zone_id', '')} candidate point</b><br>"
+            f"Site: {point.get('site_id', '')}<br>"
+            f"Type: {point.get('candidate_type', '')}<br>"
+            f"Priority: {point.get('priority_score', '')}<br>"
+            f"{'Zone representative' if representative else 'Alternative point within zone'}"
+        )
+        folium.CircleMarker(
+            [float(point["latitude"]), float(point["longitude"])],
+            radius=6 if representative else 3,
+            color="#111111" if representative else "#4d4d4d",
+            fill=True, fill_color="#ffffff" if representative else "#4d4d4d",
+            fill_opacity=0.95 if representative else 0.70,
+            weight=2 if representative else 1,
+            popup=folium.Popup(popup, max_width=420),
+            tooltip=f"{point.get('zone_id', '')} | site {point.get('site_id', '')}",
+        ).add_to(member_group)
+    member_group.add_to(fmap)
     for _, zone in zones.iterrows():
         agreement = str(zone.get("agreement_class", "Model not run"))
         color = colors.get(agreement, "#2c7fb8")
@@ -7451,6 +7568,7 @@ def render_zone_proposal(
             [float(zone["latitude"]), float(zone["longitude"])],
             tooltip=f"{zone['zone_id']} · {zone.get('primary_zone_role', '')}",
         ).add_to(fmap)
+    LayerControl(collapsed=True).add_to(fmap)
     st_folium(fmap, width=None, height=650, returned_objects=[], key=f"{key_prefix}_zone_map")
     d1, d2 = st.columns(2)
     d1.download_button(
@@ -7594,15 +7712,15 @@ def render_automatic_discover() -> None:
         return
 
     distribution = bundle.get("distribution_summary", {})
-    st.subheader("Recorded distribution and reachable planning areas")
+    st.subheader("Known distribution and survey area")
     st.caption(
-        "No area selection is required: the app already uses the recommended compact region. "
-        "Draw one or more areas only when you want to limit candidates to places you can realistically reach."
+        "The green circle is the app-suggested working area used for observed-data candidates. "
+        "Optionally draw one or more areas you can visit. This choice does not set the independent SDM extent."
     )
     d1, d2, d3 = st.columns(3)
     d1.metric("Distribution regime", str(distribution.get("distribution_regime", "unknown")).title())
     d2.metric("Recorded extent span", f"{float(distribution.get('total_span_km', 0.0)):.0f} km")
-    d3.metric("Compact fieldwork areas", int(distribution.get("stable_regions", 0)))
+    d3.metric("Occurrence regions", int(distribution.get("stable_regions", 0)))
     st.caption(str(distribution.get("distribution_regime_reason", "")))
 
     region_cards = bundle.get("region_cards", [])
@@ -7635,7 +7753,10 @@ def render_automatic_discover() -> None:
                     st.rerun()
 
     region_map_data = st_folium(
-        make_region_overview_map(bundle["occurrences"], region_cards, bundle.get("selected_region_id")),
+        make_region_overview_map(
+            bundle["occurrences"], region_cards, bundle.get("selected_region_id"),
+            region_audit=bundle.get("region_audit"), active_features=bundle.get("survey_features"),
+        ),
         width=None,
         height=560,
         returned_objects=["all_drawings", "last_active_drawing"],
@@ -7674,7 +7795,7 @@ def render_automatic_discover() -> None:
             st.session_state.automatic_region_map_reset_token = st.session_state.get("automatic_region_map_reset_token", 0) + 1
             st.rerun()
     if map_action2.button(
-        "Use automatic recommended region" if bundle.get("custom_override") else "Clear drawn area",
+        "Use app-suggested survey area" if bundle.get("custom_override") else "Clear drawn area",
         key="automatic_clear_drawn_area",
         disabled=not bool(active_drawings) and not bool(bundle.get("custom_override")),
         use_container_width=True,
