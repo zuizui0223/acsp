@@ -200,6 +200,8 @@ To test whether ACSP adds value beyond proximity to known records, hold out comp
 
 Random point-level train/test splits are not sufficient because duplicated and nearby occurrence records leak spatial information. Report held-out recall within a predeclared radius, nearest-candidate distance, rank-weighted recovery, environmental coverage, and lift over matched random controls.
 
+For weight calibration, predeclare and seed the taxon sample, preferably stratified across occurrence-record abundance. Use nested evaluation: spatial blocks test recovery within each taxon, while entire taxa are held out from weight selection. Report the sampling frame, failed taxa, all searched weight vectors, unchanged-default performance, local-only and SDM-only ablations, and random Top-k from the same candidate pool. Retrospective occurrence recovery must not be presented as validation of access, detection probability, flowering phenology, or field effort; those terms require prospective surveys.
+
 ## Design implications for AI coding agents
 
 When making implementation decisions, prioritize:

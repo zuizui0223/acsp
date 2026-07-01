@@ -174,6 +174,8 @@ Streamlit Community Cloud:
 
 The method should be benchmarked against random sampling, occurrence-only ranking, SDM-high ranking, and environmental-representativeness baselines. Recommended evaluation metrics include new-population recovery, discoveries per field day, environmental coverage, geographic independence, and improvement after field feedback.
 
+The package now exposes `stratified_random_taxa()`, `spatial_block_candidate_benchmark()`, `multi_taxon_weight_benchmark()`, and `calibrate_candidate_weights()` for reproducible weight studies. The intended design samples taxa across occurrence-count strata with a recorded seed, rebuilds candidates from training spatial blocks only, tunes weights on calibration taxa, and reports performance on completely unseen taxa against same-pool random Top-k, local-only, macro-model-only, and the current default weights. Failed taxa remain in the audit table and are not silently replaced. Retrospective GBIF recovery does not identify accessibility or detectability weights; those require prospective field-validation records.
+
 For a reproducible paper or report:
 
 1. archive the exact GitHub release used;

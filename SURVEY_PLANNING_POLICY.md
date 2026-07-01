@@ -238,6 +238,8 @@ Use one integrated candidate score for the production workflow. Do not create se
 
 The integrated evidence families are observed occurrence support, local high-resolution habitat similarity, optional macro SDM/SSDM support, survey gap, access, and field-validation learning. Recommended configured weights are 0.35, 0.25, 0.15, 0.10, 0.10, and 0.05 respectively.
 
+These configured weights are transparent starting priors, not empirically established universal constants. Weight studies must use spatial holdout within taxa and taxon-level holdout between calibration and evaluation. Do not optimize and report performance on the same taxa. Compare against same-candidate-pool random Top-k and component ablations, retain failed sampled taxa in the audit, and do not automatically change production defaults from a small or unfavorable benchmark. GBIF retrospective recovery may inform local-environment and macro-model evidence, but access and detectability require prospective field validation.
+
 Missing evidence is unavailable rather than zero. Renormalize available weights per candidate so a missing or failed SDM does not penalize occurrence/local evidence. Report evidence agreement and divergence separately. Consensus may receive a modest bonus; divergence should remain visible for exploratory field validation rather than being silently averaged away.
 
 Zone ranking must not reward generated candidate density. Candidate count is metadata. Rank a zone primarily by its strongest integrated candidate and agreement support, while retaining all member points for navigation, alternatives, and audit.

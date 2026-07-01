@@ -1,5 +1,38 @@
 # AI Change Log
 
+## 2026-07-01 - Codex (OpenAI) - Taxon-held-out weight calibration
+
+Changed files:
+- acsp/validation.py
+- acsp/__init__.py
+- test_acsp_package.py
+- README.md
+- SURVEY_PLANNING_POLICY.md
+- RESEARCH_POSITIONING.md
+- CHANGELOG_AI.md
+
+Summary:
+- Kept the current 0.35 / 0.25 / 0.15 / 0.10 / 0.10 / 0.05 production weights unchanged and explicitly classified them as starting priors rather than fitted constants.
+- Added candidate-level spatial-block benchmark output, including every held-out occurrence ID and each candidate's recovered IDs, so alternative weight vectors can be audited without regenerating environmental layers.
+- Added seeded occurrence-count-stratified taxon sampling and a multi-taxon benchmark runner that retains failed taxa instead of replacing them after seeing outcomes.
+- Added nested taxon-held-out weight search. Weights are selected only on calibration taxa and evaluated on unseen taxa against current defaults, same-pool random Top-k, local-only, and macro-model-only baselines.
+- Added a conservative recommendation gate requiring at least ten successful taxa, more than 0.02 held-out recall lift over defaults, and performance above random. The API never edits production weights automatically.
+- Fixed a benchmark denominator bug found during implementation: held-out occurrences recovered by no candidate are now retained in the recall denominator.
+- Fixed the first real-taxon pilot failure by auto-detecting the app's `_latitude` / `_longitude` columns and common GBIF/CSV coordinate names in both spatial-validation APIs.
+
+Validation:
+- All Python tests passed, including deterministic taxon sampling, training-only candidate rebuilding, unseen-taxon calibration, same-pool controls, insufficient-sample safeguards, and retained taxon failures.
+- A seeded (`20260701`) fixed-Izu-extent pilot sampled `Plagiogyria japonica`, `Selliguea hastata`, `Diplopterygium glaucum`, and `Aucuba japonica` across three occurrence-count strata. All four rebuilt from training-only blocks after the coordinate-column fix.
+- With one pilot fold per taxon, Top-5 (or the full smaller pool) and a predeclared 2 km recovery radius, default, local-only, macro-only, and same-pool random recall were all 0. This is an uninformative pilot, not support for a weight change. The calibration API now labels flat searches `uninformative` rather than presenting an arbitrary tied vector as evidence.
+
+Features preserved:
+- The simple app workflow, integrated production score, occurrence/local candidates, optional SDM/SSDM, model-only exploration, zones, route outputs, and exports are unchanged.
+
+Known risks / TODO:
+- No production weight change is justified yet. A predeclared real-taxon benchmark and prospective field results are still required.
+- The pilot used only four taxa and one fold each. The next registered run should include at least ten successful taxa, repeated blocks, and predeclared 2/5/10 km sensitivity reporting; radius selection must not be changed after inspecting which value looks favorable.
+- GBIF holdout recovery cannot estimate accessibility, detectability, flowering, or survey-effort effects; those weights must be evaluated with field-validation data.
+
 ## 2026-07-01 - Codex (OpenAI) - Unified evidence scoring and spatial recovery validation
 
 Changed files:

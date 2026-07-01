@@ -13,7 +13,13 @@ from .planning import (
 )
 from .modeling import DEFAULT_ENSEMBLE_ALGORITHMS, make_classifier, predict_equal_weight_ensemble
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
-from .validation import spatial_block_recovery_validation
+from .validation import (
+    calibrate_candidate_weights,
+    multi_taxon_weight_benchmark,
+    spatial_block_candidate_benchmark,
+    spatial_block_recovery_validation,
+    stratified_random_taxa,
+)
 
 __all__ = [
     "choose_spatial_partition",
@@ -30,7 +36,11 @@ __all__ = [
     "recommend_survey_zones",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
+    "calibrate_candidate_weights",
+    "multi_taxon_weight_benchmark",
+    "spatial_block_candidate_benchmark",
     "spatial_block_recovery_validation",
+    "stratified_random_taxa",
     "zone_agreement_summary",
 ]
 

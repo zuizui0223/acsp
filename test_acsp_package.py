@@ -6,6 +6,8 @@ import numpy as np
 from acsp import (
     DEFAULT_ENSEMBLE_ALGORITHMS,
     choose_spatial_partition,
+    calibrate_candidate_weights,
+    multi_taxon_weight_benchmark,
     filter_candidates_to_extent,
     integrated_candidate_scores,
     model_performance_table,
@@ -14,6 +16,8 @@ from acsp import (
     recommend_candidates,
     sdm_method_record,
     spatial_block_recovery_validation,
+    spatial_block_candidate_benchmark,
+    stratified_random_taxa,
 )
 
 
@@ -67,6 +71,87 @@ class AcspPackageTests(unittest.TestCase):
         self.assertEqual(summary["valid_repeats"], 3)
         self.assertTrue(all(size < len(occurrences) for size in training_sizes))
         self.assertTrue(folds["distance_excluded_recall"].between(0, 1).all())
+
+    def test_candidate_benchmark_and_taxon_heldout_calibration(self):
+        occurrences = pd.DataFrame({
+            "latitude": [35.0, 35.02, 35.5, 35.52, 36.0, 36.02, 36.5, 36.52],
+            "longitude": [139.0, 139.02, 139.5, 139.52, 140.0, 140.02, 140.5, 140.52],
+        })
+
+        def builder(_training):
+            return pd.DataFrame({
+                "site_id": range(8), "latitude": occurrences["latitude"],
+                "longitude": occurrences["longitude"], "candidate_type": ["Habitat-match"] * 8,
+                "analogue_score": np.linspace(1, 0.2, 8), "sdm_suitability": np.linspace(0.2, 1, 8),
+                "access_score": [0.5] * 8, "field_validation_support_score": [0.5] * 8,
+            })
+
+        candidates, folds, summary = spatial_block_candidate_benchmark(
+            occurrences, builder, repeats=2, top_k=2, hit_radius_km=10, random_draws=5, random_state=9,
+        )
+        self.assertEqual(summary["valid_repeats"], 2)
+        self.assertIn("covered_heldout_ids", candidates)
+        combined = pd.concat([candidates.assign(benchmark_taxon=name) for name in ["a", "b", "c", "d"]])
+        search, calibration = calibrate_candidate_weights(combined, search_draws=10, top_k=2, random_state=3)
+        self.assertEqual(len(calibration["heldout_evaluation_taxa"]), 2)
+        self.assertAlmostEqual(sum(calibration["selected_weights"].values()), 1.0, places=5)
+        self.assertFalse(calibration["recommend_production_change"])
+        self.assertIn("calibration_informative", calibration)
+        self.assertFalse(search.empty)
+
+    def test_stratified_random_taxa_is_seeded_and_spans_count_strata(self):
+        taxa = pd.DataFrame({
+            "scientific_name": [f"Species {index}" for index in range(12)],
+            "coordinate_records": np.geomspace(5, 5000, 12).astype(int),
+        })
+        first = stratified_random_taxa(taxa, 6, random_state=17)
+        second = stratified_random_taxa(taxa, 6, random_state=17)
+        self.assertEqual(first["scientific_name"].tolist(), second["scientific_name"].tolist())
+        self.assertEqual(first["benchmark_count_stratum"].nunique(), 3)
+
+    def test_multi_taxon_benchmark_keeps_failed_taxa_visible(self):
+        occurrences = pd.DataFrame({
+            "latitude": [35.0, 35.02, 35.5, 35.52, 36.0, 36.02, 36.5, 36.52],
+            "longitude": [139.0, 139.02, 139.5, 139.52, 140.0, 140.02, 140.5, 140.52],
+        })
+
+        def builder(taxon, _training):
+            if taxon == "failed taxon":
+                raise RuntimeError("declared failure")
+            return pd.DataFrame({
+                "site_id": range(8), "latitude": occurrences["latitude"],
+                "longitude": occurrences["longitude"], "candidate_type": ["Habitat-match"] * 8,
+                "analogue_score": np.linspace(1, 0.2, 8), "sdm_suitability": np.linspace(0.2, 1, 8),
+                "access_score": [0.5] * 8, "field_validation_support_score": [0.5] * 8,
+            })
+
+        taxa = {name: occurrences for name in ["a", "b", "c", "d", "failed taxon"]}
+        result = multi_taxon_weight_benchmark(
+            taxa, builder,
+            benchmark_kwargs={"repeats": 1, "top_k": 2, "hit_radius_km": 10, "random_draws": 3},
+            calibration_kwargs={"search_draws": 5, "top_k": 2},
+        )
+        self.assertEqual(result["calibration_summary"]["successful_taxa"], 4)
+        self.assertEqual(result["calibration_summary"]["failed_taxa"], 1)
+        self.assertIn("failed", result["taxon_status"]["status"].tolist())
+
+    def test_spatial_benchmark_accepts_app_internal_coordinate_columns(self):
+        occurrences = pd.DataFrame({
+            "_latitude": [35.0, 35.02, 35.5, 35.52],
+            "_longitude": [139.0, 139.02, 139.5, 139.52],
+        })
+
+        def builder(_training):
+            return pd.DataFrame({
+                "site_id": [1, 2], "latitude": [35.0, 35.5], "longitude": [139.0, 139.5],
+                "candidate_type": ["Habitat-match", "Habitat-match"], "analogue_score": [0.8, 0.7],
+            })
+
+        candidates, folds, _ = spatial_block_candidate_benchmark(
+            occurrences, builder, repeats=1, top_k=1, random_draws=2, hit_radius_km=5,
+        )
+        self.assertFalse(candidates.empty)
+        self.assertEqual(folds.loc[0, "status"], "ok")
 
     def test_all_default_classifiers_produce_an_ensemble_probability(self):
         X = pd.DataFrame({"bio1": np.linspace(0, 1, 24), "bio12": np.tile([0.1, 0.9], 12)})
