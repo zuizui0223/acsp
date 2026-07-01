@@ -4167,7 +4167,7 @@ def rgba_from_prediction(pred: np.ndarray, alpha: int = 170) -> np.ndarray:
 def add_sdm_predict_legend(fmap: folium.Map) -> None:
     legend = """
     <div style="position: fixed; bottom: 28px; left: 28px; z-index: 9999; background: rgba(255,255,255,0.92); padding: 10px 12px; border: 1px solid #999; border-radius: 4px; font-size: 12px; color: #222;">
-      <div style="font-weight: 700; margin-bottom: 6px;">SDM predicted suitability</div>
+      <div style="font-weight: 700; margin-bottom: 6px;">SDM relative suitability</div>
       <div style="width: 180px; height: 12px; background: linear-gradient(90deg, #2c7bb6, #abd9e9, #ffffbf, #fdae61, #d7191c);"></div>
       <div style="display: flex; justify-content: space-between; width: 180px;"><span>0</span><span>0.5</span><span>1</span></div>
     </div>

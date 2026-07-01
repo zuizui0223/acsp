@@ -1,5 +1,45 @@
 # AI Change Log
 
+## 2026-07-01 - Codex (OpenAI) - Random-species model accuracy benchmark
+
+Changed files:
+- acsp/validation.py
+- acsp/__init__.py
+- acsp/sdm.py
+- benchmark_random_species_models.py
+- benchmark_izu_random_taxa.py
+- test_acsp_package.py
+- test_benchmark_izu.py
+- gbif_fieldmap_builder_app.py
+- FIELD_VALIDATION_IZU.md
+- README.md
+- RESEARCH_POSITIONING.md
+- CHANGELOG_AI.md
+
+Summary:
+- Separated model-accuracy validation from candidate-recovery validation instead of treating withheld candidate recovery as model accuracy.
+- Added repeated spatial-block model validation with held-out predictions and ROC-AUC, PR-AUC, Brier, log loss, training-threshold TSS, calibration slope/intercept, and Boyce-style rank correlation for four algorithms and their equal-weight ensemble.
+- Added a checkpointed, seeded, occurrence-count-stratified random-species benchmark runner and taxon-level bootstrap uncertainty.
+- Added taxon-held-out ensemble weight and probability-shrinkage search. Fourteen taxa select settings and six unseen taxa evaluate them; the search cannot silently tune and report on the same species.
+- Kept the equal-weight production ensemble because held-out improvement did not reach the predeclared change threshold. Relabeled SDM output as relative suitability rather than calibrated occupancy probability.
+- Kept the four-island candidate-recovery runner as a separate validation track, with four independent island polygons, checkpointing, and predeclared 2/5/10 km sensitivity outputs.
+- Added a prospective four-island field protocol using two frozen ACSP sites plus one matched control per island under standardized effort.
+
+Validation:
+- Seed `20260701` sampled 20 Japanese plant species across four occurrence-count strata; all 20 completed five valid spatial holdouts (100 folds total) with no post-result species replacement.
+- The equal-weight ensemble had mean ROC-AUC 0.629, PR-AUC 0.341, Brier 0.160, log loss 0.499, TSS 0.121, calibration slope 0.525, and Boyce-style correlation 0.374.
+- Taxon-bootstrap 95% intervals were 0.586-0.672 for ensemble ROC-AUC, 0.061-0.185 for TSS, and 0.344-0.699 for calibration slope.
+- On six taxon-held-out evaluation species, searched weights plus 0.70 probability shrinkage changed log loss from 0.50184 to 0.49977, Brier from 0.16435 to 0.16263, and ROC-AUC from 0.65624 to 0.65699. This did not pass the required >0.01 log-loss improvement, so no production ensemble change was made.
+- The benchmark exposed and fixed two performance issues: serial GBIF taxon-name resolution and repeated pandas grouping inside ensemble search.
+
+Features preserved:
+- The simple Streamlit workflow, occurrence/local candidates, optional ensemble SDM/SSDM, VIF, spatial partition choices, exploratory candidates, zone planning, and field exports remain available.
+
+Known risks / TODO:
+- The 20-species benchmark supports only modest macro-SDM geographic transferability and shows overconfident raw probabilities. Macro support should remain secondary to observed/local evidence.
+- Random species were sampled from the top GBIF facet frame meeting the record threshold, so the frame represents recorded Japanese plants rather than all flora.
+- The four-island trip is a pilot external validation. Universal scoring weights require more taxa, seasons, observers, regions, and matched controls.
+
 ## 2026-07-01 - Codex (OpenAI) - Taxon-held-out weight calibration
 
 Changed files:

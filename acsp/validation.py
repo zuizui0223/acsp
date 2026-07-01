@@ -7,6 +7,10 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import average_precision_score, brier_score_loss, log_loss, roc_auc_score
+
+from .modeling import DEFAULT_ENSEMBLE_ALGORITHMS, make_classifier
 
 from .planning import EARTH_RADIUS_M, integrated_candidate_scores
 
@@ -46,6 +50,241 @@ def _nearest_distances_km(source: np.ndarray, target: np.ndarray) -> np.ndarray:
     a = np.sin((lat2 - lat1) / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin((lon2 - lon1) / 2.0) ** 2
     distances = 2.0 * EARTH_RADIUS_M * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
     return distances.min(axis=1) / 1000.0
+
+
+def _probability_metrics(labels: np.ndarray, probabilities: np.ndarray, train_labels: np.ndarray, train_probabilities: np.ndarray) -> dict[str, float]:
+    clipped = np.clip(np.asarray(probabilities, dtype=float), 1e-6, 1 - 1e-6)
+    train_clipped = np.clip(np.asarray(train_probabilities, dtype=float), 1e-6, 1 - 1e-6)
+    labels = np.asarray(labels, dtype=int)
+    train_labels = np.asarray(train_labels, dtype=int)
+    thresholds = np.unique(np.quantile(train_clipped, np.linspace(0.05, 0.95, 19)))
+    best_threshold = 0.5
+    best_tss = -np.inf
+    for threshold in thresholds:
+        predicted = train_clipped >= threshold
+        sensitivity = float(predicted[train_labels == 1].mean()) if np.any(train_labels == 1) else 0.0
+        specificity = float((~predicted[train_labels == 0]).mean()) if np.any(train_labels == 0) else 0.0
+        if sensitivity + specificity - 1.0 > best_tss:
+            best_tss = sensitivity + specificity - 1.0
+            best_threshold = float(threshold)
+    predicted = clipped >= best_threshold
+    sensitivity = float(predicted[labels == 1].mean())
+    specificity = float((~predicted[labels == 0]).mean())
+    logits = np.log(clipped / (1.0 - clipped)).reshape(-1, 1)
+    try:
+        calibration = LogisticRegression(C=1e6).fit(logits, labels)
+        calibration_slope = float(calibration.coef_[0, 0])
+        calibration_intercept = float(calibration.intercept_[0])
+    except Exception:
+        calibration_slope = np.nan
+        calibration_intercept = np.nan
+    bins = pd.qcut(pd.Series(clipped).rank(method="first"), min(10, len(clipped)), labels=False, duplicates="drop")
+    boyce_frame = pd.DataFrame({"probability": clipped, "presence": labels, "bin": bins})
+    grouped = boyce_frame.groupby("bin", observed=True).agg(midpoint=("probability", "mean"), presences=("presence", "sum"), total=("presence", "size"))
+    expected = grouped["total"] / grouped["total"].sum()
+    observed = grouped["presences"] / max(1, grouped["presences"].sum())
+    ratio = observed / expected.replace(0, np.nan)
+    boyce = float(grouped["midpoint"].corr(ratio, method="spearman")) if len(grouped) >= 3 else np.nan
+    return {
+        "roc_auc": float(roc_auc_score(labels, clipped)),
+        "pr_auc": float(average_precision_score(labels, clipped)),
+        "brier": float(brier_score_loss(labels, clipped)),
+        "log_loss": float(log_loss(labels, clipped, labels=[0, 1])),
+        "tss": sensitivity + specificity - 1.0,
+        "threshold_from_training": best_threshold,
+        "calibration_slope": calibration_slope,
+        "calibration_intercept": calibration_intercept,
+        "boyce_spearman": boyce,
+    }
+
+
+def spatial_model_accuracy_benchmark(
+    table: pd.DataFrame,
+    variables: list[str],
+    *,
+    algorithms: tuple[str, ...] = DEFAULT_ENSEMBLE_ALGORITHMS,
+    latitude_col: str = "latitude",
+    longitude_col: str = "longitude",
+    label_col: str = "presence",
+    block_degrees: float = 0.25,
+    repeats: int = 5,
+    holdout_fraction: float = 0.20,
+    random_state: int = 42,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Evaluate SDM probabilities with repeated spatial-block holdout.
+
+    Thresholds are learned on training predictions only. Fold predictions are
+    returned for audit and pooled alternatives; no final all-data fit is used in
+    validation metrics.
+    """
+    required = {latitude_col, longitude_col, label_col, *variables}
+    missing = required.difference(table.columns)
+    if missing:
+        raise ValueError(f"Model benchmark table is missing: {', '.join(sorted(missing))}")
+    work = table.copy().reset_index(drop=True)
+    work[label_col] = pd.to_numeric(work[label_col], errors="coerce")
+    for column in [latitude_col, longitude_col, *variables]:
+        work[column] = pd.to_numeric(work[column], errors="coerce")
+    work = work.dropna(subset=[latitude_col, longitude_col, label_col, *variables]).reset_index(drop=True)
+    if work[label_col].nunique() < 2:
+        raise ValueError("Model benchmark requires both presence and background rows.")
+    block = max(1e-6, float(block_degrees))
+    work["_model_block"] = (
+        np.floor(work[latitude_col] / block).astype(int).astype(str) + ":"
+        + np.floor(work[longitude_col] / block).astype(int).astype(str)
+    )
+    blocks = work["_model_block"].drop_duplicates().to_numpy()
+    if len(blocks) < 3:
+        raise ValueError("Model benchmark requires at least three occupied spatial blocks.")
+    rng = np.random.default_rng(int(random_state))
+    metric_rows: list[dict[str, Any]] = []
+    prediction_rows: list[pd.DataFrame] = []
+    holdout_count = min(len(blocks) - 1, max(1, int(round(len(blocks) * float(holdout_fraction)))))
+    attempts = 0
+    completed = 0
+    while completed < max(1, int(repeats)) and attempts < max(20, int(repeats) * 20):
+        attempts += 1
+        held_blocks = set(rng.choice(blocks, size=holdout_count, replace=False).tolist())
+        test_mask = work["_model_block"].isin(held_blocks)
+        train = work[~test_mask]
+        test = work[test_mask]
+        if train[label_col].nunique() < 2 or test[label_col].nunique() < 2 or len(test) < 4:
+            continue
+        completed += 1
+        X_train, y_train = train[variables], train[label_col].astype(int).to_numpy()
+        X_test, y_test = test[variables], test[label_col].astype(int).to_numpy()
+        test_predictions: dict[str, np.ndarray] = {}
+        train_predictions: dict[str, np.ndarray] = {}
+        for algorithm in algorithms:
+            model = make_classifier(algorithm, random_state=int(random_state) + completed)
+            model.fit(X_train, y_train)
+            train_predictions[algorithm] = model.predict_proba(X_train)[:, 1]
+            test_predictions[algorithm] = model.predict_proba(X_test)[:, 1]
+        train_predictions["Equal-weight ensemble"] = np.mean(np.vstack(list(train_predictions.values())), axis=0)
+        test_predictions["Equal-weight ensemble"] = np.mean(np.vstack(list(test_predictions.values())), axis=0)
+        for algorithm, probabilities in test_predictions.items():
+            metrics = _probability_metrics(y_test, probabilities, y_train, train_predictions[algorithm])
+            metric_rows.append({
+                "repeat": completed, "algorithm": algorithm,
+                "training_rows": len(train), "test_rows": len(test),
+                "training_presences": int(y_train.sum()), "test_presences": int(y_test.sum()),
+                "heldout_blocks": ";".join(sorted(held_blocks)), **metrics,
+            })
+            prediction_rows.append(pd.DataFrame({
+                "repeat": completed, "algorithm": algorithm, "row_id": test.index,
+                "label": y_test, "probability": probabilities,
+                "latitude": test[latitude_col].to_numpy(), "longitude": test[longitude_col].to_numpy(),
+                "spatial_block": test["_model_block"].to_numpy(),
+            }))
+    if completed < max(1, int(repeats)):
+        raise ValueError(f"Only {completed} valid spatial folds could be formed after {attempts} attempts.")
+    return pd.DataFrame(metric_rows), pd.concat(prediction_rows, ignore_index=True)
+
+
+def calibrate_model_ensemble_weights(
+    predictions: pd.DataFrame,
+    metrics: pd.DataFrame,
+    *,
+    taxon_col: str = "benchmark_taxon",
+    search_draws: int = 2000,
+    train_fraction: float = 0.70,
+    random_state: int = 42,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Select ensemble weights and probability shrinkage on calibration taxa."""
+    base_algorithms = list(DEFAULT_ENSEMBLE_ALGORITHMS)
+    required = {taxon_col, "repeat", "row_id", "label", "algorithm", "probability"}
+    missing = required.difference(predictions.columns)
+    if missing:
+        raise ValueError(f"Model predictions are missing: {', '.join(sorted(missing))}")
+    taxa = predictions[taxon_col].dropna().astype(str).drop_duplicates().to_numpy()
+    if len(taxa) < 10:
+        raise ValueError("At least ten taxa are required for held-out ensemble calibration.")
+    wide = predictions[predictions["algorithm"].isin(base_algorithms)].pivot_table(
+        index=[taxon_col, "repeat", "row_id", "label"], columns="algorithm", values="probability", aggfunc="first"
+    ).dropna(subset=base_algorithms).reset_index()
+    prevalence = metrics[metrics["algorithm"].eq(base_algorithms[0])][
+        [taxon_col, "repeat", "training_presences", "training_rows"]
+    ].drop_duplicates([taxon_col, "repeat"])
+    prevalence["training_prevalence"] = prevalence["training_presences"] / prevalence["training_rows"]
+    wide = wide.merge(prevalence[[taxon_col, "repeat", "training_prevalence"]], on=[taxon_col, "repeat"], how="left")
+    rng = np.random.default_rng(int(random_state))
+    shuffled = rng.permutation(taxa)
+    n_train = min(len(taxa) - 3, max(7, int(round(len(taxa) * float(train_fraction)))))
+    calibration_taxa = set(shuffled[:n_train])
+    evaluation_taxa = set(shuffled[n_train:])
+    equal = np.full(len(base_algorithms), 1.0 / len(base_algorithms))
+    weight_vectors = np.vstack([equal, rng.dirichlet(np.ones(len(base_algorithms)), max(1, int(search_draws)))])
+    shrinkages = np.linspace(0.35, 1.0, 14)
+
+    def fold_arrays(selected_taxa: set[str]) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        subset = wide[wide[taxon_col].astype(str).isin(selected_taxa)]
+        return [
+            (
+                fold[base_algorithms].to_numpy(float),
+                fold["training_prevalence"].fillna(fold["label"].mean()).to_numpy(float),
+                fold["label"].to_numpy(int),
+            )
+            for _, fold in subset.groupby([taxon_col, "repeat"], sort=False)
+        ]
+
+    calibration_folds = fold_arrays(calibration_taxa)
+    evaluation_folds = fold_arrays(evaluation_taxa)
+
+    calibration_predictions = np.vstack([fold[0] for fold in calibration_folds])
+    calibration_priors = np.concatenate([fold[1] for fold in calibration_folds])
+    calibration_labels = np.concatenate([fold[2] for fold in calibration_folds])
+    calibration_row_weights = np.concatenate([
+        np.full(len(fold[2]), 1.0 / (len(calibration_folds) * len(fold[2])))
+        for fold in calibration_folds
+    ])
+
+    def evaluate(weights: np.ndarray, shrinkage: float, folds: list[tuple[np.ndarray, np.ndarray, np.ndarray]]) -> tuple[float, float, float]:
+        fold_scores = []
+        for algorithm_predictions, prior, labels in folds:
+            raw = algorithm_predictions @ weights
+            probability = np.clip(prior + float(shrinkage) * (raw - prior), 1e-6, 1 - 1e-6)
+            fold_scores.append((
+                float(log_loss(labels, probability, labels=[0, 1])),
+                float(brier_score_loss(labels, probability)),
+                float(roc_auc_score(labels, probability)),
+            ))
+        return tuple(np.mean(fold_scores, axis=0)) if fold_scores else (np.nan, np.nan, np.nan)
+
+    rows = []
+    for weight_index, weights in enumerate(weight_vectors):
+        raw = calibration_predictions @ weights
+        for shrinkage in shrinkages:
+            probability = np.clip(
+                calibration_priors + float(shrinkage) * (raw - calibration_priors), 1e-6, 1 - 1e-6
+            )
+            point_log_loss = -(
+                calibration_labels * np.log(probability)
+                + (1 - calibration_labels) * np.log(1 - probability)
+            )
+            calibration_log_loss = float(np.sum(calibration_row_weights * point_log_loss))
+            calibration_brier = float(np.sum(calibration_row_weights * (probability - calibration_labels) ** 2))
+            rows.append({
+                "weight_set": weight_index, "probability_shrinkage": float(shrinkage),
+                **{f"weight_{name}": float(value) for name, value in zip(base_algorithms, weights)},
+                "calibration_log_loss": calibration_log_loss, "calibration_brier": calibration_brier,
+            })
+    search = pd.DataFrame(rows).sort_values(["calibration_log_loss", "calibration_brier"], kind="mergesort").reset_index(drop=True)
+    best = search.iloc[0]
+    selected_weights = np.array([best[f"weight_{name}"] for name in base_algorithms], dtype=float)
+    selected_eval = evaluate(selected_weights, float(best["probability_shrinkage"]), evaluation_folds)
+    equal_eval = evaluate(equal, 1.0, evaluation_folds)
+    summary = {
+        "design": "ensemble weights and probability shrinkage selected on calibration taxa; reported on unseen taxa",
+        "calibration_taxa": sorted(calibration_taxa), "heldout_evaluation_taxa": sorted(evaluation_taxa),
+        "selected_weights": {name: round(float(value), 6) for name, value in zip(base_algorithms, selected_weights)},
+        "selected_probability_shrinkage": round(float(best["probability_shrinkage"]), 6),
+        "heldout_log_loss": round(float(selected_eval[0]), 6), "equal_weight_heldout_log_loss": round(float(equal_eval[0]), 6),
+        "heldout_brier": round(float(selected_eval[1]), 6), "equal_weight_heldout_brier": round(float(equal_eval[1]), 6),
+        "heldout_roc_auc": round(float(selected_eval[2]), 6), "equal_weight_heldout_roc_auc": round(float(equal_eval[2]), 6),
+        "recommend_change": bool(selected_eval[0] < equal_eval[0] - 0.01 and selected_eval[1] < equal_eval[1]),
+        "random_state": int(random_state),
+    }
+    return search, summary
 
 
 def spatial_block_recovery_validation(
@@ -230,6 +469,10 @@ def spatial_block_candidate_benchmark(
         scored["benchmark_candidate_id"] = np.arange(len(scored), dtype=int)
         scored["covered_heldout_ids"] = covered
         scored["all_heldout_ids"] = ";".join(held_ids)
+        scored["heldout_distances_km"] = [
+            ";".join(f"{value:.8f}" for value in distances[:, index])
+            for index in range(len(scored))
+        ]
         scored["nearest_heldout_km"] = distances.min(axis=0)
         candidate_rows.append(scored)
         default_top = scored.nlargest(min(top_k, len(scored)), "integrated_support_score")

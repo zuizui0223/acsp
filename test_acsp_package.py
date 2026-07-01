@@ -7,6 +7,7 @@ from acsp import (
     DEFAULT_ENSEMBLE_ALGORITHMS,
     choose_spatial_partition,
     calibrate_candidate_weights,
+    calibrate_model_ensemble_weights,
     multi_taxon_weight_benchmark,
     filter_candidates_to_extent,
     integrated_candidate_scores,
@@ -17,6 +18,7 @@ from acsp import (
     sdm_method_record,
     spatial_block_recovery_validation,
     spatial_block_candidate_benchmark,
+    spatial_model_accuracy_benchmark,
     stratified_random_taxa,
 )
 
@@ -152,6 +154,41 @@ class AcspPackageTests(unittest.TestCase):
         )
         self.assertFalse(candidates.empty)
         self.assertEqual(folds.loc[0, "status"], "ok")
+
+    def test_spatial_model_accuracy_returns_ensemble_and_auditable_predictions(self):
+        rng = np.random.default_rng(21)
+        rows = []
+        for block in range(8):
+            for label in [0, 1]:
+                for _ in range(5):
+                    rows.append({
+                        "latitude": 34.0 + block * 0.3 + rng.normal(0, 0.01),
+                        "longitude": 139.0 + block * 0.3 + rng.normal(0, 0.01),
+                        "presence": label, "bio1": label + rng.normal(0, 0.2),
+                        "bio12": label * 0.7 + rng.normal(0, 0.2),
+                    })
+        metrics, predictions = spatial_model_accuracy_benchmark(
+            pd.DataFrame(rows), ["bio1", "bio12"], repeats=3,
+            block_degrees=0.2, holdout_fraction=0.25, random_state=8,
+        )
+        self.assertEqual(metrics["repeat"].nunique(), 3)
+        self.assertIn("Equal-weight ensemble", metrics["algorithm"].tolist())
+        self.assertTrue(metrics["roc_auc"].between(0, 1).all())
+        self.assertTrue(metrics["brier"].between(0, 1).all())
+        self.assertEqual(set(predictions["label"].unique()), {0, 1})
+
+        multi_predictions = pd.concat([
+            predictions.assign(benchmark_taxon=f"taxon {index}") for index in range(10)
+        ], ignore_index=True)
+        multi_metrics = pd.concat([
+            metrics.assign(benchmark_taxon=f"taxon {index}") for index in range(10)
+        ], ignore_index=True)
+        search, calibration = calibrate_model_ensemble_weights(
+            multi_predictions, multi_metrics, search_draws=3, random_state=5,
+        )
+        self.assertFalse(search.empty)
+        self.assertEqual(len(calibration["heldout_evaluation_taxa"]), 3)
+        self.assertIn("equal_weight_heldout_log_loss", calibration)
 
     def test_all_default_classifiers_produce_an_ensemble_probability(self):
         X = pd.DataFrame({"bio1": np.linspace(0, 1, 24), "bio12": np.tile([0.1, 0.9], 12)})

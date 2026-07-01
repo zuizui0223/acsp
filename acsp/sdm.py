@@ -100,7 +100,7 @@ def sdm_method_record(
         "environment_variables": ", ".join(variables_list),
         "environment_source": environment_source,
         "prediction_extent": prediction_extent,
-        "ensemble_method": "equal-weight mean predicted probability",
+        "ensemble_method": "equal-weight mean classifier probability used as relative suitability; not calibrated occupancy probability",
         "ensemble_algorithms": ", ".join(algorithms),
         "best_individual_model": best_model,
         "best_individual_auc": round(best_auc, 3) if np.isfinite(best_auc) else np.nan,
