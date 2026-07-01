@@ -194,6 +194,12 @@ Field-validation exports should support recording:
 - photographs, specimens, or DNA samples collected;
 - survey effort and comments.
 
+## Retrospective distance-excluded validation
+
+To test whether ACSP adds value beyond proximity to known records, hold out complete spatial blocks, islands, or occurrence clusters. Rebuild candidate generation and all environment/SDM profiles from training records only. Exclude known-location candidates, occurrence-support scores, survey-gap scores, environmental novelty, and distance-to-known evidence before ranking. Compare Top-k recovery of held-out occurrences against random Top-k draws from the same candidate pool, as well as distance-only, local-environment-only, SDM-only, and full integrated ablations.
+
+Random point-level train/test splits are not sufficient because duplicated and nearby occurrence records leak spatial information. Report held-out recall within a predeclared radius, nearest-candidate distance, rank-weighted recovery, environmental coverage, and lift over matched random controls.
+
 ## Design implications for AI coding agents
 
 When making implementation decisions, prioritize:

@@ -7,15 +7,67 @@ from acsp import (
     DEFAULT_ENSEMBLE_ALGORITHMS,
     choose_spatial_partition,
     filter_candidates_to_extent,
+    integrated_candidate_scores,
     model_performance_table,
     make_classifier,
     predict_equal_weight_ensemble,
     recommend_candidates,
     sdm_method_record,
+    spatial_block_recovery_validation,
 )
 
 
 class AcspPackageTests(unittest.TestCase):
+    def test_integrated_score_renormalizes_when_model_is_unavailable(self):
+        candidate = pd.DataFrame({
+            "site_id": [1], "occurrence_support_score": [0.8],
+            "analogue_score": [0.7], "access_score": [0.6],
+        })
+        without_model = integrated_candidate_scores(candidate)
+        with_empty_model = integrated_candidate_scores(candidate.assign(sdm_suitability=np.nan))
+        self.assertAlmostEqual(
+            without_model.loc[0, "integrated_support_score"],
+            with_empty_model.loc[0, "integrated_support_score"],
+        )
+        self.assertFalse(with_empty_model.loc[0, "component_macro_model_available"])
+
+    def test_distance_excluded_score_ignores_occurrence_and_gap_evidence(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2], "occurrence_support_score": [1.0, 0.0],
+            "survey_gap_score": [0.0, 1.0], "environmental_novelty": [0.0, 1.0],
+            "analogue_score": [0.8, 0.8], "sdm_suitability": [0.7, 0.7], "access_score": [0.6, 0.6],
+        })
+        scored = integrated_candidate_scores(candidates, exclude_occurrence_derived=True)
+        self.assertEqual(scored["integrated_support_score"].nunique(), 1)
+        self.assertTrue(scored["distance_excluded_validation_score"].all())
+
+    def test_spatial_block_recovery_is_reproducible_and_uses_training_only(self):
+        occurrences = pd.DataFrame({
+            "record_id": range(8),
+            "latitude": [35.0, 35.02, 35.5, 35.52, 36.0, 36.02, 36.5, 36.52],
+            "longitude": [139.0, 139.02, 139.5, 139.52, 140.0, 140.02, 140.5, 140.52],
+        })
+        training_sizes = []
+
+        def builder(training):
+            training_sizes.append(len(training))
+            return pd.DataFrame({
+                "site_id": range(1, 9),
+                "latitude": occurrences["latitude"], "longitude": occurrences["longitude"],
+                "candidate_type": ["Habitat-match"] * 8,
+                "analogue_score": np.linspace(1.0, 0.3, 8),
+                "sdm_suitability": np.linspace(0.9, 0.2, 8),
+                "access_score": [0.8] * 8,
+            })
+
+        folds, summary = spatial_block_recovery_validation(
+            occurrences, builder, block_degrees=0.25, repeats=3, top_k=3,
+            hit_radius_km=10.0, random_draws=10, random_state=7,
+        )
+        self.assertEqual(summary["valid_repeats"], 3)
+        self.assertTrue(all(size < len(occurrences) for size in training_sizes))
+        self.assertTrue(folds["distance_excluded_recall"].between(0, 1).all())
+
     def test_all_default_classifiers_produce_an_ensemble_probability(self):
         X = pd.DataFrame({"bio1": np.linspace(0, 1, 24), "bio12": np.tile([0.1, 0.9], 12)})
         y = np.array([0] * 12 + [1] * 12)

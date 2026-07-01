@@ -163,7 +163,7 @@ class AutomaticHierarchyTests(unittest.TestCase):
         low = ranked.set_index("site_id").loc[2]
         self.assertGreater(high["priority_score"], low["priority_score"])
         self.assertGreater(high["observed_model_agreement_score"], low["observed_model_agreement_score"])
-        self.assertEqual(high["candidate_evidence"], "Observed + model")
+        self.assertEqual(high["candidate_evidence"], "Cross-scale consensus")
         reranked = add_priority_rank(ranked)
         self.assertEqual(ranked.sort_values("site_id")["priority_score"].tolist(), reranked.sort_values("site_id")["priority_score"].tolist())
 
@@ -343,6 +343,11 @@ class AutomaticHierarchyTests(unittest.TestCase):
         self.assertLessEqual(bundle["trip_estimate"]["estimated_days"], 5)
         self.assertEqual(bundle["target_days"], bundle["trip_estimate"]["estimated_days"])
         self.assertEqual(len(bundle["reachability_curve"]), 5)
+        self.assertIn("candidate_pool", bundle)
+        self.assertIn("zones", bundle)
+        self.assertNotIn("candidate_pool_without_sdm", bundle)
+        self.assertNotIn("zones_without_sdm", bundle)
+        self.assertIn("integrated_support_score", bundle["candidate_pool"].columns)
         self.assertTrue(bundle["warnings"])
         self.assertEqual(float(land_filter.call_args.args[3]), 0.0)
 

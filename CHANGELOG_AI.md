@@ -1,5 +1,44 @@
 # AI Change Log
 
+## 2026-07-01 - Codex (OpenAI) - Unified evidence scoring and spatial recovery validation
+
+Changed files:
+- acsp/planning.py
+- acsp/validation.py
+- acsp/__init__.py
+- acsp_discover.py
+- gbif_fieldmap_builder_app.py
+- test_acsp_package.py
+- test_acsp_discover.py
+- test_automatic_hierarchy.py
+- test_zone_planning.py
+- README.md
+- SURVEY_PLANNING_POLICY.md
+- RESEARCH_POSITIONING.md
+- CHANGELOG_AI.md
+
+Summary:
+- Replaced separate internal `with SDM` / `without SDM` pools and zones with one canonical `candidate_pool`, `zones`, and `recommended_zones` product that is updated when optional SDM/SSDM evidence becomes available.
+- Added available-weight-normalized integrated scoring across observed support, local habitat, macro model, survey gap, access, and field validation. Missing SDM/SSDM evidence is unavailable rather than zero.
+- Added explicit evidence agreement, divergence, consensus/local-only/macro-only evidence classes, agreement bonus, and a small divergence bonus restricted to exploratory candidate types.
+- Removed independent zone-component maxima from the zone score. Zone priority is now 90% the strongest integrated candidate score plus 10% evidence agreement; candidate count and diagnostic component maxima do not increase priority.
+- Connected the same integrated support score to ACSP discovery utility while keeping distance redundancy, candidate-to-candidate route insertion cost, spatial-area coverage, and hard constraints.
+- Added `spatial_block_recovery_validation()`: repeated random spatial-block holdout with training-only candidate rebuilding, direct occurrence/distance evidence exclusion, and random Top-k controls drawn from the same candidate pool.
+- Added integrated component, agreement, divergence, availability, and explanation fields to candidate CSV output and the zone display.
+
+Validation:
+- All 54 Python tests passed, including missing-model renormalization, distance-excluded scoring, reproducible spatial-block holdout, canonical bundle keys, zone coherence, and existing SDM/SSDM safeguards.
+- `Campanula microdonta`: 31 base candidates / 26 zones / 8 recommendations; automatic SDM updated the same pool to 33 candidates / 28 zones / 7 recommendations in 19.6 seconds. Evidence classes were 27 cross-scale consensus, four known-record anchors, and two macro-model exploration candidates.
+- `Cirsium`: 299 fetched records produced 20 observed candidates; SSDM modeled three species and updated the same pool to 40 candidates, with six cross-scale consensus and 20 macro-model exploration candidates.
+- A 10-repeat synthetic spatial-block smoke test returned distance-excluded Top-3 recall 0.600 versus random same-pool recall 0.665 (lift -0.065). This deliberately makes no positive performance claim; it confirms that the validation reports unfavorable results rather than guaranteeing apparent improvement.
+
+Features preserved:
+- Occurrence/local candidates without SDM, optional ensemble SDM/SSDM, VIF and spatial validation, model-only exploration, zone member points, multiple survey areas, route-cost diagnostics, prediction maps, and exports remain available.
+
+Known risks / TODO:
+- The spatial-block validation API enforces a training-only callback contract, but ecological performance claims still require real taxon-specific candidate rebuilding and matched field/retrospective benchmarks. Unit simulations validate mechanics only.
+- Integrated weights and the 10% agreement contribution are transparent starting values, not fitted universal constants. Compare component ablations, spatial-block recovery, and field detection before publication claims.
+
 ## 2026-07-01 - Codex (OpenAI) - Zone auditability and survey-area clarity
 
 Changed files:

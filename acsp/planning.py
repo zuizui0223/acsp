@@ -11,6 +11,14 @@ import pandas as pd
 
 
 EARTH_RADIUS_M = 6_371_008.8
+DEFAULT_INTEGRATED_WEIGHTS = {
+    "observed": 0.35,
+    "local_habitat": 0.25,
+    "macro_model": 0.15,
+    "survey_gap": 0.10,
+    "access": 0.10,
+    "field_validation": 0.05,
+}
 
 
 def _haversine_m(lat: float, lon: float, lats: np.ndarray, lons: np.ndarray) -> np.ndarray:
@@ -34,6 +42,131 @@ def _unit_series(frame: pd.DataFrame, columns: Sequence[str], default: float = 0
     if span <= 1e-12:
         return values.notna().astype(float) * 0.5
     return ((values - float(finite.min())) / span).fillna(default).clip(0.0, 1.0)
+
+
+def _available_unit_component(frame: pd.DataFrame, columns: Sequence[str]) -> tuple[pd.Series, pd.Series]:
+    available = [column for column in columns if column in frame.columns]
+    if not available:
+        return pd.Series(np.nan, index=frame.index, dtype=float), pd.Series(False, index=frame.index)
+    values = frame[available].apply(pd.to_numeric, errors="coerce").max(axis=1, skipna=True)
+    present = values.notna()
+    finite = values[np.isfinite(values)]
+    if finite.empty:
+        return pd.Series(np.nan, index=frame.index, dtype=float), pd.Series(False, index=frame.index)
+    if float(finite.min()) >= 0.0 and float(finite.max()) <= 1.0:
+        return values.clip(0.0, 1.0), present
+    span = float(finite.max() - finite.min())
+    if span <= 1e-12:
+        normalized = pd.Series(np.where(present, 0.5, np.nan), index=frame.index, dtype=float)
+    else:
+        normalized = (values - float(finite.min())) / span
+    return normalized.clip(0.0, 1.0), present
+
+
+def integrated_candidate_scores(
+    candidates: pd.DataFrame,
+    weights: dict[str, float] | None = None,
+    exclude_occurrence_derived: bool = False,
+) -> pd.DataFrame:
+    """Score one candidate pool using every available, non-missing evidence family.
+
+    Missing model support is unavailable rather than zero and therefore does not
+    reduce a candidate's score. `exclude_occurrence_derived` is intended for
+    retrospective recovery tests and removes direct occurrence support and
+    distance/density-derived survey-gap evidence.
+    """
+    if candidates is None or candidates.empty:
+        return pd.DataFrame() if candidates is None else candidates.copy()
+    out = candidates.copy().reset_index(drop=True)
+    component_columns = {
+        "observed": ["observed_base_priority_score", "occurrence_support_score", "observed_species_richness", "species_richness", "record_count"],
+        "local_habitat": ["analogue_score", "habitat_score", "environmental_similarity", "landcover_match_score"],
+        "macro_model": ["model_support_score", "sdm_suitability", "ssdm_model_support_score", "ssdm_predicted_richness"],
+        "survey_gap": ["survey_gap_score", "environmental_novelty", "environmental_distance_to_known"],
+        "access": ["access_score", "accessibility_score"],
+        "field_validation": ["field_validation_support_score"],
+    }
+    if exclude_occurrence_derived:
+        component_columns["observed"] = []
+        component_columns["survey_gap"] = []
+    configured = dict(DEFAULT_INTEGRATED_WEIGHTS)
+    if weights:
+        configured.update({key: max(0.0, float(value)) for key, value in weights.items() if key in configured})
+    component_values: dict[str, pd.Series] = {}
+    component_available: dict[str, pd.Series] = {}
+    numerator = pd.Series(0.0, index=out.index)
+    denominator = pd.Series(0.0, index=out.index)
+    for name, columns in component_columns.items():
+        values, available = _available_unit_component(out, columns)
+        if name == "macro_model" and "model_support_available" in out.columns:
+            explicit = out["model_support_available"].astype("boolean").fillna(False).astype(bool)
+            raw_prediction = pd.Series(False, index=out.index)
+            for column in ("sdm_suitability", "ssdm_model_support_score", "ssdm_predicted_richness"):
+                if column in out.columns:
+                    raw_prediction |= pd.to_numeric(out[column], errors="coerce").notna()
+            available &= explicit | raw_prediction
+            values = values.where(available)
+        component_values[name] = values
+        component_available[name] = available
+        weight = float(configured[name])
+        numerator += values.fillna(0.0) * weight
+        denominator += available.astype(float) * weight
+        out[f"component_{name}_score"] = values.round(4)
+        out[f"component_{name}_available"] = available
+    base = numerator.div(denominator.where(denominator > 0)).fillna(0.0).clip(0.0, 1.0)
+    evidence = pd.DataFrame({
+        "observed": component_values["observed"],
+        "local_habitat": component_values["local_habitat"],
+        "macro_model": component_values["macro_model"],
+    })
+    evidence_count = evidence.notna().sum(axis=1)
+    evidence_mean = evidence.mean(axis=1, skipna=True).fillna(0.0)
+    evidence_range = (evidence.max(axis=1, skipna=True) - evidence.min(axis=1, skipna=True)).fillna(0.0)
+    agreement = (evidence_mean * (1.0 - evidence_range)).where(evidence_count >= 2, 0.0).clip(0.0, 1.0)
+    divergence = evidence_range.where(evidence_count >= 2, 0.0).clip(0.0, 1.0)
+    candidate_type = out.get("candidate_type", pd.Series("", index=out.index)).astype(str)
+    exploratory = candidate_type.str.contains(
+        "model-only|sdm-high|ssdm-high|exploratory|environmental-test|environmental contrast",
+        case=False, na=False,
+    )
+    agreement_bonus = 0.10 * agreement
+    divergence_bonus = 0.05 * divergence * exploratory.astype(float)
+    integrated = (base + agreement_bonus + divergence_bonus).clip(0.0, 1.0)
+    observed = component_values["observed"].fillna(0.0)
+    local = component_values["local_habitat"].fillna(0.0)
+    macro = component_values["macro_model"].fillna(0.0)
+    model_available = component_available["macro_model"]
+    evidence_class = np.select(
+        [
+            model_available & agreement.ge(0.55) & macro.ge(0.5),
+            model_available & local.ge(0.5) & macro.lt(0.5),
+            model_available & macro.ge(0.5) & local.lt(0.5) & observed.lt(0.5),
+            observed.ge(0.5),
+            local.ge(0.5),
+        ],
+        [
+            "Cross-scale consensus",
+            "Local-habitat support; weak macro support",
+            "Macro-model exploration",
+            "Known-record anchor",
+            "Local-habitat potential",
+        ],
+        default="Limited evidence",
+    )
+    out["integrated_base_score"] = base.round(4)
+    out["evidence_agreement_score"] = agreement.round(4)
+    out["evidence_divergence_score"] = divergence.round(4)
+    out["agreement_bonus"] = agreement_bonus.round(4)
+    out["divergence_exploration_bonus"] = divergence_bonus.round(4)
+    out["integrated_support_score"] = integrated.round(4)
+    out["integrated_evidence_class"] = evidence_class
+    out["integrated_available_weight"] = denominator.round(4)
+    out["distance_excluded_validation_score"] = bool(exclude_occurrence_derived)
+    out["integrated_score_explanation"] = [
+        f"available-weight-normalized support={base_value:.3f}; agreement={agree:.3f}; divergence={diverge:.3f}; model={'available' if model_ok else 'not available'}"
+        for base_value, agree, diverge, model_ok in zip(base, agreement, divergence, model_available)
+    ]
+    return out
 
 
 def _plain_role(candidate_type: object) -> str:
@@ -82,13 +215,14 @@ def aggregate_candidates_to_zones(
     if area_col not in work.columns:
         work[area_col] = 1
     work["_priority_unit"] = _unit_series(work, [score_col])
-    work["_observed_support"] = _unit_series(work, ["occurrence_support_score", "observed_base_priority_score"])
-    work["_local_support"] = _unit_series(work, ["analogue_score", "habitat_score", "environmental_similarity", "survey_gap_score"])
-    work["_model_support"] = _unit_series(work, ["model_support_score", "sdm_suitability", "ssdm_predicted_richness"])
-    work["_access_support"] = _unit_series(work, ["access_score", "accessibility_score"], default=0.5)
+    work["_observed_support"] = _unit_series(work, ["component_observed_score", "occurrence_support_score", "observed_base_priority_score"])
+    work["_local_support"] = _unit_series(work, ["component_local_habitat_score", "analogue_score", "habitat_score", "environmental_similarity"])
+    work["_model_support"] = _unit_series(work, ["component_macro_model_score", "model_support_score", "sdm_suitability", "ssdm_predicted_richness"])
+    work["_access_support"] = _unit_series(work, ["component_access_score", "access_score", "accessibility_score"], default=0.5)
+    work["_agreement_support"] = _unit_series(work, ["evidence_agreement_score", "observed_model_agreement_score"])
+    work["_divergence_support"] = _unit_series(work, ["evidence_divergence_score", "model_analogue_disagreement"])
     work["_representative_score"] = (
-        0.50 * work["_priority_unit"] + 0.15 * work["_observed_support"]
-        + 0.15 * work["_local_support"] + 0.10 * work["_model_support"]
+        0.80 * work["_priority_unit"] + 0.10 * work["_agreement_support"]
         + 0.10 * work["_access_support"]
     )
     assignments: dict[int, tuple[object, int]] = {}
@@ -143,8 +277,10 @@ def aggregate_candidates_to_zones(
         local = float(members["_local_support"].max())
         model = float(members["_model_support"].max())
         access = float(members["_access_support"].max())
+        agreement = float(members["_agreement_support"].max())
+        divergence = float(members["_divergence_support"].max())
         priority = float(members["_priority_unit"].max())
-        zone_score = 0.45 * priority + 0.20 * observed + 0.15 * local + 0.15 * model + 0.05 * access
+        zone_score = 0.90 * priority + 0.10 * agreement
         evidence_sources = {
             "priority": members.loc[members["_priority_unit"].idxmax(), id_col],
             "observed": members.loc[members["_observed_support"].idxmax(), id_col],
@@ -172,11 +308,11 @@ def aggregate_candidates_to_zones(
                 f"access {access:.2f}; {len(members)} candidate point(s)."
             ),
             "zone_evidence_scope": (
-                "All maximum evidence components come from one candidate point."
+                "All diagnostic evidence maxima come from one candidate point."
                 if len(distinct_evidence_sources) == 1 else
-                f"Maximum evidence components are combined across {len(distinct_evidence_sources)} candidate points within this zone."
+                f"Diagnostic evidence maxima come from {len(distinct_evidence_sources)} candidate points; they are not independently summed into the zone score."
             ),
-            "zone_score_method": "Density-neutral weighted maxima across candidate points within the complete-link zone.",
+            "zone_score_method": "0.90 * best integrated candidate score + 0.10 * strongest cross-evidence agreement; candidate count and diagnostic component maxima are not added.",
             "priority_source_site_id": evidence_sources["priority"],
             "observed_source_site_id": evidence_sources["observed"],
             "local_source_site_id": evidence_sources["local"],
@@ -186,6 +322,8 @@ def aggregate_candidates_to_zones(
             "local_habitat_support_score": round(local, 6),
             "model_support_score": round(model, 6),
             "access_support_score": round(access, 6),
+            "zone_agreement_support_score": round(agreement, 6),
+            "zone_divergence_score": round(divergence, 6),
             "zone_member_site_ids": ";".join(members[id_col].astype(str).tolist()),
         }
         rows.append(row)

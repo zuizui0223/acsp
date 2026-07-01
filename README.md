@@ -16,6 +16,12 @@ The app shows one ranked **Recommended survey zones** table and map. Nearby cand
 
 Zone ranking is density-neutral: it uses the strongest priority, observed, local-habitat, model, and access evidence within each practical zone rather than rewarding zones for containing more generated grid points. Exports identify the source candidate for every evidence maximum and state when a zone score combines evidence from different member points.
 
+## One integrated evidence algorithm
+
+The production workflow no longer maintains separate "with SDM" and "without SDM" candidate products. Every candidate receives one available-evidence score from observed support, local habitat similarity, optional macro SDM/SSDM support, survey gap, access, and field-validation learning. Missing model evidence is unavailable rather than zero: weights are renormalized for each candidate, so an SDM failure does not penalize otherwise supported sites.
+
+The default configured weights are observed 0.35, local habitat 0.25, macro model 0.15, survey gap 0.10, access 0.10, and field validation 0.05. Agreement among observed/local/macro evidence adds a small consensus bonus. Strong cross-scale divergence is retained as an explicit diagnostic and adds a small exploration bonus only to exploratory candidate types. Zone score is 90% the strongest integrated candidate score plus 10% evidence agreement; candidate count and separate component maxima are not summed into the score.
+
 Trip duration is not fixed by the user. Internally, ACSP builds feasible one- through five-day alternatives, charges each added zone for its minimum insertion cost in the hub-return route, and chooses the knee of the resulting value-versus-duration curve. The primary screen shows only the selected practical zone set and a short reason; the curve remains reproducible diagnostic evidence.
 
 Separate drawn survey areas are treated as separate daily logistics units. A single field day never combines different islands/areas, and each area receives a candidate before additional same-area sites are added. Island-local travel uses a local area hub; ferry and flight schedules are not yet modeled and are explicitly reported as unverified rather than converted into road distance.
@@ -98,18 +104,23 @@ from acsp import (
     make_classifier,
     recommend_candidates,
     recommend_survey_zones,
+    integrated_candidate_scores,
+    spatial_block_recovery_validation,
     sdm_method_record,
 )
 
 recommended = recommend_candidates(candidates, per_area=3)
 recommended_zones = recommend_survey_zones(candidates, per_area=3)
+scored = integrated_candidate_scores(candidates)
 island_extent = (139.30, 34.60, 139.50, 34.85)  # west, south, east, north
 recommended_in_extent = recommend_candidates(candidates, per_area=3, extent=island_extent)
 partition, reason = choose_spatial_partition(86, geographic_span_degrees=1.8)
 models = {name: make_classifier(name) for name in DEFAULT_ENSEMBLE_ALGORITHMS}
 ```
 
-Current Python APIs cover candidate quotas, deterministic survey-zone aggregation, SDM rank/agreement comparison, classifier construction, equal-weight prediction, partition selection, ensemble-performance summaries, and method records. GBIF retrieval and raster orchestration remain app-level APIs for now.
+`spatial_block_recovery_validation()` supports repeated random spatial-block holdout. Its candidate-builder callback receives training occurrences only; known-location candidates and direct occurrence/distance-derived score components are excluded before Top-k recovery is compared with random Top-k draws from the same candidate pool.
+
+Current Python APIs cover integrated evidence scoring, spatial-block recovery validation, candidate quotas, deterministic survey-zone aggregation, SDM rank/agreement diagnostics, classifier construction, equal-weight prediction, partition selection, ensemble-performance summaries, and method records. GBIF retrieval and raster orchestration remain app-level APIs for now.
 
 ## R package
 

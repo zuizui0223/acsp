@@ -234,18 +234,13 @@ Hide or automatically calculate technical parameters unless they are relevant:
 
 ## Candidate scoring
 
-SDM predicted probability is optional model support used to re-rank the observed-data candidates.
+Use one integrated candidate score for the production workflow. Do not create separate user-facing `with SDM` and `without SDM` products.
 
-Candidate ranking should support this structure:
+The integrated evidence families are observed occurrence support, local high-resolution habitat similarity, optional macro SDM/SSDM support, survey gap, access, and field-validation learning. Recommended configured weights are 0.35, 0.25, 0.15, 0.10, 0.10, and 0.05 respectively.
 
-`priority_score = observed_weight * occurrence_support_score + model_weight * model_support_score + optional bonuses`
+Missing evidence is unavailable rather than zero. Renormalize available weights per candidate so a missing or failed SDM does not penalize occurrence/local evidence. Report evidence agreement and divergence separately. Consensus may receive a modest bonus; divergence should remain visible for exploratory field validation rather than being silently averaged away.
 
-Recommended default weights:
-
-- observed-data weight: 0.7
-- SDM/SSDM model weight: 0.3
-
-If SDM/SSDM has not been run, rank by observed occurrence support only and show that model support is unavailable.
+Zone ranking must not reward generated candidate density. Candidate count is metadata. Rank a zone primarily by its strongest integrated candidate and agreement support, while retaining all member points for navigation, alternatives, and audit.
 
 ## Validation for publication
 

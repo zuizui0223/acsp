@@ -50,7 +50,8 @@ class DiscoverV1Tests(unittest.TestCase):
             "environmental_novelty": [0.1, 0.9],
         })
         scored = score_discovery_learning(candidates)
-        self.assertAlmostEqual(scored.loc[0, "discovery_value"], 0.36, places=3)
+        self.assertAlmostEqual(scored.loc[0, "discovery_value"], 0.28, places=3)
+        self.assertGreater(scored.loc[0, "integrated_support_score"], scored.loc[1, "integrated_support_score"])
         self.assertGreater(scored.loc[1, "learning_value"], scored.loc[0, "learning_value"])
 
     def test_three_plans_share_pool_but_prioritize_differently(self):

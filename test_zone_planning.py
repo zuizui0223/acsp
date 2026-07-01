@@ -77,10 +77,21 @@ class SurveyZoneTests(unittest.TestCase):
             "latitude": [35.0, 35.002], "longitude": [139.0, 139.002],
         })
         zone = aggregate_candidates_to_zones(candidates, merge_distance_m=1000).iloc[0]
-        self.assertIn("combined across", zone["zone_evidence_scope"])
+        self.assertIn("not independently summed", zone["zone_evidence_scope"])
         self.assertEqual(zone["observed_source_site_id"], 1)
         self.assertEqual(zone["local_source_site_id"], 2)
         self.assertEqual(zone["model_source_site_id"], 2)
+
+    def test_zone_score_uses_integrated_candidate_and_agreement_not_component_sum(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2], "priority_score": [0.8, 0.7],
+            "evidence_agreement_score": [0.4, 0.9],
+            "occurrence_support_score": [1.0, 0.0], "habitat_score": [0.0, 1.0],
+            "latitude": [35.0, 35.002], "longitude": [139.0, 139.002],
+        })
+        zone = aggregate_candidates_to_zones(candidates, merge_distance_m=1000).iloc[0]
+        self.assertAlmostEqual(zone["zone_score"], 0.81, places=6)
+        self.assertIn("not added", zone["zone_score_method"])
 
 
 if __name__ == "__main__":

@@ -14,6 +14,8 @@ from typing import Iterable, Mapping, Optional
 import numpy as np
 import pandas as pd
 
+from acsp.planning import integrated_candidate_scores
+
 
 EARTH_RADIUS_M = 6_371_008.8
 PLAN_ORDER = ("Balanced", "Discovery", "Learning")
@@ -591,10 +593,10 @@ def score_discovery_learning(candidates: pd.DataFrame) -> pd.DataFrame:
     """Add explicit Discovery, Learning, access and evidence-quality scores."""
     if candidates is None or candidates.empty:
         return pd.DataFrame() if candidates is None else candidates.copy()
-    out = candidates.copy().reset_index(drop=True)
+    out = integrated_candidate_scores(candidates).reset_index(drop=True)
     habitat, habitat_n = _weighted_available(out, {
         "analogue_score": 0.35, "habitat_score": 0.25, "environmental_similarity": 0.15,
-        "sdm_suitability": 0.15, "landcover_match_score": 0.10,
+        "landcover_match_score": 0.25,
     }, 0.0)
     detectability, detect_n = _weighted_available(out, {
         "detectability": 0.60, "flowering_probability": 0.25, "season_confidence": 0.15,
@@ -629,7 +631,8 @@ def score_discovery_learning(candidates: pd.DataFrame) -> pd.DataFrame:
     out["habitat_likelihood"] = habitat.round(4)
     out["detectability_score"] = detectability.round(4)
     out["accessibility_score"] = pd.Series(access).round(4)
-    out["discovery_value"] = (habitat * detectability * pd.Series(access)).clip(0.0, 1.0).round(4)
+    integrated = pd.to_numeric(out["integrated_support_score"], errors="coerce").fillna(habitat).clip(0.0, 1.0)
+    out["discovery_value"] = (integrated * detectability * pd.Series(access)).clip(0.0, 1.0).round(4)
     out["learning_value"] = learning.round(4)
     out["model_analogue_disagreement"] = disagreement.round(4)
     evidence_count = habitat_n + detect_n + access_n + uncertainty_n + boundary_n

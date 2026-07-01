@@ -60,6 +60,7 @@ from acsp import (
     aggregate_candidates_to_zones,
     choose_spatial_partition,
     compare_zone_rankings,
+    integrated_candidate_scores,
     make_classifier,
     model_performance_table,
     recommend_candidates,
@@ -80,7 +81,7 @@ from acsp_discover import (
 )
 
 APP_TITLE = "ACSP — Adaptive Complementarity-based Survey Prioritization"
-APP_BUILD_ID = "acsp-zone-audit-20260701"
+APP_BUILD_ID = "acsp-integrated-evidence-20260701"
 EARTH_RADIUS_M = 6_371_008.8
 ENV_SENTINEL_ABS = 1e20
 GBIF_SPECIES_MATCH_URL = "https://api.gbif.org/v1/species/match"
@@ -2313,77 +2314,54 @@ def available_sort_cols(df: pd.DataFrame, desired: list[str]) -> list[str]:
 
 
 def add_priority_rank(sites: pd.DataFrame, observed_weight: float = 0.7, model_weight: float = 0.3) -> pd.DataFrame:
-    """Compute weighted priority score and rank.
-
-    priority_score = observed_weight * occurrence_support_score
-                   + model_weight   * model_support_score
-                   + optional small bonuses (recency, photo, base)
-
-    model_support_score is taken from (in priority order):
-      1. model_support_score column (if present and non-NaN, and non-zero when sdm_suitability is available)
-      2. sdm_suitability column (fallback for rows where model_support_score is NaN or 0 but SDM has run)
-      3. ssdm_model_support_score column
-      4. 0.0 (when no model data is available)
-
-    SDM/SSDM is optional: when no model data exists, model_support_score=0 and
-    priority_score is determined entirely by occurrence support.
-    """
+    """Apply the unified evidence score and retain legacy output columns."""
     out = sites.copy()
     if out.empty:
         out["priority_rank"] = []
         return out
-    observed_w = float(observed_weight)
-    model_w = float(model_weight)
-    if "occurrence_support_score" in out.columns:
-        observed_source = out["occurrence_support_score"]
-    elif "priority_score" in out.columns:
-        observed_source = out["priority_score"]
-    else:
-        observed_source = pd.Series(0.0, index=out.index)
-    observed = pd.to_numeric(observed_source, errors="coerce").fillna(0.0).clip(0, 1)
-    # Build model series with fallback: prefer model_support_score, but if it is 0
-    # while sdm_suitability is non-NaN (meaning SDM ran after model_support_score was set),
-    # use sdm_suitability instead so re-ranking reflects actual SDM predictions.
-    if "model_support_score" in out.columns:
-        model = pd.to_numeric(out["model_support_score"], errors="coerce")
-    else:
-        model = pd.Series(np.nan, index=out.index)
-    if "sdm_suitability" in out.columns:
-        sdm_suit = pd.to_numeric(out["sdm_suitability"], errors="coerce")
-        model = model.where(model.notna() & ~(model.eq(0.0) & sdm_suit.notna()), sdm_suit)
-    elif "ssdm_model_support_score" in out.columns:
-        ssdm_score = pd.to_numeric(out["ssdm_model_support_score"], errors="coerce")
-        model = model.where(model.notna(), ssdm_score)
-    model = model.clip(0, 1)
-    base_priority = pd.to_numeric(
-        out.get("observed_base_priority_score", out.get("priority_score", observed)), errors="coerce"
-    ).fillna(observed).clip(0, 1)
-    model_filled = model.fillna(0.0)
-    model_available = pd.Series(False, index=out.index)
-    for col in ["sdm_suitability", "ssdm_predicted_richness", "ssdm_model_support_score"]:
-        if col in out.columns:
-            model_available |= pd.to_numeric(out[col], errors="coerce").notna()
-    agreement = np.sqrt(observed * model_filled).where(model_available, 0.0)
-    agreement_bonus = (0.15 * agreement).clip(0.0, 0.15)
+    pair_total = max(1e-9, float(observed_weight) + float(model_weight))
+    weights = {
+        "observed": 0.50 * float(observed_weight) / pair_total,
+        "macro_model": 0.50 * float(model_weight) / pair_total,
+        "local_habitat": 0.25,
+        "survey_gap": 0.10,
+        "access": 0.10,
+        "field_validation": 0.05,
+    }
+    candidate_type_before = out.get("candidate_type", pd.Series("", index=out.index)).astype(str)
+    observed_candidate = candidate_type_before.str.contains(
+        "occurrence|known|observed richness|richness hotspot", case=False, na=False
+    )
+    occurrence_support_before = pd.to_numeric(
+        out.get("occurrence_support_score", pd.Series(0.0, index=out.index)), errors="coerce"
+    ).fillna(0.0).clip(0.0, 1.0)
+    existing_priority = pd.to_numeric(
+        out.get("priority_score", occurrence_support_before), errors="coerce"
+    ).fillna(occurrence_support_before).clip(0.0, 1.0)
+    existing_observed_base = pd.to_numeric(
+        out.get("observed_base_priority_score", existing_priority), errors="coerce"
+    ).fillna(existing_priority).clip(0.0, 1.0)
+    out["observed_base_priority_score"] = existing_observed_base.where(
+        observed_candidate, occurrence_support_before
+    )
+    out = integrated_candidate_scores(out, weights=weights)
+    observed = pd.to_numeric(out["component_observed_score"], errors="coerce").fillna(0.0)
+    model = pd.to_numeric(out["component_macro_model_score"], errors="coerce")
+    model_available = out["component_macro_model_available"].astype(bool)
     candidate_type = out.get("candidate_type", pd.Series("", index=out.index)).astype(str)
     model_only = candidate_type.str.contains("model-only|sdm-high|ssdm-high|exploratory", case=False, na=False) & observed.le(0.0)
-    evidence_bonus = (base_priority - observed).clip(lower=0, upper=0.10).where(~model_only, 0.0)
-    exploration_bonus = (0.20 * model_filled).where(model_only, 0.0)
-    out["observed_base_priority_score"] = base_priority.round(3)
+    out["observed_base_priority_score"] = observed.round(3)
     out["occurrence_support_score"] = observed.round(3)
-    out["model_support_score"] = model_filled.round(3)
+    out["model_support_score"] = model.fillna(0.0).round(3)
     out["model_support_available"] = model_available
-    out["observed_model_agreement_score"] = agreement.round(3)
-    out["model_agreement_bonus"] = agreement_bonus.round(3)
-    out["model_only_exploration_bonus"] = exploration_bonus.round(3)
-    out["candidate_evidence"] = np.where(model_only, "Model-only exploratory", np.where(model_available, "Observed + model", "Observed only"))
-    out["observed_weight"] = round(observed_w, 3)
-    out["model_weight"] = round(model_w, 3)
-    out["priority_score"] = (observed_w * observed + model_w * model_filled + evidence_bonus + agreement_bonus + exploration_bonus).clip(0, 1).round(3)
-    out["score_explanation"] = [
-        f"priority = {observed_w:.2f}*observed({obs:.3f}) + {model_w:.2f}*model({mod:.3f}) + evidence({evidence:.3f}) + agreement({agree:.3f}) + exploration({explore:.3f}); model-only sites require field validation"
-        for obs, mod, evidence, agree, explore in zip(observed, model_filled, evidence_bonus, agreement_bonus, exploration_bonus)
-    ]
+    out["observed_model_agreement_score"] = out["evidence_agreement_score"].round(3)
+    out["model_agreement_bonus"] = out["agreement_bonus"].round(3)
+    out["model_only_exploration_bonus"] = out["divergence_exploration_bonus"].where(model_only, 0.0).round(3)
+    out["candidate_evidence"] = out["integrated_evidence_class"]
+    out["observed_weight"] = round(weights["observed"], 3)
+    out["model_weight"] = round(weights["macro_model"], 3)
+    out["priority_score"] = out["integrated_support_score"].round(3)
+    out["score_explanation"] = out["integrated_score_explanation"]
     sort_cols = available_sort_cols(out, ["priority_score", "model_support_score", "occurrence_support_score"])
     if not sort_cols:
         out["priority_rank"] = range(1, len(out) + 1)
@@ -6274,6 +6252,14 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
 
 
 EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "plan_name", "plan_rank", "discover_utility", "discovery_value", "learning_value", "accessibility_score", "representation_value", "discovery_label", "learning_label", "access_label", "data_quality", "constraint_status", "priority_rank", "priority_score", "observed_base_priority_score", "candidate_evidence", "recommendation_basis", "occurrence_support_score", "model_support_score", "model_support_available", "observed_model_agreement_score", "model_agreement_bonus", "model_only_exploration_bonus", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "requested_search_cell_size_m", "effective_search_cell_size_m", "resolution_decision_reason", "resolution_data_quality", "effective_grid_cells_evaluated", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
+for _column in reversed([
+    "integrated_support_score", "integrated_base_score", "integrated_evidence_class",
+    "evidence_agreement_score", "evidence_divergence_score", "agreement_bonus",
+    "divergence_exploration_bonus", "integrated_available_weight",
+    "component_observed_score", "component_local_habitat_score", "component_macro_model_score",
+    "component_survey_gap_score", "component_access_score", "component_field_validation_score",
+]):
+    EXPORT_CSV_COLS.insert(EXPORT_CSV_COLS.index("observed_base_priority_score"), _column)
 
 
 def make_export_csv(sites: pd.DataFrame) -> str:
@@ -7047,11 +7033,8 @@ def build_automatic_discover_bundle(
         "survey_features": list(survey_features or []),
         "target_days": target_days,
         "all_candidates": all_candidates,
-        "candidate_pool_without_sdm": eligible.copy(),
-        "recommended_without_sdm": simple_recommended_candidates(
-            eligible, default_total=3 if survey_features else 8,
-        ),
-        "zones_without_sdm": initial_zones,
+        "candidate_pool": eligible.copy(),
+        "zones": initial_zones,
         "recommended_zones": recommended_zones,
         "zone_agreement_summary": zone_agreement_summary(initial_zones),
         "reachability_curve": scale_decision["curve"],
@@ -7153,11 +7136,8 @@ def build_automatic_genus_bundle(
         "species_summary": species_summary,
         "richness_grid": richness_grid,
         "all_candidates": hotspots,
-        "candidate_pool_without_sdm": eligible.copy(),
-        "recommended_without_sdm": simple_recommended_candidates(
-            eligible, default_total=3 if survey_features else 8,
-        ),
-        "zones_without_sdm": initial_zones,
+        "candidate_pool": eligible.copy(),
+        "zones": initial_zones,
         "recommended_zones": recommended_zones,
         "zone_agreement_summary": zone_agreement_summary(initial_zones),
         "reachability_curve": scale_decision["curve"],
@@ -7219,7 +7199,7 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(bundle["scope"]["_longitude"].mean())
     model_zones = compare_zone_rankings(
-        bundle.get("zones_without_sdm", pd.DataFrame()),
+        bundle.get("zones", pd.DataFrame()),
         aggregate_candidates_to_zones(eligible),
     )
     model_protocol = infer_survey_protocol(bundle.get("taxon_metadata")).as_dict()
@@ -7244,11 +7224,8 @@ def add_automatic_ssdm_support(bundle: dict[str, Any], status=None, progress=Non
             "vif": vif_diag,
             "environment_source": "NASA POWER MERRA-2 1981-2010 macro-climate normals; native 0.5-degree latitude grid, interpolated to the SSDM prediction grid",
         },
-        "candidate_pool_with_sdm": eligible.copy(),
-        "recommended_with_sdm": model_connected_recommendations(
-            eligible, default_total=3 if bundle.get("survey_features") else 8,
-        ),
-        "zones_with_sdm": model_zones,
+        "candidate_pool": eligible.copy(),
+        "zones": model_zones,
         "recommended_zones": recommended_zone_rows(
             zones_matching_plan(model_zones, plans.get("Balanced", pd.DataFrame())),
             default_total=3 if bundle.get("survey_features") else len(plans.get("Balanced", pd.DataFrame())),
@@ -7319,7 +7296,7 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
     hub_lat = float(selected_region["center_latitude"]) if selected_region else float(bundle["scope"]["_latitude"].mean())
     hub_lon = float(selected_region["center_longitude"]) if selected_region else float(bundle["scope"]["_longitude"].mean())
     model_zones = compare_zone_rankings(
-        bundle.get("zones_without_sdm", pd.DataFrame()),
+        bundle.get("zones", pd.DataFrame()),
         aggregate_candidates_to_zones(eligible),
     )
     scale_decision = select_automatic_trip_scale(
@@ -7371,11 +7348,8 @@ def add_automatic_sdm_support(bundle: dict[str, Any], status=None, progress=None
             "model_performance": performance,
             "method_record": method_record,
         },
-        "candidate_pool_with_sdm": eligible.copy(),
-        "recommended_with_sdm": model_connected_recommendations(
-            eligible, default_total=3 if bundle.get("survey_features") else 8,
-        ),
-        "zones_with_sdm": model_zones,
+        "candidate_pool": eligible.copy(),
+        "zones": model_zones,
         "recommended_zones": recommended_zone_rows(
             zones_matching_plan(model_zones, balanced),
             default_total=3 if bundle.get("survey_features") else len(balanced),
@@ -7488,8 +7462,8 @@ def render_zone_proposal(
 ) -> None:
     """Render one stable zone surface before and after optional model support."""
     zones = bundle.get("recommended_zones", pd.DataFrame())
-    all_zones = bundle.get("zones_with_sdm", bundle.get("zones_without_sdm", pd.DataFrame()))
-    pool = bundle.get("candidate_pool_with_sdm", bundle.get("candidate_pool_without_sdm", pd.DataFrame()))
+    all_zones = bundle.get("zones", pd.DataFrame())
+    pool = bundle.get("candidate_pool", pd.DataFrame())
     st.subheader("Recommended survey zones")
     if bundle.get("reachability_reason"):
         st.caption(str(bundle["reachability_reason"]))
@@ -7500,13 +7474,20 @@ def render_zone_proposal(
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Recommended zones", len(zones))
     m2.metric("Points in recommended zones", int(zones["zone_member_count"].sum()))
-    m3.metric("Concordant top zones", int(summary.get("concordant_top_zones", 0)))
-    m4.metric("Model-led exploration", int(summary.get("model_led_top_zones", 0)))
+    mean_agreement = pd.to_numeric(
+        zones.get("zone_agreement_support_score", pd.Series(0.0, index=zones.index)), errors="coerce"
+    ).fillna(0.0).mean()
+    mean_divergence = pd.to_numeric(
+        zones.get("zone_divergence_score", pd.Series(0.0, index=zones.index)), errors="coerce"
+    ).fillna(0.0).mean()
+    m3.metric("Mean evidence agreement", f"{mean_agreement:.2f}")
+    m4.metric("Mean evidence divergence", f"{mean_divergence:.2f}")
     show_cols = [column for column in [
         "recommended_zone_rank", "zone_id", "primary_zone_role", "zone_score", "zone_member_count",
         "zone_radius_m", "zone_merge_threshold_m", "representative_site_id", "initial_rank", "model_rank", "rank_change",
         "observed_support_score", "local_habitat_support_score", "model_support_score",
-        "agreement_score", "agreement_class", "zone_evidence_summary", "zone_evidence_scope", "zone_score_method",
+        "agreement_score", "agreement_class", "zone_agreement_support_score", "zone_divergence_score",
+        "zone_evidence_summary", "zone_evidence_scope", "zone_score_method",
         "priority_source_site_id", "observed_source_site_id", "local_source_site_id",
         "model_source_site_id", "access_source_site_id", "latitude", "longitude",
     ] if column in zones.columns]
@@ -7557,7 +7538,9 @@ def render_zone_proposal(
             f"<b>{zone['zone_id']} · {zone.get('primary_zone_role', '')}</b><br>"
             f"Rank: {zone.get('recommended_zone_rank', zone.get('zone_rank', ''))}<br>"
             f"Evidence: {zone.get('zone_evidence_summary', '')}<br>"
-            f"Agreement: {agreement}"
+            f"Agreement class: {agreement}<br>"
+            f"Agreement score: {zone.get('zone_agreement_support_score', '')}<br>"
+            f"Divergence score: {zone.get('zone_divergence_score', '')}"
         )
         folium.Circle(
             [float(zone["latitude"]), float(zone["longitude"])], radius=radius,
