@@ -1,5 +1,13 @@
 # AI Change Log
 
+## 2026-07-02 - Codex (OpenAI) - Publication repository cleanup
+
+Summary:
+- Moved superseded Izu, initial SDM-accuracy, and pre-hierarchy national benchmark assets under `legacy/`.
+- Extracted retry, radius-coverage, and fold-completion helpers into the supported `acsp.benchmarking` module so the current national benchmark has no legacy dependency.
+- Removed temporary notes and completed patch notes from the publication root while preserving them in `legacy/notes/`.
+- Kept only the final mixed and plant confirmation artifacts in the active `benchmark_results/` path.
+
 ## 2026-07-02 - Codex (OpenAI) - Five-kilometre precision ceiling audit
 
 Summary:
