@@ -98,6 +98,10 @@ def integrated_candidate_scores(
     denominator = pd.Series(0.0, index=out.index)
     for name, columns in component_columns.items():
         values, available = _available_unit_component(out, columns)
+        if name == "local_habitat" and exclude_occurrence_derived and "occurrence_derived_habitat_score" in out.columns:
+            occurrence_derived = out["occurrence_derived_habitat_score"].astype("boolean").fillna(False).astype(bool)
+            available &= ~occurrence_derived
+            values = values.where(available)
         if name == "macro_model" and "model_support_available" in out.columns:
             explicit = out["model_support_available"].astype("boolean").fillna(False).astype(bool)
             raw_prediction = pd.Series(False, index=out.index)

@@ -10,6 +10,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
+import time
 from typing import Any
 
 import pandas as pd
@@ -55,10 +56,22 @@ def island_wkt() -> str:
     return f"MULTIPOLYGON({','.join(parts)})"
 
 
-def _get_json(url: str, params: dict[str, Any] | None = None, timeout: int = 60) -> dict[str, Any]:
-    response = requests.get(url, params=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+def _get_json(
+    url: str, params: dict[str, Any] | None = None, timeout: int = 60, attempts: int = 3
+) -> dict[str, Any]:
+    """Fetch JSON while tolerating the short GBIF TLS failures seen in long benchmarks."""
+    last_error: Exception | None = None
+    for attempt in range(max(1, int(attempts))):
+        try:
+            response = requests.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+            if attempt + 1 < max(1, int(attempts)):
+                time.sleep(0.5 * (2 ** attempt))
+    assert last_error is not None
+    raise last_error
 
 
 def taxon_sampling_frame(facet_limit: int = 300, minimum_records: int = 15) -> pd.DataFrame:
@@ -71,7 +84,10 @@ def taxon_sampling_frame(facet_limit: int = 300, minimum_records: int = 15) -> p
     counts = payload.get("facets", [{}])[0].get("counts", [])
     def resolve(item: dict[str, Any]) -> dict[str, Any] | None:
         key = int(item["name"])
-        metadata = _get_json(f"{GBIF_SPECIES}/{key}", timeout=30)
+        try:
+            metadata = _get_json(f"{GBIF_SPECIES}/{key}", timeout=30)
+        except (requests.RequestException, ValueError):
+            return None
         if metadata.get("rank") == "SPECIES" and metadata.get("scientificName"):
             return {
                 "speciesKey": key, "scientific_name": metadata["scientificName"],
@@ -105,6 +121,34 @@ def _coverage_at_radius(candidates: pd.DataFrame, radius_km: float) -> pd.DataFr
     return out
 
 
+def _fold_completion(folds: pd.DataFrame, expected_repeats: int) -> dict[str, Any]:
+    valid = int(folds.get("status", pd.Series(dtype=str)).eq("ok").sum())
+    if valid == int(expected_repeats):
+        status = "ok"
+    elif valid > 0:
+        status = "partial"
+    else:
+        status = "failed"
+    return {
+        "status": status,
+        "valid_repeats": valid,
+        "attempted_repeats": int(len(folds)),
+        "failed_repeats": int(len(folds) - valid),
+    }
+
+
+def _read_candidate_files(paths: list[Path]) -> pd.DataFrame:
+    frames = []
+    for path in paths:
+        try:
+            frame = pd.read_csv(path)
+        except pd.errors.EmptyDataError:
+            continue
+        if not frame.empty and "benchmark_taxon" in frame.columns:
+            frames.append(frame)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
@@ -125,7 +169,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         candidate_path = output / f"{slug}_candidates.csv"
         fold_path = output / f"{slug}_folds.csv"
         if candidate_path.exists() and fold_path.exists():
-            statuses.append({"benchmark_taxon": row.scientific_name, "status": "checkpoint"})
+            folds = pd.read_csv(fold_path)
+            statuses.append({
+                "benchmark_taxon": row.scientific_name,
+                "checkpoint": True,
+                **_fold_completion(folds, args.repeats),
+            })
             continue
         try:
             occurrences = fetch_occurrences(int(row.speciesKey), args.records_per_taxon)
@@ -150,17 +199,29 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             )
             candidates["benchmark_taxon"] = str(row.scientific_name)
             folds["benchmark_taxon"] = str(row.scientific_name)
+            if candidates.empty:
+                candidates = pd.DataFrame(columns=["benchmark_taxon"])
             candidates.to_csv(candidate_path, index=False)
             folds.to_csv(fold_path, index=False)
-            statuses.append({"benchmark_taxon": row.scientific_name, "status": "ok", **summary})
+            statuses.append({
+                "benchmark_taxon": row.scientific_name,
+                **_fold_completion(folds, args.repeats),
+                **summary,
+            })
         except Exception as exc:
             statuses.append({"benchmark_taxon": row.scientific_name, "status": "failed", "reason": str(exc)})
         pd.DataFrame(statuses).to_csv(output / "taxon_status.csv", index=False)
 
+    # Checkpoint-only taxa use ``continue`` above, so always rewrite the complete audit table.
+    pd.DataFrame(statuses).to_csv(output / "taxon_status.csv", index=False)
+
     candidate_files = sorted(output.glob("taxon_*_candidates.csv"))
-    all_candidates = pd.concat([pd.read_csv(path) for path in candidate_files], ignore_index=True) if candidate_files else pd.DataFrame()
+    all_candidates = _read_candidate_files(candidate_files)
     radius_summaries = []
     for radius in args.radii:
+        if all_candidates.empty:
+            radius_summaries.append({"radius_km": radius, "status": "insufficient_taxa"})
+            continue
         radius_candidates = _coverage_at_radius(all_candidates, radius)
         radius_candidates.to_csv(output / f"candidate_benchmark_{radius:g}km.csv", index=False)
         if radius_candidates["benchmark_taxon"].nunique() < 4:
@@ -175,7 +236,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         radius_summaries.append(summary)
     result = {
         "protocol": vars(args), "island_bounds": ISLAND_BOUNDS,
-        "sampled_taxa": int(len(sample)), "completed_taxa": int(len(candidate_files)),
+        "sampled_taxa": int(len(sample)),
+        "fully_completed_taxa": int(sum(item.get("status") == "ok" for item in statuses)),
+        "partially_completed_taxa": int(sum(item.get("status") == "partial" for item in statuses)),
+        "failed_taxa": int(sum(item.get("status") == "failed" for item in statuses)),
+        "evaluable_taxa": int(all_candidates.get("benchmark_taxon", pd.Series(dtype=str)).nunique()),
         "radius_results": radius_summaries,
     }
     (output / "benchmark_summary.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")

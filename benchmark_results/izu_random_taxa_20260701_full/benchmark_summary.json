@@ -1,0 +1,210 @@
+{
+  "protocol": {
+    "output": "benchmark_results/izu_random_taxa_20260701_full",
+    "taxa": 20,
+    "repeats": 5,
+    "records_per_taxon": 150,
+    "minimum_records": 15,
+    "facet_limit": 300,
+    "strata": 4,
+    "seed": 20260701,
+    "block_degrees": 0.03,
+    "holdout_fraction": 0.2,
+    "top_k": 5,
+    "radii": [
+      2.0,
+      5.0,
+      10.0
+    ],
+    "random_draws": 200,
+    "search_draws": 2000,
+    "train_fraction": 0.7,
+    "include_sdm": false
+  },
+  "island_bounds": {
+    "Izu Oshima": [
+      139.3,
+      34.64,
+      139.49,
+      34.84
+    ],
+    "Toshima": [
+      139.24,
+      34.49,
+      139.3,
+      34.55
+    ],
+    "Niijima": [
+      139.2,
+      34.31,
+      139.31,
+      34.48
+    ],
+    "Kozushima": [
+      139.09,
+      34.16,
+      139.23,
+      34.28
+    ]
+  },
+  "sampled_taxa": 20,
+  "fully_completed_taxa": 16,
+  "partially_completed_taxa": 1,
+  "failed_taxa": 3,
+  "evaluable_taxa": 17,
+  "radius_results": [
+    {
+      "design": "seeded taxon-held-out calibration with within-taxon spatial-block recovery",
+      "calibration_taxa": [
+        "Christella acuminata (Houtt.) Holttum",
+        "Hydrangea involucrata Siebold",
+        "Hydrangea macrophylla (Thunb.) Ser.",
+        "Lilium auratum Lindl.",
+        "Piper kadsura (Choisy) Ohwi",
+        "Pteris parkeri J.J.Parker",
+        "Rubus trifidus Thunb.",
+        "Saxifraga fortunei Hook.",
+        "Sceptridium japonicum (Prantl) Lyon",
+        "Smilax china L.",
+        "Vitis ficifolia Bunge",
+        "Woodwardia prolifera Hook. & Arn."
+      ],
+      "heldout_evaluation_taxa": [
+        "Buxus microphylla Siebold & Zucc.",
+        "Carex oshimensis Nakai",
+        "Dryopteris caudipinna Nakai",
+        "Dryopteris erythrosora (D.C.Eaton) Kuntze",
+        "Equisetum arvense L."
+      ],
+      "selected_weights": {
+        "local_habitat": 1.0
+      },
+      "calibrated_components": [
+        "local_habitat"
+      ],
+      "unavailable_retrospective_components": [
+        "macro_model"
+      ],
+      "field_only_components": [
+        "access",
+        "field_validation"
+      ],
+      "selected_calibration_recall": 0.07136,
+      "selected_heldout_recall": 0.194967,
+      "default_heldout_recall": 0.194967,
+      "heldout_lift_over_default": 0.0,
+      "calibration_informative": false,
+      "calibration_recall_range": 0.0,
+      "random_same_pool_heldout_recall": 0.209813,
+      "greedy_same_pool_oracle_recall": 0.373892,
+      "local_only_heldout_recall": 0.194967,
+      "macro_only_heldout_recall": null,
+      "recommend_production_change": false,
+      "limitation": "GBIF recovery calibrates only varying local-habitat and macro-model evidence. Accessibility, detectability, and field-validation weights require prospective field data.",
+      "random_state": 20260701,
+      "radius_km": 2.0
+    },
+    {
+      "design": "seeded taxon-held-out calibration with within-taxon spatial-block recovery",
+      "calibration_taxa": [
+        "Christella acuminata (Houtt.) Holttum",
+        "Hydrangea involucrata Siebold",
+        "Hydrangea macrophylla (Thunb.) Ser.",
+        "Lilium auratum Lindl.",
+        "Piper kadsura (Choisy) Ohwi",
+        "Pteris parkeri J.J.Parker",
+        "Rubus trifidus Thunb.",
+        "Saxifraga fortunei Hook.",
+        "Sceptridium japonicum (Prantl) Lyon",
+        "Smilax china L.",
+        "Vitis ficifolia Bunge",
+        "Woodwardia prolifera Hook. & Arn."
+      ],
+      "heldout_evaluation_taxa": [
+        "Buxus microphylla Siebold & Zucc.",
+        "Carex oshimensis Nakai",
+        "Dryopteris caudipinna Nakai",
+        "Dryopteris erythrosora (D.C.Eaton) Kuntze",
+        "Equisetum arvense L."
+      ],
+      "selected_weights": {
+        "local_habitat": 1.0
+      },
+      "calibrated_components": [
+        "local_habitat"
+      ],
+      "unavailable_retrospective_components": [
+        "macro_model"
+      ],
+      "field_only_components": [
+        "access",
+        "field_validation"
+      ],
+      "selected_calibration_recall": 0.263099,
+      "selected_heldout_recall": 0.344379,
+      "default_heldout_recall": 0.344379,
+      "heldout_lift_over_default": 0.0,
+      "calibration_informative": false,
+      "calibration_recall_range": 0.0,
+      "random_same_pool_heldout_recall": 0.321992,
+      "greedy_same_pool_oracle_recall": 0.460033,
+      "local_only_heldout_recall": 0.344379,
+      "macro_only_heldout_recall": null,
+      "recommend_production_change": false,
+      "limitation": "GBIF recovery calibrates only varying local-habitat and macro-model evidence. Accessibility, detectability, and field-validation weights require prospective field data.",
+      "random_state": 20260701,
+      "radius_km": 5.0
+    },
+    {
+      "design": "seeded taxon-held-out calibration with within-taxon spatial-block recovery",
+      "calibration_taxa": [
+        "Christella acuminata (Houtt.) Holttum",
+        "Hydrangea involucrata Siebold",
+        "Hydrangea macrophylla (Thunb.) Ser.",
+        "Lilium auratum Lindl.",
+        "Piper kadsura (Choisy) Ohwi",
+        "Pteris parkeri J.J.Parker",
+        "Rubus trifidus Thunb.",
+        "Saxifraga fortunei Hook.",
+        "Sceptridium japonicum (Prantl) Lyon",
+        "Smilax china L.",
+        "Vitis ficifolia Bunge",
+        "Woodwardia prolifera Hook. & Arn."
+      ],
+      "heldout_evaluation_taxa": [
+        "Buxus microphylla Siebold & Zucc.",
+        "Carex oshimensis Nakai",
+        "Dryopteris caudipinna Nakai",
+        "Dryopteris erythrosora (D.C.Eaton) Kuntze",
+        "Equisetum arvense L."
+      ],
+      "selected_weights": {
+        "local_habitat": 1.0
+      },
+      "calibrated_components": [
+        "local_habitat"
+      ],
+      "unavailable_retrospective_components": [
+        "macro_model"
+      ],
+      "field_only_components": [
+        "access",
+        "field_validation"
+      ],
+      "selected_calibration_recall": 0.348218,
+      "selected_heldout_recall": 0.373791,
+      "default_heldout_recall": 0.373791,
+      "heldout_lift_over_default": 0.0,
+      "calibration_informative": false,
+      "calibration_recall_range": 0.0,
+      "random_same_pool_heldout_recall": 0.380276,
+      "greedy_same_pool_oracle_recall": 0.489444,
+      "local_only_heldout_recall": 0.373791,
+      "macro_only_heldout_recall": null,
+      "recommend_production_change": false,
+      "limitation": "GBIF recovery calibrates only varying local-habitat and macro-model evidence. Accessibility, detectability, and field-validation weights require prospective field data.",
+      "random_state": 20260701,
+      "radius_km": 10.0
+    }
+  ]
+}

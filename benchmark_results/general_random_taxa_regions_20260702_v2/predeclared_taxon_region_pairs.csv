@@ -1,0 +1,25 @@
+pair_id,status,taxon_group,kingdomKey,geographic_stratum,region_name,west,south,east,north,speciesKey,scientific_name,coordinate_records,record_count_stratum
+1,predeclared,plant,6,north,Tohoku,139.5,38.0,141.5,40.5,7924597,Equisetum arvense L.,449,0
+2,predeclared,plant,6,east,Kanto,138.5,35.0,140.5,36.5,2702808,Echinochloa crus-galli (L.) P.Beauv.,1223,1
+3,predeclared,plant,6,west,Shikoku,132.5,32.7,134.5,34.5,7319608,Polystichum pseudomakinoi Tagawa,373,2
+4,predeclared,plant,6,south,Ryukyu,126.0,24.0,130.0,28.5,7331031,Ardisia quinquegona Blume,317,3
+5,predeclared,animal,1,north,Hokkaido east,143.0,42.5,145.5,44.5,2440954,"Cervus nippon Temminck, 1838",611,0
+6,predeclared,animal,1,east,Izu,138.8,34.0,139.8,35.0,2481606,"Bulweria bulwerii (Jardine & Selby, 1828)",116,1
+7,predeclared,animal,1,west,Chugoku,131.5,34.0,134.0,35.5,5231223,"Phoenicurus auroreus (Pallas, 1776)",1362,2
+8,predeclared,animal,1,south,Ryukyu,126.0,24.0,130.0,28.5,7342055,"Hypsipetes amaurotis (Temminck, 1830)",7717,3
+9,predeclared,plant,6,north,Hokkaido west,140.0,42.5,142.0,44.5,2687927,Equisetum hyemale L.,96,0
+10,predeclared,plant,6,east,Izu,138.8,34.0,139.8,35.0,4126366,Calamagrostis autumnalis Koidz.,86,1
+11,predeclared,plant,6,west,Shikoku,132.5,32.7,134.5,34.5,7327603,Rhododendron dilatatum Miq.,411,2
+12,predeclared,plant,6,south,Northern Kyushu,129.5,32.5,131.5,34.0,5665885,Woodwardia japonica (L.fil.) Sm.,292,3
+13,predeclared,animal,1,north,Hokkaido east,143.0,42.5,145.5,44.5,7716303,"Pterostichus thunbergi A.Morawitz, 1862",705,0
+14,predeclared,animal,1,east,Kanto,138.5,35.0,140.5,36.5,2490310,"Motacilla cinerea Tunstall, 1771",7950,1
+15,predeclared,animal,1,west,Shikoku,132.5,32.7,134.5,34.5,6101070,"Parus cinereus Vieillot, 1818",868,2
+16,predeclared,animal,1,south,Northern Kyushu,129.5,32.5,131.5,34.0,6101015,"Chloris sinica (Linnaeus, 1766)",2382,3
+17,predeclared,plant,6,north,Hokkaido east,143.0,42.5,145.5,44.5,3925470,Thalictrum sachalinense Lecoy.,109,0
+18,predeclared,plant,6,east,Izu,138.8,34.0,139.8,35.0,4101039,Boehmeria splitgerbera Koidz.,88,1
+19,predeclared,plant,6,west,Kinki,134.5,33.5,136.5,35.5,8391312,Coniogramme japonica (Thunb.) Diels,603,2
+20,predeclared,plant,6,south,Southern Kyushu,130.0,30.8,131.8,32.5,5646838,Leptochilus ellipticus (Thunb.) Noot.,521,3
+21,predeclared,animal,1,north,Tohoku,139.5,38.0,141.5,40.5,2492391,"Cyanoptila cyanomelana (Temminck, 1829)",614,0
+22,predeclared,animal,1,east,Chubu mountains,136.5,35.0,138.5,37.0,5844385,"Buteo japonicus Temminck & Schlegel, 1844",1467,1
+23,predeclared,animal,1,west,Shikoku,132.5,32.7,134.5,34.5,9687165,"Motacilla alba Linnaeus, 1758",849,2
+24,predeclared,animal,1,south,Southern Kyushu,130.0,30.8,131.8,32.5,2394503,"Lepomis macrochirus Rafinesque, 1819",4546,3

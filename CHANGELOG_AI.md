@@ -1,5 +1,105 @@
 # AI Change Log
 
+## 2026-07-02 - Codex (OpenAI) - Independent retrospective confirmation
+
+Changed files:
+- acsp/validation.py
+- acsp/__init__.py
+- benchmark_general_random_taxa_regions.py
+- test_benchmark_general.py
+- RETROSPECTIVE_VALIDATION_PROTOCOL.md
+- benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/{benchmark_summary.json,predeclared_taxon_region_pairs.csv,pair_status.csv,cohort_summary.csv,fold_recovery.csv,robust_inference.csv}
+- .gitignore
+- CHANGELOG_AI.md
+
+Summary:
+- Added failure-inclusive intention-to-evaluate recovery, taxon-region clustered bootstrap intervals, and pair-level sign-flip tests.
+- Added confirmatory taxon exclusion so a new seed cannot reuse any development taxon.
+- Froze 5 km as the primary retrospective endpoint, with 2 and 10 km as sensitivity endpoints, before inspecting the independent cohort.
+
+Validation:
+- Seed `20260703` drew 24 balanced taxon-region pairs with zero taxon overlap with the development cohort.
+- Twelve pairs completed all five folds, five were partial, and seven failed; only 17 pairs were evaluable.
+- Fold completion was 58.3% for plants and 65.0% for animals. Rankable-fold rates were 26.7% and 21.7%, far below the predeclared 90% completion and 80% rankable gates.
+- At the primary 5 km endpoint, animal ITE lift was -0.0041 (95% clustered CI -0.0130 to 0.0006) and plant lift was -0.0005 (-0.0014 to 0.0000).
+- At 10 km, neither animal (-0.0026, CI -0.0130 to 0.0050) nor plant (0.0013, CI -0.0048 to 0.0082) showed confirmed superiority over random.
+- The favorable 10 km animal development result did not replicate. No production-weight or superiority claim is justified.
+
+Known risks / TODO:
+- Candidate-generation stability, not only ranking, is the dominant blocker on unseen taxa.
+- The next algorithm iteration must be developed outside this frozen confirmation set and tested on another excluded-taxon seed.
+- Retrospective robustness cannot identify field access, detectability, or phenology weights; those remain explicitly unvalidated.
+
+## 2026-07-02 - Codex (OpenAI) - Stratified national taxon-by-region validation
+
+Changed files:
+- acsp/planning.py
+- gbif_fieldmap_builder_app.py
+- benchmark_general_random_taxa_regions.py
+- test_benchmark_general.py
+- test_acsp_package.py
+- benchmark_results/general_random_taxa_regions_20260702_v2/{benchmark_summary.json,predeclared_taxon_region_pairs.csv,pair_status.csv,cohort_summary.csv,fold_recovery.csv}
+- .gitignore
+- CHANGELOG_AI.md
+
+Summary:
+- Added a seeded general-performance benchmark that balances plant/animal taxa, northern/eastern/western/southern Japan, and four regional occurrence-count strata.
+- Added a sparse-pool fallback: when the standard local search yields fewer than six cells, the redundant occurrence-cluster-centre buffer is relaxed while individual training-record separation remains enforced and the fallback stage is exported.
+- Marked spatial distance-based habitat fallback scores as occurrence-derived and excluded them from distance-free retrospective scoring.
+- Added explicit rankable-fold reporting when the candidate pool exceeds Top-k; folds selecting the entire pool no longer masquerade as evidence about ranking quality.
+- Cached repeated GBIF species metadata and region sampling frames without changing the seeded sample.
+
+Validation:
+- The predeclared run used 24 fixed taxon-region pairs: 12 plants, 12 animals, three pairs in each taxon-group × geographic-stratum cell, and five spatial holdouts per pair.
+- Version 2 completed all five repeats for 23 pairs; the remaining seabird pair failed hard-constraint screening and remains in the denominator. Version 1 had only 17 full, four partial, and three failed pairs.
+- Median distance-free candidate-pool size increased from 3 in version 1 to 17.5 for plants and 20 for animals in version 2. Rankable folds were 41/60 for plants and 47/55 for animals.
+- On rankable folds at 10 km, animal default recall was 0.135 versus random 0.075 and greedy pool ceiling 0.276. Plant default recall was 0.053 versus random 0.069 and pool ceiling 0.220.
+- At 2 km both groups were effectively unrecoverable; at 5 km default and random were close. No global production-weight change is justified.
+- All 69 Python tests passed.
+- Added intention-to-evaluate inference that assigns zero recovery to failed/missing folds, clusters bootstrap uncertainty by taxon-region pair, and uses pair-level sign-flip tests rather than treating repeated folds as independent.
+- At 5 km, neither group showed a robust lift: animal ITE lift 0.0023 (95% cluster-bootstrap CI -0.0042 to 0.0113) and plant lift 0.0005 (-0.0209 to 0.0203).
+- At 10 km, animals showed lift 0.0475 (0.0138 to 0.0935; pair-level sign-flip p=0.0129), while plants showed -0.0114 (-0.0515 to 0.0173).
+- Version 2 remains a development-set evaluation because its fallback was motivated by version 1 on the same fixed pairs. A new-seed confirmatory cohort is required before treating the 10 km animal result as replicated evidence.
+
+Known risks / TODO:
+- Plant and animal ranking performance diverged, so a single universal scoring model is not supported. The next model should branch by life history/mobility and distribution regime while keeping one-name input.
+- The seabird failure shows that terrestrial land/access constraints cannot be transferred unchanged to marine or coastal life histories.
+- External habitat-layer availability and caching can affect candidate-pool construction; future benchmark artifacts should pin layer versions and export source checksums.
+- Recovery remains low at realistic 2-5 km radii. Candidate ranking and macro/local evidence need improvement before claiming superiority over random search.
+
+## 2026-07-01 - Codex (OpenAI) - Full four-island distance-free recovery benchmark
+
+Changed files:
+- acsp/validation.py
+- benchmark_random_species_models.py
+- benchmark_izu_random_taxa.py
+- test_acsp_package.py
+- test_benchmark_izu.py
+- test_benchmark_resilience.py
+- benchmark_results/izu_random_taxa_20260701_full/{benchmark_summary.json,predeclared_taxon_sample.csv,taxon_status.csv}
+- .gitignore
+- CHANGELOG_AI.md
+
+Summary:
+- Ran the predeclared 20-taxon, five-repeat four-island benchmark with training-only candidate rebuilding, occurrence-supported candidate removal, occurrence/distance score exclusion, and held-out occurrence matching at 2/5/10 km.
+- Distinguished fully completed, partially completed, failed, and evaluable taxa. Empty candidate checkpoints no longer count as successful taxa or break final aggregation.
+- Added retry handling for transient GBIF TLS/HTTP failures and isolated failed species-name resolutions instead of aborting the sampling frame.
+- Prevented retrospective GBIF recovery from fitting access or field-validation weights. Weight search now uses only varying local-habitat and macro-model evidence; missing components cannot absorb arbitrary nominal weight.
+- Added a greedy same-pool recovery ceiling to distinguish candidate-pool limitations from ranking limitations.
+
+Validation:
+- Seed `20260701` predeclared 20 plant taxa across four occurrence-count strata: 16 fully completed, one partial, three failed, and 17 evaluable.
+- On five completely held-out evaluation taxa, local-habitat Top-5 recall versus same-pool random recall was 0.195 versus 0.210 at 2 km, 0.344 versus 0.322 at 5 km, and 0.374 versus 0.380 at 10 km.
+- Greedy same-pool recovery ceilings were 0.374, 0.460, and 0.489 at 2, 5, and 10 km, respectively, showing room to improve ranking as well as candidate generation.
+- This run did not include macro SDM, so only local habitat varied retrospectively. The search was correctly classified as uninformative for relative weight fitting and no production-weight change is recommended.
+- All 65 Python tests passed after the resilience, completion-audit, component-identifiability, and oracle-baseline changes.
+
+Known risks / TODO:
+- Three of 20 predeclared taxa were not fully evaluable, including hard-constraint or distance-free-candidate failures. These failures are part of algorithm performance, not taxa to replace after inspection.
+- A separate checkpointed run with macro SDM enabled is required to estimate local-versus-macro weight allocation.
+- Access, detectability, phenology, and field-validation weights require prospective standardized surveys and cannot be inferred from GBIF proximity.
+- The four-island plant frame does not validate nationwide regions, narrow endemics outside these islands, or animal taxa; those require predeclared stratified benchmark cohorts.
+
 ## 2026-07-01 - Codex (OpenAI) - Random-species model accuracy benchmark
 
 Changed files:

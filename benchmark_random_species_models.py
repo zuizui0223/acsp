@@ -6,6 +6,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
+import time
 from typing import Any
 
 import numpy as np
@@ -53,10 +54,22 @@ def summarize_model_accuracy(metrics: pd.DataFrame, random_state: int, bootstrap
     return pd.DataFrame(rows)
 
 
-def _get_json(url: str, params: dict[str, Any] | None = None, timeout: int = 60) -> dict[str, Any]:
-    response = requests.get(url, params=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+def _get_json(
+    url: str, params: dict[str, Any] | None = None, timeout: int = 60, attempts: int = 3
+) -> dict[str, Any]:
+    """Fetch JSON while tolerating the short GBIF TLS failures seen in long benchmarks."""
+    last_error: Exception | None = None
+    for attempt in range(max(1, int(attempts))):
+        try:
+            response = requests.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+            if attempt + 1 < max(1, int(attempts)):
+                time.sleep(0.5 * (2 ** attempt))
+    assert last_error is not None
+    raise last_error
 
 
 def japan_plant_sampling_frame(facet_limit: int, minimum_records: int) -> pd.DataFrame:
@@ -69,7 +82,10 @@ def japan_plant_sampling_frame(facet_limit: int, minimum_records: int) -> pd.Dat
 
     def resolve(item: dict[str, Any]) -> dict[str, Any] | None:
         key = int(item["name"])
-        metadata = _get_json(f"{GBIF_SPECIES}/{key}", timeout=30)
+        try:
+            metadata = _get_json(f"{GBIF_SPECIES}/{key}", timeout=30)
+        except (requests.RequestException, ValueError):
+            return None
         if metadata.get("rank") != "SPECIES" or not metadata.get("scientificName"):
             return None
         return {"speciesKey": key, "scientific_name": metadata["scientificName"], "coordinate_records": int(item["count"])}
