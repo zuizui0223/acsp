@@ -1,5 +1,22 @@
 # AI Change Log
 
+## 2026-07-02 - Codex (OpenAI) - Cross-taxon hierarchical regional validation
+
+Summary:
+- Added automatic terrestrial, coastal, marine, and inland-aquatic candidate surfaces from GBIF taxonomy plus training-record land fraction.
+- Added marine distance-to-land-band habitat evidence, spatially complementary aquatic candidate generation, and water-transit cautions.
+- Fixed bird climate predictors being silently discarded when a DEM was available.
+- Exported explicit 10 km regional-zone claim fields so representative coordinates are not presented as validated exact sites.
+- Added mixed-scale and sensitivity endpoint artifacts, single-group confirmation sampling, and a peer-review-oriented validation report.
+
+Validation:
+- 73 unit tests pass.
+- Hierarchical development: 24 pairs, 120/120 completed folds, mixed endpoint lift 0.0297 (95% CI 0.0103–0.0523; sign-flip p=0.0063).
+- Independent mixed confirmation: 24 unseen taxa, 119/120 completed folds; animal 10 km lift 0.0408 (0.0031–0.0847).
+- Independent plant extension: 24 further unseen taxa, 115/120 completed folds; plant 10 km lift 0.0215 (0.0002–0.0481).
+- Pooled algorithm-compatible independent plant confirmations: 36 pairs, 10 km lift 0.0186 (0.0035–0.0374; p=0.0233).
+- Five-kilometre plant recovery did not replicate. The supported cross-taxon claim is regional 10 km candidate-zone prioritization, not exact-site prediction.
+
 ## 2026-07-02 - Codex (OpenAI) - Two-stage recovery and complementary ranking
 
 Summary:

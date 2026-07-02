@@ -21,6 +21,7 @@ from gbif_fieldmap_builder_app import (
     detect_occurrence_columns,
     gbif_record_to_species_row,
 )
+from acsp_discover import primary_recovery_radius_km
 
 
 GBIF_SEARCH = "https://api.gbif.org/v1/occurrence/search"
@@ -99,13 +100,17 @@ def predeclare_pairs(
     facet_limit: int,
     minimum_records: int,
     excluded_taxa: set[str] | None = None,
+    taxon_groups: list[str] | None = None,
 ) -> pd.DataFrame:
     rng = np.random.default_rng(int(seed))
     cells = pd.DataFrame(REGION_CELLS, columns=["geographic_stratum", "region_name", "west", "south", "east", "north"])
     selected_rows = []
     used_taxa: set[str] = set(map(str, excluded_taxa or set()))
     strata = list(dict.fromkeys(cells["geographic_stratum"]))
-    groups = list(TAXON_GROUPS)
+    groups = list(taxon_groups or TAXON_GROUPS)
+    invalid_groups = set(groups).difference(TAXON_GROUPS)
+    if invalid_groups:
+        raise ValueError(f"Unknown taxon groups: {', '.join(sorted(invalid_groups))}")
     frame_cache: dict[tuple[str, str], pd.DataFrame] = {}
     for index in range(int(pair_count)):
         geographic = strata[index % len(strata)]
@@ -159,7 +164,12 @@ def summarize_recovery(candidates: pd.DataFrame, radius: float, top_k: int, seed
     work = _coverage_at_radius(candidates, radius)
     rng = np.random.default_rng(int(seed))
     rows = []
-    group_columns = ["benchmark_taxon", "benchmark_region", "taxon_group", "geographic_stratum", "repeat"]
+    group_columns = ["benchmark_taxon", "benchmark_region", "taxon_group", "geographic_stratum"]
+    group_columns.extend(
+        column for column in ("taxon_class", "surface_domain", "primary_radius_km")
+        if column in work.columns
+    )
+    group_columns.append("repeat")
     for keys, fold in work.groupby(group_columns, sort=False):
         all_ids = set(filter(None, str(fold["all_heldout_ids"].iloc[0]).split(";")))
         if not all_ids:
@@ -209,7 +219,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         sample = pd.read_csv(args.sample_file).head(int(args.pairs)).copy()
     else:
         sample = predeclare_pairs(
-            args.pairs, args.seed, args.facet_limit, args.minimum_records, excluded_taxa
+            args.pairs, args.seed, args.facet_limit, args.minimum_records, excluded_taxa,
+            list(args.taxon_groups),
         )
     if not sample_path.exists():
         sample.to_csv(sample_path, index=False)
@@ -243,7 +254,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 # recovery endpoint and often left <= top_k cells, making the
                 # ranking statistically unidentifiable.  The production bundle
                 # still applies hard constraints before making a field plan.
-                return bundle["potential_candidates"]
+                potential = bundle["potential_candidates"].copy()
+                taxon_class = str(metadata.get("class") or "unknown").lower()
+                surface_domain = str(bundle.get("surface_domain") or "terrestrial")
+                potential["taxon_class"] = taxon_class
+                potential["primary_radius_km"] = primary_recovery_radius_km(
+                    metadata, surface_domain=surface_domain
+                )
+                return potential
 
             candidates, folds, _ = spatial_block_candidate_benchmark(
                 occurrences, builder, block_degrees=args.block_degrees, repeats=args.repeats,
@@ -284,6 +302,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             recovery_rows.extend(summarize_recovery(candidates, radius, args.top_k, args.seed))
     recovery = pd.DataFrame(recovery_rows)
     recovery.to_csv(output / "fold_recovery.csv", index=False)
+    primary = pd.DataFrame()
+    if not recovery.empty and "primary_radius_km" in recovery.columns:
+        primary = recovery[
+            np.isclose(
+                pd.to_numeric(recovery["radius_km"], errors="coerce"),
+                pd.to_numeric(recovery["primary_radius_km"], errors="coerce"),
+            )
+        ].copy()
+        primary.to_csv(output / "primary_endpoint_recovery.csv", index=False)
     cohort = pd.DataFrame()
     if not recovery.empty:
         cohort = recovery.groupby(["radius_km", "taxon_group", "geographic_stratum"], as_index=False).agg(
@@ -312,12 +339,30 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             random_state=args.seed,
         )
     robust.to_csv(output / "robust_inference.csv", index=False)
+    primary_inference = pd.DataFrame()
+    if not primary.empty:
+        endpoint = primary.copy()
+        endpoint["radius_km"] = 0.0
+        endpoint["primary_endpoint_group"] = "all_taxa"
+        declared_endpoint = sample[sample["status"].eq("predeclared")].rename(
+            columns={"scientific_name": "benchmark_taxon"}
+        ).copy()
+        declared_endpoint["primary_endpoint_group"] = "all_taxa"
+        primary_inference = clustered_recovery_inference(
+            endpoint, declared_endpoint, repeats=args.repeats,
+            group_col="primary_endpoint_group",
+            bootstrap_draws=args.bootstrap_draws,
+            permutation_draws=args.permutation_draws,
+            random_state=args.seed,
+        ).rename(columns={"radius_km": "mixed_primary_endpoint"})
+    primary_inference.to_csv(output / "primary_endpoint_inference.csv", index=False)
     result = {
         "protocol": vars(args), "predeclared_pairs": int(len(sample)),
         "evaluable_pairs": int(candidates[["benchmark_taxon", "benchmark_region"]].drop_duplicates().shape[0]) if not candidates.empty else 0,
         "status_counts": pd.Series([item.get("status", "unknown") for item in statuses]).value_counts().to_dict(),
         "cohort_summary": cohort.to_dict("records"),
         "robust_inference": json.loads(robust.to_json(orient="records")),
+        "primary_endpoint_inference": json.loads(primary_inference.to_json(orient="records")),
         "interpretation": "General performance across predeclared taxon-group, record-count, and geographic strata. Robust inference assigns zero recovery to missing/failed folds and clusters uncertainty by taxon-region pair.",
     }
     (output / "benchmark_summary.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -332,6 +377,11 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument("--records-per-pair", type=int, default=150)
     command.add_argument("--minimum-records", type=int, default=20)
     command.add_argument("--facet-limit", type=int, default=160)
+    command.add_argument(
+        "--taxon-groups", nargs="+", choices=sorted(TAXON_GROUPS),
+        default=list(TAXON_GROUPS),
+        help="Taxon groups included in a newly drawn cohort.",
+    )
     command.add_argument("--seed", type=int, default=20260702)
     command.add_argument(
         "--exclude-sample", action="append", default=[],
