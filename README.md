@@ -4,6 +4,8 @@ ACSP converts occurrence records into ranked, field-ready survey zones. It is a 
 
 Development status: **alpha (0.1.0)**. Independent retrospective tests support cross-taxon prioritization of 10 km regional candidate zones over random same-pool selection. Exact-site accuracy, access, detection, abundance, and field efficiency remain unvalidated; see [HIERARCHICAL_VALIDATION_REPORT.md](HIERARCHICAL_VALIDATION_REPORT.md).
 
+The investigated 5 km precision ceiling and rejected model variants are recorded in [FINE_SCALE_LIMITS_REPORT.md](FINE_SCALE_LIMITS_REPORT.md). Candidate exports include a technical precision-floor audit so coarse representative points cannot silently acquire an exact-site interpretation.
+
 ## Main workflow
 
 The automatic app asks users to make only three decisions:

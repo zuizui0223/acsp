@@ -1,5 +1,18 @@
 # AI Change Log
 
+## 2026-07-02 - Codex (OpenAI) - Five-kilometre precision ceiling audit
+
+Summary:
+- Added a per-candidate technical precision audit using grid half diagonal, environmental resolution, and coordinate uncertainty.
+- Tested and rejected cross-species supervised rankers, Top-8 expansion, climate/covariance variants, and direct GSI point-tile extraction when they failed transferability or latency requirements.
+- Retained the independently supported 10 km regional-zone model and documented why 5 km exact-site performance is not currently a defensible name-only claim.
+
+Validation:
+- The independent plant 5 km lift remained uncertain despite a useful same-pool oracle ceiling.
+- Top-8 combined confirmation still crossed zero; supervised rankers were below random in leave-one-species-out development tests.
+- Direct fine terrain extraction exceeded three minutes before completing one three-fold species benchmark and was removed.
+- All 74 Python tests pass after adding precision-audit coverage.
+
 ## 2026-07-02 - Codex (OpenAI) - Cross-taxon hierarchical regional validation
 
 Summary:
