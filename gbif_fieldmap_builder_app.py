@@ -78,6 +78,7 @@ from acsp_discover import (
     infer_survey_protocol,
     parse_field_results,
     primary_recovery_radius_km,
+    spatial_precision_audit,
     preferred_survey_window,
     recommend_survey_regions,
     summarize_plan as summarize_discover_plan,
@@ -1040,7 +1041,7 @@ def add_observed_richness_grid_layer(fmap: folium.Map, grid: pd.DataFrame, metri
 @st.cache_data(show_spinner=False)
 def make_richness_map(grid: pd.DataFrame, hotspots: pd.DataFrame, metric: str) -> folium.Map:
     center = (float(grid["latitude"].mean()), float(grid["longitude"].mean())) if not grid.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     metric_col = {"Species richness": "species_richness", "Record count": "record_count", "Species with minimum records": "species_with_min_records"}.get(metric, "species_richness")
     max_value = float(grid[metric_col].max()) if not grid.empty else 0.0
     add_observed_richness_grid_layer(fmap, grid, metric, name=f"occurrence richness grid: {metric}", opacity=0.48)
@@ -1069,7 +1070,7 @@ def make_richness_map(grid: pd.DataFrame, hotspots: pd.DataFrame, metric: str) -
 @st.cache_data(show_spinner=False)
 def make_genus_candidate_selection_map(grid: pd.DataFrame, candidates: pd.DataFrame, metric: str, selected_ids: Optional[tuple] = None, add_draw: bool = True, show_grid: bool = True) -> folium.Map:
     center = (float(grid["latitude"].mean()), float(grid["longitude"].mean())) if grid is not None and not grid.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     metric_col = {"Species richness": "species_richness", "Record count": "record_count", "Species with minimum records": "species_with_min_records"}.get(metric, "species_richness")
     max_value = float(grid[metric_col].max()) if grid is not None and not grid.empty and metric_col in grid.columns else 0.0
     if show_grid and grid is not None and not grid.empty:
@@ -1413,7 +1414,7 @@ def expand_lonlat_bounds(bounds: tuple[float, float, float, float], distance_km:
 
 def make_exclusion_review_map(occ_map_display: pd.DataFrame, excluded_ids: set[int], add_draw: bool = False, show_images: bool = True) -> folium.Map:
     center = (float(occ_map_display["_latitude"].mean()), float(occ_map_display["_longitude"].mean())) if not occ_map_display.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     fg_in = FeatureGroup(name="included occurrences", show=True)
     fg_ex = FeatureGroup(name="excluded occurrences", show=True)
     for _, row in occ_map_display.iterrows():
@@ -1460,7 +1461,7 @@ def make_target_selection_map(
     active_features: Optional[list[dict[str, Any]]] = None,
 ) -> folium.Map:
     center = (float(occ_map_display["_latitude"].mean()), float(occ_map_display["_longitude"].mean())) if not occ_map_display.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     if richness_grid is not None and not richness_grid.empty:
         add_observed_richness_grid_layer(
             fmap,
@@ -2144,7 +2145,7 @@ def excluded_occurrences_from_ids(occ_raw: pd.DataFrame, excluded_ids: set[int])
 def make_sdm_extent_preview_map(occ: pd.DataFrame, extent_geom, area_mode: str) -> folium.Map:
     center_df = occ
     center = (float(center_df["_latitude"].mean()), float(center_df["_longitude"].mean())) if not center_df.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     if extent_geom is not None and not extent_geom.is_empty:
         folium.GeoJson(
             extent_geom.__geo_interface__,
@@ -2196,7 +2197,7 @@ def make_sdm_setup_map(
     """
     all_pts = pd.concat([occ_sdm_final, excluded_raw], ignore_index=True, sort=False) if not excluded_raw.empty else occ_sdm_final
     center = (float(all_pts["_latitude"].mean()), float(all_pts["_longitude"].mean())) if not all_pts.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
 
     # Extent polygon
     if extent_geom is not None and not extent_geom.is_empty:
@@ -2257,9 +2258,9 @@ def make_macro_cluster_map(occ: pd.DataFrame) -> folium.Map:
     app being slow — MarkerCluster handles thousands of points efficiently.
     """
     if occ.empty:
-        return Map(location=(35.5, 135.5), zoom_start=6, tiles="OpenStreetMap")
+        return Map(location=(35.5, 135.5), zoom_start=6, tiles="OpenStreetMap", prefer_canvas=True)
     center = (float(occ["_latitude"].mean()), float(occ["_longitude"].mean()))
-    fmap = Map(location=center, zoom_start=6, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=6, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     mc = MarkerCluster(name=f"All occurrences ({len(occ):,} records)", show=True,
                        options={"maxClusterRadius": 40, "disableClusteringAtZoom": 10})
     for _, row in occ.iterrows():
@@ -4401,7 +4402,7 @@ def make_ssdm_overlay(grid: pd.DataFrame, value_col: str, shape: tuple[int, int]
 @st.cache_data(show_spinner=False)
 def make_ssdm_map(grid: pd.DataFrame, hotspots: pd.DataFrame, value_col: str, title: str, shape: tuple[int, int], bounds: list[list[float]], show_coverage_layer: bool = True) -> folium.Map:
     center = (float(grid["latitude"].mean()), float(grid["longitude"].mean())) if not grid.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=7, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     overlay = make_ssdm_overlay(grid, value_col, shape, bounds)
     folium.raster_layers.ImageOverlay(image=overlay["image"], bounds=overlay["bounds"], opacity=0.70, name=title, interactive=True).add_to(fmap)
     # Coverage layer: n_species_evaluated as raster overlay (fast — no per-cell Python loop)
@@ -5174,6 +5175,19 @@ def make_potential_survey_site_candidates(
         "10 km regional candidate zone; coordinate is a representative screening point, not a validated exact survey site"
     )
     grid["validated_zone_radius_km"] = 10.0
+    precision_rows = [
+        spatial_precision_audit(
+            effective_cell,
+            environmental_resolution_m=environmental_resolution_m,
+            coordinate_uncertainty_q75_m=coordinate_q75,
+            target_radius_km=5.0,
+        )
+        for effective_cell in effective_cells.to_numpy(dtype=float)
+    ]
+    grid["five_km_precision_status"] = [row["status"] for row in precision_rows]
+    grid["precision_floor_km"] = [row["precision_floor_km"] for row in precision_rows]
+    grid["precision_limiting_factor"] = [row["limiting_factor"] for row in precision_rows]
+    grid["precision_limit_reason"] = [row["reason"] for row in precision_rows]
     if "macro_filter_basis" not in grid.columns:
         grid["macro_filter_basis"] = "Local habitat analogue grid from the active survey-area occurrence set"
 
@@ -5468,7 +5482,7 @@ def st_folium_with_overlay(fmap: folium.Map, selected_overlay: Optional[FeatureG
 @st.cache_data(show_spinner=False)
 def build_map(occ: pd.DataFrame, sites: pd.DataFrame, overlay: Optional[dict[str, Any]], route_plan: Optional[pd.DataFrame], occurrence_buffer_m: float, survey_range_m: float, layers: dict[str, bool], show_images: bool = True, selected_ids: Optional[tuple] = None, add_draw: bool = False, range_ids: Optional[tuple] = None) -> folium.Map:
     center = (float(occ["_latitude"].mean()), float(occ["_longitude"].mean())) if not occ.empty else (35.5, 135.5)
-    fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=8, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     if layers.get("predict") and overlay is not None:
         folium.raster_layers.ImageOverlay(image=overlay["image"], bounds=overlay["bounds"], opacity=0.68, name="SDM predict map", interactive=True).add_to(fmap)
         add_sdm_predict_legend(fmap)
@@ -6448,6 +6462,7 @@ def make_survey_day_html(day_lists: dict, sites: pd.DataFrame) -> str:
 
 EXPORT_CSV_COLS = ["site_id", "name", "latitude", "longitude", "validated_spatial_claim", "validated_zone_radius_km", "surface_domain", "plan_name", "plan_rank", "discover_utility", "discovery_value", "learning_value", "accessibility_score", "representation_value", "discovery_label", "learning_label", "access_label", "data_quality", "constraint_status", "priority_rank", "priority_score", "observed_base_priority_score", "candidate_evidence", "recommendation_basis", "occurrence_support_score", "model_support_score", "model_support_available", "observed_model_agreement_score", "model_agreement_bonus", "model_only_exploration_bonus", "field_validation_support_score", "observed_weight", "model_weight", "score_explanation", "sdm_suitability", "ssdm_predicted_richness", "observed_species_richness", "species_richness", "record_count", "species_list", "n_occurrences", "candidate_type", "candidate_method", "habitat_basis", "macro_filter_basis", "habitat_score", "environmental_similarity", "mahalanobis_environment_distance", "analogue_score", "environmental_distance_to_known", "environmental_novelty", "survey_effort_proxy", "survey_gap_score", "access_score", "target_record_density", "all_taxa_record_density", "nearest_known_population_km", "requested_search_cell_size_m", "effective_search_cell_size_m", "resolution_decision_reason", "resolution_data_quality", "effective_grid_cells_evaluated", "search_cell_radius_m", "elevation", "slope", "aspect", "roughness", "tpi", "ndvi", "landcover", "landcover_match_score", "distance_to_road_m", "distance_to_trail_m", "distance_to_coast_m", "distance_to_forest_edge_m", "missing_layer_note", "validation_learning_note", "why_selected", "selection_reason", "selection_algorithm", "selection_step", "base_score", "geographic_complementarity_gain", "environmental_complementarity_gain", "habitat_analogue_gain", "exploration_gain", "sampling_gap_gain", "validation_learning_gain", "access_gain", "redundancy_penalty", "travel_penalty", "marginal_gain_score", "access_note", "recommended_survey_window", "season_confidence", "flowering_record_count", "google_maps_url"]
 for _column in reversed([
+    "five_km_precision_status", "precision_floor_km", "precision_limiting_factor", "precision_limit_reason",
     "integrated_support_score", "integrated_base_score", "integrated_evidence_class",
     "evidence_agreement_score", "evidence_divergence_score", "agreement_bonus",
     "divergence_exploration_bonus", "integrated_available_weight",
@@ -6963,6 +6978,7 @@ def select_automatic_trip_scale(
     }
 
 
+@st.cache_data(show_spinner=False, max_entries=12)
 def make_region_overview_map(
     occurrences: pd.DataFrame,
     region_cards: list[dict[str, Any]],
@@ -6971,13 +6987,15 @@ def make_region_overview_map(
     active_features: Optional[list[dict[str, Any]]] = None,
 ) -> folium.Map:
     center = [float(occurrences["_latitude"].mean()), float(occurrences["_longitude"].mean())]
-    fmap = Map(location=center, zoom_start=6, tiles="OpenStreetMap", control_scale=True)
+    fmap = Map(location=center, zoom_start=6, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True)
     display = spatially_balanced_cap(occurrences, min(500, len(occurrences)))
     scope_lookup = pd.Series(dtype=object)
     if region_audit is not None and not region_audit.empty and {"_row_id", "scope_class"}.issubset(region_audit.columns):
         scope_lookup = region_audit.drop_duplicates("_row_id").set_index("_row_id")["scope_class"]
     records_group = FeatureGroup(name="Known distribution", show=True)
     noise_group = FeatureGroup(name="Possible remote noise (not used for suggested area)", show=True)
+    records_cluster = MarkerCluster(options={"maxClusterRadius": 45, "disableClusteringAtZoom": 11})
+    noise_cluster = MarkerCluster(options={"maxClusterRadius": 45, "disableClusteringAtZoom": 11})
     for _, row in display.iterrows():
         scope_class = str(scope_lookup.get(row.get("_row_id"), "unclassified"))
         color = "#d62728" if scope_class == "possible_remote_noise" else "#4c78a8"
@@ -6985,7 +7003,9 @@ def make_region_overview_map(
             (float(row["_latitude"]), float(row["_longitude"])), radius=3,
             color=color, fill=True, fill_opacity=0.55, weight=1,
             tooltip="Possible remote noise; excluded from automatic area" if scope_class == "possible_remote_noise" else "Known occurrence",
-        ).add_to(noise_group if scope_class == "possible_remote_noise" else records_group)
+        ).add_to(noise_cluster if scope_class == "possible_remote_noise" else records_cluster)
+    records_cluster.add_to(records_group)
+    noise_cluster.add_to(noise_group)
     records_group.add_to(fmap)
     noise_group.add_to(fmap)
     active_regions = FeatureGroup(name="App-suggested survey area", show=True)
@@ -7742,52 +7762,12 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
         st.warning(warning)
 
 
-def render_zone_proposal(
-    bundle: dict[str, Any],
-    key_prefix: str,
-    overlay: Optional[dict[str, Any]] = None,
-) -> None:
-    """Render one stable zone surface before and after optional model support."""
-    zones = bundle.get("recommended_zones", pd.DataFrame())
-    all_zones = bundle.get("zones", pd.DataFrame())
-    pool = bundle.get("candidate_pool", pd.DataFrame())
-    st.subheader("Recommended survey zones")
-    if bundle.get("reachability_reason"):
-        st.caption(str(bundle["reachability_reason"]))
-    if zones is None or zones.empty:
-        st.warning("No practical survey zone survived the automatic constraints.")
-        return
-    summary = bundle.get("zone_agreement_summary", {})
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Recommended zones", len(zones))
-    m2.metric("Points in recommended zones", int(zones["zone_member_count"].sum()))
-    mean_agreement = pd.to_numeric(
-        zones.get("zone_agreement_support_score", pd.Series(0.0, index=zones.index)), errors="coerce"
-    ).fillna(0.0).mean()
-    mean_divergence = pd.to_numeric(
-        zones.get("zone_divergence_score", pd.Series(0.0, index=zones.index)), errors="coerce"
-    ).fillna(0.0).mean()
-    m3.metric("Mean evidence agreement", f"{mean_agreement:.2f}")
-    m4.metric("Mean evidence divergence", f"{mean_divergence:.2f}")
-    show_cols = [column for column in [
-        "recommended_zone_rank", "zone_id", "primary_zone_role", "zone_score", "zone_member_count",
-        "zone_radius_m", "zone_merge_threshold_m", "representative_site_id", "initial_rank", "model_rank", "rank_change",
-        "observed_support_score", "local_habitat_support_score", "model_support_score",
-        "agreement_score", "agreement_class", "zone_agreement_support_score", "zone_divergence_score",
-        "zone_evidence_summary", "zone_evidence_scope", "zone_score_method",
-        "priority_source_site_id", "observed_source_site_id", "local_source_site_id",
-        "model_source_site_id", "access_source_site_id", "latitude", "longitude",
-    ] if column in zones.columns]
-    st.dataframe(zones[show_cols], width="stretch", hide_index=True)
-    if bool(summary.get("model_run")):
-        with st.expander("What changed after SDM/SSDM?", expanded=True):
-            st.write(summary)
-            st.caption(
-                "Disagreement is not automatically a model error: broad macro-climate support can differ from local habitat evidence or expose extrapolation and field-validation targets."
-            )
+@st.cache_data(show_spinner=False, max_entries=12)
+def make_zone_proposal_map(zones: pd.DataFrame, pool: pd.DataFrame) -> folium.Map:
+    """Build the stable recommended-zone map once per data revision."""
     fmap = Map(
         location=[float(zones["latitude"].mean()), float(zones["longitude"].mean())],
-        zoom_start=9, tiles="OpenStreetMap", control_scale=True,
+        zoom_start=9, tiles="OpenStreetMap", control_scale=True, prefer_canvas=True,
     )
     colors = {
         "Concordant — highest priority": "#1b9e77",
@@ -7839,6 +7819,53 @@ def render_zone_proposal(
             tooltip=f"{zone['zone_id']} · {zone.get('primary_zone_role', '')}",
         ).add_to(fmap)
     LayerControl(collapsed=True).add_to(fmap)
+    return fmap
+
+
+def render_zone_proposal(
+    bundle: dict[str, Any],
+    key_prefix: str,
+    overlay: Optional[dict[str, Any]] = None,
+) -> None:
+    """Render one stable zone surface before and after optional model support."""
+    zones = bundle.get("recommended_zones", pd.DataFrame())
+    all_zones = bundle.get("zones", pd.DataFrame())
+    pool = bundle.get("candidate_pool", pd.DataFrame())
+    st.subheader("Recommended survey zones")
+    if bundle.get("reachability_reason"):
+        st.caption(str(bundle["reachability_reason"]))
+    if zones is None or zones.empty:
+        st.warning("No practical survey zone survived the automatic constraints.")
+        return
+    summary = bundle.get("zone_agreement_summary", {})
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Recommended zones", len(zones))
+    m2.metric("Points in recommended zones", int(zones["zone_member_count"].sum()))
+    mean_agreement = pd.to_numeric(
+        zones.get("zone_agreement_support_score", pd.Series(0.0, index=zones.index)), errors="coerce"
+    ).fillna(0.0).mean()
+    mean_divergence = pd.to_numeric(
+        zones.get("zone_divergence_score", pd.Series(0.0, index=zones.index)), errors="coerce"
+    ).fillna(0.0).mean()
+    m3.metric("Mean evidence agreement", f"{mean_agreement:.2f}")
+    m4.metric("Mean evidence divergence", f"{mean_divergence:.2f}")
+    show_cols = [column for column in [
+        "recommended_zone_rank", "zone_id", "primary_zone_role", "zone_score", "zone_member_count",
+        "zone_radius_m", "zone_merge_threshold_m", "representative_site_id", "initial_rank", "model_rank", "rank_change",
+        "observed_support_score", "local_habitat_support_score", "model_support_score",
+        "agreement_score", "agreement_class", "zone_agreement_support_score", "zone_divergence_score",
+        "zone_evidence_summary", "zone_evidence_scope", "zone_score_method",
+        "priority_source_site_id", "observed_source_site_id", "local_source_site_id",
+        "model_source_site_id", "access_source_site_id", "latitude", "longitude",
+    ] if column in zones.columns]
+    st.dataframe(zones[show_cols], width="stretch", hide_index=True)
+    if bool(summary.get("model_run")):
+        with st.expander("What changed after SDM/SSDM?", expanded=True):
+            st.write(summary)
+            st.caption(
+                "Disagreement is not automatically a model error: broad macro-climate support can differ from local habitat evidence or expose extrapolation and field-validation targets."
+            )
+    fmap = make_zone_proposal_map(zones, pool)
     st_folium(fmap, width=None, height=650, returned_objects=[], key=f"{key_prefix}_zone_map")
     d1, d2 = st.columns(2)
     d1.download_button(

@@ -23,7 +23,9 @@ from gbif_fieldmap_builder_app import (
     _power_query_bounds,
     attach_power_bioclim,
     make_sdm_exploration_candidates,
+    make_region_overview_map,
     make_ssdm_exploration_candidates,
+    make_zone_proposal_map,
     model_connected_recommendations,
     open_raster_with_retry,
     simple_recommended_candidates,
@@ -32,6 +34,31 @@ from gbif_fieldmap_builder_app import (
 
 
 class AutomaticHierarchyTests(unittest.TestCase):
+    def test_mobile_maps_use_canvas_renderer_without_dropping_occurrences(self):
+        occurrences = pd.DataFrame({
+            "_row_id": range(6), "_latitude": np.linspace(35.0, 35.05, 6),
+            "_longitude": np.linspace(139.0, 139.05, 6),
+        })
+        html = make_region_overview_map(occurrences, [], None).get_root().render()
+        self.assertIn('"preferCanvas": true', html)
+        self.assertIn('L.markerClusterGroup(', html)
+        self.assertEqual(html.count('L.circleMarker('), 6)
+
+    def test_zone_map_keeps_members_and_uses_canvas_renderer(self):
+        zones = pd.DataFrame({
+            "zone_id": ["1-Z001"], "latitude": [35.0], "longitude": [139.0],
+            "zone_member_site_ids": ["1;2"], "representative_site_id": [1],
+            "zone_radius_m": [500.0], "agreement_class": ["Model not run"],
+        })
+        pool = pd.DataFrame({
+            "site_id": [1, 2], "latitude": [35.0, 35.002], "longitude": [139.0, 139.002],
+            "candidate_type": ["Habitat-match", "Survey-gap"], "priority_score": [0.9, 0.8],
+        })
+        html = make_zone_proposal_map(zones, pool).get_root().render()
+        self.assertIn('"preferCanvas": true', html)
+        self.assertIn('site 1', html)
+        self.assertIn('site 2', html)
+
     def test_polygon_selection_does_not_use_only_its_bounding_box(self):
         records = pd.DataFrame({
             "_row_id": [1, 2], "_latitude": [0.25, 0.75], "_longitude": [0.25, 0.75],
