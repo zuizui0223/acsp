@@ -1,5 +1,13 @@
 # AI Change Log
 
+## 2026-07-03 - Codex (OpenAI) - Mobile map rendering performance
+
+Summary:
+- Enabled Leaflet Canvas rendering on every Folium map without removing any occurrence, candidate, popup, layer, or drawing control.
+- Clustered known-distribution points at broad zoom levels while retaining all individual records when users zoom in.
+- Cached automatic distribution and recommended-zone map construction by their dataframe inputs so ordinary Streamlit reruns do not rebuild unchanged maps.
+- Added regression tests for full occurrence/member retention, marker clustering, and Canvas configuration.
+
 ## 2026-07-02 - Codex (OpenAI) - Publication repository cleanup
 
 Summary:
