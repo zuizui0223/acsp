@@ -1,5 +1,14 @@
 """Reusable ACSP survey-planning methods."""
 
+from .field_validation import (
+    DEFAULT_RECOVERY_RADII_KM,
+    cluster_field_detections,
+    detection_recovery_table,
+    haversine_distance_m,
+    normalize_field_locations,
+    recovery_summary,
+    stratified_random_recovery_benchmark,
+)
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -29,6 +38,7 @@ __all__ = [
     "choose_spatial_partition",
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
+    "DEFAULT_RECOVERY_RADII_KM",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
@@ -50,6 +60,12 @@ __all__ = [
     "spatial_model_accuracy_benchmark",
     "stratified_random_taxa",
     "zone_agreement_summary",
+    "haversine_distance_m",
+    "normalize_field_locations",
+    "cluster_field_detections",
+    "detection_recovery_table",
+    "recovery_summary",
+    "stratified_random_recovery_benchmark",
 ]
 
 __version__ = "0.1.0"

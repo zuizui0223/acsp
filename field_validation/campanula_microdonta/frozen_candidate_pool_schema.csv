@@ -1,0 +1,2 @@
+site_id,survey_area_id,latitude,longitude,candidate_type,priority_rank,priority_score,is_recommended,algorithm_version,generated_at_utc,source_release
+EXAMPLE-ONLY,oshima,34.750000,139.400000,Habitat-match,1,0.900,true,replace-with-frozen-build,YYYY-MM-DDTHH:MM:SSZ,replace-with-commit-or-release

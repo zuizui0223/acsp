@@ -26,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip build
           python -m pip install -e .
       - name: Compile Python sources
-        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/benchmarking.py acsp/cli.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py
+        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/benchmarking.py acsp/cli.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py audit_random_validation_stability.py paper/build_paper_outputs.py
       - name: Run Python tests
         run: python -m unittest discover -v
       - name: Build Python wheel
@@ -43,6 +43,43 @@ jobs:
         run: |
           acsp-fieldmap --help
           acsp-recommend --help
+
+  validation-stability:
+    name: Frozen validation and paper-output audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Re-sample independent validation cohorts
+        run: python audit_random_validation_stability.py | tee validation-stability.json
+      - name: Build paper tables without post-hoc recommendations
+        run: |
+          python paper/build_paper_outputs.py --output-dir paper-generated
+          test -s paper-generated/table_1_retrospective_validation.csv
+          test -s paper-generated/table_2_field_inventory.csv
+          test -s paper-generated/paper_output_manifest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("paper-generated/paper_output_manifest.json").read_text())
+          assert manifest["retrospective_status"] == "complete"
+          assert manifest["raw_positive_gps_rows"] == 28
+          assert manifest["prospective_status"] in {
+              "complete", "blocked_missing_frozen_candidate_pool"
+          }
+          PY
+      - name: Upload validation and paper outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-and-paper-outputs
+          path: |
+            validation-stability.json
+            paper-generated
+          if-no-files-found: error
 
   github-action:
     name: ACSP GitHub Action smoke test
