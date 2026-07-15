@@ -26,9 +26,12 @@ jobs:
           python -m pip install --upgrade pip build
           python -m pip install -e .
       - name: Compile Python sources
-        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/benchmarking.py acsp/cli.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py
+        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/benchmarking.py acsp/cli.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py audit_random_validation_stability.py
       - name: Run Python tests
         run: python -m unittest discover -v
+      - name: Audit frozen random-validation stability
+        if: matrix.python-version == '3.12'
+        run: python audit_random_validation_stability.py
       - name: Build Python wheel
         run: python -m build --wheel
       - name: Verify wheel in an isolated environment
