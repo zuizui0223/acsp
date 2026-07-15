@@ -4,21 +4,26 @@ on:
   push:
     branches:
       - agent/campanula-temporal-external-validation
+      - agent/field-informed-environment-calibration-v4
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
+      - field_validation/campanula_microdonta/calibrate_environmental_ranking.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
+      - test_field_calibration.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
+      - field_validation/campanula_microdonta/calibrate_environmental_ranking.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
+      - test_field_calibration.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -39,8 +44,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-      - name: Test area-balanced selection
-        run: python -m unittest test_area_selection.py
+      - name: Test candidate selection and field calibration
+        run: |
+          python -m unittest test_area_selection.py
+          python -m unittest test_field_calibration.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -55,6 +62,12 @@ jobs:
             --results field_validation/campanula_microdonta/temporal_external_results \
             --random-iterations 10000 \
             --seed 20260715
+      - name: Learn GBIF and environmental ranking from field outcomes
+        run: |
+          python field_validation/campanula_microdonta/calibrate_environmental_ranking.py \
+            --results field_validation/campanula_microdonta/temporal_external_results \
+            --random-iterations 10000 \
+            --seed 20260715
       - name: Check primary outputs
         run: |
           test -s field_validation/campanula_microdonta/temporal_external_results/gbif_training_occurrences_through_2025.csv
@@ -64,6 +77,10 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/updated_area_balanced_top5.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/baseline_vs_area_balanced_comparison.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/algorithm_update_summary.json
+          test -s field_validation/campanula_microdonta/temporal_external_results/field_calibration_summary.json
+          test -s field_validation/campanula_microdonta/temporal_external_results/field_calibration_leave_one_island_out.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/field_informed_development_top5.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/field_informed_same_pool_random_benchmark.csv
       - name: Upload validation outputs
         uses: actions/upload-artifact@v4
         with:
