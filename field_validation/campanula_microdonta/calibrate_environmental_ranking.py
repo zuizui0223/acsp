@@ -15,7 +15,7 @@ from pathlib import Path
 import pandas as pd
 
 from acsp.field_calibration import calibrate_field_ranker
-from field_validation.campanula_microdonta.run_temporal_external_validation import (
+from run_temporal_external_validation import (
     DEFAULT_SEED,
     island_random_benchmark,
 )
@@ -44,7 +44,6 @@ def main() -> None:
     outer = calibration["outer_selections"]
     outer_configs = calibration["outer_configurations"]
     final_selected = calibration["final_selections"]
-    baseline_selected = calibration["baseline_selections"]
 
     annotated.to_csv(results / "field_calibrated_candidate_pool.csv", index=False)
     search.to_csv(results / "field_calibration_configuration_search.csv", index=False)
