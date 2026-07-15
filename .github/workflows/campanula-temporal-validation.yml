@@ -10,6 +10,13 @@ on:
       - acsp/**
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
+  pull_request:
+    paths:
+      - field_validation/campanula_microdonta/run_temporal_external_validation.py
+      - field_validation/campanula_microdonta/locations_2026.csv
+      - acsp/**
+      - gbif_fieldmap_builder_app.py
+      - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
 
 permissions:
