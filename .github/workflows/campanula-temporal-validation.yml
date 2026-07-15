@@ -1,0 +1,50 @@
+name: Campanula temporal external validation
+
+on:
+  push:
+    branches:
+      - agent/campanula-temporal-external-validation
+    paths:
+      - field_validation/campanula_microdonta/run_temporal_external_validation.py
+      - field_validation/campanula_microdonta/locations_2026.csv
+      - acsp/**
+      - gbif_fieldmap_builder_app.py
+      - .github/workflows/campanula-temporal-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Run temporal external validation
+        run: |
+          python field_validation/campanula_microdonta/run_temporal_external_validation.py \
+            --output field_validation/campanula_microdonta/temporal_external_results \
+            --gbif-cap 2000 \
+            --random-iterations 10000 \
+            --seed 20260715 \
+            --cluster-radius-m 500
+      - name: Check primary outputs
+        run: |
+          test -s field_validation/campanula_microdonta/temporal_external_results/gbif_training_occurrences_through_2025.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/distance_excluded_candidate_pool.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/frozen_acsp_top5.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/validation_summary.json
+      - name: Upload validation outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: campanula-temporal-external-validation
+          path: field_validation/campanula_microdonta/temporal_external_results
+          if-no-files-found: error
