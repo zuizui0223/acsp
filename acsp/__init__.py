@@ -1,5 +1,17 @@
 """Reusable ACSP survey-planning methods."""
 
+from .field_calibration import (
+    DEFAULT_FIELD_FEATURE_SPECS,
+    DEFAULT_FIELD_RADIUS_WEIGHTS,
+    RankConfiguration,
+    add_within_area_rank_features,
+    apply_rank_configuration,
+    attach_field_utility,
+    calibrate_field_ranker,
+    enumerate_rank_configurations,
+    recovery_metrics as field_calibration_recovery_metrics,
+    select_one_per_area,
+)
 from .field_validation import (
     DEFAULT_RECOVERY_RADII_KM,
     cluster_field_detections,
@@ -39,6 +51,16 @@ __all__ = [
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
+    "DEFAULT_FIELD_FEATURE_SPECS",
+    "DEFAULT_FIELD_RADIUS_WEIGHTS",
+    "RankConfiguration",
+    "attach_field_utility",
+    "add_within_area_rank_features",
+    "enumerate_rank_configurations",
+    "apply_rank_configuration",
+    "select_one_per_area",
+    "calibrate_field_ranker",
+    "field_calibration_recovery_metrics",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
