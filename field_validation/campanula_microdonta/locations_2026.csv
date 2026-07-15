@@ -1,0 +1,29 @@
+detection_source_id,island,latitude,longitude,survey_year,survey_date,detected,notes
+oshima-01,oshima,34.766970,139.372480,2026,,1,user-provided field GPS
+oshima-04,oshima,34.784430,139.413600,2026,,1,user-provided field GPS
+oshima-05,oshima,34.784637,139.411538,2026,,1,user-provided field GPS
+oshima-06,oshima,34.785380,139.392230,2026,,1,user-provided field GPS
+oshima-07,oshima,34.788430,139.392230,2026,,1,user-provided field GPS
+oshima-08,oshima,34.720780,139.354770,2026,,1,user-provided field GPS
+oshima-09,oshima,34.685770,139.397500,2026,,1,user-provided field GPS
+oshima-10,oshima,34.684640,139.435960,2026,,1,user-provided field GPS
+oshima-11,oshima,34.696350,139.449160,2026,,1,user-provided field GPS
+oshima-12,oshima,34.783220,139.412160,2026,,1,user-provided field GPS
+oshima-13,oshima,34.771170,139.352340,2026,,1,user-provided field GPS
+oshima-14,oshima,34.769700,139.352340,2026,,1,user-provided field GPS
+oshima-15,oshima,34.765320,139.349870,2026,,1,longitude corrected from 135.349870 by data owner
+toshima-01,toshima,34.531220,139.277630,2026,,1,user-provided field GPS
+toshima-02,toshima,34.531570,139.278930,2026,,1,user-provided field GPS
+toshima-03,toshima,34.531400,139.279070,2026,,1,user-provided field GPS
+toshima-04,toshima,34.515799,139.277740,2026,,1,user-provided field GPS
+toshima-05,toshima,34.531689,139.278876,2026,,1,user-provided field GPS
+toshima-06,toshima,34.531689,139.278876,2026,,1,duplicate GPS row retained for audit
+toshima-07,toshima,34.525075,139.270277,2026,,1,user-provided field GPS
+toshima-08,toshima,34.528310,139.271100,2026,,1,user-provided field GPS
+niijima-01,niijima,34.361220,139.256330,2026,,1,user-provided field GPS
+niijima-02,niijima,34.412600,139.279220,2026,,1,user-provided field GPS
+niijima-03,niijima,34.384794,139.256210,2026,,1,user-provided field GPS
+niijima-04,niijima,34.373348,139.263418,2026,,1,user-provided field GPS
+shikinejima-01,shikinejima,34.333021,139.214281,2026,,1,user-provided field GPS
+kozushima-01,kozushima,34.208730,139.139310,2026,,1,user-provided field GPS
+kozushima-02,kozushima,34.223300,139.131060,2026,,1,user-provided field GPS
