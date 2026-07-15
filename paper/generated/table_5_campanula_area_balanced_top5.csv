@@ -1,0 +1,6 @@
+selection_rank,site_id,island,latitude,longitude,component_local_habitat_score,candidate_type
+1,95,niijima,34.376298,139.262788,0.9980,Habitat-match
+2,82,shikinejima,34.331249,139.216648,0.9969,Environmental-test
+3,40,oshima,34.776751,139.413385,0.9855,Survey-gap
+4,57,toshima,34.523088,139.287303,0.9852,Survey-gap
+5,103,kozushima,34.229599,139.151000,0.9645,Survey-gap

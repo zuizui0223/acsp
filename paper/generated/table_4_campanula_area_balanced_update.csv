@@ -1,0 +1,6 @@
+radius_km,acsp_detection_recall,random_mean_recall,random_q025,random_q975,lift_over_random,randomization_p_one_sided,iterations,selection_policy,result_status
+0.5,0.1052631579,0.1026789474,0.0,0.2105263158,0.0025842105,0.6972302770,10000,one candidate per declared island then local-habitat score,post-baseline algorithm development
+1.0,0.1578947368,0.1748473684,0.1052631579,0.2631578947,-0.0169526316,0.7913208679,10000,one candidate per declared island then local-habitat score,post-baseline algorithm development
+2.0,0.4736842105,0.3749947368,0.2105263158,0.5263157895,0.0986894737,0.1959804020,10000,one candidate per declared island then local-habitat score,post-baseline algorithm development
+5.0,0.6842105263,0.6751684211,0.5789473684,0.7894736842,0.0090421053,0.6154384562,10000,one candidate per declared island then local-habitat score,post-baseline algorithm development
+10.0,0.8947368421,0.8573368421,0.7368421053,1.0,0.0374000000,0.4995500450,10000,one candidate per declared island then local-habitat score,post-baseline algorithm development
