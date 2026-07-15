@@ -32,6 +32,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _benchmark_and_write(
+    annotated: pd.DataFrame,
+    selected: pd.DataFrame,
+    clusters: pd.DataFrame,
+    *,
+    results: Path,
+    stem: str,
+    iterations: int,
+    seed: int,
+) -> pd.DataFrame:
+    benchmark, draws = island_random_benchmark(
+        annotated,
+        selected,
+        clusters,
+        iterations=iterations,
+        seed=seed,
+    )
+    benchmark.to_csv(results / f"{stem}_benchmark.csv", index=False)
+    draws.to_csv(results / f"{stem}_draws.csv", index=False)
+    return benchmark
+
+
 def main() -> None:
     args = parse_args()
     results = Path(args.results)
@@ -51,18 +73,25 @@ def main() -> None:
     outer_configs.to_csv(results / "field_calibration_fold_rules.csv", index=False)
     final_selected.to_csv(results / "field_informed_development_top5.csv", index=False)
 
-    development_benchmark, development_draws = island_random_benchmark(
+    iterations = int(args.random_iterations)
+    seed = int(args.seed)
+    outer_benchmark = _benchmark_and_write(
+        annotated,
+        outer,
+        clusters,
+        results=results,
+        stem="field_calibration_leave_one_island_out_same_pool_random",
+        iterations=iterations,
+        seed=seed,
+    )
+    development_benchmark = _benchmark_and_write(
         annotated,
         final_selected,
         clusters,
-        iterations=int(args.random_iterations),
-        seed=int(args.seed),
-    )
-    development_benchmark.to_csv(
-        results / "field_informed_same_pool_random_benchmark.csv", index=False
-    )
-    development_draws.to_csv(
-        results / "field_informed_same_pool_random_draws.csv", index=False
+        results=results,
+        stem="field_informed_same_pool_random",
+        iterations=iterations,
+        seed=seed,
     )
 
     summary = {
@@ -77,14 +106,17 @@ def main() -> None:
         ),
         "baseline_metrics": calibration["baseline_metrics"],
         "leave_one_island_out_metrics": calibration["outer_cv_metrics"],
+        "leave_one_island_out_random_benchmark": outer_benchmark.to_dict(orient="records"),
         "all_data_development_metrics": calibration["development_metrics"],
+        "all_data_development_random_benchmark": development_benchmark.to_dict(orient="records"),
         "final_configuration": calibration["final_configuration"].as_dict(),
         "available_feature_specs": calibration["available_feature_specs"],
-        "random_iterations": int(args.random_iterations),
-        "seed": int(args.seed),
+        "random_iterations": iterations,
+        "seed": seed,
         "interpretation": (
-            "The all-data fit is an optimized development result, not independent confirmation. "
-            "Leave-one-island-out performance is the less biased estimate for current features."
+            "Leave-one-island-out performance and its same-pool random benchmark are the primary "
+            "current transfer estimate. The all-data fit is an optimized development result and "
+            "must not be treated as independent confirmation."
         ),
     }
     (results / "field_calibration_summary.json").write_text(
