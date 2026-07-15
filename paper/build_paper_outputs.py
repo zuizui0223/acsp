@@ -13,6 +13,11 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 
@@ -24,7 +29,6 @@ from acsp.field_validation import (
 )
 from audit_random_validation_stability import run as run_stability_audit
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOCATIONS = ROOT / "field_validation/campanula_microdonta/locations_2026.csv"
 DEFAULT_CANDIDATES = ROOT / "field_validation/campanula_microdonta/frozen_candidate_pool.csv"
 DEFAULT_OUTPUT = ROOT / "paper/generated"
@@ -86,13 +90,17 @@ def _seed_sensitivity_table(stability: dict[str, object]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def _field_inventory(locations: pd.DataFrame, cluster_radius_m: float) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _field_inventory(
+    locations: pd.DataFrame, cluster_radius_m: float
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     field_rows, clusters = cluster_field_detections(
         locations,
         cluster_radius_m=cluster_radius_m,
         area_col="island",
     )
-    raw_counts = field_rows.groupby("island", as_index=False).agg(raw_positive_gps_rows=("field_row_id", "size"))
+    raw_counts = field_rows.groupby("island", as_index=False).agg(
+        raw_positive_gps_rows=("field_row_id", "size")
+    )
     cluster_counts = clusters.groupby("island", as_index=False).agg(
         independent_detection_clusters=("detection_cluster_id", "size"),
         source_points_after_clustering=("n_source_points", "sum"),
