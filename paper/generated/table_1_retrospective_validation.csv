@@ -1,0 +1,3 @@
+taxon_group,cohort,declared_taxon_region_pairs,acsp_ite_recall_10km,same_pool_random_ite_recall_10km,lift_over_random,leave_one_pair_out_min_lift,minimum_bootstrap_probability_lift_positive,minimum_half_cohort_probability_lift_positive,maximum_sign_flip_p_across_seeds,stability_verdict
+animals,Independent mixed confirmation,12,0.09805510180888079,0.05722301792845741,0.04083208388042337,0.025781853743678643,0.9858,0.9772,0.0852914708529147,stable
+plants,Pooled independent plant confirmations,36,0.10982110599166496,0.09119277328535459,0.018628332706310383,0.012006685956975599,0.9942,0.9913,0.027097290270972903,stable
