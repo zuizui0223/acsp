@@ -55,7 +55,13 @@ jobs:
       - name: Install audit dependencies
         run: python -m pip install numpy pandas
       - name: Re-sample independent validation cohorts
-        run: python audit_random_validation_stability.py
+        run: python audit_random_validation_stability.py | tee validation-stability.json
+      - name: Upload stability result
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-stability
+          path: validation-stability.json
+          if-no-files-found: error
 
   github-action:
     name: ACSP GitHub Action smoke test
