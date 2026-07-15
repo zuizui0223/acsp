@@ -1,0 +1,2 @@
+status,reason,expected_path
+blocked_missing_frozen_candidate_pool,The exact pre-survey ACSP candidate export is required. Do not regenerate recommendations after inspecting field detections.,field_validation/campanula_microdonta/frozen_candidate_pool.csv
