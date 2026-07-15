@@ -79,6 +79,7 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/algorithm_update_summary.json
           test -s field_validation/campanula_microdonta/temporal_external_results/field_calibration_summary.json
           test -s field_validation/campanula_microdonta/temporal_external_results/field_calibration_leave_one_island_out.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/field_calibration_leave_one_island_out_same_pool_random_benchmark.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/field_informed_development_top5.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/field_informed_same_pool_random_benchmark.csv
       - name: Upload validation outputs
