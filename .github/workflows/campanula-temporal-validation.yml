@@ -13,6 +13,7 @@ on:
       - acsp/**
       - test_area_selection.py
       - test_field_calibration.py
+      - test_transfer_ranker.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
@@ -24,6 +25,7 @@ on:
       - acsp/**
       - test_area_selection.py
       - test_field_calibration.py
+      - test_transfer_ranker.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -48,6 +50,7 @@ jobs:
         run: |
           python -m unittest test_area_selection.py
           python -m unittest test_field_calibration.py
+          python -m unittest test_transfer_ranker.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -62,12 +65,14 @@ jobs:
             --results field_validation/campanula_microdonta/temporal_external_results \
             --random-iterations 10000 \
             --seed 20260715
-      - name: Learn GBIF and environmental ranking from field outcomes
+      - name: Learn transfer-aware environmental ranking from field outcomes
         run: |
           python field_validation/campanula_microdonta/calibrate_environmental_ranking.py \
             --results field_validation/campanula_microdonta/temporal_external_results \
             --random-iterations 10000 \
-            --seed 20260715
+            --seed 20260715 \
+            --selected-utility-weight 0.5 \
+            --pairwise-concordance-weight 0.5
       - name: Check primary outputs
         run: |
           test -s field_validation/campanula_microdonta/temporal_external_results/gbif_training_occurrences_through_2025.csv
@@ -82,6 +87,10 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/field_calibration_leave_one_island_out_same_pool_random_benchmark.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/field_informed_development_top5.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/field_informed_same_pool_random_benchmark.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/transfer_ranker_leave_one_island_out.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/transfer_ranker_leave_one_island_out_same_pool_random_benchmark.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/ecology_only_transfer_ranker_leave_one_island_out.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/ecology_only_transfer_ranker_leave_one_island_out_same_pool_random_benchmark.csv
       - name: Upload validation outputs
         uses: actions/upload-artifact@v4
         with:
