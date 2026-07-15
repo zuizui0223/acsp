@@ -21,7 +21,7 @@ from acsp.field_validation import (
     recovery_summary,
     stratified_random_recovery_benchmark,
 )
-from field_validation.campanula_microdonta.run_temporal_external_validation import (
+from run_temporal_external_validation import (
     DEFAULT_SEED,
     PRIMARY_RADIUS_KM,
     PRIMARY_TOP_K,
