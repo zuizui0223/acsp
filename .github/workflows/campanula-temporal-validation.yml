@@ -9,11 +9,13 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/calibrate_environmental_ranking.py
+      - field_validation/campanula_microdonta/evaluate_reachable_patches.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
       - test_field_calibration.py
       - test_transfer_ranker.py
+      - test_reachable_patches.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
@@ -21,11 +23,13 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/calibrate_environmental_ranking.py
+      - field_validation/campanula_microdonta/evaluate_reachable_patches.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
       - test_field_calibration.py
       - test_transfer_ranker.py
+      - test_reachable_patches.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -51,6 +55,7 @@ jobs:
           python -m unittest test_area_selection.py
           python -m unittest test_field_calibration.py
           python -m unittest test_transfer_ranker.py
+          python -m unittest test_reachable_patches.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -73,6 +78,12 @@ jobs:
             --seed 20260715 \
             --selected-utility-weight 0.5 \
             --pairwise-concordance-weight 0.5
+      - name: Evaluate persistent reachable patches
+        run: |
+          python field_validation/campanula_microdonta/evaluate_reachable_patches.py \
+            --results field_validation/campanula_microdonta/temporal_external_results \
+            --random-iterations 10000 \
+            --seed 20260715
       - name: Check primary outputs
         run: |
           test -s field_validation/campanula_microdonta/temporal_external_results/gbif_training_occurrences_through_2025.csv
@@ -91,6 +102,10 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/transfer_ranker_leave_one_island_out_same_pool_random_benchmark.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/ecology_only_transfer_ranker_leave_one_island_out.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/ecology_only_transfer_ranker_leave_one_island_out_same_pool_random_benchmark.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/persistent_reachable_patches.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/persistent_reachable_patch_stations.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/persistent_reachable_patch_random_benchmark.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/persistent_reachable_patch_summary.json
       - name: Upload validation outputs
         uses: actions/upload-artifact@v4
         with:
