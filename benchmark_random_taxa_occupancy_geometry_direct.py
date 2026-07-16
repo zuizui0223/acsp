@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Confirmation benchmark using occurrence-supported environmental rows.
+"""Confirmation benchmark with coordinate-to-environment-cell extraction.
 
-The candidate-generation bundle already computes environmental features for known
-occurrence-supported rows. This benchmark uses those rows to describe occurrence
-environments and reserves occurrence-excluded candidates only for the available-
-environment null. Campanula is not used.
+Occurrence coordinates and null environments are evaluated against the same ACSP-generated
+environmental reference grid. Each occurrence is retained only when a complete reference cell
+lies within the declared maximum distance. Cells used by occurrences are removed from the null.
+Campanula is not used.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import pandas as pd
 
 import benchmark_random_taxa_occupancy_geometry as legacy
 import benchmark_random_taxa_occupancy_geometry_v2 as publication
+from acsp.environment_sampling import sample_environment_at_points
 from benchmark_general_random_taxa_regions import (
     _species_metadata,
     fetch_occurrences,
@@ -44,61 +45,38 @@ def parser() -> argparse.ArgumentParser:
     return command
 
 
-def _environment_tables(row: pd.Series, occurrences: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+def _reference_environment(row: pd.Series, occurrences: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     bounds = (float(row.west), float(row.south), float(row.east), float(row.north))
     metadata = _species_metadata(int(row.speciesKey)) or {}
     metadata.setdefault("kingdom", "Plantae" if row.taxon_group == "plant" else "Animalia")
     bundle = build_automatic_discover_bundle(
         str(row.scientific_name),
         occurrences.reset_index(drop=True),
-        "random taxa direct occupancy-geometry benchmark",
+        "random taxa coordinate environment benchmark",
         str(row.region_name),
         taxon_metadata=metadata,
         survey_bounds=bounds,
         survey_features=[rectangle_feature(bounds, str(row.region_name))],
         candidate_generation_only=True,
     )
-    candidates = bundle["potential_candidates"].copy()
-    features = [column for column in FEATURES if column in candidates.columns]
+    reference = bundle["potential_candidates"].copy()
+    features = [column for column in FEATURES if column in reference.columns]
     if len(features) < 2:
         raise ValueError("fewer than two environmental features are available")
-    required = features + ["latitude", "longitude"]
+    required = ["latitude", "longitude", *features]
     for column in required:
-        candidates[column] = pd.to_numeric(candidates[column], errors="coerce")
-    candidates = candidates.dropna(subset=required).reset_index(drop=True)
-    candidate_type = candidates.get("candidate_type", pd.Series("", index=candidates.index)).astype(str)
-    known_mask = candidate_type.str.contains(
-        "occurrence-supported|known-location|known anchor", case=False, na=False
-    )
-    known = candidates.loc[known_mask].copy().reset_index(drop=True)
-    available = candidates.loc[~known_mask].copy().reset_index(drop=True)
-    if len(known) < 4:
-        raise ValueError("fewer than four occurrence-supported environmental rows remain")
-    if len(available) < 10:
-        raise ValueError("fewer than ten occurrence-excluded available environments remain")
-    return known, available, features
+        reference[column] = pd.to_numeric(reference[column], errors="coerce")
+    reference = reference.dropna(subset=required).drop_duplicates(
+        subset=["latitude", "longitude"], keep="first"
+    ).reset_index(drop=True)
+    if len(reference) < 10:
+        raise ValueError("fewer than ten complete environmental reference cells remain")
+    return reference, features
 
 
-def _direct_occurrence_environment(
-    occurrences: pd.DataFrame,
-    known: pd.DataFrame,
-    features: list[str],
-    maximum_direct_match_km: float,
-) -> tuple[np.ndarray, np.ndarray]:
+def _occurrence_points(occurrences: pd.DataFrame) -> pd.DataFrame:
     coordinates = publication._coordinates(occurrences)
-    finite = np.isfinite(coordinates).all(axis=1)
-    coordinates = coordinates[finite]
-    known_coordinates = known[["latitude", "longitude"]].to_numpy(float)
-    distances = legacy._distance_matrix_km(coordinates, known_coordinates)
-    nearest = np.argmin(distances, axis=1)
-    nearest_km = distances[np.arange(len(nearest)), nearest]
-    matched = nearest_km <= float(maximum_direct_match_km)
-    if int(matched.sum()) < 6:
-        raise ValueError(
-            f"only {int(matched.sum())} occurrences have occurrence-supported environments "
-            f"within {float(maximum_direct_match_km):.3f} km"
-        )
-    return known.iloc[nearest[matched]][features].to_numpy(float), nearest_km[matched]
+    return pd.DataFrame({"latitude": coordinates[:, 0], "longitude": coordinates[:, 1]})
 
 
 def run(args: argparse.Namespace) -> dict[str, object]:
@@ -127,27 +105,43 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         }
         try:
             occurrences = fetch_occurrences(row, int(args.records_per_pair))
-            known, available, features = _environment_tables(row, occurrences)
-            values, direct_km = _direct_occurrence_environment(
-                occurrences, known, features, float(args.maximum_direct_match_km)
+            reference, features = _reference_environment(row, occurrences)
+            sample_result = sample_environment_at_points(
+                _occurrence_points(occurrences),
+                reference,
+                features,
+                maximum_distance_km=float(args.maximum_direct_match_km),
             )
+            if len(sample_result.values) < 6:
+                raise ValueError(
+                    f"only {len(sample_result.values)} occurrences matched complete environmental "
+                    f"cells within {float(args.maximum_direct_match_km):.3f} km"
+                )
+            null_mask = np.ones(len(reference), dtype=bool)
+            null_mask[np.unique(sample_result.matched_reference_indices)] = False
+            null_environment = reference.loc[null_mask, features].to_numpy(float)
+            if len(null_environment) < 10:
+                raise ValueError("fewer than ten occurrence-excluded null environments remain")
+
+            values = sample_result.values
             diagnostics = publication._state_diagnostics(values)
             status.update(
                 records=len(values),
-                occurrence_supported_environments=len(known),
-                available_environments=len(available),
+                environmental_reference_cells=len(reference),
+                occurrence_excluded_null_environments=len(null_environment),
                 features=";".join(features),
-                median_direct_match_km=float(np.median(direct_km)),
-                maximum_direct_match_km=float(np.max(direct_km)),
+                median_direct_match_km=float(np.median(sample_result.distances_km)),
+                maximum_direct_match_km=float(np.max(sample_result.distances_km)),
+                matched_occurrence_fraction=float(len(values) / max(1, len(occurrences))),
                 **diagnostics,
             )
             informative = diagnostics["unique_environment_states"] >= int(args.minimum_unique_states)
             if not informative:
-                status.update(status="uninformative", reason="too few distinct direct environmental states")
+                status.update(status="uninformative", reason="too few distinct sampled environmental states")
             else:
                 repeats = legacy._pair_benchmark(
                     values,
-                    available[features].to_numpy(float),
+                    null_environment,
                     repeats=int(args.repeats),
                     training_fraction=float(args.training_fraction),
                     random_draws=int(args.random_draws),
@@ -202,8 +196,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     technical = informative + int(status_frame["status"].eq("uninformative").sum()) if not status_frame.empty else 0
     complete_success = None if pair_summary.empty else float(pair_summary["complete_success"].mean())
     result = {
-        "validation_stage": "direct_occurrence_environment_confirmation",
-        "design": "independent random taxon-region pairs; occurrence-supported environments; occurrence-excluded null",
+        "validation_stage": "coordinate_environment_cell_confirmation",
+        "design": "independent random taxon-region pairs; bounded coordinate-to-cell extraction; occurrence-excluded null",
         "campanula_used": False,
         "predeclared_pairs": declared,
         "technically_eligible_pairs": technical,
@@ -228,7 +222,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             and pair_summary["complete_success"].mean() >= 0.50
         ),
         "protocol": vars(args),
-        "caution": "Occurrence-supported rows are generated by the existing ACSP environmental pipeline; exact source rasters remain feature-dependent.",
+        "caution": "Environmental values are nearest complete ACSP reference cells within a frozen distance bound; extraction distance is reported for every pair.",
     }
     (output / "occupancy_geometry_benchmark_summary.json").write_text(
         json.dumps(result, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
