@@ -1,14 +1,14 @@
 """Local ecological contrast inference for survey selection.
 
 The module does not estimate occurrence probability. It represents each occupied
-state by its empirical position within the environmental availability of its own
-region, then transfers those relative states to candidate regions.
+state by its empirical position within environmental availability, then transfers
+those relative states to candidate regions. Availability may be supplied as
+explicit groups or as local support neighbourhoods around arbitrary coordinates.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-
 import numpy as np
 
 
@@ -29,13 +29,7 @@ def _groups(values: np.ndarray, *, n_rows: int, name: str) -> np.ndarray:
 
 
 def empirical_contrast(values: np.ndarray, availability: np.ndarray) -> np.ndarray:
-    """Map feature values to centred empirical ranks within availability.
-
-    The result lies in [-1, 1]. A value of -1 is below all available states,
-    zero is locally typical, and +1 is above all available states. Mid-ranks are
-    used for ties, making constant features map to zero rather than appearing
-    informative.
-    """
+    """Map feature values to centred empirical ranks within availability."""
 
     query = _matrix(values, name="values")
     frame = _matrix(availability, name="availability")
@@ -62,19 +56,28 @@ class EcologicalContrastOperator:
     feature_reliability: np.ndarray
 
 
+def _operator_from_group_contrasts(labels: list[object], contrasts: list[np.ndarray]) -> EcologicalContrastOperator:
+    if not contrasts:
+        raise ValueError("no occupied group has a usable availability frame")
+    group_contrasts = np.vstack(contrasts)
+    median = np.median(group_contrasts, axis=0)
+    disagreement = np.median(np.abs(group_contrasts - median[None, :]), axis=0)
+    reliability = np.abs(median) * (1.0 - np.clip(disagreement, 0.0, 1.0))
+    return EcologicalContrastOperator(
+        group_labels=np.asarray(labels, dtype=object),
+        group_contrasts=group_contrasts,
+        median_contrast=median,
+        feature_reliability=reliability,
+    )
+
+
 def fit_ecological_contrast(
     occupied_features: np.ndarray,
     occupied_groups: np.ndarray,
     availability_features: np.ndarray,
     availability_groups: np.ndarray,
 ) -> EcologicalContrastOperator:
-    """Infer group-level occupied contrasts relative to local availability.
-
-    Each group's occupied rows are transformed only against availability rows
-    from the same group. Group medians prevent record-rich regions from
-    dominating the inferred operator. Feature reliability is the absolute
-    median contrast discounted by disagreement among groups.
-    """
+    """Infer group-level occupied contrasts relative to matched availability."""
 
     occupied = _matrix(occupied_features, name="occupied_features")
     available = _matrix(availability_features, name="availability_features")
@@ -83,29 +86,16 @@ def fit_ecological_contrast(
     occupied_group = _groups(occupied_groups, n_rows=len(occupied), name="occupied_groups")
     available_group = _groups(availability_groups, n_rows=len(available), name="availability_groups")
 
-    labels = np.asarray(sorted(set(occupied_group.tolist()), key=str), dtype=object)
-    contrasts = []
-    retained = []
-    for label in labels:
+    contrasts: list[np.ndarray] = []
+    retained: list[object] = []
+    for label in sorted(set(occupied_group.tolist()), key=str):
         occ = occupied[occupied_group == label]
         frame = available[available_group == label]
         if len(frame) < 2 or len(occ) < 1:
             continue
         contrasts.append(np.median(empirical_contrast(occ, frame), axis=0))
         retained.append(label)
-    if not contrasts:
-        raise ValueError("no occupied group has at least two availability rows")
-
-    group_contrasts = np.vstack(contrasts)
-    median = np.median(group_contrasts, axis=0)
-    disagreement = np.median(np.abs(group_contrasts - median[None, :]), axis=0)
-    reliability = np.abs(median) * (1.0 - np.clip(disagreement, 0.0, 1.0))
-    return EcologicalContrastOperator(
-        group_labels=np.asarray(retained, dtype=object),
-        group_contrasts=group_contrasts,
-        median_contrast=median,
-        feature_reliability=reliability,
-    )
+    return _operator_from_group_contrasts(retained, contrasts)
 
 
 def candidate_contrasts(
@@ -131,6 +121,104 @@ def candidate_contrasts(
         mask = candidate_group == label
         result[mask] = empirical_contrast(candidates[mask], frame)
     return result
+
+
+def automatic_support_size(n_support: int) -> int:
+    """Choose one deterministic local-frame size without a tuned radius."""
+
+    if n_support < 2:
+        raise ValueError("at least two support states are required")
+    return min(n_support, max(8, int(np.ceil(np.sqrt(n_support)))))
+
+
+def local_contrasts(
+    query_features: np.ndarray,
+    query_coordinates: np.ndarray,
+    support_features: np.ndarray,
+    support_coordinates: np.ndarray,
+    *,
+    n_neighbors: int | None = None,
+    self_indices: np.ndarray | None = None,
+) -> np.ndarray:
+    """Transform each query against its nearest support states.
+
+    Coordinates define availability only; ecological features remain arbitrary and
+    replaceable. The default neighbourhood size is deterministic from support-set
+    size, avoiding a distance-radius parameter. ``self_indices`` excludes a query's
+    own support row when candidates are transformed against the same pool.
+    """
+
+    query = _matrix(query_features, name="query_features")
+    query_coords = _matrix(query_coordinates, name="query_coordinates")
+    support = _matrix(support_features, name="support_features")
+    support_coords = _matrix(support_coordinates, name="support_coordinates")
+    if query.shape[0] != query_coords.shape[0]:
+        raise ValueError("query features and coordinates must have equal rows")
+    if support.shape[0] != support_coords.shape[0]:
+        raise ValueError("support features and coordinates must have equal rows")
+    if query.shape[1] != support.shape[1]:
+        raise ValueError("query and support features must have equal columns")
+    if query_coords.shape[1] != support_coords.shape[1]:
+        raise ValueError("query and support coordinates must have equal columns")
+
+    k = automatic_support_size(len(support)) if n_neighbors is None else int(n_neighbors)
+    if not 2 <= k <= len(support):
+        raise ValueError("n_neighbors must be between 2 and the support count")
+    excluded = None
+    if self_indices is not None:
+        excluded = np.asarray(self_indices, dtype=int)
+        if excluded.shape != (len(query),):
+            raise ValueError("self_indices must contain one support index per query")
+
+    result = np.empty_like(query, dtype=float)
+    batch = 512
+    for start in range(0, len(query), batch):
+        stop = min(len(query), start + batch)
+        delta = query_coords[start:stop, None, :] - support_coords[None, :, :]
+        distance2 = np.einsum("qsd,qsd->qs", delta, delta)
+        if excluded is not None:
+            rows = np.arange(stop - start)
+            distance2[rows, excluded[start:stop]] = np.inf
+        usable_k = min(k, len(support) - (1 if excluded is not None else 0))
+        if usable_k < 2:
+            raise ValueError("fewer than two support neighbours remain after self exclusion")
+        nearest = np.argpartition(distance2, usable_k - 1, axis=1)[:, :usable_k]
+        for local_row, support_rows in enumerate(nearest):
+            result[start + local_row] = empirical_contrast(
+                query[start + local_row : start + local_row + 1], support[support_rows]
+            )[0]
+    return result
+
+
+def fit_local_ecological_contrast(
+    occupied_features: np.ndarray,
+    occupied_coordinates: np.ndarray,
+    occupied_groups: np.ndarray,
+    support_features: np.ndarray,
+    support_coordinates: np.ndarray,
+    *,
+    n_neighbors: int | None = None,
+) -> EcologicalContrastOperator:
+    """Fit repeated occupied contrasts using point-centred local support frames."""
+
+    occupied = _matrix(occupied_features, name="occupied_features")
+    groups = _groups(occupied_groups, n_rows=len(occupied), name="occupied_groups")
+    transformed = local_contrasts(
+        occupied,
+        occupied_coordinates,
+        support_features,
+        support_coordinates,
+        n_neighbors=n_neighbors,
+    )
+    contrasts: list[np.ndarray] = []
+    retained: list[object] = []
+    for label in sorted(set(groups.tolist()), key=str):
+        values = transformed[groups == label]
+        if len(values) == 0:
+            continue
+        contrasts.append(np.median(values, axis=0))
+        retained.append(label)
+    return _operator_from_group_contrasts(retained, contrasts)
 
 
 def contrast_membership(
