@@ -6,7 +6,7 @@ Development status: **alpha (0.1.0)**. Independent retrospective tests support c
 
 The investigated 5 km precision ceiling and rejected model variants are recorded in [FINE_SCALE_LIMITS_REPORT.md](FINE_SCALE_LIMITS_REPORT.md). Candidate exports include a technical precision-floor audit so coarse representative points cannot silently acquire an exact-site interpretation.
 
-> Research note: PR #34 contains an experimental local ecological contrast operator. It represents occupied states by their empirical position within region-specific environmental availability instead of predicting raster suitability. It is isolated from production until it beats area-balanced absolute prototypes and same-quota random selection in cross-taxon leave-one-region-out validation. See `docs/algorithm_notes.md`.
+> Research note: PR #34 tests a local ecological contrast operator that represents occupied states by their empirical position within region-specific environmental availability instead of predicting raster suitability. Its primary gate is now the seeded random taxon-by-region spatial-block benchmark in `benchmark_random_taxa_contrast.py`. Campanula field validation is postponed and cannot rescue a method that fails the general benchmark. See `docs/algorithm_notes.md`.
 
 ## Main workflow
 
@@ -182,7 +182,7 @@ The method should be benchmarked against random sampling, occurrence-only rankin
 
 The package now exposes `stratified_random_taxa()`, `spatial_block_candidate_benchmark()`, `multi_taxon_weight_benchmark()`, and `calibrate_candidate_weights()` for reproducible weight studies. The intended design samples taxa across occurrence-count strata with a recorded seed, rebuilds candidates from training spatial blocks only, tunes weights on calibration taxa, and reports performance on completely unseen taxa against same-pool random Top-k, local-only, macro-model-only, and the current default weights. Failed taxa remain in the audit table and are not silently replaced. Retrospective GBIF recovery does not identify accessibility or detectability weights; those require prospective field-validation records.
 
-`benchmark_general_random_taxa_regions.py` is the supported national hierarchical benchmark. Superseded Izu, initial SDM-accuracy, and pre-hierarchy national experiments are retained under [legacy/](legacy/README.md) for reproducibility and are excluded from normal test discovery.
+`benchmark_general_random_taxa_regions.py` is the supported national hierarchical benchmark. `benchmark_random_taxa_contrast.py` is the experimental random taxon-by-region gate for the ecological contrast operator. Superseded Izu, initial SDM-accuracy, and pre-hierarchy national experiments are retained under [legacy/](legacy/README.md) for reproducibility and are excluded from normal test discovery.
 
 For a reproducible paper or report:
 
