@@ -54,57 +54,52 @@ This claim must be weakened or abandoned if literature review finds a method wit
 - deterministic tie handling;
 - arbitrary feature dimension.
 
-### Validation status
+### Validation result and decision
 
-Not yet accepted. Unit tests establish only implementation semantics. The next required experiment is an adapter to the existing random-taxa benchmark using exactly the same training folds and candidate pools, followed by Campanula temporal external validation and runtime/memory measurement. No production workflow should use this method before those comparisons.
+The initial line-segment relation membership was replaced by a stricter relation witness because a line segment incorrectly assumes support for unobserved intermediate states. In the frozen Campanula candidate pool, fixed `k=3` relation witness and point-prototype coverage both produced 10 km recovery of 0.632 with the same median nearest-detection distance of about 3.82 km. The graph therefore added no measurable information beyond the occurrence nodes. Because k-nearest-neighbour edges are deterministic functions of node locations, edge coverage can collapse to ordinary point-cloud coverage.
 
-### Rejection rule
+**Decision: reject the occurrence-relation graph as the central algorithm.** Keep the implementation and benchmark only as a documented negative result. Do not add edge weights, persistence, routing, higher simplices, or access heuristics to rescue it.
 
-Remove or redesign this direction if either condition holds:
-
-1. mean same-pool lift is not positive on development taxa and remains non-positive on untouched confirmation taxa; or
-2. any gain is explained by ordinary environmental medoid/coverage sampling rather than graph relations.
-
-The first ablation must therefore compare relation-edge coverage against point-prototype coverage with the same scaling and candidate pool.
-
-### Next idea if rejected
-
-Infer higher-order occurrence simplices only if edge coverage shows signal but systematically misses multi-modal or branching structure. Do not add persistence, routing, accessibility, or adaptive feedback merely to rescue a failed edge object.
-
-## 2026-07-16 — Iteration 1b: relation witness and first ablation
+## 2026-07-16 — Iteration 2: local ecological contrast operator
 
 ### Hypothesis
 
-The first edge-membership definition used distance to the finite segment between two occurrences. This silently assumed that every environmental state between the endpoints was ecologically supported. Replace that interpolation with a relation witness: a candidate represents an edge only when it is simultaneously close to both observed endpoints.
+Absolute environmental values transfer poorly across islands and regions because the entire available environment shifts. A more stable ecological object may be the transformation from locally available environments to occupied relative states. For region `g`, each occupied feature is mapped to its centred empirical rank within the availability frame `A_g`:
 
-### Implementation
+`delta_gj = 2 * rank(x_gj | A_gj) - 1`.
 
-`acsp/relation_witness.py` computes endpoint kernels and uses their geometric mean. `test_relation_witness.py` checks feature-unit invariance and verifies that support from only one endpoint is insufficient. The Campanula workflow now runs a predeclared `k=3`, Top-5 comparison against current ACSP and point-prototype facility coverage, recording runtime and peak memory.
+The inferred object is the set of group-level occupied contrast vectors and their robust cross-group median, not a suitability surface.
 
-### Exploratory result before CI rerun
+### Minimal implementation
 
-A replay using the previously archived Campanula artifact gave the following 10 km field-cluster recall:
+`acsp/contrast.py` implements:
 
-- current unbalanced ACSP Top-5: 0.263;
-- point-prototype environmental coverage: 0.632;
-- occurrence-relation witness: 0.632.
+1. empirical contrast transformation in arbitrary feature space;
+2. group-balanced fitting of occupied contrasts against matched local availability;
+3. feature reliability from cross-group agreement;
+4. candidate transformation against the availability of its own target group;
+5. batch selection by marginal coverage of observed contrast states.
 
-The relation object therefore produced no observed benefit over node/prototype coverage. The result uses nearest-candidate terrain as a proxy for terrain at historical occurrence coordinates and is not confirmatory, but it is already sufficient to reject a performance claim for graph edges.
+Only empirical ranks are used, so the operator is invariant to group-specific location shifts and monotone feature rescaling. Constant features map to zero. No pseudo-absence, classifier, raster grid, or presence probability is fitted.
 
-### Failure reason
+### Tests
 
-A k-nearest-neighbour edge is a deterministic transformation of occurrence node positions. It introduces no new ecological observation. If candidate-edge membership is constructed only from endpoint distances, the edge-cover objective can collapse to ordinary point-cloud coverage. Adding higher-order simplices would repeat the same mistake because those simplices would also be derived solely from the same nodes.
+- constant features carry zero contrast;
+- identical relative selection is invariant to large group-specific environmental shifts;
+- candidates are transformed only against their own availability group;
+- contrast-state coverage avoids duplicate selections;
+- shifted regions with the same relative occupied state match the same operator.
 
-### Decision
+### Campanula validation design
 
-Do not promote occurrence-relation edges to production. Retain the code only as a falsified research branch and benchmark baseline. Do not rescue it with edge weights, persistence, route terms, or parameter search.
+The frozen 2025-or-earlier GBIF records, frozen candidate pool, and independent 2026 detections are retained. Because the archived occurrence table lacks sampled terrain values, each historical occurrence is provisionally mapped to the nearest candidate environment within the same island. This approximation is exported and must not be hidden. The comparison uses identical area balancing and Top-5 size for:
 
-### Next mathematical object
+- current ACSP;
+- absolute environmental prototype coverage;
+- ecological contrast.
 
-The next admissible object must contain information absent from the occurrence point cloud itself. The proposed object is an **ecological contrast operator**: for each geographically independent occurrence, compare its feature vector with the locally available feature distribution and infer recurrent directions of selection. This estimates a transformation from local availability to occupied state, not presence probability and not point geometry.
+Runtime and peak memory are recorded. The 2026 detections are read only for final evaluation.
 
-A minimal formulation is:
+### Acceptance rule
 
-`delta_g = robust_rank(x_occurrence_g | A_g) - 0.5`,
-
-where `A_g` is the locally available feature matrix for independent region `g`. Recurrent contrast structure is inferred from the cross-region matrix of `delta_g` vectors. Candidate sets are then chosen to represent distinct recurrent contrast directions. This remains raster-free and accepts arbitrary feature matrices, but unlike the rejected graph it requires explicit local availability information and therefore contains a new empirical relation rather than a graph manufactured from occurrence coordinates alone.
+Do not adopt the contrast operator unless it exceeds both the area-balanced absolute prototype and same-quota random selection in cross-taxon leave-one-region-out validation. Campanula improvement alone is insufficient. If performance depends strongly on the availability definition or direct occurrence-environment extraction removes the signal, reject or reformulate the operator.
