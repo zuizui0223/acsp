@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Confirmation benchmark with coordinate-to-environment-cell extraction.
-
-Occurrence coordinates and null environments are evaluated against the same ACSP-generated
-environmental reference grid. Each occurrence is retained only when a complete reference cell
-lies within the declared maximum distance. Cells used by occurrences are removed from the null.
-Campanula is not used.
-"""
-
+"""Frozen confirmation using direct CHELSA extraction at occurrence and null coordinates."""
 from __future__ import annotations
 
 import argparse
@@ -20,7 +13,7 @@ import pandas as pd
 
 import benchmark_random_taxa_occupancy_geometry as legacy
 import benchmark_random_taxa_occupancy_geometry_v2 as publication
-from acsp.environment_sampling import sample_environment_at_points
+from acsp.chelsa_sampling import DEFAULT_VARIABLES, sample_chelsa_at_coordinates
 from benchmark_general_random_taxa_regions import (
     _species_metadata,
     fetch_occurrences,
@@ -29,7 +22,7 @@ from benchmark_general_random_taxa_regions import (
 )
 from gbif_fieldmap_builder_app import build_automatic_discover_bundle
 
-FEATURES = legacy.FEATURES
+FEATURES = tuple(DEFAULT_VARIABLES)
 
 
 def parser() -> argparse.ArgumentParser:
@@ -41,37 +34,9 @@ def parser() -> argparse.ArgumentParser:
         seed=20260730,
         minimum_unique_fraction=0.0,
     )
+    # Retained only so old workflow invocations remain compatible.
     command.add_argument("--maximum-direct-match-km", type=float, default=1.0)
     return command
-
-
-def _reference_environment(row: pd.Series, occurrences: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
-    bounds = (float(row.west), float(row.south), float(row.east), float(row.north))
-    metadata = _species_metadata(int(row.speciesKey)) or {}
-    metadata.setdefault("kingdom", "Plantae" if row.taxon_group == "plant" else "Animalia")
-    bundle = build_automatic_discover_bundle(
-        str(row.scientific_name),
-        occurrences.reset_index(drop=True),
-        "random taxa coordinate environment benchmark",
-        str(row.region_name),
-        taxon_metadata=metadata,
-        survey_bounds=bounds,
-        survey_features=[rectangle_feature(bounds, str(row.region_name))],
-        candidate_generation_only=True,
-    )
-    reference = bundle["potential_candidates"].copy()
-    features = [column for column in FEATURES if column in reference.columns]
-    if len(features) < 2:
-        raise ValueError("fewer than two environmental features are available")
-    required = ["latitude", "longitude", *features]
-    for column in required:
-        reference[column] = pd.to_numeric(reference[column], errors="coerce")
-    reference = reference.dropna(subset=required).drop_duplicates(
-        subset=["latitude", "longitude"], keep="first"
-    ).reset_index(drop=True)
-    if len(reference) < 10:
-        raise ValueError("fewer than ten complete environmental reference cells remain")
-    return reference, features
 
 
 def _occurrence_points(occurrences: pd.DataFrame) -> pd.DataFrame:
@@ -79,18 +44,50 @@ def _occurrence_points(occurrences: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"latitude": coordinates[:, 0], "longitude": coordinates[:, 1]})
 
 
+def _null_points(row: pd.Series, occurrences: pd.DataFrame) -> pd.DataFrame:
+    bounds = (float(row.west), float(row.south), float(row.east), float(row.north))
+    metadata = _species_metadata(int(row.speciesKey)) or {}
+    metadata.setdefault("kingdom", "Plantae" if row.taxon_group == "plant" else "Animalia")
+    bundle = build_automatic_discover_bundle(
+        str(row.scientific_name),
+        occurrences.reset_index(drop=True),
+        "random taxa direct CHELSA benchmark",
+        str(row.region_name),
+        taxon_metadata=metadata,
+        survey_bounds=bounds,
+        survey_features=[rectangle_feature(bounds, str(row.region_name))],
+        candidate_generation_only=True,
+    )
+    candidates = bundle.get("potential_candidates", pd.DataFrame()).copy()
+    if not {"latitude", "longitude"}.issubset(candidates.columns):
+        raise ValueError("candidate generator did not return null coordinates")
+    candidates["latitude"] = pd.to_numeric(candidates["latitude"], errors="coerce")
+    candidates["longitude"] = pd.to_numeric(candidates["longitude"], errors="coerce")
+    candidates = candidates.dropna(subset=["latitude", "longitude"]).drop_duplicates(
+        ["latitude", "longitude"]
+    )
+    if len(candidates) < 10:
+        raise ValueError("fewer than ten candidate null coordinates remain")
+    return candidates[["latitude", "longitude"]].reset_index(drop=True)
+
+
+def _sample_complete(points: pd.DataFrame) -> tuple[np.ndarray, pd.DataFrame]:
+    sampled = sample_chelsa_at_coordinates(points, variables=FEATURES)
+    complete = sampled.frame.iloc[sampled.complete_indices].reset_index(drop=True)
+    return complete[list(FEATURES)].to_numpy(float), complete
+
+
 def run(args: argparse.Namespace) -> dict[str, object]:
     legacy._coordinates = publication._coordinates
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     sample_path = output / "predeclared_taxon_region_pairs.csv"
-    if sample_path.exists():
-        sample = pd.read_csv(sample_path).head(int(args.pairs))
-    else:
-        sample = predeclare_pairs(
-            int(args.pairs), int(args.seed), int(args.facet_limit), int(args.minimum_records)
-        )
-        sample.to_csv(sample_path, index=False)
+    sample = (
+        pd.read_csv(sample_path).head(int(args.pairs))
+        if sample_path.exists()
+        else predeclare_pairs(int(args.pairs), int(args.seed), int(args.facet_limit), int(args.minimum_records))
+    )
+    sample.to_csv(sample_path, index=False)
 
     statuses: list[dict[str, object]] = []
     all_repeats: list[pd.DataFrame] = []
@@ -105,39 +102,28 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         }
         try:
             occurrences = fetch_occurrences(row, int(args.records_per_pair))
-            reference, features = _reference_environment(row, occurrences)
-            sample_result = sample_environment_at_points(
-                _occurrence_points(occurrences),
-                reference,
-                features,
-                maximum_distance_km=float(args.maximum_direct_match_km),
-            )
-            if len(sample_result.values) < 6:
-                raise ValueError(
-                    f"only {len(sample_result.values)} occurrences matched complete environmental "
-                    f"cells within {float(args.maximum_direct_match_km):.3f} km"
-                )
-            null_mask = np.ones(len(reference), dtype=bool)
-            null_mask[np.unique(sample_result.matched_reference_indices)] = False
-            null_environment = reference.loc[null_mask, features].to_numpy(float)
+            occurrence_points = _occurrence_points(occurrences)
+            null_points = _null_points(row, occurrences)
+            values, occurrence_sample = _sample_complete(occurrence_points)
+            null_environment, null_sample = _sample_complete(null_points)
+            if len(values) < 6:
+                raise ValueError(f"only {len(values)} occurrence coordinates had complete CHELSA values")
             if len(null_environment) < 10:
-                raise ValueError("fewer than ten occurrence-excluded null environments remain")
+                raise ValueError(f"only {len(null_environment)} null coordinates had complete CHELSA values")
 
-            values = sample_result.values
             diagnostics = publication._state_diagnostics(values)
             status.update(
                 records=len(values),
-                environmental_reference_cells=len(reference),
-                occurrence_excluded_null_environments=len(null_environment),
-                features=";".join(features),
-                median_direct_match_km=float(np.median(sample_result.distances_km)),
-                maximum_direct_match_km=float(np.max(sample_result.distances_km)),
-                matched_occurrence_fraction=float(len(values) / max(1, len(occurrences))),
+                occurrence_input_coordinates=len(occurrence_points),
+                occurrence_complete_fraction=float(len(values) / max(1, len(occurrence_points))),
+                null_input_coordinates=len(null_points),
+                null_complete_environments=len(null_environment),
+                features=";".join(FEATURES),
+                environment_source="CHELSA v2.1 30 arc-second COG",
                 **diagnostics,
             )
-            informative = diagnostics["unique_environment_states"] >= int(args.minimum_unique_states)
-            if not informative:
-                status.update(status="uninformative", reason="too few distinct sampled environmental states")
+            if diagnostics["unique_environment_states"] < int(args.minimum_unique_states):
+                status.update(status="uninformative", reason="too few distinct direct CHELSA states")
             else:
                 repeats = legacy._pair_benchmark(
                     values,
@@ -196,8 +182,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     technical = informative + int(status_frame["status"].eq("uninformative").sum()) if not status_frame.empty else 0
     complete_success = None if pair_summary.empty else float(pair_summary["complete_success"].mean())
     result = {
-        "validation_stage": "coordinate_environment_cell_confirmation",
-        "design": "independent random taxon-region pairs; bounded coordinate-to-cell extraction; occurrence-excluded null",
+        "validation_stage": "direct_chelsa_coordinate_confirmation",
+        "design": "independent random taxon-region pairs; direct CHELSA sampling for occurrences and null coordinates",
         "campanula_used": False,
         "predeclared_pairs": declared,
         "technically_eligible_pairs": technical,
@@ -222,7 +208,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             and pair_summary["complete_success"].mean() >= 0.50
         ),
         "protocol": vars(args),
-        "caution": "Environmental values are nearest complete ACSP reference cells within a frozen distance bound; extraction distance is reported for every pair.",
+        "environment_source": "CHELSA v2.1 30 arc-second COG: bio1, bio4, bio12, bio15",
     }
     (output / "occupancy_geometry_benchmark_summary.json").write_text(
         json.dumps(result, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
@@ -234,4 +220,4 @@ if __name__ == "__main__":
     result = run(parser().parse_args())
     print(json.dumps(result, indent=2, ensure_ascii=False))
     if not result.get("passes_direct_confirmation_gate", False):
-        raise SystemExit("Direct occurrence-environment confirmation gate failed")
+        raise SystemExit("Direct CHELSA confirmation gate failed")
