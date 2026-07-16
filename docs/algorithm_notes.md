@@ -117,6 +117,20 @@ The method is not accepted unless all conditions hold on the predeclared develop
 
 Passing this gate is not confirmation. A separate frozen taxon cohort and direct environmental extraction at occurrence coordinates are required next. Failure of the initial gate triggers redesign or rejection; Campanula results must not be used to rescue a failed general method.
 
+### Initial random-taxa result
+
+The first eight-pair run completed technically but only three taxon-region pairs were evaluable (`completion_rate = 0.375`). Mean lift over random was `+0.0497`, while mean lift over absolute prototypes was only `+0.00147`. The contrast method exceeded the absolute prototype in one of three evaluable pairs. This does not support a contrast-specific benefit.
+
+Most failed folds reported `no training occurrence could be matched to an availability block`; others retained fewer than two occupied availability blocks. The failure was caused by requiring occurrence coordinates and generated candidates to occupy the same fixed grid cell. That condition is not part of the ecological hypothesis and made evaluation depend on candidate-grid coincidence.
+
+### Iteration 2b: point-centred support availability
+
+The fixed-cell availability adapter is replaced, not tuned. Each occurrence and candidate is transformed against its nearest support states in coordinate space. Ecological variables remain an arbitrary replaceable feature matrix. The default support count is deterministic from candidate-pool size:
+
+`k = min(n, max(8, ceil(sqrt(n))))`.
+
+Training occurrence feature values remain provisional nearest-candidate proxies, but they no longer require cell overlap. Occupied contrast vectors are aggregated by training spatial holdout block. Candidate self rows are excluded from their own local availability frame. The revalidation uses the same frozen eight taxon-region pairs, the same held-out blocks, Top-k, radius, random draws, and acceptance rules. If this raises completion but still does not beat absolute prototypes, reject the contrast direction rather than tuning neighbourhood size or bandwidth.
+
 ### Implementation status
 
-The generic operator, invariance tests, cross-region fold benchmark, seeded random taxon runner, auditable artifacts, and dedicated GitHub Actions workflow are implemented on PR #34. The Campanula workflow is skipped for this research branch and remains available by manual dispatch. The operator remains isolated from production recommendation APIs.
+The generic grouped operator, point-centred local-support operator, invariance tests, cross-region fold benchmark, seeded random taxon runner, auditable artifacts, and dedicated GitHub Actions workflow are implemented on PR #34. The Campanula workflow is skipped for this research branch and remains available by manual dispatch. The operator remains isolated from production recommendation APIs.
