@@ -70,3 +70,41 @@ The first ablation must therefore compare relation-edge coverage against point-p
 ### Next idea if rejected
 
 Infer higher-order occurrence simplices only if edge coverage shows signal but systematically misses multi-modal or branching structure. Do not add persistence, routing, accessibility, or adaptive feedback merely to rescue a failed edge object.
+
+## 2026-07-16 — Iteration 1b: relation witness and first ablation
+
+### Hypothesis
+
+The first edge-membership definition used distance to the finite segment between two occurrences. This silently assumed that every environmental state between the endpoints was ecologically supported. Replace that interpolation with a relation witness: a candidate represents an edge only when it is simultaneously close to both observed endpoints.
+
+### Implementation
+
+`acsp/relation_witness.py` computes endpoint kernels and uses their geometric mean. `test_relation_witness.py` checks feature-unit invariance and verifies that support from only one endpoint is insufficient. The Campanula workflow now runs a predeclared `k=3`, Top-5 comparison against current ACSP and point-prototype facility coverage, recording runtime and peak memory.
+
+### Exploratory result before CI rerun
+
+A replay using the previously archived Campanula artifact gave the following 10 km field-cluster recall:
+
+- current unbalanced ACSP Top-5: 0.263;
+- point-prototype environmental coverage: 0.632;
+- occurrence-relation witness: 0.632.
+
+The relation object therefore produced no observed benefit over node/prototype coverage. The result uses nearest-candidate terrain as a proxy for terrain at historical occurrence coordinates and is not confirmatory, but it is already sufficient to reject a performance claim for graph edges.
+
+### Failure reason
+
+A k-nearest-neighbour edge is a deterministic transformation of occurrence node positions. It introduces no new ecological observation. If candidate-edge membership is constructed only from endpoint distances, the edge-cover objective can collapse to ordinary point-cloud coverage. Adding higher-order simplices would repeat the same mistake because those simplices would also be derived solely from the same nodes.
+
+### Decision
+
+Do not promote occurrence-relation edges to production. Retain the code only as a falsified research branch and benchmark baseline. Do not rescue it with edge weights, persistence, route terms, or parameter search.
+
+### Next mathematical object
+
+The next admissible object must contain information absent from the occurrence point cloud itself. The proposed object is an **ecological contrast operator**: for each geographically independent occurrence, compare its feature vector with the locally available feature distribution and infer recurrent directions of selection. This estimates a transformation from local availability to occupied state, not presence probability and not point geometry.
+
+A minimal formulation is:
+
+`delta_g = robust_rank(x_occurrence_g | A_g) - 0.5`,
+
+where `A_g` is the locally available feature matrix for independent region `g`. Recurrent contrast structure is inferred from the cross-region matrix of `delta_g` vectors. Candidate sets are then chosen to represent distinct recurrent contrast directions. This remains raster-free and accepts arbitrary feature matrices, but unlike the rejected graph it requires explicit local availability information and therefore contains a new empirical relation rather than a graph manufactured from occurrence coordinates alone.
