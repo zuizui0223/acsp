@@ -90,20 +90,33 @@ Only empirical ranks are used, so the operator is invariant to group-specific lo
 - contrast-state coverage avoids duplicate selections;
 - shifted regions with the same relative occupied state match the same operator.
 
-### Campanula validation design
+### Revised validation priority
 
-The frozen 2025-or-earlier GBIF records, frozen candidate pool, and independent 2026 detections are retained. Because the archived occurrence table lacks sampled terrain values, each historical occurrence is provisionally mapped to the nearest candidate environment within the same island. This approximation is exported and must not be hidden. The comparison uses identical area balancing and Top-5 size for:
+Campanula is postponed. The primary development test is now a predeclared random taxon-by-region benchmark.
 
-- current ACSP;
-- absolute environmental prototype coverage;
-- ecological contrast.
+For each taxon-region pair:
 
-Runtime and peak memory are recorded. The 2026 detections are read only for final evaluation.
+1. split occurrence records by spatial blocks;
+2. rebuild the candidate pool from training occurrences only;
+3. define geographic availability blocks independently of held-out outcomes;
+4. approximate each training occurrence environment by the nearest candidate in the same availability block;
+5. fit the contrast operator using training availability blocks only;
+6. transfer the operator to all candidate availability blocks;
+7. compare equal-Top-k recovery against current ACSP, absolute environmental prototype coverage, and same-pool random selection.
 
-### Acceptance rule
+`acsp/contrast_benchmark.py` implements the reusable fold logic. `benchmark_random_taxa_contrast.py` runs seeded random taxon-region pairs and records every failed pair rather than replacing it. Runtime, peak memory, completion rate, pair-level effects, and sign-flip tests are exported.
 
-Do not adopt the contrast operator unless it exceeds both the area-balanced absolute prototype and same-quota random selection in cross-taxon leave-one-region-out validation. Campanula improvement alone is insufficient. If performance depends strongly on the availability definition or direct occurrence-environment extraction removes the signal, reject or reformulate the operator.
+### Initial development gate
+
+The method is not accepted unless all conditions hold on the predeclared development cohort:
+
+- at least 75% of declared taxon-region pairs are evaluable;
+- mean lift over same-pool random selection is positive;
+- mean lift over absolute prototype coverage is positive;
+- at least 60% of evaluable pairs have positive lift over random.
+
+Passing this gate is not confirmation. A separate frozen taxon cohort and direct environmental extraction at occurrence coordinates are required next. Failure of the initial gate triggers redesign or rejection; Campanula results must not be used to rescue a failed general method.
 
 ### Implementation status
 
-The generic operator, invariance tests, Campanula benchmark adapter, artifact checks, and CI wiring are implemented on PR #34. It remains isolated from production recommendation APIs. The next decision depends on the completed Campanula artifact and then the existing random-taxa folds adapted to leave-one-region-out contrast transfer.
+The generic operator, invariance tests, cross-region fold benchmark, seeded random taxon runner, auditable artifacts, and dedicated GitHub Actions workflow are implemented on PR #34. The Campanula workflow is skipped for this research branch and remains available by manual dispatch. The operator remains isolated from production recommendation APIs.
