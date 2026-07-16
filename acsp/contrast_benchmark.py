@@ -1,9 +1,10 @@
 """Spatially honest benchmarks for local ecological contrast selection.
 
 The benchmark rebuilds candidates from training occurrences only. Environmental
-values at training occurrences are provisionally represented by the nearest
-candidate in the same availability block; held-out occurrences are used only for
-final geographic recovery evaluation.
+values at training occurrences are provisionally represented by the globally
+nearest candidate, while availability is defined by point-centred local support
+neighbourhoods rather than coincident raster or grid cells. Held-out occurrences
+are used only for final geographic recovery evaluation.
 """
 
 from __future__ import annotations
@@ -16,9 +17,10 @@ import pandas as pd
 from sklearn.preprocessing import RobustScaler
 
 from .contrast import (
-    candidate_contrasts,
+    automatic_support_size,
     contrast_membership,
-    fit_ecological_contrast,
+    fit_local_ecological_contrast,
+    local_contrasts,
     select_contrast_cover,
 )
 from .planning import integrated_candidate_scores, select_complementary_candidates
@@ -38,6 +40,15 @@ def _coordinates(frame: pd.DataFrame) -> np.ndarray:
         if latitude in frame.columns and longitude in frame.columns:
             return frame[[latitude, longitude]].apply(pd.to_numeric, errors="coerce").to_numpy(float)
     raise ValueError("table lacks latitude and longitude columns")
+
+
+def _metric_coordinates(coords: np.ndarray) -> np.ndarray:
+    """Return locally metric coordinates in kilometres for neighbourhood search."""
+    values = np.asarray(coords, dtype=float)
+    mean_latitude = float(np.nanmean(values[:, 0]))
+    return np.column_stack(
+        [values[:, 0] * 111.0, values[:, 1] * 111.0 * np.cos(np.deg2rad(mean_latitude))]
+    )
 
 
 def _distance_matrix_km(first: np.ndarray, second: np.ndarray) -> np.ndarray:
@@ -79,28 +90,14 @@ def _occurrence_proxies(
     training: pd.DataFrame,
     candidates: pd.DataFrame,
     features: list[str],
-    groups: np.ndarray,
-    block_degrees: float,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Map occurrences to nearest candidate features without requiring cell overlap."""
     occurrence_coords = _coordinates(training)
-    occurrence_groups = _block_labels(occurrence_coords, block_degrees)
     candidate_coords = candidates[["latitude", "longitude"]].to_numpy(float)
-    rows: list[np.ndarray] = []
-    labels: list[object] = []
-    for coordinate, label in zip(occurrence_coords, occurrence_groups):
-        eligible = np.flatnonzero(groups == label)
-        if len(eligible) < 2:
-            continue
-        distance = _distance_matrix_km(coordinate.reshape(1, 2), candidate_coords[eligible])[0]
-        nearest = eligible[int(np.argmin(distance))]
-        rows.append(candidates.loc[nearest, features].to_numpy(float))
-        labels.append(label)
-    if not rows:
-        raise ValueError("no training occurrence could be matched to an availability block")
-    matrix = np.vstack(rows)
-    labels_array = np.asarray(labels, dtype=object)
-    unique_rows = pd.DataFrame(matrix).assign(_group=labels_array).drop_duplicates().reset_index(drop=True)
-    return unique_rows.drop(columns="_group").to_numpy(float), unique_rows["_group"].to_numpy(object)
+    distances = _distance_matrix_km(occurrence_coords, candidate_coords)
+    nearest = np.argmin(distances, axis=1)
+    features_matrix = candidates.iloc[nearest][features].to_numpy(float)
+    return features_matrix, occurrence_coords, distances[np.arange(len(nearest)), nearest]
 
 
 def _prototype_membership(occupied: np.ndarray, candidates: np.ndarray) -> np.ndarray:
@@ -132,8 +129,15 @@ def spatial_block_contrast_benchmark(
     random_state: int = 42,
     feature_columns: tuple[str, ...] = DEFAULT_CONTRAST_FEATURES,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Compare contrast, absolute prototypes, current ACSP, and random selection."""
+    """Compare local contrast, absolute prototypes, current ACSP, and random.
 
+    ``availability_block_degrees`` is retained for API compatibility but no longer
+    controls availability. Local support size is selected deterministically from
+    candidate-pool size, and no occurrence-candidate grid-cell coincidence is
+    required.
+    """
+
+    del availability_block_degrees
     work = occurrences.copy().reset_index(drop=True)
     coords = _coordinates(work)
     finite = np.isfinite(coords).all(axis=1)
@@ -147,7 +151,6 @@ def spatial_block_contrast_benchmark(
     if len(blocks) < 2:
         raise ValueError("occurrences occupy fewer than two holdout blocks")
 
-    availability_block = float(availability_block_degrees or block_degrees)
     rng = np.random.default_rng(int(random_state))
     n_holdout = min(len(blocks) - 1, max(1, int(round(len(blocks) * holdout_fraction))))
     candidate_outputs: list[pd.DataFrame] = []
@@ -156,9 +159,8 @@ def spatial_block_contrast_benchmark(
     for repeat in range(1, max(1, int(repeats)) + 1):
         held_blocks = set(rng.choice(blocks, size=n_holdout, replace=False).tolist())
         heldout = work[work["_contrast_holdout_block"].isin(held_blocks)].copy()
-        training = work[~work["_contrast_holdout_block"].isin(held_blocks)].drop(
-            columns=["_contrast_holdout_block", "_contrast_occurrence_id"]
-        )
+        training_with_blocks = work[~work["_contrast_holdout_block"].isin(held_blocks)].copy()
+        training = training_with_blocks.drop(columns=["_contrast_holdout_block", "_contrast_occurrence_id"])
         try:
             raw_candidates = candidate_builder(training.copy())
             if raw_candidates is None or raw_candidates.empty:
@@ -169,26 +171,35 @@ def spatial_block_contrast_benchmark(
             ].reset_index(drop=True)
             scored = integrated_candidate_scores(raw_candidates, exclude_occurrence_derived=True)
             pool, features = _finite_features(scored, feature_columns)
-            groups = _block_labels(pool[["latitude", "longitude"]].to_numpy(float), availability_block)
-            counts = pd.Series(groups).value_counts()
-            valid_groups = set(counts[counts >= 2].index)
-            keep = np.asarray([label in valid_groups for label in groups])
-            pool = pool.loc[keep].reset_index(drop=True)
-            groups = groups[keep]
-            if len(pool) < 2:
-                raise ValueError("no availability blocks retained at least two candidates")
-
             candidate_matrix = pool[features].to_numpy(float)
-            occupied_matrix, occupied_groups = _occurrence_proxies(
-                training, pool, features, groups, availability_block
-            )
-            if len(np.unique(occupied_groups)) < 2:
-                raise ValueError("fewer than two occupied availability blocks")
+            candidate_geo = pool[["latitude", "longitude"]].to_numpy(float)
+            candidate_metric = _metric_coordinates(candidate_geo)
+            support_size = automatic_support_size(len(pool))
 
-            operator = fit_ecological_contrast(
-                occupied_matrix, occupied_groups, candidate_matrix, groups
+            occupied_matrix, occupied_geo, proxy_distances = _occurrence_proxies(
+                training, pool, features
             )
-            transformed = candidate_contrasts(candidate_matrix, groups, candidate_matrix, groups)
+            occupied_groups = training_with_blocks["_contrast_holdout_block"].to_numpy(object)
+            if len(np.unique(occupied_groups)) < 2:
+                raise ValueError("fewer than two occupied training blocks")
+            occupied_metric = _metric_coordinates(occupied_geo)
+
+            operator = fit_local_ecological_contrast(
+                occupied_matrix,
+                occupied_metric,
+                occupied_groups,
+                candidate_matrix,
+                candidate_metric,
+                n_neighbors=support_size,
+            )
+            transformed = local_contrasts(
+                candidate_matrix,
+                candidate_metric,
+                candidate_matrix,
+                candidate_metric,
+                n_neighbors=support_size,
+                self_indices=np.arange(len(pool)),
+            )
             contrast_matrix = contrast_membership(operator, transformed)
             contrast_indices = select_contrast_cover(
                 contrast_matrix, n_select=min(int(top_k), len(pool))
@@ -217,7 +228,10 @@ def spatial_block_contrast_benchmark(
                 "candidate_pool": len(pool),
                 "feature_columns": ";".join(features),
                 "occupied_availability_blocks": len(np.unique(occupied_groups)),
-                "target_availability_blocks": len(np.unique(groups)),
+                "target_availability_blocks": len(pool),
+                "local_support_neighbors": support_size,
+                "median_occurrence_proxy_km": float(np.median(proxy_distances)),
+                "availability_design": "point-centred nearest-support neighbourhood",
             }
             for name, selected in methods.items():
                 recovered = _covered_ids(selected, heldout, hit_radius_km)
