@@ -1,5 +1,13 @@
 """Reusable ACSP survey-planning methods."""
 
+from .contrast import (
+    EcologicalContrastOperator,
+    candidate_contrasts,
+    contrast_membership,
+    empirical_contrast,
+    fit_ecological_contrast,
+    select_contrast_cover,
+)
 from .field_validation import (
     DEFAULT_RECOVERY_RADII_KM,
     cluster_field_detections,
@@ -76,6 +84,12 @@ __all__ = [
     "infer_occurrence_relation_graph",
     "relation_membership",
     "select_relation_cover",
+    "EcologicalContrastOperator",
+    "empirical_contrast",
+    "fit_ecological_contrast",
+    "candidate_contrasts",
+    "contrast_membership",
+    "select_contrast_cover",
 ]
 
 __version__ = "0.1.0"
