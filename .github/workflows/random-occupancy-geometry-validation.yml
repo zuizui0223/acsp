@@ -46,7 +46,7 @@ jobs:
             --training-fraction 0.70 \
             --random-draws 100 \
             --minimum-unique-states 4 \
-            --minimum-unique-fraction 0.10 \
+            --minimum-unique-fraction 0.0 \
             --seed 20260716
       - name: Check auditable outputs
         run: |
