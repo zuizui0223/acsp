@@ -9,11 +9,13 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/benchmark_occurrence_relations.py
+      - field_validation/campanula_microdonta/benchmark_ecological_contrast.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
       - test_occurrence_relations.py
       - test_relation_witness.py
+      - test_ecological_contrast.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
@@ -21,11 +23,13 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/benchmark_occurrence_relations.py
+      - field_validation/campanula_microdonta/benchmark_ecological_contrast.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
       - test_occurrence_relations.py
       - test_relation_witness.py
+      - test_ecological_contrast.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -49,7 +53,7 @@ jobs:
       - name: Test selection algorithms
         run: |
           python -m unittest test_area_selection.py
-          python -m pytest -q test_occurrence_relations.py test_relation_witness.py
+          python -m pytest -q test_occurrence_relations.py test_relation_witness.py test_ecological_contrast.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -68,6 +72,10 @@ jobs:
         run: |
           python field_validation/campanula_microdonta/benchmark_occurrence_relations.py \
             --results field_validation/campanula_microdonta/temporal_external_results
+      - name: Run ecological contrast benchmark
+        run: |
+          python field_validation/campanula_microdonta/benchmark_ecological_contrast.py \
+            --results field_validation/campanula_microdonta/temporal_external_results
       - name: Check primary outputs
         run: |
           test -s field_validation/campanula_microdonta/temporal_external_results/gbif_training_occurrences_through_2025.csv
@@ -81,6 +89,10 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/point_prototype_top5.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_relation_comparison.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_relation_benchmark_summary.json
+          test -s field_validation/campanula_microdonta/temporal_external_results/ecological_contrast_top5.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/absolute_prototype_area_balanced_top5.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/ecological_contrast_comparison.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/ecological_contrast_benchmark_summary.json
       - name: Upload validation outputs
         uses: actions/upload-artifact@v4
         with:
