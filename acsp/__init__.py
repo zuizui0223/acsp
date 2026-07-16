@@ -9,6 +9,14 @@ from .field_validation import (
     recovery_summary,
     stratified_random_recovery_benchmark,
 )
+from .occupancy_geometry import (
+    OccupancyGeometry,
+    infer_occupancy_geometry,
+    minimum_spanning_tree,
+    pairwise_distances,
+    project_states,
+    robust_scale,
+)
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -66,6 +74,12 @@ __all__ = [
     "detection_recovery_table",
     "recovery_summary",
     "stratified_random_recovery_benchmark",
+    "OccupancyGeometry",
+    "robust_scale",
+    "pairwise_distances",
+    "minimum_spanning_tree",
+    "infer_occupancy_geometry",
+    "project_states",
 ]
 
 __version__ = "0.1.0"
