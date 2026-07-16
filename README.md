@@ -6,6 +6,8 @@ Development status: **alpha (0.1.0)**. Independent retrospective tests support c
 
 The investigated 5 km precision ceiling and rejected model variants are recorded in [FINE_SCALE_LIMITS_REPORT.md](FINE_SCALE_LIMITS_REPORT.md). Candidate exports include a technical precision-floor audit so coarse representative points cannot silently acquire an exact-site interpretation.
 
+An experimental research branch now also contains a **local ecological contrast operator**. It represents occupied states by their empirical position within region-specific environmental availability rather than predicting raster suitability. This operator is not part of the production recommendation workflow and must outperform area-balanced absolute prototypes and same-quota random selection in cross-taxon leave-one-region-out validation before adoption. The full hypothesis and negative occurrence-graph result are recorded append-only in `docs/algorithm_notes.md`.
+
 ## Main workflow
 
 The automatic app asks users to make only three decisions:
@@ -112,6 +114,7 @@ from acsp import (
     spatial_block_recovery_validation,
     sdm_method_record,
 )
+```
 
 recommended = recommend_candidates(candidates, per_area=3)
 recommended_zones = recommend_survey_zones(candidates, per_area=3)
