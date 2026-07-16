@@ -2,10 +2,13 @@
 
 from .contrast import (
     EcologicalContrastOperator,
+    automatic_support_size,
     candidate_contrasts,
     contrast_membership,
     empirical_contrast,
     fit_ecological_contrast,
+    fit_local_ecological_contrast,
+    local_contrasts,
     select_contrast_cover,
 )
 from .contrast_benchmark import (
@@ -94,6 +97,9 @@ __all__ = [
     "empirical_contrast",
     "fit_ecological_contrast",
     "candidate_contrasts",
+    "automatic_support_size",
+    "local_contrasts",
+    "fit_local_ecological_contrast",
     "contrast_membership",
     "select_contrast_cover",
 ]
