@@ -22,6 +22,12 @@ from .planning import (
     zone_agreement_summary,
 )
 from .modeling import DEFAULT_ENSEMBLE_ALGORITHMS, make_classifier, predict_equal_weight_ensemble
+from .relations import (
+    OccurrenceRelationGraph,
+    infer_occurrence_relation_graph,
+    relation_membership,
+    select_relation_cover,
+)
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
 from .validation import (
     calibrate_candidate_weights,
@@ -66,6 +72,10 @@ __all__ = [
     "detection_recovery_table",
     "recovery_summary",
     "stratified_random_recovery_benchmark",
+    "OccurrenceRelationGraph",
+    "infer_occurrence_relation_graph",
+    "relation_membership",
+    "select_relation_cover",
 ]
 
 __version__ = "0.1.0"
