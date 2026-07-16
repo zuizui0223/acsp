@@ -103,3 +103,7 @@ Runtime and peak memory are recorded. The 2026 detections are read only for fina
 ### Acceptance rule
 
 Do not adopt the contrast operator unless it exceeds both the area-balanced absolute prototype and same-quota random selection in cross-taxon leave-one-region-out validation. Campanula improvement alone is insufficient. If performance depends strongly on the availability definition or direct occurrence-environment extraction removes the signal, reject or reformulate the operator.
+
+### Implementation status
+
+The generic operator, invariance tests, Campanula benchmark adapter, artifact checks, and CI wiring are implemented on PR #34. It remains isolated from production recommendation APIs. The next decision depends on the completed Campanula artifact and then the existing random-taxa folds adapted to leave-one-region-out contrast transfer.
