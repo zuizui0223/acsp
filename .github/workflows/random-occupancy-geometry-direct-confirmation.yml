@@ -7,6 +7,7 @@ on:
       - benchmark_random_taxa_occupancy_geometry.py
       - benchmark_random_taxa_occupancy_geometry_v2.py
       - benchmark_random_taxa_occupancy_geometry_direct.py
+      - benchmark_random_taxa_occupancy_geometry_direct_v2.py
       - benchmark_general_random_taxa_regions.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/random-occupancy-geometry-direct-confirmation.yml
@@ -30,7 +31,7 @@ jobs:
           python -m pip install -e ".[dev]"
       - name: Run direct occurrence-environment confirmation
         run: |
-          python benchmark_random_taxa_occupancy_geometry_direct.py \
+          python benchmark_random_taxa_occupancy_geometry_direct_v2.py \
             --output benchmark_results/random_taxa_occupancy_geometry_direct \
             --pairs 12 \
             --records-per-pair 120 \
