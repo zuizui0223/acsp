@@ -1,0 +1,59 @@
+name: Random taxa occupancy geometry direct confirmation
+
+on:
+  pull_request:
+    paths:
+      - acsp/occupancy_geometry.py
+      - benchmark_random_taxa_occupancy_geometry.py
+      - benchmark_random_taxa_occupancy_geometry_v2.py
+      - benchmark_random_taxa_occupancy_geometry_direct.py
+      - benchmark_general_random_taxa_regions.py
+      - gbif_fieldmap_builder_app.py
+      - .github/workflows/random-occupancy-geometry-direct-confirmation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  confirm-direct-occurrence-environments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run direct occurrence-environment confirmation
+        run: |
+          python benchmark_random_taxa_occupancy_geometry_direct.py \
+            --output benchmark_results/random_taxa_occupancy_geometry_direct \
+            --pairs 12 \
+            --records-per-pair 120 \
+            --minimum-records 20 \
+            --facet-limit 180 \
+            --repeats 30 \
+            --training-fraction 0.70 \
+            --random-draws 200 \
+            --minimum-unique-states 4 \
+            --minimum-unique-fraction 0.0 \
+            --maximum-direct-match-km 1.0 \
+            --seed 20260730
+      - name: Check direct confirmation outputs
+        run: |
+          test -s benchmark_results/random_taxa_occupancy_geometry_direct/predeclared_taxon_region_pairs.csv
+          test -s benchmark_results/random_taxa_occupancy_geometry_direct/pair_status.csv
+          test -s benchmark_results/random_taxa_occupancy_geometry_direct/geometry_repeat_results.csv
+          test -s benchmark_results/random_taxa_occupancy_geometry_direct/geometry_pair_summary.csv
+          test -s benchmark_results/random_taxa_occupancy_geometry_direct/occupancy_geometry_benchmark_summary.json
+      - name: Upload direct confirmation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: random-taxa-occupancy-geometry-direct-confirmation
+          path: benchmark_results/random_taxa_occupancy_geometry_direct
+          if-no-files-found: error
