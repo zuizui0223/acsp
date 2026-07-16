@@ -8,6 +8,10 @@ from .contrast import (
     fit_ecological_contrast,
     select_contrast_cover,
 )
+from .contrast_benchmark import (
+    DEFAULT_CONTRAST_FEATURES,
+    spatial_block_contrast_benchmark,
+)
 from .field_validation import (
     DEFAULT_RECOVERY_RADII_KM,
     cluster_field_detections,
@@ -53,6 +57,7 @@ __all__ = [
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
+    "DEFAULT_CONTRAST_FEATURES",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
@@ -71,6 +76,7 @@ __all__ = [
     "multi_taxon_weight_benchmark",
     "spatial_block_candidate_benchmark",
     "spatial_block_recovery_validation",
+    "spatial_block_contrast_benchmark",
     "spatial_model_accuracy_benchmark",
     "stratified_random_taxa",
     "zone_agreement_summary",
