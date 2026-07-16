@@ -114,7 +114,6 @@ from acsp import (
     spatial_block_recovery_validation,
     sdm_method_record,
 )
-```
 
 recommended = recommend_candidates(candidates, per_area=3)
 recommended_zones = recommend_survey_zones(candidates, per_area=3)
