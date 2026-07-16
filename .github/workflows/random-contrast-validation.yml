@@ -1,0 +1,67 @@
+name: Random taxa ecological contrast validation
+
+on:
+  pull_request:
+    paths:
+      - acsp/contrast.py
+      - acsp/contrast_benchmark.py
+      - benchmark_random_taxa_contrast.py
+      - benchmark_general_random_taxa_regions.py
+      - test_ecological_contrast.py
+      - test_contrast_benchmark.py
+      - .github/workflows/random-contrast-validation.yml
+  workflow_dispatch:
+    inputs:
+      pairs:
+        description: Number of random taxon-region pairs
+        required: false
+        default: "8"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-random-taxa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Test contrast method
+        run: |
+          python -m pytest -q test_ecological_contrast.py test_contrast_benchmark.py
+      - name: Run random taxon-region development benchmark
+        run: |
+          python benchmark_random_taxa_contrast.py \
+            --output benchmark_results/random_taxa_contrast \
+            --pairs "${{ github.event.inputs.pairs || '8' }}" \
+            --repeats 3 \
+            --records-per-pair 120 \
+            --minimum-records 20 \
+            --facet-limit 120 \
+            --seed 20260716 \
+            --block-degrees 0.10 \
+            --availability-block-degrees 0.20 \
+            --holdout-fraction 0.20 \
+            --top-k 5 \
+            --hit-radius-km 10 \
+            --random-draws 200
+      - name: Check auditable outputs
+        run: |
+          test -s benchmark_results/random_taxa_contrast/predeclared_taxon_region_pairs.csv
+          test -s benchmark_results/random_taxa_contrast/pair_status.csv
+          test -s benchmark_results/random_taxa_contrast/contrast_fold_results.csv
+          test -s benchmark_results/random_taxa_contrast/contrast_pair_summary.csv
+          test -s benchmark_results/random_taxa_contrast/contrast_benchmark_summary.json
+      - name: Upload random validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: random-taxa-ecological-contrast
+          path: benchmark_results/random_taxa_contrast
+          if-no-files-found: error
