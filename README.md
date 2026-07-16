@@ -6,7 +6,7 @@ Development status: **alpha (0.1.0)**. Independent retrospective tests support c
 
 The investigated 5 km precision ceiling and rejected model variants are recorded in [FINE_SCALE_LIMITS_REPORT.md](FINE_SCALE_LIMITS_REPORT.md). Candidate exports include a technical precision-floor audit so coarse representative points cannot silently acquire an exact-site interpretation.
 
-An experimental research branch now also contains a **local ecological contrast operator**. It represents occupied states by their empirical position within region-specific environmental availability rather than predicting raster suitability. This operator is not part of the production recommendation workflow and must outperform area-balanced absolute prototypes and same-quota random selection in cross-taxon leave-one-region-out validation before adoption. The full hypothesis and negative occurrence-graph result are recorded append-only in `docs/algorithm_notes.md`.
+> Research note: PR #34 contains an experimental local ecological contrast operator. It represents occupied states by their empirical position within region-specific environmental availability instead of predicting raster suitability. It is isolated from production until it beats area-balanced absolute prototypes and same-quota random selection in cross-taxon leave-one-region-out validation. See `docs/algorithm_notes.md`.
 
 ## Main workflow
 
@@ -118,7 +118,7 @@ from acsp import (
 recommended = recommend_candidates(candidates, per_area=3)
 recommended_zones = recommend_survey_zones(candidates, per_area=3)
 scored = integrated_candidate_scores(candidates)
-island_extent = (139.30, 34.60, 139.50, 34.85)  # west, south, east, north
+island_extent = (139.30, 34.60, 139.50, 34.85)
 recommended_in_extent = recommend_candidates(candidates, per_area=3, extent=island_extent)
 partition, reason = choose_spatial_partition(86, geographic_span_degrees=1.8)
 models = {name: make_classifier(name) for name in DEFAULT_ENSEMBLE_ALGORITHMS}
