@@ -87,18 +87,20 @@ def _gap_threshold(edge_lengths: np.ndarray, multiplier: float) -> float:
         return np.inf
     median = float(np.median(edge_lengths))
     mad = float(np.median(np.abs(edge_lengths - median)) * 1.4826)
-    if mad == 0.0:
-        positive = edge_lengths[edge_lengths > median]
-        return float(np.min(positive)) if positive.size else np.inf
-    return median + float(multiplier) * mad
+    if mad > 0.0:
+        return median + float(multiplier) * mad
+
+    tolerance = max(1e-12, abs(median) * 1e-9)
+    clearly_larger = edge_lengths[edge_lengths > median + tolerance]
+    if clearly_larger.size == 0:
+        return np.inf
+    return 0.5 * (median + float(np.min(clearly_larger)))
 
 
 def _component_labels(n: int, edges: np.ndarray, threshold: float) -> np.ndarray:
     adjacency: list[list[int]] = [[] for _ in range(n)]
     for source, target, length in edges:
-        # Edges exactly at the inferred gap threshold are the first gap edges and
-        # must be cut. Keeping them with <= collapses clearly separated modes.
-        if float(length) < threshold:
+        if float(length) <= threshold:
             i, j = int(source), int(target)
             adjacency[i].append(j)
             adjacency[j].append(i)
@@ -131,7 +133,7 @@ def infer_occupancy_geometry(
     ``continuity`` is the direct environmental span divided by MST length and lies
     in ``(0, 1]``. Lower values indicate a more winding or fragmented occupation.
     ``gap_strength`` is the largest MST edge relative to the median MST edge.
-    Components are obtained by cutting MST edges at or above a robust threshold.
+    Components are obtained by cutting MST edges above a robust threshold.
     """
     if gap_multiplier < 0.0:
         raise ValueError("gap_multiplier must be non-negative")
