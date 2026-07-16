@@ -7,6 +7,7 @@ on:
       - benchmark_random_taxa_occupancy_geometry.py
       - benchmark_random_taxa_occupancy_geometry_v2.py
       - benchmark_general_random_taxa_regions.py
+      - finalize_occupancy_geometry_confirmation.py
       - .github/workflows/random-occupancy-geometry-confirmation.yml
   workflow_dispatch:
 
@@ -40,22 +41,12 @@ jobs:
             --minimum-unique-states 4 \
             --minimum-unique-fraction 0.0 \
             --seed 20260723
-      - name: Mark confirmation metadata
+      - name: Finalize pilot confirmation
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          path = Path('benchmark_results/random_taxa_occupancy_geometry_confirmation/occupancy_geometry_benchmark_summary.json')
-          summary = json.loads(path.read_text())
-          summary['validation_stage'] = 'frozen_confirmation_cohort'
-          summary['development_seed'] = 20260716
-          summary['confirmation_seed'] = 20260723
-          summary['thresholds_frozen_before_confirmation'] = True
-          summary['campanula_used'] = False
-          path.write_text(json.dumps(summary, indent=2, ensure_ascii=False))
-          if not summary.get('passes_publication_development_gate', False):
-              raise SystemExit(json.dumps(summary, indent=2))
-          PY
+          python finalize_occupancy_geometry_confirmation.py \
+            --directory benchmark_results/random_taxa_occupancy_geometry_confirmation \
+            --minimum-technical-eligibility-fraction 0.60 \
+            --minimum-informative-among-eligible 0.75
       - name: Check confirmation outputs
         run: |
           test -s benchmark_results/random_taxa_occupancy_geometry_confirmation/predeclared_taxon_region_pairs.csv
