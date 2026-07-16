@@ -5,6 +5,7 @@ on:
     paths:
       - acsp/occupancy_geometry.py
       - benchmark_random_taxa_occupancy_geometry.py
+      - run_random_taxa_occupancy_geometry.py
       - benchmark_general_random_taxa_regions.py
       - test_occupancy_geometry.py
       - .github/workflows/random-occupancy-geometry-validation.yml
@@ -35,7 +36,7 @@ jobs:
         run: python -m pytest -q test_occupancy_geometry.py
       - name: Run random taxon-region geometry benchmark
         run: |
-          python benchmark_random_taxa_occupancy_geometry.py \
+          python run_random_taxa_occupancy_geometry.py \
             --output benchmark_results/random_taxa_occupancy_geometry \
             --pairs "${{ github.event.inputs.pairs || '8' }}" \
             --records-per-pair 120 \
@@ -53,6 +54,7 @@ jobs:
           test -s benchmark_results/random_taxa_occupancy_geometry/geometry_pair_summary.csv
           test -s benchmark_results/random_taxa_occupancy_geometry/occupancy_geometry_benchmark_summary.json
       - name: Upload random validation artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: random-taxa-occupancy-geometry
