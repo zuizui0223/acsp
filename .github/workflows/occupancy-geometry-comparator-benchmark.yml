@@ -1,0 +1,56 @@
+name: Occupancy geometry comparator benchmark
+
+on:
+  pull_request:
+    paths:
+      - acsp/occupancy_geometry.py
+      - acsp/chelsa_sampling.py
+      - benchmark_occupancy_geometry_comparators.py
+      - benchmark_random_taxa_occupancy_geometry_direct.py
+      - benchmark_general_random_taxa_regions.py
+      - .github/workflows/occupancy-geometry-comparator-benchmark.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare-methods:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run frozen direct-CHELSA comparator benchmark
+        run: |
+          python benchmark_occupancy_geometry_comparators.py \
+            --output benchmark_results/occupancy_geometry_comparators \
+            --pairs 12 \
+            --records-per-pair 120 \
+            --minimum-records 20 \
+            --facet-limit 180 \
+            --repeats 30 \
+            --training-fraction 0.70 \
+            --random-draws 200 \
+            --minimum-unique-states 4 \
+            --seed 20260730
+      - name: Check comparator outputs
+        run: |
+          test -s benchmark_results/occupancy_geometry_comparators/predeclared_taxon_region_pairs.csv
+          test -s benchmark_results/occupancy_geometry_comparators/pair_status.csv
+          test -s benchmark_results/occupancy_geometry_comparators/comparator_repeat_results.csv
+          test -s benchmark_results/occupancy_geometry_comparators/comparator_pair_summary.csv
+          test -s benchmark_results/occupancy_geometry_comparators/comparator_summary.json
+      - name: Upload comparator artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: occupancy-geometry-comparator-benchmark
+          path: benchmark_results/occupancy_geometry_comparators
+          if-no-files-found: error
