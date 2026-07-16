@@ -14,6 +14,10 @@ from acsp.field_calibration import recovery_metrics
 from acsp.reachable_patches import PatchSettings, discover_persistent_patches
 
 
+RADII_KM = (0.5, 1.0, 2.0, 5.0, 10.0)
+EARTH_RADIUS_KM = 6371.0088
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -25,6 +29,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _haversine_matrix_km(
+    first_latitude: np.ndarray,
+    first_longitude: np.ndarray,
+    second_latitude: np.ndarray,
+    second_longitude: np.ndarray,
+) -> np.ndarray:
+    """Return all pairwise great-circle distances without Python row loops."""
+    first_lat = np.radians(np.asarray(first_latitude, dtype=float))[:, None]
+    first_lon = np.radians(np.asarray(first_longitude, dtype=float))[:, None]
+    second_lat = np.radians(np.asarray(second_latitude, dtype=float))[None, :]
+    second_lon = np.radians(np.asarray(second_longitude, dtype=float))[None, :]
+    delta_lat = second_lat - first_lat
+    delta_lon = second_lon - first_lon
+    haversine = (
+        np.sin(delta_lat / 2.0) ** 2
+        + np.cos(first_lat) * np.cos(second_lat) * np.sin(delta_lon / 2.0) ** 2
+    )
+    return 2.0 * EARTH_RADIUS_KM * np.arcsin(np.sqrt(np.clip(haversine, 0.0, 1.0)))
+
+
 def _random_same_budget(
     pool: pd.DataFrame,
     selected: pd.DataFrame,
@@ -33,32 +57,73 @@ def _random_same_budget(
     iterations: int,
     seed: int,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Vectorized same-area random benchmark.
+
+    Candidate-to-detection distances are computed once. All random sets are then
+    sampled and evaluated in NumPy arrays, avoiding 10,000 repeated DataFrame and
+    haversine loops while preserving the same island-specific station budget.
+    """
+    iterations = max(1, int(iterations))
     rng = np.random.default_rng(seed)
     observed = recovery_metrics(selected, clusters)
-    rows = []
-    for iteration in range(iterations):
-        parts = []
-        for area, selected_group in selected.groupby("survey_area_id"):
-            candidates = pool[pool["survey_area_id"].eq(area)]
-            sample_n = min(len(candidates), len(selected_group))
-            chosen = rng.choice(candidates.index.to_numpy(), size=sample_n, replace=False)
-            parts.append(candidates.loc[chosen])
-        random_selected = pd.concat(parts, ignore_index=True)
-        metrics = recovery_metrics(random_selected, clusters)
-        rows.append({"iteration": iteration, **metrics})
-    draws = pd.DataFrame(rows)
+
+    working_pool = pool.reset_index(drop=True).copy()
+    pool_area = working_pool["survey_area_id"].astype(str).str.lower().to_numpy()
+    cluster_area = clusters["island"].astype(str).str.lower().to_numpy()
+    selected_counts = (
+        selected["survey_area_id"].astype(str).str.lower().value_counts().to_dict()
+    )
+    distances = _haversine_matrix_km(
+        working_pool["latitude"].to_numpy(float),
+        working_pool["longitude"].to_numpy(float),
+        clusters["latitude"].to_numpy(float),
+        clusters["longitude"].to_numpy(float),
+    )
+    nearest = np.full((iterations, len(clusters)), np.inf, dtype=float)
+
+    for area, requested_n in selected_counts.items():
+        candidate_rows = np.flatnonzero(pool_area == area)
+        cluster_columns = np.flatnonzero(cluster_area == area)
+        if len(candidate_rows) == 0 or len(cluster_columns) == 0:
+            continue
+        sample_n = min(int(requested_n), len(candidate_rows))
+        if sample_n == len(candidate_rows):
+            sampled_rows = np.broadcast_to(candidate_rows, (iterations, len(candidate_rows)))
+        else:
+            random_keys = rng.random((iterations, len(candidate_rows)))
+            local_indices = np.argpartition(random_keys, sample_n - 1, axis=1)[:, :sample_n]
+            sampled_rows = candidate_rows[local_indices]
+        area_nearest = distances[sampled_rows][:, :, cluster_columns].min(axis=1)
+        nearest[:, cluster_columns] = area_nearest
+
+    draw_data: dict[str, object] = {
+        "iteration": np.arange(iterations, dtype=int),
+        "n_detection_clusters": np.full(iterations, len(clusters), dtype=int),
+    }
+    for radius in RADII_KM:
+        recovered = (nearest <= radius).sum(axis=1)
+        draw_data[f"recall_{radius:g}km"] = recovered / max(1, len(clusters))
+        draw_data[f"n_recovered_{radius:g}km"] = recovered
+    draw_data["median_nearest_candidate_km"] = np.median(nearest, axis=1)
+    draw_data["mean_nearest_candidate_km"] = np.mean(nearest, axis=1)
+    draws = pd.DataFrame(draw_data)
+
     benchmarks = []
-    for radius in (0.5, 1.0, 2.0, 5.0, 10.0):
+    for radius in RADII_KM:
         column = f"recall_{radius:g}km"
         observed_value = float(observed[column])
-        random_values = pd.to_numeric(draws[column], errors="coerce")
+        random_values = draws[column].to_numpy(float)
+        random_mean = float(random_values.mean())
         benchmarks.append(
             {
                 "radius_km": radius,
                 "observed_recall": observed_value,
-                "random_mean_recall": float(random_values.mean()),
-                "lift_over_random": float(observed_value - random_values.mean()),
-                "one_sided_p": float((1 + np.sum(random_values >= observed_value)) / (len(random_values) + 1)),
+                "random_mean_recall": random_mean,
+                "lift_over_random": float(observed_value - random_mean),
+                "one_sided_p": float(
+                    (1 + np.count_nonzero(random_values >= observed_value))
+                    / (len(random_values) + 1)
+                ),
             }
         )
     return pd.DataFrame(benchmarks), draws
@@ -96,7 +161,13 @@ def main() -> None:
         "metrics": metrics,
         "random_benchmark": benchmark.to_dict(orient="records"),
         "total_stations": int(len(stations)),
-        "total_internal_route_km": float(pd.to_numeric(patches["patch_internal_route_km"], errors="coerce").sum()),
+        "total_internal_route_km": float(
+            pd.to_numeric(patches["patch_internal_route_km"], errors="coerce").sum()
+        ),
+        "random_evaluation": (
+            "Vectorized exact same-island station-count benchmark with one precomputed "
+            "candidate-to-detection distance matrix. Internal route length is not yet exactly matched."
+        ),
         "interpretation": (
             "This first experiment fixes station count and patch diameter. The random control preserves "
             "station count by island but does not yet exactly match internal route length; route-matched "
