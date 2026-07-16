@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - agent/campanula-temporal-external-validation
-      - agent/occurrence-relation-graph
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
@@ -39,6 +38,7 @@ permissions:
 
 jobs:
   validate:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref != 'agent/occurrence-relation-graph'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
