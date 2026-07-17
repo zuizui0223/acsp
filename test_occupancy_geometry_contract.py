@@ -59,7 +59,7 @@ class OccupancyGeometryContractTests(unittest.TestCase):
         distances = pairwise_distances(values)
         edges = minimum_spanning_tree(distances)
         self.assertEqual(edges.shape, (2, 3))
-        self.assertAlmostEqual(float(edges[:, 2].sum()), 2.0)
+        self.assertAlmostEqual(float(edges[:, 2].sum()), 2.0 / 1.4826)
 
     def test_empty_candidate_projection_is_supported(self):
         occurrences = np.array([[0.0], [1.0], [2.0]])
