@@ -7,11 +7,10 @@ Two deliberately separate experiments are used.
    covariance. This tests whether gap strength detects missing environmental states
    when PCA breadth and Gaussian covariance volume are identical.
 2. Path experiment: straight and curved paths are generated with the same number of
-   ordered points, comparable step size, and the same isotropic noise, without
-   scenario-specific whitening. This tests continuity as diameter divided by MST
-   path length. Scenario-specific whitening is intentionally forbidden here because
-   it can magnify the near-zero transverse variance of a straight path and destroy
-   the topology being tested.
+   ordered points and the same small measurement noise, without scenario-specific
+   whitening. The straight path varies coherently in both variables so per-feature
+   robust scaling preserves its one-dimensional geometry instead of magnifying an
+   otherwise near-constant transverse variable.
 
 Campanula is not used.
 """
@@ -75,18 +74,19 @@ def _fragmentation_scenario(name: str, n: int, rng: np.random.Generator) -> np.n
 
 
 def _path_scenario(name: str, n: int, rng: np.random.Generator) -> np.ndarray:
-    """Generate paths with comparable scale without topology-destroying whitening."""
+    """Generate one-dimensional straight and curved paths under robust feature scaling."""
     if name == "straight_path":
-        # Chord length is 2.0 and ordered path length is also approximately 2.0.
+        # Both variables vary coherently. This remains a rank-one diagonal path after
+        # independent median/MAD scaling, unlike a horizontal path whose constant
+        # coordinate would turn tiny measurement noise into a full-scale dimension.
         t = np.linspace(-1.0, 1.0, n)
-        x = np.column_stack([t, np.zeros_like(t)])
+        x = np.column_stack([t, t]) / np.sqrt(2.0)
     elif name == "curved_path":
-        # Semicircle radius 1: chord length 2.0 but path length pi.
+        # A semicircular path with the same endpoint chord length (2.0) before scaling.
         angle = np.linspace(0.0, np.pi, n)
         x = np.column_stack([np.cos(angle), np.sin(angle)])
     else:
         raise ValueError(name)
-    # Same small isotropic measurement noise in both scenarios.
     return x + rng.normal(0.0, 0.004, size=(n, 2))
 
 
@@ -176,9 +176,9 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     result = {
         "campanula_used": False,
         "design_revision": (
-            "Fragmentation is tested under exact moment matching; path tortuosity is tested "
-            "without scenario-specific whitening because whitening a near-rank-one straight "
-            "path amplifies transverse noise and changes its topology."
+            "Fragmentation is tested under exact moment matching. Path tortuosity uses a "
+            "diagonal straight path so independent robust feature scaling preserves its "
+            "one-dimensional geometry instead of amplifying a near-constant coordinate."
         ),
         "fragmentation_scenario_count": len(fragmentation_names),
         "path_scenario_count": len(path_names),
