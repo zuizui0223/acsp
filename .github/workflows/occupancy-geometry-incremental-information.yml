@@ -1,0 +1,37 @@
+name: Occupancy geometry incremental information
+
+on:
+  pull_request:
+    paths:
+      - "benchmark_occupancy_geometry_incremental_information.py"
+      - "benchmark_occupancy_geometry_comparators.py"
+      - "benchmark_random_taxa_occupancy_geometry_direct.py"
+      - "benchmark_random_taxa_occupancy_geometry_v2.py"
+      - "acsp/occupancy_geometry.py"
+      - ".github/workflows/occupancy-geometry-incremental-information.yml"
+  workflow_dispatch:
+
+jobs:
+  incremental-information:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: pip install -e .
+      - name: Run real-taxon incremental information benchmark
+        run: python benchmark_occupancy_geometry_incremental_information.py
+      - name: Check outputs
+        run: |
+          test -s benchmark_results/occupancy_geometry_incremental_information/incremental_pair_metrics.csv
+          test -s benchmark_results/occupancy_geometry_incremental_information/topology_conventional_correlations.csv
+          test -s benchmark_results/occupancy_geometry_incremental_information/conventional_nearest_matches.csv
+          test -s benchmark_results/occupancy_geometry_incremental_information/incremental_information_summary.json
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: occupancy-geometry-incremental-information
+          path: benchmark_results/occupancy_geometry_incremental_information/
