@@ -9,6 +9,12 @@ from .field_validation import (
     recovery_summary,
     stratified_random_recovery_benchmark,
 )
+from .gap_connectivity import (
+    CorridorBarrierConfig,
+    annotate_gap_patch_barriers,
+    corridor_support_profile,
+    summarize_corridor_barrier,
+)
 from .gap_patches import (
     GapPatchConfig,
     discover_gap_patches,
@@ -17,8 +23,7 @@ from .gap_patches import (
 )
 from .gap_validation import (
     cluster_patch_recovery_table,
-    equal_member_budget_baselines,
-    select_gap_patches_under_member_budget,
+    select_gap_patches_within_travel_distance,
 )
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
@@ -51,6 +56,7 @@ __all__ = [
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
     "GapPatchConfig",
+    "CorridorBarrierConfig",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
@@ -64,9 +70,11 @@ __all__ = [
     "discover_gap_patches",
     "summarize_gap_patches",
     "patch_recovery_table",
-    "select_gap_patches_under_member_budget",
+    "select_gap_patches_within_travel_distance",
     "cluster_patch_recovery_table",
-    "equal_member_budget_baselines",
+    "corridor_support_profile",
+    "summarize_corridor_barrier",
+    "annotate_gap_patch_barriers",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
     "calibrate_candidate_weights",
