@@ -8,20 +8,24 @@ on:
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
+      - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
+      - test_gap_input_normalization.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
+      - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
+      - test_gap_input_normalization.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -42,8 +46,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-      - name: Test area-balanced selection
-        run: python -m unittest test_area_selection.py
+      - name: Test selection and input normalization
+        run: |
+          python -m unittest test_area_selection.py
+          python -m unittest test_gap_input_normalization.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -58,6 +64,10 @@ jobs:
             --results field_validation/campanula_microdonta/temporal_external_results \
             --random-iterations 10000 \
             --seed 20260715
+      - name: Normalize gap-validation inputs
+        run: |
+          python field_validation/campanula_microdonta/normalize_gap_validation_inputs.py \
+            --results field_validation/campanula_microdonta/temporal_external_results
       - name: Run gap-patch external validation
         run: |
           python field_validation/campanula_microdonta/run_gap_patch_external_validation.py \
