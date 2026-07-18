@@ -20,6 +20,18 @@ class GapInputNormalizationTests(unittest.TestCase):
         self.assertAlmostEqual(float(normalized.loc[0, "latitude"]), 34.7)
         self.assertAlmostEqual(float(normalized.loc[0, "longitude"]), 139.4)
 
+    def test_clean_occurrence_internal_columns_are_normalized(self):
+        frame = pd.DataFrame({
+            "_latitude": [34.7],
+            "_longitude": [139.4],
+            "_year": [2025],
+        })
+        normalized = normalize_coordinate_columns(frame, name="clean_occurrences output")
+        self.assertIn("latitude", normalized.columns)
+        self.assertIn("longitude", normalized.columns)
+        self.assertNotIn("_latitude", normalized.columns)
+        self.assertNotIn("_longitude", normalized.columns)
+
     def test_short_aliases_are_normalized_case_insensitively(self):
         frame = pd.DataFrame({"LAT": [34.7], "LNG": [139.4]})
         normalized = normalize_coordinate_columns(frame, name="short aliases")
