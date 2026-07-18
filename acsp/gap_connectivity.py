@@ -19,6 +19,7 @@ class CorridorBarrierConfig:
     interpolation_radius_m: float = 750.0
     low_support_threshold: float = 0.35
     min_barrier_length_m: float = 750.0
+    min_coverage_fraction: float = 0.75
 
     def validate(self) -> None:
         if self.sample_spacing_m <= 0 or self.interpolation_radius_m <= 0:
@@ -27,6 +28,8 @@ class CorridorBarrierConfig:
             raise ValueError("low_support_threshold must lie in [0, 1]")
         if self.min_barrier_length_m < 0:
             raise ValueError("min_barrier_length_m must be non-negative")
+        if not 0.0 <= self.min_coverage_fraction <= 1.0:
+            raise ValueError("min_coverage_fraction must lie in [0, 1]")
 
 
 def _nearest_pair(
@@ -74,11 +77,10 @@ def corridor_support_profile(
     support_col: str = "integrated_support_score",
     config: CorridorBarrierConfig | None = None,
 ) -> pd.DataFrame:
-    """Sample occurrence-conditioned support along a straight anchor-patch transect.
+    """Sample candidate support along an anchor-patch transect.
 
-    Support at each transect position is taken from the nearest candidate within
-    the interpolation radius. Unsampled positions are explicit support gaps and
-    receive zero rather than being silently interpolated across large holes.
+    Positions without a candidate inside the interpolation radius remain missing.
+    They are evidence gaps, not ecological low-support observations.
     """
     cfg = config or CorridorBarrierConfig()
     cfg.validate()
@@ -92,21 +94,23 @@ def corridor_support_profile(
     sample_lats, sample_lons, along_m = _transect_points(*start, *end, cfg.sample_spacing_m)
     pool_lats = pool["latitude"].to_numpy(float)
     pool_lons = pool["longitude"].to_numpy(float)
-    support = []
-    nearest_candidate_m = []
-    sampled = []
+    support: list[float] = []
+    nearest_candidate_m: list[float] = []
+    sampled: list[bool] = []
     for latitude, longitude in zip(sample_lats, sample_lons):
         if pool.empty:
             nearest = math.inf
-            value = 0.0
+            value = math.nan
+            available = False
         else:
             distances = haversine_distance_m(latitude, longitude, pool_lats, pool_lons)
             position = int(np.argmin(distances))
             nearest = float(distances[position])
-            value = float(pool.iloc[position][support_col]) if nearest <= cfg.interpolation_radius_m else 0.0
+            available = nearest <= cfg.interpolation_radius_m
+            value = float(pool.iloc[position][support_col]) if available else math.nan
         support.append(value)
         nearest_candidate_m.append(nearest)
-        sampled.append(nearest <= cfg.interpolation_radius_m)
+        sampled.append(available)
     profile = pd.DataFrame({
         "transect_distance_m": along_m,
         "latitude": sample_lats,
@@ -115,46 +119,77 @@ def corridor_support_profile(
         "nearest_candidate_m": nearest_candidate_m,
         "support_sample_available": sampled,
     })
-    profile["low_support"] = profile["corridor_support"].lt(cfg.low_support_threshold)
+    profile["low_support"] = (
+        profile["support_sample_available"]
+        & profile["corridor_support"].lt(cfg.low_support_threshold)
+    )
+    profile["support_gap"] = ~profile["support_sample_available"]
     return profile
+
+
+def _longest_run_m(positions: np.ndarray, mask: np.ndarray) -> float:
+    longest = 0.0
+    run_start: float | None = None
+    for position, active in zip(positions, mask):
+        if active and run_start is None:
+            run_start = float(position)
+        elif not active and run_start is not None:
+            longest = max(longest, float(position) - run_start)
+            run_start = None
+    if run_start is not None and len(positions):
+        longest = max(longest, float(positions[-1]) - run_start)
+    return longest
 
 
 def summarize_corridor_barrier(
     profile: pd.DataFrame,
     *,
     config: CorridorBarrierConfig | None = None,
-) -> dict[str, float | bool]:
-    """Summarize the amount and longest run of low support along a transect."""
+) -> dict[str, float | bool | str]:
+    """Summarize observed low support separately from missing corridor evidence."""
     cfg = config or CorridorBarrierConfig()
     cfg.validate()
     if profile is None or profile.empty:
         return {
             "corridor_length_m": 0.0,
-            "corridor_low_support_fraction": 0.0,
+            "corridor_coverage_fraction": 0.0,
+            "corridor_low_support_fraction_observed": 0.0,
             "corridor_longest_low_support_m": 0.0,
-            "corridor_support_mean": 0.0,
+            "corridor_longest_support_gap_m": 0.0,
+            "corridor_support_mean_observed": math.nan,
+            "corridor_evidence_sufficient": False,
             "corridor_barrier_present": False,
+            "corridor_evidence_class": "insufficient_corridor_evidence",
         }
     ordered = profile.sort_values("transect_distance_m").reset_index(drop=True)
     positions = ordered["transect_distance_m"].to_numpy(float)
+    available = ordered["support_sample_available"].astype(bool).to_numpy()
     low = ordered["low_support"].astype(bool).to_numpy()
-    longest = 0.0
-    run_start: float | None = None
-    for position, is_low in zip(positions, low):
-        if is_low and run_start is None:
-            run_start = float(position)
-        elif not is_low and run_start is not None:
-            longest = max(longest, float(position) - run_start)
-            run_start = None
-    if run_start is not None:
-        longest = max(longest, float(positions[-1]) - run_start)
-    length = float(positions[-1]) if len(positions) else 0.0
+    gaps = ~available
+    coverage = float(available.mean())
+    observed_low_fraction = float(low[available].mean()) if available.any() else 0.0
+    longest_low = _longest_run_m(positions, low)
+    longest_gap = _longest_run_m(positions, gaps)
+    evidence_sufficient = coverage >= cfg.min_coverage_fraction
+    barrier_present = evidence_sufficient and longest_low >= cfg.min_barrier_length_m
+    if not evidence_sufficient:
+        evidence_class = "insufficient_corridor_evidence"
+    elif barrier_present:
+        evidence_class = "observed_low_support_barrier"
+    else:
+        evidence_class = "observed_continuous_or_short_gap"
     return {
-        "corridor_length_m": length,
-        "corridor_low_support_fraction": float(low.mean()),
-        "corridor_longest_low_support_m": longest,
-        "corridor_support_mean": float(ordered["corridor_support"].mean()),
-        "corridor_barrier_present": bool(longest >= cfg.min_barrier_length_m),
+        "corridor_length_m": float(positions[-1]) if len(positions) else 0.0,
+        "corridor_coverage_fraction": coverage,
+        "corridor_low_support_fraction_observed": observed_low_fraction,
+        "corridor_longest_low_support_m": longest_low,
+        "corridor_longest_support_gap_m": longest_gap,
+        "corridor_support_mean_observed": float(
+            ordered.loc[ordered["support_sample_available"], "corridor_support"].mean()
+        ) if available.any() else math.nan,
+        "corridor_evidence_sufficient": bool(evidence_sufficient),
+        "corridor_barrier_present": bool(barrier_present),
+        "corridor_evidence_class": evidence_class,
     }
 
 
@@ -202,9 +237,14 @@ def annotate_gap_patch_barriers(
     out["gap_patch_ecological_class"] = np.select(
         [
             out["gap_patch_class"].eq("anchor_expansion"),
+            ~out["corridor_evidence_sufficient"].astype(bool),
             out["corridor_barrier_present"].astype(bool),
         ],
-        ["continuous_anchor_extension", "barrier_separated_patch"],
+        [
+            "continuous_anchor_extension",
+            "insufficient_corridor_evidence",
+            "barrier_separated_patch",
+        ],
         default="distance_separated_without_barrier",
     )
     return out
