@@ -2,11 +2,7 @@ import unittest
 
 import pandas as pd
 
-from acsp import (
-    cluster_patch_recovery_table,
-    equal_member_budget_baselines,
-    select_gap_patches_under_member_budget,
-)
+from acsp import cluster_patch_recovery_table, select_gap_patches_within_travel_distance
 
 
 class GapValidationTests(unittest.TestCase):
@@ -28,11 +24,26 @@ class GapValidationTests(unittest.TestCase):
             "gap_patch_centroid_longitude": [139.0005, 139.0005, 139.101, 139.101, 139.101],
         })
 
-    def test_budget_keeps_whole_patch_and_does_not_overrun(self):
-        selected = select_gap_patches_under_member_budget(self.members, 2)
+    def test_travel_limit_keeps_whole_reachable_patch(self):
+        selected = select_gap_patches_within_travel_distance(
+            self.members,
+            origin_latitude=35.0,
+            origin_longitude=139.0,
+            max_travel_distance_m=5_000,
+        )
         self.assertEqual(selected["gap_patch_id"].unique().tolist(), ["a"])
         self.assertEqual(len(selected), 2)
-        self.assertTrue(selected["gap_patch_members_used"].eq(2).all())
+        self.assertTrue(selected["gap_patch_route_distance_m"].le(5_000).all())
+
+    def test_longer_travel_limit_can_add_second_patch(self):
+        selected = select_gap_patches_within_travel_distance(
+            self.members,
+            origin_latitude=35.0,
+            origin_longitude=139.0,
+            max_travel_distance_m=40_000,
+        )
+        self.assertEqual(set(selected["gap_patch_id"]), {"a", "b"})
+        self.assertTrue(selected["gap_patch_route_distance_m"].le(40_000).all())
 
     def test_cluster_recovery_counts_population_once(self):
         held = pd.DataFrame({
@@ -43,26 +54,6 @@ class GapValidationTests(unittest.TestCase):
         result = cluster_patch_recovery_table(self.members.iloc[:2], held, radii_km=(1, 10))
         self.assertEqual(len(result), 2)
         self.assertTrue(bool(result.loc[result["cluster_id"].eq("x"), "recovered_within_1km"].iloc[0]))
-
-    def test_equal_budget_baselines_are_reproducible(self):
-        candidates = self.members[["site_id", "latitude", "longitude"]].copy()
-        candidates["integrated_support_score"] = [0.9, 0.8, 0.7, 0.6, 0.5]
-        known = pd.DataFrame({"latitude": [34.99], "longitude": [138.99]})
-        held = pd.DataFrame({
-            "cluster_id": ["x", "y"],
-            "latitude": [35.0, 35.101],
-            "longitude": [139.0, 139.101],
-        })
-        selected = self.members.iloc[:2]
-        first = equal_member_budget_baselines(
-            candidates, known, held, selected, random_draws=3, random_state=7
-        )
-        second = equal_member_budget_baselines(
-            candidates, known, held, selected, random_draws=3, random_state=7
-        )
-        pd.testing.assert_frame_equal(first, second)
-        self.assertEqual(set(first["method"]), {"gap_patch", "support_topk", "nearest_known", "random"})
-        self.assertTrue(first["member_budget"].eq(2).all())
 
 
 if __name__ == "__main__":
