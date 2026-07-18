@@ -15,6 +15,11 @@ from .gap_patches import (
     patch_recovery_table,
     summarize_gap_patches,
 )
+from .gap_validation import (
+    cluster_patch_recovery_table,
+    equal_member_budget_baselines,
+    select_gap_patches_under_member_budget,
+)
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -59,6 +64,9 @@ __all__ = [
     "discover_gap_patches",
     "summarize_gap_patches",
     "patch_recovery_table",
+    "select_gap_patches_under_member_budget",
+    "cluster_patch_recovery_table",
+    "equal_member_budget_baselines",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
     "calibrate_candidate_weights",
