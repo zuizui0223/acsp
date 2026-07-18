@@ -1,4 +1,4 @@
-"""Equal-budget validation helpers for gap-separated survey patches."""
+"""Validation and travel-constrained selection for gap-separated patches."""
 
 from __future__ import annotations
 
@@ -10,19 +10,50 @@ import pandas as pd
 from .gap_patches import haversine_distance_m, patch_recovery_table, summarize_gap_patches
 
 
-def select_gap_patches_under_member_budget(
+def _point_distance_m(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float:
+    return float(haversine_distance_m(a_lat, a_lon, np.array([b_lat]), np.array([b_lon]))[0])
+
+
+def _route_distance_m(points: list[tuple[float, float]], origin: tuple[float, float]) -> float:
+    """Return closed-route distance through ordered points using great-circle legs."""
+    if not points:
+        return 0.0
+    route = [origin, *points, origin]
+    return float(sum(_point_distance_m(*route[index], *route[index + 1]) for index in range(len(route) - 1)))
+
+
+def _best_insertion(
+    route: list[tuple[float, float]],
+    point: tuple[float, float],
+    origin: tuple[float, float],
+) -> tuple[float, int]:
+    """Return minimum closed-route distance and insertion position for one point."""
+    best_distance = float("inf")
+    best_position = 0
+    for position in range(len(route) + 1):
+        candidate = [*route[:position], point, *route[position:]]
+        distance = _route_distance_m(candidate, origin)
+        if distance < best_distance:
+            best_distance = distance
+            best_position = position
+    return best_distance, best_position
+
+
+def select_gap_patches_within_travel_distance(
     patch_members: pd.DataFrame,
-    member_budget: int,
+    origin_latitude: float,
+    origin_longitude: float,
+    max_travel_distance_m: float,
     *,
     allowed_classes: Iterable[str] | None = None,
 ) -> pd.DataFrame:
-    """Select whole patches greedily without exceeding a member-count budget.
+    """Select whole patches whose centroid route fits a maximum travel distance.
 
-    The score-per-member rule prevents large patches from winning merely because
-    they contain more candidate points. Whole patches are retained so evaluation
-    uses operational objects rather than a disguised point-level Top-k.
+    Patches are added by largest patch score per marginal route metre. The only
+    operational constraint is a closed travel-distance limit from the supplied
+    origin. Patch count and member count are not treated as budgets.
     """
-    if patch_members is None or patch_members.empty or member_budget <= 0:
+    if patch_members is None or patch_members.empty or max_travel_distance_m <= 0:
         return pd.DataFrame()
     work = patch_members.copy()
     if allowed_classes is not None:
@@ -30,28 +61,48 @@ def select_gap_patches_under_member_budget(
         work = work[work["gap_patch_class"].astype(str).isin(allowed)].copy()
     if work.empty:
         return work
+
     summary = summarize_gap_patches(work)
-    summary["selection_value_per_member"] = (
-        pd.to_numeric(summary["gap_patch_score"], errors="coerce").fillna(0.0)
-        / pd.to_numeric(summary["gap_patch_member_count"], errors="coerce").clip(lower=1)
-    )
-    summary = summary.sort_values(
-        ["selection_value_per_member", "gap_patch_score", "gap_patch_id"],
-        ascending=[False, False, True],
-    )
+    origin = (float(origin_latitude), float(origin_longitude))
+    route: list[tuple[float, float]] = []
     selected: list[str] = []
-    used = 0
-    for row in summary.itertuples(index=False):
-        cost = int(row.gap_patch_member_count)
-        if used + cost > int(member_budget):
-            continue
-        selected.append(str(row.gap_patch_id))
-        used += cost
+    route_distances: dict[str, float] = {}
+    remaining = set(summary["gap_patch_id"].astype(str))
+
+    while remaining:
+        current_distance = _route_distance_m(route, origin)
+        best: tuple[float, float, str, int] | None = None
+        for patch_id in sorted(remaining):
+            row = summary.loc[summary["gap_patch_id"].astype(str).eq(patch_id)].iloc[0]
+            point = (
+                float(row["gap_patch_centroid_latitude"]),
+                float(row["gap_patch_centroid_longitude"]),
+            )
+            new_distance, position = _best_insertion(route, point, origin)
+            marginal = max(new_distance - current_distance, 1.0)
+            if new_distance > float(max_travel_distance_m):
+                continue
+            efficiency = float(row["gap_patch_score"]) / marginal
+            key = (efficiency, float(row["gap_patch_score"]), patch_id, position)
+            if best is None or key[:2] > best[:2] or (key[:2] == best[:2] and patch_id < best[2]):
+                best = key
+        if best is None:
+            break
+        _, _, patch_id, position = best
+        row = summary.loc[summary["gap_patch_id"].astype(str).eq(patch_id)].iloc[0]
+        route.insert(position, (
+            float(row["gap_patch_centroid_latitude"]),
+            float(row["gap_patch_centroid_longitude"]),
+        ))
+        selected.append(patch_id)
+        route_distances[patch_id] = _route_distance_m(route, origin)
+        remaining.remove(patch_id)
+
     out = work[work["gap_patch_id"].astype(str).isin(selected)].copy()
     rank = {patch_id: index + 1 for index, patch_id in enumerate(selected)}
     out["gap_patch_selection_rank"] = out["gap_patch_id"].astype(str).map(rank).astype(int)
-    out["gap_patch_member_budget"] = int(member_budget)
-    out["gap_patch_members_used"] = int(used)
+    out["gap_patch_route_distance_m"] = out["gap_patch_id"].astype(str).map(route_distances)
+    out["gap_patch_max_travel_distance_m"] = float(max_travel_distance_m)
     return out.sort_values(["gap_patch_selection_rank", "gap_patch_id"]).reset_index(drop=True)
 
 
@@ -85,66 +136,5 @@ def cluster_patch_recovery_table(
         }
         for column in recovered_cols:
             row[column] = bool(group[column].any())
-        rows.append(row)
-    return pd.DataFrame(rows)
-
-
-def equal_member_budget_baselines(
-    candidates: pd.DataFrame,
-    known_occurrences: pd.DataFrame,
-    held_out_occurrences: pd.DataFrame,
-    selected_gap_members: pd.DataFrame,
-    *,
-    support_col: str = "integrated_support_score",
-    cluster_col: str = "cluster_id",
-    radii_km: Iterable[float] = (1.0, 2.0, 5.0, 10.0),
-    random_draws: int = 100,
-    random_state: int = 0,
-) -> pd.DataFrame:
-    """Compare gap patches with support, nearest-anchor, and random baselines."""
-    if selected_gap_members is None or selected_gap_members.empty:
-        return pd.DataFrame()
-    pool = candidates.dropna(subset=["latitude", "longitude"]).copy().reset_index(drop=True)
-    budget = min(len(pool), len(selected_gap_members))
-    if budget <= 0:
-        return pd.DataFrame()
-    pool[support_col] = pd.to_numeric(pool[support_col], errors="coerce").fillna(0.0)
-    known = known_occurrences.dropna(subset=["latitude", "longitude"]).copy()
-    if known.empty:
-        pool["nearest_known_m"] = np.inf
-    else:
-        known_lats = known["latitude"].to_numpy(float)
-        known_lons = known["longitude"].to_numpy(float)
-        pool["nearest_known_m"] = [
-            float(np.min(haversine_distance_m(row.latitude, row.longitude, known_lats, known_lons)))
-            for row in pool[["latitude", "longitude"]].itertuples(index=False)
-        ]
-
-    selections: list[tuple[str, int, pd.DataFrame]] = [
-        ("gap_patch", 0, selected_gap_members),
-        ("support_topk", 0, pool.nlargest(budget, support_col)),
-        ("nearest_known", 0, pool.nsmallest(budget, "nearest_known_m")),
-    ]
-    rng = np.random.default_rng(random_state)
-    for draw in range(max(1, int(random_draws))):
-        positions = rng.choice(len(pool), size=budget, replace=False)
-        selections.append(("random", draw, pool.iloc[positions]))
-
-    rows: list[dict[str, object]] = []
-    for method, draw, selection in selections:
-        recovery = cluster_patch_recovery_table(
-            selection, held_out_occurrences, cluster_col=cluster_col, radii_km=radii_km
-        )
-        row: dict[str, object] = {
-            "method": method,
-            "draw": int(draw),
-            "member_budget": int(budget),
-            "held_out_cluster_count": int(len(recovery)),
-        }
-        for column in [c for c in recovery.columns if c.startswith("recovered_within_")]:
-            row[column.replace("recovered_", "recall_")] = float(recovery[column].mean())
-        row["median_nearest_patch_distance_m"] = (
-            float(recovery["nearest_patch_distance_m"].median()) if not recovery.empty else np.nan
-        )
         rows.append(row)
     return pd.DataFrame(rows)
