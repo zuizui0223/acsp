@@ -11,6 +11,7 @@ import pandas as pd
 
 LATITUDE_ALIASES = (
     "latitude",
+    "_latitude",
     "decimalLatitude",
     "decimal_latitude",
     "decimallatitude",
@@ -19,6 +20,7 @@ LATITUDE_ALIASES = (
 )
 LONGITUDE_ALIASES = (
     "longitude",
+    "_longitude",
     "decimalLongitude",
     "decimal_longitude",
     "decimallongitude",
