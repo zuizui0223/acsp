@@ -9,6 +9,12 @@ from .field_validation import (
     recovery_summary,
     stratified_random_recovery_benchmark,
 )
+from .gap_patches import (
+    GapPatchConfig,
+    discover_gap_patches,
+    patch_recovery_table,
+    summarize_gap_patches,
+)
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -39,6 +45,7 @@ __all__ = [
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
+    "GapPatchConfig",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
@@ -49,6 +56,9 @@ __all__ = [
     "recommend_candidates",
     "recommend_survey_zones",
     "select_complementary_candidates",
+    "discover_gap_patches",
+    "summarize_gap_patches",
+    "patch_recovery_table",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
     "calibrate_candidate_weights",
@@ -68,4 +78,4 @@ __all__ = [
     "stratified_random_recovery_benchmark",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0-dev"
