@@ -9,12 +9,14 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
+      - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
       - test_gap_input_normalization.py
+      - test_gap_validation.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
@@ -22,12 +24,14 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
+      - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/locations_2026.csv
       - acsp/**
       - test_area_selection.py
       - test_gap_input_normalization.py
+      - test_gap_validation.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -52,6 +56,7 @@ jobs:
         run: |
           python -m unittest test_area_selection.py
           python -m unittest test_gap_input_normalization.py
+          python -m unittest test_gap_validation.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -78,6 +83,12 @@ jobs:
         run: |
           python field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py \
             --results field_validation/campanula_microdonta/temporal_external_results
+      - name: Run equal-travel patch baselines
+        run: |
+          python field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py \
+            --results field_validation/campanula_microdonta/temporal_external_results \
+            --random-draws 200 \
+            --seed 20260718
       - name: Check primary outputs
         run: |
           test -s field_validation/campanula_microdonta/temporal_external_results/gbif_training_occurrences_through_2025.csv
@@ -95,6 +106,8 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_evidence_sensitivity.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_labels_by_setting.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_label_stability.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/travel_constrained_patch_baseline_draws.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/travel_constrained_patch_baseline_comparison.csv
       - name: Upload validation outputs
         uses: actions/upload-artifact@v4
         with:
