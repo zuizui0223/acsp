@@ -12,7 +12,6 @@ on:
       - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_sensitivity.py
       - field_validation/campanula_microdonta/rank_robust_near_disconnected_patches.py
       - field_validation/campanula_microdonta/run_robust_patch_portfolio_validation.py
-      - field_validation/campanula_microdonta/run_member_budget_portfolio_validation.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
       - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
@@ -33,7 +32,6 @@ on:
       - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_sensitivity.py
       - field_validation/campanula_microdonta/rank_robust_near_disconnected_patches.py
       - field_validation/campanula_microdonta/run_robust_patch_portfolio_validation.py
-      - field_validation/campanula_microdonta/run_member_budget_portfolio_validation.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
       - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
@@ -110,12 +108,6 @@ jobs:
             --results field_validation/campanula_microdonta/temporal_external_results \
             --random-draws 2000 \
             --seed 20260719
-      - name: Run equal-effort member-budget validation
-        run: |
-          python field_validation/campanula_microdonta/run_member_budget_portfolio_validation.py \
-            --results field_validation/campanula_microdonta/temporal_external_results \
-            --random-draws 2000 \
-            --seed 20260719
       - name: Run corridor evidence sensitivity
         run: |
           python field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py \
@@ -152,8 +144,6 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/robust_near_disconnected_patch_ranking_summary.json
           test -s field_validation/campanula_microdonta/temporal_external_results/robust_patch_portfolio_draws.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/robust_patch_portfolio_comparison.csv
-          test -s field_validation/campanula_microdonta/temporal_external_results/member_budget_portfolio_draws.csv
-          test -s field_validation/campanula_microdonta/temporal_external_results/member_budget_portfolio_comparison.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_evidence_sensitivity.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_labels_by_setting.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_label_stability.csv
