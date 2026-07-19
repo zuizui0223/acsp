@@ -10,6 +10,7 @@ on:
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
       - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_validation.py
       - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_sensitivity.py
+      - field_validation/campanula_microdonta/rank_robust_near_disconnected_patches.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
       - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
@@ -28,6 +29,7 @@ on:
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
       - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_validation.py
       - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_sensitivity.py
+      - field_validation/campanula_microdonta/rank_robust_near_disconnected_patches.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
       - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
@@ -94,6 +96,10 @@ jobs:
         run: |
           python field_validation/campanula_microdonta/run_occurrence_patch_connectivity_sensitivity.py \
             --results field_validation/campanula_microdonta/temporal_external_results
+      - name: Rank robust near-disconnected patches
+        run: |
+          python field_validation/campanula_microdonta/rank_robust_near_disconnected_patches.py \
+            --results field_validation/campanula_microdonta/temporal_external_results
       - name: Run corridor evidence sensitivity
         run: |
           python field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py \
@@ -126,6 +132,8 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_patch_connectivity_sensitivity.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_patch_labels_by_setting.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_patch_label_stability.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/robust_near_disconnected_patch_ranking.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/robust_near_disconnected_patch_ranking_summary.json
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_evidence_sensitivity.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_labels_by_setting.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_label_stability.csv
