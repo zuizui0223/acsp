@@ -25,6 +25,11 @@ from .gap_validation import (
     cluster_patch_recovery_table,
     select_gap_patches_within_travel_distance,
 )
+from .occurrence_patch_connectivity import (
+    OccurrencePatchConnectivityConfig,
+    annotate_occurrence_patch_connectivity,
+    build_occurrence_patches,
+)
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -57,6 +62,7 @@ __all__ = [
     "DEFAULT_RECOVERY_RADII_KM",
     "GapPatchConfig",
     "CorridorBarrierConfig",
+    "OccurrencePatchConnectivityConfig",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
@@ -75,6 +81,8 @@ __all__ = [
     "corridor_support_profile",
     "summarize_corridor_barrier",
     "annotate_gap_patch_barriers",
+    "build_occurrence_patches",
+    "annotate_occurrence_patch_connectivity",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
     "calibrate_candidate_weights",
