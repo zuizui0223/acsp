@@ -8,6 +8,7 @@ on:
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
+      - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_validation.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
       - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
@@ -17,12 +18,14 @@ on:
       - test_area_selection.py
       - test_gap_input_normalization.py
       - test_gap_validation.py
+      - test_occurrence_patch_connectivity.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   pull_request:
     paths:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/run_gap_patch_external_validation.py
+      - field_validation/campanula_microdonta/run_occurrence_patch_connectivity_validation.py
       - field_validation/campanula_microdonta/run_corridor_evidence_sensitivity.py
       - field_validation/campanula_microdonta/run_travel_constrained_patch_baselines.py
       - field_validation/campanula_microdonta/normalize_gap_validation_inputs.py
@@ -32,6 +35,7 @@ on:
       - test_area_selection.py
       - test_gap_input_normalization.py
       - test_gap_validation.py
+      - test_occurrence_patch_connectivity.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
@@ -57,6 +61,7 @@ jobs:
           python -m unittest test_area_selection.py
           python -m unittest test_gap_input_normalization.py
           python -m unittest test_gap_validation.py
+          python -m unittest test_occurrence_patch_connectivity.py
       - name: Run frozen baseline validation
         run: |
           python field_validation/campanula_microdonta/run_temporal_external_validation.py \
@@ -78,6 +83,10 @@ jobs:
       - name: Run gap-patch external validation
         run: |
           python field_validation/campanula_microdonta/run_gap_patch_external_validation.py \
+            --results field_validation/campanula_microdonta/temporal_external_results
+      - name: Run occurrence-patch connectivity validation
+        run: |
+          python field_validation/campanula_microdonta/run_occurrence_patch_connectivity_validation.py \
             --results field_validation/campanula_microdonta/temporal_external_results
       - name: Run corridor evidence sensitivity
         run: |
@@ -103,6 +112,11 @@ jobs:
           test -s field_validation/campanula_microdonta/temporal_external_results/gap_patch_all_field_cluster_recovery.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/gap_patch_travel_sensitivity.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/gap_patch_external_validation_summary.json
+          test -s field_validation/campanula_microdonta/temporal_external_results/known_occurrence_patch_members.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/candidate_patch_occurrence_connectivity.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_patch_connectivity_cluster_recovery.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_patch_connectivity_summary.csv
+          test -s field_validation/campanula_microdonta/temporal_external_results/occurrence_patch_connectivity_validation_summary.json
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_evidence_sensitivity.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_labels_by_setting.csv
           test -s field_validation/campanula_microdonta/temporal_external_results/corridor_patch_label_stability.csv
