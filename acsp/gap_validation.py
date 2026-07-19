@@ -46,12 +46,15 @@ def select_gap_patches_within_travel_distance(
     max_travel_distance_m: float,
     *,
     allowed_classes: Iterable[str] | None = None,
+    priority_col: str = "gap_patch_score",
+    higher_priority_is_better: bool = True,
 ) -> pd.DataFrame:
     """Select whole patches whose centroid route fits a maximum travel distance.
 
-    Patches are added by largest patch score per marginal route metre. The only
-    operational constraint is a closed travel-distance limit from the supplied
-    origin. Patch count and member count are not treated as budgets.
+    Patches are added greedily by priority per marginal route metre. Supplying an
+    explicit ``priority_col`` allows support-only, nearest-anchor, random-order,
+    or other baselines to be evaluated under exactly the same travel constraint.
+    Patch count and member count are not treated as budgets.
     """
     if patch_members is None or patch_members.empty or max_travel_distance_m <= 0:
         return pd.DataFrame()
@@ -63,6 +66,19 @@ def select_gap_patches_within_travel_distance(
         return work
 
     summary = summarize_gap_patches(work)
+    if priority_col not in summary.columns:
+        patch_priority = work.groupby("gap_patch_id", sort=True)[priority_col].mean()
+        summary[priority_col] = summary["gap_patch_id"].map(patch_priority)
+    if priority_col not in summary.columns:
+        raise ValueError(f"priority column {priority_col!r} was not found")
+    priority = pd.to_numeric(summary[priority_col], errors="coerce")
+    if priority.notna().sum() < 1:
+        raise ValueError(f"priority column {priority_col!r} has no usable values")
+    priority = priority.fillna(priority.min())
+    if not higher_priority_is_better:
+        priority = -priority
+    summary["_selection_priority"] = priority
+
     origin = (float(origin_latitude), float(origin_longitude))
     route: list[tuple[float, float]] = []
     selected: list[str] = []
@@ -82,8 +98,9 @@ def select_gap_patches_within_travel_distance(
             marginal = max(new_distance - current_distance, 1.0)
             if new_distance > float(max_travel_distance_m):
                 continue
-            efficiency = float(row["gap_patch_score"]) / marginal
-            key = (efficiency, float(row["gap_patch_score"]), patch_id, position)
+            value = float(row["_selection_priority"])
+            efficiency = value / marginal
+            key = (efficiency, value, patch_id, position)
             if best is None or key[:2] > best[:2] or (key[:2] == best[:2] and patch_id < best[2]):
                 best = key
         if best is None:
@@ -103,6 +120,7 @@ def select_gap_patches_within_travel_distance(
     out["gap_patch_selection_rank"] = out["gap_patch_id"].astype(str).map(rank).astype(int)
     out["gap_patch_route_distance_m"] = out["gap_patch_id"].astype(str).map(route_distances)
     out["gap_patch_max_travel_distance_m"] = float(max_travel_distance_m)
+    out["gap_patch_selection_priority_col"] = priority_col
     return out.sort_values(["gap_patch_selection_rank", "gap_patch_id"]).reset_index(drop=True)
 
 
