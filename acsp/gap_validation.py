@@ -67,10 +67,10 @@ def select_gap_patches_within_travel_distance(
 
     summary = summarize_gap_patches(work)
     if priority_col not in summary.columns:
+        if priority_col not in work.columns:
+            raise ValueError(f"priority column {priority_col!r} was not found")
         patch_priority = work.groupby("gap_patch_id", sort=True)[priority_col].mean()
         summary[priority_col] = summary["gap_patch_id"].map(patch_priority)
-    if priority_col not in summary.columns:
-        raise ValueError(f"priority column {priority_col!r} was not found")
     priority = pd.to_numeric(summary[priority_col], errors="coerce")
     if priority.notna().sum() < 1:
         raise ValueError(f"priority column {priority_col!r} has no usable values")
