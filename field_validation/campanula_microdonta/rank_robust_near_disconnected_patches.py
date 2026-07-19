@@ -47,7 +47,7 @@ def main() -> None:
     ranked = patch.merge(stability, on=["gap_patch_id", "survey_area_id"], how="inner")
     ranked = ranked[ranked["ever_near_disconnected"]].copy()
     ranked["robust_near_disconnected_priority_score"] = (
-        ranked["near_disconnected_frequency"] * ranked["gap_patch_score"]
+        ranked["near_disconnected_frequency"].pow(2) * ranked["gap_patch_score"]
     )
     ranked["priority_uses_2026_field_detections"] = False
     ranked = ranked.sort_values(
@@ -83,7 +83,7 @@ def main() -> None:
     ranked.to_csv(results / "robust_near_disconnected_patch_ranking.csv", index=False)
 
     summary = {
-        "priority_definition": "near_disconnected_frequency * frozen gap_patch_score",
+        "priority_definition": "near_disconnected_frequency^2 * frozen gap_patch_score",
         "field_data_used_in_priority": False,
         "ranked_patch_count": int(len(ranked)),
         "top_patch_id": None if ranked.empty else str(ranked.iloc[0]["gap_patch_id"]),
