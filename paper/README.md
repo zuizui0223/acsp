@@ -1,76 +1,49 @@
 # ACSP methods paper
 
-This directory separates three evidence layers.
+This paper is now scoped to the frozen pre-*Campanula microdonta* validation program.
 
-1. **Retrospective breadth:** frozen, predeclared taxon–region cohorts evaluated with spatial-block hold-out and same-pool random Top-5 controls.
-2. **Temporal external baseline:** *Campanula microdonta* candidates generated from Japanese GBIF records through 2025 and evaluated against independent field detections from 2026.
-3. **Post-baseline development:** a general survey-area-balanced selector added after the baseline exposed candidate concentration across islands.
+## Included evidence
 
-The baseline and updated results must remain separate. The updated selector does not train on field coordinates, but its need was diagnosed from the baseline result and therefore it is not an untouched confirmation.
+1. **Retrospective breadth:** predeclared taxon–region cohorts evaluated with spatial-block hold-out and same-pool random Top-5 controls.
+2. **Leakage control:** candidates are reconstructed from training occurrences only; known-location and direct occurrence-distance evidence are excluded from the confirmatory comparison.
+3. **Selection-value inference:** repeated folds are summarized within taxon–region pairs, with pair-level bootstrap, half-cohort, leave-one-pair-out, and sign-flip stability analyses.
 
-## Rebuild retrospective paper outputs
+The paper asks whether an occurrence-conditioned environmental-analogue selection rule adds recovery value beyond random selection from the identical generated candidate pool. It does not claim exact-site occupancy, field efficiency, or validation of every production-app component.
+
+## Excluded from this paper
+
+The 2026 *C. microdonta* island application, area-balanced post-baseline update, gap-patch development, occurrence-patch connectivity, and corridor/barrier experiments are not part of the confirmatory ACSP paper.
+
+The island field application is retained as provenance and as the motivating case for the separate `zuizui0223/odsp` research program. ODSP asks what geographical survey object should be used when supported candidate patches lie near, but outside, known occurrence patches.
+
+## Rebuild paper outputs
 
 ```bash
 python -m pip install -e .
 python paper/build_paper_outputs.py
 ```
 
-This rebuilds:
+The publication builder should produce the frozen retrospective tables and manifest without requiring field GPS data or post-baseline algorithms.
+
+Primary outputs:
 
 - `table_1_retrospective_validation.csv`
 - `table_s1_seed_sensitivity.csv`
-- `table_2_field_inventory.csv`
-- the 500-m independent-detection clusters and manifest
-
-## Run the temporal external field evaluation
-
-```bash
-python field_validation/campanula_microdonta/run_temporal_external_validation.py \
-  --output field_validation/campanula_microdonta/temporal_external_results \
-  --gbif-cap 2000 \
-  --random-iterations 10000 \
-  --seed 20260715 \
-  --cluster-radius-m 500
-
-python field_validation/campanula_microdonta/compare_area_balanced_update.py \
-  --results field_validation/campanula_microdonta/temporal_external_results \
-  --random-iterations 10000 \
-  --seed 20260715
-```
-
-The first command performs the following operations in order:
-
-1. retrieves *C. microdonta* GBIF records dated through 2025;
-2. generates the distance-excluded candidate pool;
-3. writes the baseline global Top-5;
-4. only then reads and clusters the 2026 field GPS file;
-5. calculates multi-radius recovery and same-pool random controls.
-
-The second command applies the general area-balanced selector to the already generated candidate pool before evaluating it against field clusters.
-
-## Current field inventory
-
-The 28 positive GPS rows form 19 independent clusters at 500 m:
-
-- Oshima: 13 rows, 9 clusters
-- Toshima: 8 rows, 3 clusters
-- Niijima: 4 rows, 4 clusters
-- Shikinejima: 1 row, 1 cluster
-- Kozushima: 2 rows, 2 clusters
-
-These counts describe positive field locations only. They do not estimate occupancy, detection probability, access success, or discoveries per unit effort.
-
-## Current paper tables
-
-- `table_3_campanula_baseline_validation.csv`: untouched external baseline
-- `table_4_campanula_area_balanced_update.csv`: post-baseline update against same-allocation random sets
-- `table_5_campanula_area_balanced_top5.csv`: updated one-per-island candidate set
+- retrospective cohort audit and manifest
 
 ## Interpretation guardrails
 
-- The baseline is retained even though it performed poorly.
-- Random controls match the candidate pool, Top-k budget, and selected island allocation.
-- Ten kilometres is a regional endpoint and saturates on small islands.
-- The 2-km updated lift is exploratory and not statistically resolved.
-- The field detections are not score-training data.
-- Updating the algorithm after inspecting baseline performance converts the same field set into development evidence for the update.
+- The supported endpoint is regional held-out recovery, with 10 km as the primary frozen scale.
+- Same-pool random selection is the central counterfactual; it separates candidate availability from selection value.
+- Failed folds and failed taxon–region pairs remain in the intention-to-evaluate denominator.
+- Plant and animal selection policies must be reported exactly as frozen.
+- The paper does not claim universal superiority, exact-location prediction, occupancy probability, accessibility, detectability, or discoveries per field day.
+- The production Streamlit application contains additional components that are outside the validated paper core.
+
+## Repository separation
+
+- `zuizui0223/acsp`: finite candidate-set selection and same-pool counterfactual validation.
+- `zuizui0223/odsp`: occurrence-relative geographical survey-patch construction.
+- `zuizui0223/eog`: descriptive geometry of observed states in environmental feature space.
+
+Any future cross-reference should preserve these distinct estimands rather than presenting the repositories as successive versions of one algorithm.
