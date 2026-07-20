@@ -1,0 +1,74 @@
+name: ODSP fold export
+
+on:
+  workflow_dispatch:
+    inputs:
+      cohort:
+        description: Frozen confirmation cohort to export
+        required: true
+        type: choice
+        options:
+          - mixed_20260705
+          - plants_20260706
+      pairs:
+        description: Number of manifest rows to process
+        required: true
+        default: "24"
+      repeats:
+        description: Spatial-block repeats per pair
+        required: true
+        default: "5"
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Resolve frozen cohort
+        id: cohort
+        shell: bash
+        run: |
+          if [ "${{ inputs.cohort }}" = "mixed_20260705" ]; then
+            echo "sample=benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv" >> "$GITHUB_OUTPUT"
+          else
+            echo "sample=benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Export explicit ODSP folds
+        run: |
+          python export_odsp_benchmark_folds.py \
+            --sample-file "${{ steps.cohort.outputs.sample }}" \
+            --output "odsp_exports/${{ inputs.cohort }}" \
+            --pairs "${{ inputs.pairs }}" \
+            --repeats "${{ inputs.repeats }}"
+      - name: Validate export inventory
+        run: |
+          test -f "odsp_exports/${{ inputs.cohort }}/export_status.csv"
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+          root = Path("odsp_exports/${{ inputs.cohort }}")
+          status = pd.read_csv(root / "export_status.csv")
+          if status.empty:
+              raise SystemExit("No pair export status rows were produced")
+          fold_manifests = list(root.glob("pair_*/fold_*/fold_manifest.json"))
+          if not fold_manifests:
+              raise SystemExit("No fold manifests were produced")
+          print(status["status"].value_counts(dropna=False).to_dict())
+          print("fold_manifests", len(fold_manifests))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: odsp-folds-${{ inputs.cohort }}
+          path: odsp_exports/${{ inputs.cohort }}
+          if-no-files-found: error
+          retention-days: 30
