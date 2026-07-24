@@ -34,6 +34,8 @@ jobs:
           acsp/benchmarking.py
           acsp/claims.py
           acsp/cli.py
+          acsp/comparator_benchmark.py
+          acsp/comparator_export.py
           acsp/decision_baselines.py
           acsp/planning.py
           acsp/modeling.py
@@ -41,6 +43,8 @@ jobs:
           acsp/validated_core.py
           acsp_discover.py
           audit_random_validation_stability.py
+          export_standard_baseline_folds.py
+          run_standard_baseline_benchmark.py
           paper/build_paper_outputs.py
       - name: Run Python tests
         run: python -m unittest discover -v

@@ -1,0 +1,38 @@
+{
+  "protocol_id": "acsp-standard-baselines-v1",
+  "description": "Frozen same-pool comparison of the validated ACSP core with geographic, environmental, dual-space, local-score, random, and held-out-oracle selectors.",
+  "top_k": 5,
+  "recovery_radius_km": 10.0,
+  "block_degrees": 0.1,
+  "holdout_fraction": 0.2,
+  "repeats": 5,
+  "random_draws": 200,
+  "random_state": 20260724,
+  "bootstrap_draws": 10000,
+  "sign_flip_draws": 10000,
+  "dual_environment_weight": 0.5,
+  "environmental_columns": [
+    "elevation",
+    "slope",
+    "aspect",
+    "roughness",
+    "tpi"
+  ],
+  "circular_environmental_columns": [
+    "aspect"
+  ],
+  "methods": [
+    "frozen_acsp",
+    "local_evidence_top_k",
+    "geographic_maximin",
+    "environmental_maximin",
+    "dual_space_maximin",
+    "random_same_pool_mean",
+    "heldout_greedy_oracle"
+  ],
+  "candidate_pool_rule": "Training-only potential_candidates after removal of occurrence-supported, known-location, and known-anchor candidates.",
+  "inference_unit": "taxon-region pair",
+  "failure_rule": "Missing or failed expected folds contribute zero recall in intention-to-evaluate pair means for universal methods.",
+  "environmental_eligibility_rule": "Environmental and dual-space comparisons include only taxon-region pairs for which every expected fold has finite values for all five predeclared raw terrain features; aspect is represented by sine and cosine after export.",
+  "claim_guardrail": "Comparator results must be reported even when ACSP is equivalent or inferior; the held-out oracle is non-operational headroom only."
+}
