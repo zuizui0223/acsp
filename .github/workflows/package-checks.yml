@@ -26,7 +26,22 @@ jobs:
           python -m pip install --upgrade pip build
           python -m pip install -e .
       - name: Compile Python sources
-        run: python -m py_compile gbif_fieldmap_builder_app.py acsp/__init__.py acsp/app.py acsp/benchmarking.py acsp/cli.py acsp/planning.py acsp/modeling.py acsp/sdm.py acsp_discover.py audit_random_validation_stability.py paper/build_paper_outputs.py
+        run: >-
+          python -m py_compile
+          gbif_fieldmap_builder_app.py
+          acsp/__init__.py
+          acsp/app.py
+          acsp/benchmarking.py
+          acsp/claims.py
+          acsp/cli.py
+          acsp/decision_baselines.py
+          acsp/planning.py
+          acsp/modeling.py
+          acsp/sdm.py
+          acsp/validated_core.py
+          acsp_discover.py
+          audit_random_validation_stability.py
+          paper/build_paper_outputs.py
       - name: Run Python tests
         run: python -m unittest discover -v
       - name: Build Python wheel
@@ -56,21 +71,24 @@ jobs:
         run: python -m pip install -e .
       - name: Re-sample independent validation cohorts
         run: python audit_random_validation_stability.py | tee validation-stability.json
-      - name: Build paper tables without post-hoc recommendations
+      - name: Build retrospective-only paper tables
         run: |
           python paper/build_paper_outputs.py --output-dir paper-generated
           test -s paper-generated/table_1_retrospective_validation.csv
-          test -s paper-generated/table_2_field_inventory.csv
+          test -s paper-generated/table_s1_seed_sensitivity.csv
+          test -s paper-generated/table_s2_claim_matrix.csv
+          test -s paper-generated/validated_core_policies.json
           test -s paper-generated/paper_output_manifest.json
           python - <<'PY'
           import json
           from pathlib import Path
           manifest = json.loads(Path("paper-generated/paper_output_manifest.json").read_text())
+          assert manifest["paper_scope"] == "pre_campanula_retrospective_only"
           assert manifest["retrospective_status"] == "complete"
-          assert manifest["raw_positive_gps_rows"] == 28
-          assert manifest["prospective_status"] in {
-              "complete", "blocked_missing_frozen_candidate_pool"
-          }
+          assert manifest["field_data_read"] is False
+          assert manifest["post_baseline_algorithms_read"] is False
+          assert manifest["primary_recovery_radius_km"] == 10.0
+          assert manifest["top_k"] == 5
           PY
       - name: Upload validation and paper outputs
         uses: actions/upload-artifact@v4

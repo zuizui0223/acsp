@@ -1,5 +1,16 @@
 """Reusable ACSP survey-planning methods."""
 
+from .claims import CLAIM_MATRIX, claim_status_table
+from .decision_baselines import (
+    DecisionBaselineConfig,
+    compare_decision_baselines,
+    random_same_pool_sets,
+    recovered_fraction,
+    select_dual_space_farthest,
+    select_environmental_farthest,
+    select_geographic_farthest,
+    select_score_top_k,
+)
 from .field_validation import (
     DEFAULT_RECOVERY_RADII_KM,
     cluster_field_detections,
@@ -23,6 +34,7 @@ from .planning import (
 )
 from .modeling import DEFAULT_ENSEMBLE_ALGORITHMS, make_classifier, predict_equal_weight_ensemble
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
+from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
     calibrate_candidate_weights,
     clustered_recovery_inference,
@@ -35,7 +47,12 @@ from .validation import (
 )
 
 __all__ = [
+    "CLAIM_MATRIX",
+    "DecisionBaselineConfig",
+    "ValidatedCorePolicy",
     "choose_spatial_partition",
+    "claim_status_table",
+    "compare_decision_baselines",
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
@@ -46,9 +63,16 @@ __all__ = [
     "aggregate_candidates_to_zones",
     "compare_zone_rankings",
     "normalize_extent",
+    "random_same_pool_sets",
     "recommend_candidates",
     "recommend_survey_zones",
+    "recovered_fraction",
     "select_complementary_candidates",
+    "select_dual_space_farthest",
+    "select_environmental_farthest",
+    "select_geographic_farthest",
+    "select_score_top_k",
+    "select_validated_core",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
     "calibrate_candidate_weights",

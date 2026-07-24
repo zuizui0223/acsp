@@ -1,0 +1,62 @@
+{
+  "plant": {
+    "taxon_group": "plant",
+    "top_k": 5,
+    "score_col": "component_local_habitat_score",
+    "evidence_weight": 1.0,
+    "separation_scale_m": 25000.0,
+    "recovery_radius_km": 10.0,
+    "validation_block_degrees": 0.1,
+    "repeats": 5,
+    "geographic_complementarity_weight": 0.0,
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "excluded_confirmatory_evidence": [
+      "direct occurrence support",
+      "survey-gap distance",
+      "environmental novelty",
+      "distance to known occurrences",
+      "production macro-model, access, logistics, and field-feedback weights"
+    ],
+    "supported_claim": "Top-5 regional held-out recovery within 10 km versus random Top-5 from the identical candidate pool",
+    "unsupported_claims": [
+      "exact-site occupancy",
+      "5 km general precision",
+      "accessibility",
+      "detectability",
+      "abundance",
+      "discoveries per field day",
+      "validation of the complete production integrated score"
+    ],
+    "fingerprint": "5621d22164f666037a27e8a66df3383778f4b744ae26a9be3b3edb438870c6a2"
+  },
+  "animal": {
+    "taxon_group": "animal",
+    "top_k": 5,
+    "score_col": "component_local_habitat_score",
+    "evidence_weight": 0.75,
+    "separation_scale_m": 25000.0,
+    "recovery_radius_km": 10.0,
+    "validation_block_degrees": 0.1,
+    "repeats": 5,
+    "geographic_complementarity_weight": 0.25,
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "excluded_confirmatory_evidence": [
+      "direct occurrence support",
+      "survey-gap distance",
+      "environmental novelty",
+      "distance to known occurrences",
+      "production macro-model, access, logistics, and field-feedback weights"
+    ],
+    "supported_claim": "Top-5 regional held-out recovery within 10 km versus random Top-5 from the identical candidate pool",
+    "unsupported_claims": [
+      "exact-site occupancy",
+      "5 km general precision",
+      "accessibility",
+      "detectability",
+      "abundance",
+      "discoveries per field day",
+      "validation of the complete production integrated score"
+    ],
+    "fingerprint": "8042ea08f35c5c825cf777f45330c8683837c6a4e252c1284eaa29fc010a36c8"
+  }
+}
