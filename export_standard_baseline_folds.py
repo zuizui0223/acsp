@@ -10,7 +10,6 @@ import pandas as pd
 
 from acsp.comparator_benchmark import StandardBaselineProtocol
 from acsp.comparator_export import write_comparator_pair_export
-from acsp.planning import integrated_candidate_scores
 from benchmark_general_random_taxa_regions import (
     _species_metadata,
     fetch_occurrences,
@@ -40,7 +39,7 @@ def candidate_builder_for(row: pd.Series, bounds: tuple[float, float, float, flo
         potential = bundle["potential_candidates"].copy()
         potential["surface_domain"] = str(bundle.get("surface_domain") or "terrestrial")
         potential["taxon_class"] = str(metadata.get("class") or "unknown").lower()
-        return integrated_candidate_scores(potential, exclude_occurrence_derived=True)
+        return potential
 
     return build
 
