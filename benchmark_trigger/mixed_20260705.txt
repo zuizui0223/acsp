@@ -1,0 +1,5 @@
+Trigger the frozen mixed-cohort standard same-pool baseline benchmark.
+
+Protocol: validation/standard_baseline_protocol.json
+Pairs: 24
+Records per pair: 150
