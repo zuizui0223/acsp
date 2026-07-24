@@ -18,6 +18,9 @@
     "roughness",
     "tpi"
   ],
+  "circular_environmental_columns": [
+    "aspect"
+  ],
   "methods": [
     "frozen_acsp",
     "local_evidence_top_k",
@@ -29,6 +32,7 @@
   ],
   "candidate_pool_rule": "Training-only potential_candidates after removal of occurrence-supported, known-location, and known-anchor candidates.",
   "inference_unit": "taxon-region pair",
-  "failure_rule": "Missing or failed expected folds contribute zero recall in intention-to-evaluate pair means.",
+  "failure_rule": "Missing or failed expected folds contribute zero recall in intention-to-evaluate pair means for universal methods.",
+  "environmental_eligibility_rule": "Environmental and dual-space comparisons include only taxon-region pairs for which every expected fold has finite values for all five predeclared raw terrain features; aspect is represented by sine and cosine after export.",
   "claim_guardrail": "Comparator results must be reported even when ACSP is equivalent or inferior; the held-out oracle is non-operational headroom only."
 }
