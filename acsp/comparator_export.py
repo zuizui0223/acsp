@@ -98,8 +98,7 @@ def iter_comparator_folds(
         if candidates is None:
             candidates = pd.DataFrame()
         candidates = candidates.copy().reset_index(drop=True)
-        required_candidate_columns = {"latitude", "longitude", "component_local_habitat_score"}
-        candidate_missing = required_candidate_columns - set(candidates.columns)
+        candidate_missing = {"latitude", "longitude"} - set(candidates.columns)
         if not candidate_missing:
             candidates["latitude"] = pd.to_numeric(candidates["latitude"], errors="coerce")
             candidates["longitude"] = pd.to_numeric(candidates["longitude"], errors="coerce")
@@ -113,6 +112,13 @@ def iter_comparator_folds(
                 )
             ].reset_index(drop=True)
             candidates = integrated_candidate_scores(candidates, exclude_occurrence_derived=True)
+            score = pd.to_numeric(
+                candidates.get("component_local_habitat_score", pd.Series(dtype=float)),
+                errors="coerce",
+            )
+            if score.empty or not score.notna().any():
+                candidate_missing.add("component_local_habitat_score")
+                candidates = pd.DataFrame()
         else:
             candidates = pd.DataFrame()
 
