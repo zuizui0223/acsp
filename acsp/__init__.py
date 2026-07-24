@@ -1,6 +1,21 @@
 """Reusable ACSP survey-planning methods."""
 
 from .claims import CLAIM_MATRIX, claim_status_table
+from .comparator_benchmark import (
+    ALL_METHODS,
+    ENVIRONMENTAL_METHODS,
+    UNIVERSAL_METHODS,
+    StandardBaselineProtocol,
+    comparator_inference,
+    evaluate_candidate_fold,
+    pair_level_intention_to_evaluate,
+    select_heldout_greedy_oracle,
+)
+from .comparator_export import (
+    ComparatorFold,
+    iter_comparator_folds,
+    write_comparator_pair_export,
+)
 from .decision_baselines import (
     DecisionBaselineConfig,
     compare_decision_baselines,
@@ -47,15 +62,23 @@ from .validation import (
 )
 
 __all__ = [
+    "ALL_METHODS",
     "CLAIM_MATRIX",
+    "ComparatorFold",
     "DecisionBaselineConfig",
+    "ENVIRONMENTAL_METHODS",
+    "StandardBaselineProtocol",
+    "UNIVERSAL_METHODS",
     "ValidatedCorePolicy",
     "choose_spatial_partition",
     "claim_status_table",
+    "comparator_inference",
     "compare_decision_baselines",
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
+    "evaluate_candidate_fold",
+    "iter_comparator_folds",
     "make_classifier",
     "model_performance_table",
     "filter_candidates_to_extent",
@@ -63,6 +86,7 @@ __all__ = [
     "aggregate_candidates_to_zones",
     "compare_zone_rankings",
     "normalize_extent",
+    "pair_level_intention_to_evaluate",
     "random_same_pool_sets",
     "recommend_candidates",
     "recommend_survey_zones",
@@ -71,8 +95,10 @@ __all__ = [
     "select_dual_space_farthest",
     "select_environmental_farthest",
     "select_geographic_farthest",
+    "select_heldout_greedy_oracle",
     "select_score_top_k",
     "select_validated_core",
+    "write_comparator_pair_export",
     "predict_equal_weight_ensemble",
     "sdm_method_record",
     "calibrate_candidate_weights",
