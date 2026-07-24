@@ -32,6 +32,12 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _json_default(value: object) -> object:
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def _coordinate_columns(frame: pd.DataFrame) -> tuple[str, str]:
     for latitude, longitude in (
         ("latitude", "longitude"),
@@ -148,7 +154,7 @@ def iter_comparator_folds(
                     candidates[key] = value
 
         environmental_status = {
-            column: (
+            column: bool(
                 column in candidates.columns
                 and pd.to_numeric(candidates[column], errors="coerce").notna().any()
             )
@@ -229,7 +235,7 @@ def write_comparator_pair_export(
             },
         }
         (directory / "fold_manifest.json").write_text(
-            json.dumps(manifest, indent=2, ensure_ascii=False),
+            json.dumps(manifest, indent=2, ensure_ascii=False, default=_json_default),
             encoding="utf-8",
         )
         pair_manifests.append(manifest)
@@ -240,7 +246,7 @@ def write_comparator_pair_export(
             "training_records": len(fold.training),
             "heldout_records": len(fold.heldout),
             "candidate_rows": len(fold.candidates),
-            "environmentally_eligible": fold.audit["environmentally_eligible"],
+            "environmentally_eligible": bool(fold.audit["environmentally_eligible"]),
         })
     pair_manifest = {
         "pair_id": pair_id,
@@ -251,7 +257,7 @@ def write_comparator_pair_export(
             {
                 "repeat": item["repeat"],
                 "status": item["status"],
-                "environmentally_eligible": item["environmentally_eligible"],
+                "environmentally_eligible": bool(item["environmentally_eligible"]),
                 "files": item["files"],
             }
             for item in pair_manifests
@@ -259,7 +265,7 @@ def write_comparator_pair_export(
         "provenance": dict(provenance or {}),
     }
     (root / "pair_manifest.json").write_text(
-        json.dumps(pair_manifest, indent=2, ensure_ascii=False),
+        json.dumps(pair_manifest, indent=2, ensure_ascii=False, default=_json_default),
         encoding="utf-8",
     )
     status = pd.DataFrame(rows)
