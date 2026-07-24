@@ -1,0 +1,140 @@
+name: Standard same-pool baseline benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      cohort:
+        description: Frozen confirmation cohort
+        required: true
+        type: choice
+        options:
+          - mixed_20260705
+          - plants_20260706
+      pairs:
+        description: Number of declared pairs to process
+        required: true
+        default: "24"
+      records_per_pair:
+        description: GBIF records requested per pair
+        required: true
+        default: "150"
+  push:
+    branches:
+      - benchmark/mixed-20260705
+      - benchmark/plants-20260706
+    paths:
+      - benchmark_trigger/**
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Resolve frozen cohort
+        id: cohort
+        shell: bash
+        env:
+          INPUT_COHORT: ${{ inputs.cohort }}
+          INPUT_PAIRS: ${{ inputs.pairs }}
+          INPUT_RECORDS: ${{ inputs.records_per_pair }}
+        run: |
+          set -euo pipefail
+          cohort="${INPUT_COHORT:-}"
+          pairs="${INPUT_PAIRS:-24}"
+          records="${INPUT_RECORDS:-150}"
+          if [ -z "$cohort" ]; then
+            case "$GITHUB_REF_NAME" in
+              benchmark/mixed-20260705) cohort="mixed_20260705" ;;
+              benchmark/plants-20260706) cohort="plants_20260706" ;;
+              *) echo "Cannot infer cohort from branch: $GITHUB_REF_NAME" >&2; exit 1 ;;
+            esac
+          fi
+          if [ "$cohort" = "mixed_20260705" ]; then
+            sample="benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv"
+          elif [ "$cohort" = "plants_20260706" ]; then
+            sample="benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv"
+          else
+            echo "Unknown cohort: $cohort" >&2
+            exit 1
+          fi
+          echo "cohort=$cohort" >> "$GITHUB_OUTPUT"
+          echo "sample=$sample" >> "$GITHUB_OUTPUT"
+          echo "pairs=$pairs" >> "$GITHUB_OUTPUT"
+          echo "records=$records" >> "$GITHUB_OUTPUT"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Export audited training-only folds
+        run: |
+          python export_standard_baseline_folds.py \
+            --sample-file "${{ steps.cohort.outputs.sample }}" \
+            --protocol validation/standard_baseline_protocol.json \
+            --output "standard_baseline_exports/${{ steps.cohort.outputs.cohort }}" \
+            --pairs "${{ steps.cohort.outputs.pairs }}" \
+            --records-per-pair "${{ steps.cohort.outputs.records }}"
+      - name: Run all frozen selectors
+        run: |
+          python run_standard_baseline_benchmark.py \
+            --export-root "standard_baseline_exports/${{ steps.cohort.outputs.cohort }}" \
+            --protocol validation/standard_baseline_protocol.json \
+            --output "standard_baseline_results/${{ steps.cohort.outputs.cohort }}"
+      - name: Validate audit and result inventory
+        run: |
+          set -euo pipefail
+          cohort="${{ steps.cohort.outputs.cohort }}"
+          export_root="standard_baseline_exports/$cohort"
+          result_root="standard_baseline_results/$cohort"
+          test -s "$export_root/declared_pairs.csv"
+          test -s "$export_root/pair_export_status.csv"
+          test -s "$export_root/export_manifest.json"
+          test -s "$result_root/fold_method_comparison.csv"
+          test -s "$result_root/pair_level_intention_to_evaluate.csv"
+          test -s "$result_root/pair_level_comparator_inference.csv"
+          test -s "$result_root/method_eligibility_audit.csv"
+          test -s "$result_root/standard_baseline_benchmark_manifest.json"
+          COHORT="$cohort" python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+          import pandas as pd
+
+          cohort = os.environ["COHORT"]
+          export_root = Path("standard_baseline_exports") / cohort
+          result_root = Path("standard_baseline_results") / cohort
+          declared = pd.read_csv(export_root / "declared_pairs.csv")
+          folds = pd.read_csv(result_root / "fold_method_comparison.csv")
+          pairs = pd.read_csv(result_root / "pair_level_intention_to_evaluate.csv")
+          expected_methods = {
+              "frozen_acsp",
+              "local_evidence_top_k",
+              "geographic_maximin",
+              "environmental_maximin",
+              "dual_space_maximin",
+              "random_same_pool_mean",
+              "heldout_greedy_oracle",
+          }
+          if set(folds["decision_method"]) != expected_methods:
+              raise SystemExit(f"method mismatch: {set(folds['decision_method'])}")
+          expected_pairs = declared[declared["status"].eq("predeclared")]["pair_id"].nunique()
+          if pairs["pair_id"].nunique() != expected_pairs:
+              raise SystemExit("pair-level table omitted declared pairs")
+          manifest = json.loads((result_root / "standard_baseline_benchmark_manifest.json").read_text())
+          print("declared_pairs", expected_pairs)
+          print("fold_status", folds.groupby(["decision_method", "status"]).size().to_dict())
+          print("protocol", manifest["protocol"]["fingerprint"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standard-baselines-${{ steps.cohort.outputs.cohort }}
+          path: |
+            standard_baseline_exports/${{ steps.cohort.outputs.cohort }}
+            standard_baseline_results/${{ steps.cohort.outputs.cohort }}
+          if-no-files-found: error
+          retention-days: 30
