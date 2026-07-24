@@ -8,7 +8,9 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/locations_2026.csv
-      - acsp/**
+      - acsp/area_selection.py
+      - acsp/field_validation.py
+      - acsp/planning.py
       - test_area_selection.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
@@ -17,7 +19,9 @@ on:
       - field_validation/campanula_microdonta/run_temporal_external_validation.py
       - field_validation/campanula_microdonta/compare_area_balanced_update.py
       - field_validation/campanula_microdonta/locations_2026.csv
-      - acsp/**
+      - acsp/area_selection.py
+      - acsp/field_validation.py
+      - acsp/planning.py
       - test_area_selection.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/campanula-temporal-validation.yml
