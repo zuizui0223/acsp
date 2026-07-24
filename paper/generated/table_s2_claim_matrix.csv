@@ -1,0 +1,6 @@
+claim_id,status,scope,permitted_wording,prohibited_wording
+regional_top5_10km,validated,Frozen plant and animal policies in independent Japanese taxon-region cohorts,"ACSP Top-5 regional selections recovered more held-out occurrences within 10 km than random Top-5 sets from the identical candidate pools.",ACSP predicts occupied exact sites.
+general_5km_precision,not_supported,General name-only workflow,"Five-kilometre results are sensitivity analyses and remain unsupported as a general exact-location claim.",ACSP is validated to 5 km.
+full_integrated_score,software_feature_not_independently_validated,Production observed/local/macro/gap/access/field-feedback score,"The application exposes a transparent integrated evidence score outside the validated paper core.",All production score components are cross-taxon validated.
+access_detectability_efficiency,not_validated,"Access, detectability, abundance, phenology and discoveries per field day",These quantities require prospective standardized field records.,"Recommended zones are reachable, occupied, or more efficient in the field."
+sdm_superiority,not_tested,Comparison with SDM-led and other established site-selection methods,"ACSP addresses a downstream finite-set decision estimand and has not established universal superiority over SDMs or survey-design algorithms.",ACSP is better than SDM.
