@@ -1,0 +1,68 @@
+name: Reaggregate untouched SDM Top-k benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - benchmark/sdm-topk-reaggregate-31236963484
+    paths:
+      - .benchmark-triggers/sdm-topk-reaggregate-31236963484.txt
+      - .github/workflows/reaggregate-sdm-topk-benchmark.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Download frozen pair artifacts from original successful pair run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdm-topk-pair-*
+          path: sdm_topk_pairs
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31236963484
+      - name: Strictly verify and reaggregate unchanged pair artifacts
+        run: |
+          python reaggregate_sdm_topk_benchmark.py \
+            --pair-root sdm_topk_pairs \
+            --output sdm_topk_aggregate_reverified
+      - name: Require complete artifact verification
+        run: |
+          test -s sdm_topk_aggregate_reverified/benchmark_manifest.json
+          test -s sdm_topk_aggregate_reverified/pair_artifact_audit.csv
+          test -s sdm_topk_aggregate_reverified/pair_level_inference.csv
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path("sdm_topk_aggregate_reverified")
+          manifest = json.loads((root / "benchmark_manifest.json").read_text())
+          audit = pd.read_csv(root / "pair_artifact_audit.csv")
+          folds = pd.read_csv(root / "all_fold_results.csv")
+          assert manifest["declared_pairs"] == 24
+          assert manifest["verified_pair_artifacts"] == 24
+          assert manifest["artifact_verification_failures"] == 0
+          assert manifest["written_fold_method_rows"] == 720
+          assert manifest["aggregation_qa"]["source_pair_artifacts_unchanged"] is True
+          assert audit["artifact_status"].eq("verified").all()
+          assert len(folds) == 720
+          print(json.dumps(manifest, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdm-topk-untouched-aggregate-reverified
+          path: sdm_topk_aggregate_reverified
+          if-no-files-found: error
+          retention-days: 90
