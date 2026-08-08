@@ -1,0 +1,69 @@
+{
+  "status": "reviewed_secondary_decision_contrast",
+  "date": "2026-08-08",
+  "scientific_goal": "characterize ACSP-SDM decision differences under matched training folds, candidate pools, Top-5 budgets, and 10-km evaluation rather than establish universal superiority",
+  "protocol_fingerprint": "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652",
+  "execution_contract_fingerprint": "1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1",
+  "source_original_pair_run_id": 31236963484,
+  "recovered_pair_run_id": 31238895064,
+  "recovered_aggregate_artifact_id": 9016466376,
+  "recovered_aggregate_artifact_sha256": "560b4e46b4c9b961bba21558ba897632ea1edf8f178625c086357a8fc478e461",
+  "decision_difference_run_id": 31239346408,
+  "decision_difference_artifact_id": 9016492790,
+  "decision_difference_artifact_sha256": "98a927bc5a48f7c59300c955fa0ba464a560498bb3048c84b4f60470f5907eb6",
+  "declared_taxon_region_pairs": 24,
+  "verified_pair_artifacts": 24,
+  "expected_fold_method_rows": 720,
+  "written_fold_method_rows": 720,
+  "sdm_ok_folds": 101,
+  "sdm_failure_after_recovery_folds": 16,
+  "shared_candidate_failure_folds": 3,
+  "pairs_with_at_least_one_sdm_ok_fold": 23,
+  "performance_summary": {
+    "all_declared_acsp_minus_sdm": -0.0002743544457457217,
+    "all_declared_acsp_minus_sdm_ci_low": -0.038519007969252686,
+    "all_declared_acsp_minus_sdm_ci_high": 0.03674634225309018,
+    "all_declared_acsp_minus_sdm_sign_flip_p": 0.9894010598940106,
+    "sdm_evaluable_acsp_minus_sdm": 0.04082613055643883,
+    "sdm_evaluable_acsp_minus_sdm_ci_low": -0.038326575036237064,
+    "sdm_evaluable_acsp_minus_sdm_ci_high": 0.14544892278846544,
+    "sdm_evaluable_acsp_minus_sdm_sign_flip_p": 0.5441455854414559,
+    "interpretation": "No evidence of a general ACSP recovery advantage over fitted-SDM Top-5 ranking in this frozen benchmark."
+  },
+  "decision_difference_summary": {
+    "sdm_evaluable_folds": 101,
+    "evaluable_pairs": 23,
+    "mean_top5_shared_count": 1.9306930693069306,
+    "mean_top5_jaccard": 0.2644585887160144,
+    "exact_set_match_fraction": 0.009900990099009901,
+    "mean_local_sdm_rank_spearman": 0.3183412929445506,
+    "mean_acsp_selected_local_evidence": 0.9235023762376238,
+    "mean_sdm_selected_local_evidence": 0.8774712871287126,
+    "mean_acsp_selected_sdm_suitability": 0.22246534653465352,
+    "mean_sdm_selected_sdm_suitability": 0.37094059405940605,
+    "mean_acsp_selected_pairwise_distance_km": 110.76617230964592,
+    "mean_sdm_selected_pairwise_distance_km": 82.39241979548096,
+    "interpretation": "ACSP and fitted-SDM ranking usually produced different Top-5 sets despite similar regional recovery."
+  },
+  "qa_history": [
+    {
+      "stage": "original aggregate",
+      "status": "invalid_not_used",
+      "reason": "glob matched fold_results.csv as a fold path"
+    },
+    {
+      "stage": "initial fitted-SDM merge",
+      "status": "invalid_not_used",
+      "reason": "pre-existing all-missing sdm_suitability placeholder collided with predicted column"
+    },
+    {
+      "stage": "recovery",
+      "status": "complete",
+      "boundary": "original frozen training, held-out, and candidate artifacts reused; no GBIF refetch, split regeneration, candidate regeneration, predictor change, retuning, or non-SDM result change"
+    }
+  ],
+  "claim_boundary": {
+    "permitted": "ACSP and fitted-SDM Top-5 ranking had similar 10-km regional recovery in this frozen matched-pool benchmark but generally selected different candidate sets; the comparison operationalizes their different decision targets.",
+    "prohibited": "ACSP is better than SDM, SDM is generally inferior for survey planning, or similar recall means ACSP and SDM are equivalent methods."
+  }
+}

@@ -1,6 +1,6 @@
 # ACSP - Adaptive Complementarity-based Survey Prioritization
 
-ACSP converts occurrence records into ranked, field-ready survey zones. It is a field-survey decision tool, not an all-record SDM platform.
+ACSP converts occurrence records into ranked, field-ready survey zones. It is a field-survey decision tool, not an all-record SDM platform. SDMs estimate location-indexed fitted quantities; ACSP returns a finite candidate set under a declared survey budget and can use SDM output as one optional evidence source.
 
 Development status: **alpha (0.1.0)**. Independent retrospective tests support cross-taxon prioritization of 10 km regional candidate zones over random same-pool selection. Exact-site accuracy, access, detection, abundance, and field efficiency remain unvalidated; see [HIERARCHICAL_VALIDATION_REPORT.md](HIERARCHICAL_VALIDATION_REPORT.md).
 
@@ -137,7 +137,7 @@ library(acsp)
 recommended <- acsp_recommend(candidates, per_area = 3)
 zones <- acsp_zones(candidates)
 recommended_in_extent <- acsp_recommend(candidates, extent = c(139.30, 34.60, 139.50, 34.85))
-partition <- acsp_sdm_partition(86, geographic_span_degrees = 1.8)
+partition <- acsp_sdm_partition(86, geographic_span_degrees=1.8)
 algorithms <- acsp_default_algorithms()
 ```
 
@@ -176,7 +176,9 @@ Streamlit Community Cloud:
 
 ## Validation and publication path
 
-The method should be benchmarked against random sampling, occurrence-only ranking, SDM-high ranking, and environmental-representativeness baselines. Recommended evaluation metrics include new-population recovery, discoveries per field day, environmental coverage, geographic independence, and improvement after field feedback.
+The validated publication path now separates three questions. First, independent same-pool random comparisons test whether the frozen ACSP policy adds regional recovery value within its generated candidate pool. Second, standard local/geographic/environmental baselines help attribute that selection signal. Third, a predeclared untouched 24-pair benchmark compares ACSP with the production fitted-SDM Top-5 rule under identical training folds, candidate pools, budgets, and 10-km endpoints.
+
+The fitted-SDM benchmark is a **decision-level contrast, not a universal superiority test**. All-declared ACSP and fitted-SDM regional recovery were essentially identical, but the selected sets were usually different: among 101 SDM-evaluable folds, mean Top-5 Jaccard overlap was 0.264 and exact agreement occurred once. See [docs/ACSP_SDM_POSITIONING.md](docs/ACSP_SDM_POSITIONING.md) and `validation/sdm_decision_results_20260808/`.
 
 The package now exposes `stratified_random_taxa()`, `spatial_block_candidate_benchmark()`, `multi_taxon_weight_benchmark()`, and `calibrate_candidate_weights()` for reproducible weight studies. The intended design samples taxa across occurrence-count strata with a recorded seed, rebuilds candidates from training spatial blocks only, tunes weights on calibration taxa, and reports performance on completely unseen taxa against same-pool random Top-k, local-only, macro-model-only, and the current default weights. Failed taxa remain in the audit table and are not silently replaced. Retrospective GBIF recovery does not identify accessibility or detectability weights; those require prospective field-validation records.
 
@@ -196,6 +198,7 @@ GitHub Actions runs on every push, pull request, and manual dispatch. It tests t
 
 - Straight-line map links do not model roads, ferries, cliffs, permissions, or trail time.
 - Presence-only SDM AUC can be optimistic, especially under random holdout.
+- The direct matched-pool SDM benchmark used one frozen production-aligned ensemble and does not establish a result for all SDM formulations or downstream survey optimizers.
 - Local access and detectability require field verification.
 - App-provided NDVI, land cover, and stronger all-taxa survey-effort layers remain future work.
 - The R package does not yet expose full raster SDM/SSDM fitting.
