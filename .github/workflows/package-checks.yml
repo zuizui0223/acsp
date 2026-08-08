@@ -45,6 +45,7 @@ jobs:
           acsp_discover.py
           audit_random_validation_stability.py
           export_standard_baseline_folds.py
+          predeclare_sdm_topk_cohort.py
           run_standard_baseline_benchmark.py
           paper/build_paper_outputs.py
       - name: Run Python tests
