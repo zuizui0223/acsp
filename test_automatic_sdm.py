@@ -29,7 +29,7 @@ class AutomaticSdmCoreTests(unittest.TestCase):
         temp = pd.DataFrame([self._monthly(35.0, 140.0, temperatures)])
         precip = pd.DataFrame([self._monthly(35.0, 140.0, precip_daily)])
         climate = derive_power_bioclim(temp, precip)
-        self.assertEqual(tuple(climate[AUTO_SDM_VARIABLES].columns), AUTO_SDM_VARIABLES)
+        self.assertEqual(tuple(climate[list(AUTO_SDM_VARIABLES)].columns), AUTO_SDM_VARIABLES)
         self.assertAlmostEqual(climate.loc[0, "bio1"], float(temperatures.mean()))
         self.assertAlmostEqual(climate.loc[0, "bio4"], float(temperatures.std(ddof=0) * 100.0))
         monthly = precip_daily * np.array([31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
