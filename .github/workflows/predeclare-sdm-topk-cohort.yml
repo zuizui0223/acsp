@@ -6,6 +6,7 @@ on:
     branches:
       - benchmark/sdm-topk-cohort-predeclare
     paths:
+      - .benchmark-triggers/sdm-topk-cohort-predeclare.txt
       - .github/workflows/predeclare-sdm-topk-cohort.yml
       - validation/sdm_topk_protocol.json
       - predeclare_sdm_topk_cohort.py
