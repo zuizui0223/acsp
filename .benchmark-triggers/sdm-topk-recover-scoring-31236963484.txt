@@ -1,8 +1,9 @@
-triggered_at=2026-08-08T12:55:00+09:00
+triggered_at=2026-08-08T13:04:00+09:00
 source_run_id=31236963484
 source_pair_artifacts=sdm-topk-pair-1..24
 bug=empty_sdm_suitability_placeholder_merge_collision
 fix=drop_only_all_missing_placeholder_before_unchanged_production_sdm_scoring
+recovery_qa=preserve_empty_shared_candidate_folds_and_serialize_genuine_sdm_failures
 refetch_gbif=false
 regenerate_outer_splits=false
 regenerate_candidate_pool=false
