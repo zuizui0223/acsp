@@ -1,0 +1,86 @@
+{
+  "protocol_id": "acsp-sdm-topk-comparator-v1",
+  "status": "frozen_before_cohort_sampling_and_outcome_inspection",
+  "cohort": {
+    "pair_count": 24,
+    "taxon_groups": ["plant", "animal"],
+    "geographic_strata": ["north", "east", "west", "south"],
+    "seed": 20260808,
+    "minimum_records": 20,
+    "facet_limit": 160,
+    "records_per_pair": 300,
+    "exclusion_policy": "exclude all scientific names in listed development, confirmation, legacy SDM, and Izu benchmark samples"
+  },
+  "exclusion_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv"
+  ],
+  "outer_validation": {
+    "block_degrees": 0.1,
+    "repeats": 5,
+    "holdout_fraction": 0.2,
+    "top_k": 5,
+    "recovery_radius_km": 10.0,
+    "random_draws_per_fold": 200,
+    "fold_seed_base": 20260808
+  },
+  "production_sdm": {
+    "presence_working_cap": 300,
+    "presence_cap_function": "spatially_balanced_cap",
+    "qc_function": "auto_remote_spatial_outlier_qc",
+    "minimum_qc_presences": 5,
+    "background_count": 500,
+    "background_function": "build_presence_background",
+    "area_mode": "bounding box",
+    "buffer_km": 10.0,
+    "rectangle_margin_km": 20.0,
+    "variables": ["bio1", "bio4", "bio12", "bio15", "bio14"],
+    "resolution": "power-climatology",
+    "environment_extraction_function": "extract_environment",
+    "clean_environment_function": "clean_environment_table",
+    "variable_selection_strategy": "Ecological preset / representative climate set",
+    "vif_threshold": 10.0,
+    "correlation_threshold": 0.8,
+    "custom_variables": ["bio1", "bio4", "bio12", "bio15", "bio14"],
+    "partition_function": "auto_sdm_partition",
+    "fit_function": "fit_sdm",
+    "internal_k_folds": 5,
+    "checkerboard_degrees": 0.05,
+    "algorithms": ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting"],
+    "ensemble": "equal_weight_mean_probability",
+    "prediction_extent": "QC-derived bounding box with a 20 km margin; independent of drawn survey areas",
+    "prediction_max_pixels": 40000,
+    "candidate_scoring": "extract the same retained predictors at the shared ACSP candidate rows and apply the fitted equal-weight ensemble directly",
+    "score_interpretation": "relative suitability for Top-k ranking; not calibrated occupancy probability",
+    "automatic_sdm_core_fingerprint": "1e10f5959085717480749e1f38214f925a9c6b2e8a32e5309024d88456d723a2"
+  },
+  "decision_methods": [
+    "frozen_acsp",
+    "local_evidence_top_k",
+    "fitted_sdm_top_k",
+    "geographic_maximin",
+    "random_same_pool_mean",
+    "heldout_greedy_oracle"
+  ],
+  "failure_estimands": {
+    "primary": "all declared taxon-region pairs; shared candidate-pool failures score zero for every operational method; SDM-only fit/extraction failures score zero for fitted_sdm_top_k while other methods retain their observed fold recovery",
+    "secondary": "paired SDM-evaluable taxon-region pairs only, requiring at least one SDM-evaluable fold and reporting completion explicitly"
+  },
+  "inference": {
+    "unit": "taxon-region pair",
+    "bootstrap_draws": 10000,
+    "sign_flip_draws": 10000,
+    "primary_contrasts": [
+      "frozen_acsp - fitted_sdm_top_k",
+      "local_evidence_top_k - fitted_sdm_top_k",
+      "fitted_sdm_top_k - random_same_pool_mean"
+    ],
+    "negative_results_retained": true
+  },
+  "leakage_guardrail": "training occurrences only enter candidate generation, SDM QC, background generation, environment extraction, variable selection, and model fitting; held-out coordinates are attached only after all operational Top-5 sets are frozen",
+  "protocol_fingerprint": "12a53c8bdf2493038809d6a1021a7dcf2ee7c07ea891ad5b0862d2ee2813f7b2"
+}
