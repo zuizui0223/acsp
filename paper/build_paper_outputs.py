@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Build paper-ready outputs for the frozen pre-Campanula ACSP validation.
 
-The paper is intentionally restricted to the independent retrospective
-cross-taxon program. Field GPS data, post-baseline allocation rules, ODSP
-exports, and production-only integrated evidence are not read by this builder.
+The paper is restricted to cross-taxon retrospective evidence. The original
+independent confirmation table remains frozen. A later predeclared standard-
+baseline reconstruction is reported separately as secondary comparator evidence;
+it does not replace the original confirmatory candidate pools or estimates.
+Field GPS data, post-baseline allocation rules, ODSP exports, and production-only
+integrated evidence are not read by this builder.
 """
 from __future__ import annotations
 
@@ -18,10 +21,14 @@ if str(ROOT) not in sys.path:
 
 import pandas as pd
 
-from acsp import ValidatedCorePolicy, claim_status_table
+from acsp import StandardBaselineProtocol, ValidatedCorePolicy, claim_status_table
 from audit_random_validation_stability import run as run_stability_audit
 
 DEFAULT_OUTPUT = ROOT / "paper/generated"
+COMPARATOR_DIR = ROOT / "validation/standard_baseline_results_20260724"
+COMPARATOR_SUMMARY = COMPARATOR_DIR / "comparator_summary.csv"
+COMPARATOR_MANIFEST = COMPARATOR_DIR / "run_manifest.json"
+COMPARATOR_PROTOCOL = ROOT / "validation/standard_baseline_protocol.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -74,6 +81,36 @@ def _seed_sensitivity_table(stability: dict[str, object]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def _load_secondary_comparator() -> tuple[pd.DataFrame, dict[str, object]]:
+    if not COMPARATOR_SUMMARY.exists() or not COMPARATOR_MANIFEST.exists():
+        raise FileNotFoundError("Reviewed secondary comparator snapshot is incomplete.")
+    summary = pd.read_csv(COMPARATOR_SUMMARY)
+    manifest = json.loads(COMPARATOR_MANIFEST.read_text(encoding="utf-8"))
+    protocol = StandardBaselineProtocol.from_json(COMPARATOR_PROTOCOL).manifest()
+    if manifest.get("protocol_fingerprint") != protocol.get("fingerprint"):
+        raise ValueError("Secondary comparator protocol fingerprint does not match the frozen protocol.")
+    if not manifest.get("runs") or any(int(run.get("checksum_mismatches", -1)) != 0 for run in manifest["runs"]):
+        raise ValueError("Secondary comparator artifacts have not passed checksum review.")
+    required = {
+        "taxon_group",
+        "decision_method",
+        "eligible_pairs",
+        "mean_ite_recall",
+        "vs_random_mean_difference",
+        "vs_random_ci_low",
+        "vs_random_ci_high",
+        "vs_random_sign_flip_p",
+        "vs_acsp_mean_difference",
+        "vs_acsp_ci_low",
+        "vs_acsp_ci_high",
+        "vs_acsp_sign_flip_p",
+    }
+    missing = required - set(summary.columns)
+    if missing:
+        raise ValueError(f"Secondary comparator summary is missing: {', '.join(sorted(missing))}")
+    return summary, manifest
+
+
 def build(args: argparse.Namespace) -> dict[str, object]:
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -82,6 +119,7 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     retrospective = _retrospective_table(stability)
     seed_sensitivity = _seed_sensitivity_table(stability)
     claims = claim_status_table()
+    comparator, comparator_manifest = _load_secondary_comparator()
     policies = {
         group: ValidatedCorePolicy.for_taxon_group(group).manifest()
         for group in ("plant", "animal")
@@ -90,15 +128,19 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     retrospective.to_csv(output / "table_1_retrospective_validation.csv", index=False)
     seed_sensitivity.to_csv(output / "table_s1_seed_sensitivity.csv", index=False)
     claims.to_csv(output / "table_s2_claim_matrix.csv", index=False)
+    comparator.to_csv(output / "table_s3_standard_baseline_comparison.csv", index=False)
     (output / "retrospective_stability.json").write_text(
         json.dumps(stability, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     (output / "validated_core_policies.json").write_text(
         json.dumps(policies, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    (output / "standard_baseline_results_manifest.json").write_text(
+        json.dumps(comparator_manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
     manifest: dict[str, object] = {
-        "paper_scope": "pre_campanula_retrospective_only",
+        "paper_scope": "pre_campanula_cross_taxon_retrospective",
         "retrospective_status": "complete",
         "retrospective_endpoint": stability["endpoint"],
         "retrospective_baseline": stability["baseline"],
@@ -107,16 +149,17 @@ def build(args: argparse.Namespace) -> dict[str, object]:
         "top_k": 5,
         "field_data_read": False,
         "post_baseline_algorithms_read": False,
-        "method_comparator_status": (
-            "implementation_ready; requires frozen candidate-level fold exports "
-            "before environmental/geographic/dual-space results enter the paper"
-        ),
+        "method_comparator_status": "complete_secondary_predeclared_reconstruction",
+        "method_comparator_protocol_fingerprint": comparator_manifest["protocol_fingerprint"],
+        "method_comparator_boundary": comparator_manifest["provenance_boundary"],
         "outputs": [
             "table_1_retrospective_validation.csv",
             "table_s1_seed_sensitivity.csv",
             "table_s2_claim_matrix.csv",
+            "table_s3_standard_baseline_comparison.csv",
             "retrospective_stability.json",
             "validated_core_policies.json",
+            "standard_baseline_results_manifest.json",
         ],
     }
     (output / "paper_output_manifest.json").write_text(
