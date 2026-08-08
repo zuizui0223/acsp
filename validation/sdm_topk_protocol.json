@@ -82,5 +82,5 @@
     "negative_results_retained": true
   },
   "leakage_guardrail": "training occurrences only enter candidate generation, SDM QC, background generation, environment extraction, variable selection, and model fitting; held-out coordinates are attached only after all operational Top-5 sets are frozen",
-  "protocol_fingerprint": "12a53c8bdf2493038809d6a1021a7dcf2ee7c07ea891ad5b0862d2ee2813f7b2"
+  "protocol_fingerprint": "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652"
 }
