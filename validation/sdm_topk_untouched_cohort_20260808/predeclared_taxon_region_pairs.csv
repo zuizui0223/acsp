@@ -1,0 +1,25 @@
+pair_id,status,taxon_group,kingdomKey,geographic_stratum,region_name,west,south,east,north,speciesKey,scientific_name,coordinate_records,record_count_stratum
+1,predeclared,plant,6,north,Tohoku,139.5,38.0,141.5,40.5,5414239,Ilex crenata Thunb.,310,0
+2,predeclared,plant,6,east,Kanto,138.5,35.0,140.5,36.5,7462730,Aconitum japonicum Thunb.,904,1
+3,predeclared,plant,6,west,Kinki,134.5,33.5,136.5,35.5,7486180,Coryphopteris japonica (Baker) L.J.He & X.C.Zhang,502,2
+4,predeclared,plant,6,south,Southern Kyushu,130.0,30.8,131.8,32.5,7475142,Symplocos nakaharae (Hayata) Masam.,265,3
+5,predeclared,animal,1,north,Hokkaido east,143.0,42.5,145.5,44.5,2481685,"Limosa limosa (Linnaeus, 1758)",307,0
+6,predeclared,animal,1,east,Izu,138.8,34.0,139.8,35.0,5231288,"Ficedula narcissina (Temminck, 1836)",33,1
+7,predeclared,animal,1,west,Kinki,134.5,33.5,136.5,35.5,4286942,"Carassius auratus (Linnaeus, 1758)",1084,2
+8,predeclared,animal,1,south,Southern Kyushu,130.0,30.8,131.8,32.5,8351644,"Horornis diphone (Kittlitz, 1830)",1437,3
+9,predeclared,plant,6,north,Hokkaido west,140.0,42.5,142.0,44.5,2725426,Carex mollicula Boott,46,0
+10,predeclared,plant,6,east,Chubu mountains,136.5,35.0,138.5,37.0,2876013,Corylus sieboldiana Blume,624,1
+11,predeclared,plant,6,west,Kinki,134.5,33.5,136.5,35.5,7319214,Arachniodes chinensis (Rosenst.) Ching,503,2
+12,predeclared,plant,6,south,Ryukyu,126.0,24.0,130.0,28.5,7289120,Diplazium dilatatum Blume,199,3
+13,predeclared,animal,1,north,Tohoku,139.5,38.0,141.5,40.5,8782891,Japonica lutea,225,0
+14,predeclared,animal,1,east,Chubu mountains,136.5,35.0,138.5,37.0,1427267,"Mnais pruinosa Selys, 1853",427,1
+15,predeclared,animal,1,west,Shikoku,132.5,32.7,134.5,34.5,2480311,"Charadrius alexandrinus Linnaeus, 1758",157,2
+16,predeclared,animal,1,south,Southern Kyushu,130.0,30.8,131.8,32.5,9615912,"Turdus eunomus Temminck, 1831",1483,3
+17,predeclared,plant,6,north,Hokkaido east,143.0,42.5,145.5,44.5,2724351,Carex japonica Thunb.,74,0
+18,predeclared,plant,6,east,Chubu mountains,136.5,35.0,138.5,37.0,5582033,Salix udensis (Wimm.) Trautv. & C.A.Mey.,633,1
+19,predeclared,plant,6,west,Kinki,134.5,33.5,136.5,35.5,5275415,Pteris multifida Poir.,573,2
+20,predeclared,plant,6,south,Southern Kyushu,130.0,30.8,131.8,32.5,3189636,Camellia japonica L.,325,3
+21,predeclared,animal,1,north,Hokkaido east,143.0,42.5,145.5,44.5,7937336,"Charadrius dubius Scopoli, 1786",297,0
+22,predeclared,animal,1,east,Chubu mountains,136.5,35.0,138.5,37.0,2480637,"Accipiter nisus (Linnaeus, 1758)",441,1
+23,predeclared,animal,1,west,Shikoku,132.5,32.7,134.5,34.5,2434654,"Paguma larvata (C.E.H.Smith, 1827)",280,2
+24,predeclared,animal,1,south,Northern Kyushu,129.5,32.5,131.5,34.0,2495414,"Columba livia J.F.Gmelin, 1789",2126,3
