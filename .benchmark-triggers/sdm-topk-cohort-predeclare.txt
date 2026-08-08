@@ -1,0 +1,4 @@
+triggered_at=2026-08-08T11:53:00+09:00
+protocol=validation/sdm_topk_protocol.json
+protocol_fingerprint=cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652
+purpose=sample_only_no_candidate_generation_no_sdm_fit_no_heldout_recovery
