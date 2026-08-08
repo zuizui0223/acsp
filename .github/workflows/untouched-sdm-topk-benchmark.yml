@@ -1,0 +1,120 @@
+name: Untouched fitted-SDM Top-k benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - benchmark/sdm-topk-untouched-run
+    paths:
+      - .benchmark-triggers/sdm-topk-untouched-run.txt
+      - .github/workflows/untouched-sdm-topk-benchmark.yml
+
+permissions:
+  contents: read
+
+jobs:
+  pair:
+    name: Pair ${{ matrix.pair_id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        pair_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Run frozen pair benchmark
+        run: |
+          python execute_sdm_topk_pair.py \
+            --pair-id "${{ matrix.pair_id }}" \
+            --output sdm_topk_pair_results
+      - name: Verify pair artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pair_id = int("${{ matrix.pair_id }}")
+          root = Path("sdm_topk_pair_results") / f"pair_{pair_id:03d}"
+          manifest = json.loads((root / "pair_manifest.json").read_text())
+          assert manifest["pair_id"] == pair_id
+          assert manifest["protocol_fingerprint"] == "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652"
+          assert manifest["execution_contract_fingerprint"] == "1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1"
+          assert manifest["expected_repeats"] == 5
+          assert (root / "fold_results.csv").is_file()
+          print(manifest)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdm-topk-pair-${{ matrix.pair_id }}
+          path: sdm_topk_pair_results
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    name: Aggregate untouched benchmark
+    if: always()
+    needs: pair
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sdm-topk-pair-*
+          path: sdm_topk_pairs
+          merge-multiple: true
+      - name: Aggregate pair-level estimands
+        run: |
+          python aggregate_sdm_topk_benchmark.py \
+            --pair-root sdm_topk_pairs \
+            --output sdm_topk_aggregate
+      - name: Validate complete frozen output
+        run: |
+          test -s sdm_topk_aggregate/all_fold_results.csv
+          test -s sdm_topk_aggregate/pair_level_intention_to_evaluate.csv
+          test -s sdm_topk_aggregate/pair_level_sdm_evaluable.csv
+          test -s sdm_topk_aggregate/pair_level_inference.csv
+          test -s sdm_topk_aggregate/method_summary.csv
+          test -s sdm_topk_aggregate/pair_artifact_audit.csv
+          test -s sdm_topk_aggregate/benchmark_manifest.json
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path("sdm_topk_aggregate")
+          manifest = json.loads((root / "benchmark_manifest.json").read_text())
+          folds = pd.read_csv(root / "all_fold_results.csv")
+          primary = pd.read_csv(root / "pair_level_intention_to_evaluate.csv")
+          assert manifest["protocol_fingerprint"] == "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652"
+          assert manifest["execution_contract_fingerprint"] == "1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1"
+          assert manifest["declared_pairs"] == 24
+          assert len(folds) == 24 * 5 * 6
+          assert primary["pair_id"].nunique() == 24
+          assert set(primary["decision_method"]) == {
+              "frozen_acsp",
+              "local_evidence_top_k",
+              "fitted_sdm_top_k",
+              "geographic_maximin",
+              "random_same_pool_mean",
+              "heldout_greedy_oracle",
+          }
+          print(json.dumps(manifest, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdm-topk-untouched-aggregate
+          path: sdm_topk_aggregate
+          if-no-files-found: error
+          retention-days: 90
