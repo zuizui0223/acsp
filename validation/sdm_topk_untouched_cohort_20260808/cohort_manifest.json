@@ -1,0 +1,32 @@
+{
+  "status": "ready",
+  "protocol_path": "validation/sdm_topk_protocol.json",
+  "protocol_fingerprint": "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652",
+  "declared_pairs_requested": 24,
+  "declared_pairs_obtained": 24,
+  "excluded_unique_taxa": 131,
+  "excluded_taxon_source_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv"
+  ],
+  "overlap_with_excluded_taxa": [],
+  "duplicate_declared_taxa": [],
+  "taxon_group_counts": {
+    "animal": 12,
+    "plant": 12
+  },
+  "geographic_stratum_counts": {
+    "east": 6,
+    "north": 6,
+    "south": 6,
+    "west": 6
+  },
+  "outcomes_inspected": false,
+  "candidate_generation_run": false,
+  "sdm_fitting_run": false,
+  "heldout_recovery_run": false
+}

@@ -1,0 +1,16 @@
+{
+  "workflow_name": "Predeclare SDM Top-k comparator cohort",
+  "workflow_run_id": 31235966440,
+  "workflow_run_conclusion": "success",
+  "trigger_branch": "benchmark/sdm-topk-cohort-predeclare",
+  "trigger_commit": "d478bd511bad4ea7cda0cb8a0ba2a620e7cacf54",
+  "artifact_id": 9015415903,
+  "artifact_name": "sdm-topk-untouched-cohort",
+  "artifact_sha256": "90ef782c436d1891edc58d05d1a4e34fbee1fe03ba4c0fdbcae25f978db43b34",
+  "artifact_digest_verified_after_download": true,
+  "protocol_fingerprint": "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652",
+  "sample_frozen_before_candidate_generation": true,
+  "sample_frozen_before_sdm_fitting": true,
+  "sample_frozen_before_heldout_recovery": true,
+  "reviewed_on": "2026-08-08"
+}
