@@ -1,0 +1,6 @@
+triggered_at=2026-08-08T13:24:00+09:00
+source_recovery_run_id=31238895064
+purpose=outcome_free_decision_differentiation
+heldout_outcomes_read=false
+metrics=top5_overlap,jaccard,exact_set_match,local_vs_sdm_rank_correlation,selected_score_profiles,geographic_dispersion
+universal_superiority_test=false
