@@ -36,6 +36,25 @@ def prepare_sdm_scoring_input(candidates: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def is_empty_shared_candidate_fold(
+    candidates: pd.DataFrame,
+    fold_result: pd.DataFrame,
+) -> bool:
+    """Identify a pre-existing shared-candidate failure without inventing candidates.
+
+    Empty candidate folds are part of the frozen intention-to-evaluate benchmark. They
+    must remain failures for every method rather than being repaired by regenerating a
+    candidate pool solely to make the fitted-SDM comparator evaluable.
+    """
+    if not candidates.empty:
+        return False
+    if "candidate_pool" in fold_result.columns:
+        pool_sizes = pd.to_numeric(fold_result["candidate_pool"], errors="coerce").fillna(0)
+        if pool_sizes.ne(0).any():
+            raise ValueError("empty candidate artifact conflicts with non-zero candidate_pool result")
+    return True
+
+
 def update_sdm_fold_result(
     fold_result: pd.DataFrame,
     *,
@@ -49,6 +68,13 @@ def update_sdm_fold_result(
     if int(mask.sum()) != 1:
         raise ValueError("fold result must contain exactly one fitted_sdm_top_k row")
     original_other = out.loc[~mask, ["decision_method", "heldout_recall"]].copy().reset_index(drop=True)
+
+    if "selected_ids" not in out.columns:
+        out["selected_ids"] = pd.Series("", index=out.index, dtype="string")
+    else:
+        out["selected_ids"] = out["selected_ids"].astype("string")
+    out["method_status"] = out["method_status"].astype("string")
+
     out.loc[mask, "method_status"] = status
     out.loc[mask, "heldout_recall"] = float(recall)
     out.loc[mask, "selected_ids"] = ";".join(map(str, selected_ids))
@@ -89,40 +115,48 @@ def recover_pair(source_pair: Path, output_pair: Path) -> dict[str, Any]:
         }
 
         selected_ids: list[str] = []
-        try:
-            scoring_input = prepare_sdm_scoring_input(candidates)
-            scored, sdm_audit = core._fit_and_score_production_sdm(training, scoring_input)
-            finite = scored[pd.to_numeric(scored["sdm_suitability"], errors="coerce").notna()].copy()
-            selected = select_sdm_top_k(finite, 5, id_col="candidate_id")
-            selected_ids = selected["candidate_id"].astype(str).tolist()
-            coverage, all_ids = core._coverage_sets(
-                scored,
-                heldout,
-                radius_km=float(json.loads(core.PROTOCOL_PATH.read_text())["outer_validation"]["recovery_radius_km"]),
-            )
-            recall = core._recall(selected_ids, coverage, all_ids)
-            fold_result = update_sdm_fold_result(
-                fold_result, status="ok", recall=recall, selected_ids=selected_ids
-            )
-            decisions.setdefault("methods", {})["fitted_sdm_top_k"] = selected_ids
-            candidates_out = scored
-            recovery_audit.update({
-                "recovery_status": "sdm_ok",
-                "selected_ids": selected_ids,
-                "heldout_recall": float(recall),
-                "production_sdm_audit": sdm_audit,
-            })
-        except Exception as exc:
-            fold_result = update_sdm_fold_result(
-                fold_result, status="sdm_failure_after_recovery", recall=0.0, selected_ids=[]
-            )
-            decisions.setdefault("methods", {})["fitted_sdm_top_k"] = []
+        if is_empty_shared_candidate_fold(candidates, fold_result):
             candidates_out = candidates
             recovery_audit.update({
-                "recovery_status": "sdm_failure_after_recovery",
-                "error_type": type(exc).__name__,
-                "error_message": str(exc),
+                "recovery_status": "preserved_shared_candidate_failure",
+                "reason": "source shared candidate pool is empty",
+                "selected_ids": [],
             })
+        else:
+            try:
+                scoring_input = prepare_sdm_scoring_input(candidates)
+                scored, sdm_audit = core._fit_and_score_production_sdm(training, scoring_input)
+                finite = scored[pd.to_numeric(scored["sdm_suitability"], errors="coerce").notna()].copy()
+                selected = select_sdm_top_k(finite, 5, id_col="candidate_id")
+                selected_ids = selected["candidate_id"].astype(str).tolist()
+                coverage, all_ids = core._coverage_sets(
+                    scored,
+                    heldout,
+                    radius_km=float(json.loads(core.PROTOCOL_PATH.read_text())["outer_validation"]["recovery_radius_km"]),
+                )
+                recall = core._recall(selected_ids, coverage, all_ids)
+                fold_result = update_sdm_fold_result(
+                    fold_result, status="ok", recall=recall, selected_ids=selected_ids
+                )
+                decisions.setdefault("methods", {})["fitted_sdm_top_k"] = selected_ids
+                candidates_out = scored
+                recovery_audit.update({
+                    "recovery_status": "sdm_ok",
+                    "selected_ids": selected_ids,
+                    "heldout_recall": float(recall),
+                    "production_sdm_audit": sdm_audit,
+                })
+            except Exception as exc:
+                fold_result = update_sdm_fold_result(
+                    fold_result, status="sdm_failure_after_recovery", recall=0.0, selected_ids=[]
+                )
+                decisions.setdefault("methods", {})["fitted_sdm_top_k"] = []
+                candidates_out = candidates
+                recovery_audit.update({
+                    "recovery_status": "sdm_failure_after_recovery",
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                })
 
         out_fold = output_pair / fold_dir.name
         state = {
