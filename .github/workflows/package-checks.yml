@@ -31,6 +31,7 @@ jobs:
           gbif_fieldmap_builder_app.py
           acsp/__init__.py
           acsp/app.py
+          acsp/automatic_sdm.py
           acsp/benchmarking.py
           acsp/claims.py
           acsp/cli.py

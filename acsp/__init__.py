@@ -1,5 +1,14 @@
 """Reusable ACSP survey-planning methods."""
 
+from .automatic_sdm import (
+    AUTO_SDM_VARIABLES,
+    AutomaticSdmCoreConfig,
+    derive_power_bioclim,
+    fit_automatic_sdm_core,
+    interpolate_power_bioclim,
+    score_automatic_sdm_candidates,
+    select_sdm_top_k,
+)
 from .claims import CLAIM_MATRIX, claim_status_table
 from .comparator_benchmark import (
     ALL_METHODS,
@@ -63,6 +72,8 @@ from .validation import (
 
 __all__ = [
     "ALL_METHODS",
+    "AUTO_SDM_VARIABLES",
+    "AutomaticSdmCoreConfig",
     "CLAIM_MATRIX",
     "ComparatorFold",
     "DecisionBaselineConfig",
@@ -77,7 +88,10 @@ __all__ = [
     "DEFAULT_INTEGRATED_WEIGHTS",
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
+    "derive_power_bioclim",
     "evaluate_candidate_fold",
+    "fit_automatic_sdm_core",
+    "interpolate_power_bioclim",
     "iter_comparator_folds",
     "make_classifier",
     "model_performance_table",
@@ -91,12 +105,14 @@ __all__ = [
     "recommend_candidates",
     "recommend_survey_zones",
     "recovered_fraction",
+    "score_automatic_sdm_candidates",
     "select_complementary_candidates",
     "select_dual_space_farthest",
     "select_environmental_farthest",
     "select_geographic_farthest",
     "select_heldout_greedy_oracle",
     "select_score_top_k",
+    "select_sdm_top_k",
     "select_validated_core",
     "write_comparator_pair_export",
     "predict_equal_weight_ensemble",
