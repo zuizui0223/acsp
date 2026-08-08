@@ -1,0 +1,36 @@
+{
+  "protocol_id": "acsp-automatic-sdm-core-v1",
+  "status": "model_core_frozen_before_sdm_topk_outcomes",
+  "variables": ["bio1", "bio4", "bio12", "bio14", "bio15"],
+  "environmental_source": "NASA POWER 1981-2010 T2M and PRECTOTCORR normals",
+  "climate_derivation": {
+    "bio1": "mean monthly T2M",
+    "bio4": "population standard deviation of monthly T2M multiplied by 100",
+    "bio12": "sum of monthly PRECTOTCORR totals",
+    "bio14": "minimum monthly PRECTOTCORR total",
+    "bio15": "coefficient of variation of monthly PRECTOTCORR totals multiplied by 100"
+  },
+  "interpolation": {
+    "metric": "haversine",
+    "neighbors": 4,
+    "weight": "inverse_distance_squared"
+  },
+  "algorithms": [
+    "Logistic regression",
+    "Random forest",
+    "ExtraTrees",
+    "Gradient boosting"
+  ],
+  "ensemble": "equal_weight_mean_probability",
+  "random_state": 42,
+  "score_interpretation": "relative suitability for ranking; not calibrated occupancy probability",
+  "core_fingerprint": "1e10f5959085717480749e1f38214f925a9c6b2e8a32e5309024d88456d723a2",
+  "not_yet_frozen_here": [
+    "background count and land-sampling rule",
+    "prediction extent rule",
+    "training occurrence QC and thinning",
+    "full fold failure estimand",
+    "new untouched cohort sample"
+  ],
+  "guardrail": "Do not run or inspect full SDM Top-5 outcomes until the remaining benchmark-level fields are frozen in a separate protocol."
+}
