@@ -1,0 +1,55 @@
+{
+  "contract_id": "acsp-sdm-topk-execution-v1",
+  "parent_protocol_fingerprint": "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652",
+  "untouched_cohort_artifact_sha256": "90ef782c436d1891edc58d05d1a4e34fbee1fe03ba4c0fdbcae25f978db43b34",
+  "shared_candidate_pool": {
+    "builder": "build_automatic_discover_bundle(candidate_generation_only=True)",
+    "source_table": "potential_candidates",
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "score_function": "integrated_candidate_scores(exclude_occurrence_derived=True)",
+    "candidate_id_rule": "pair{pair_id:03d}-fold{repeat:02d}-candidate{row_index:05d}",
+    "minimum_rows_for_operational_fold": 5
+  },
+  "production_sdm_execution": {
+    "presence_cap": 300,
+    "presence_cap_function": "spatially_balanced_cap",
+    "qc_function": "auto_remote_spatial_outlier_qc",
+    "minimum_qc_presences": 5,
+    "background_count": 500,
+    "background_function": "build_presence_background",
+    "area_mode": "bounding box",
+    "buffer_km": 10.0,
+    "rectangle_margin_km": 20.0,
+    "variables": ["bio1", "bio4", "bio12", "bio15", "bio14"],
+    "resolution": "power-climatology",
+    "variable_selection": "Ecological preset / representative climate set",
+    "vif_threshold": 10.0,
+    "correlation_threshold": 0.8,
+    "partition_function": "auto_sdm_partition",
+    "fit_function": "fit_sdm",
+    "algorithms": ["Logistic regression", "Random forest", "ExtraTrees", "Gradient boosting"],
+    "k_folds": 5,
+    "checkerboard_degrees": 0.05,
+    "candidate_environment_function": "extract_environment",
+    "candidate_prediction_function": "predict_suitability",
+    "candidate_missing_environment_rule": "retain rows in the shared pool; only finite sdm_suitability rows are rankable by SDM",
+    "minimum_finite_sdm_candidates": 5,
+    "sdm_fold_failure_rule": "if fitting fails or fewer than five shared candidates receive finite SDM suitability, fitted_sdm_top_k recall is zero in the primary all-declared estimand"
+  },
+  "decision_freeze_boundary": {
+    "pre_outcome_methods": ["frozen_acsp", "local_evidence_top_k", "fitted_sdm_top_k", "geographic_maximin", "random_same_pool"],
+    "post_outcome_only": ["heldout_greedy_oracle", "coverage_calculation"],
+    "guardrail": "held-out coordinates and IDs are not passed to candidate generation, SDM fitting, SDM scoring, or operational selectors"
+  },
+  "randomness": {
+    "outer_fold_seed": "20260808 + pair_id",
+    "same_pool_random_seed": "20260808 + pair_id*1000 + repeat",
+    "production_model_internal_randomness": "existing production defaults (42 where defined)"
+  },
+  "outputs": {
+    "per_fold": ["training_occurrences.csv", "held_out_occurrences.csv", "candidate_pool_pre_outcome.csv", "decision_sets.json", "sdm_audit.json", "fold_result.csv", "fold_manifest.json"],
+    "per_pair": ["fold_results.csv", "pair_manifest.json"],
+    "aggregate": ["all_fold_results.csv", "pair_level_intention_to_evaluate.csv", "pair_level_sdm_evaluable.csv", "pair_level_inference.csv", "benchmark_manifest.json"]
+  },
+  "contract_fingerprint": "e4f7a398cde62fede844cc10b488e914da8f5ab2af9c4594a86f5b5258e41ac2"
+}
