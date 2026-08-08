@@ -40,11 +40,18 @@ CLAIM_MATRIX: tuple[dict[str, str], ...] = (
         "prohibited_wording": "Recommended zones are reachable, occupied, or more efficient in the field.",
     },
     {
-        "claim_id": "sdm_superiority",
-        "status": "not_tested",
-        "scope": "Direct comparison with fitted SDM-led survey policies",
-        "permitted_wording": "ACSP addresses a downstream finite-set decision estimand and has not established universal superiority over SDMs or survey-design algorithms.",
-        "prohibited_wording": "ACSP is better than SDM.",
+        "claim_id": "sdm_relationship",
+        "status": "positioned",
+        "scope": "Relationship between ACSP finite-set survey decisions and fitted species distribution models",
+        "permitted_wording": "SDMs estimate a pointwise model quantity such as relative suitability, intensity, or occurrence probability depending on model design, whereas ACSP produces a finite regional survey decision under a candidate budget. ACSP can use SDM output as one optional evidence channel rather than replacing the SDM estimand.",
+        "prohibited_wording": "ACSP and SDM estimate the same quantity, or ACSP replaces species distribution modeling.",
+    },
+    {
+        "claim_id": "sdm_decision_comparison",
+        "status": "benchmark_in_progress",
+        "scope": "Frozen same-training-fold, same-candidate-pool Top-5 comparison with ACSP's production fitted-SDM ranking",
+        "permitted_wording": "The direct fitted-SDM benchmark is a controlled decision-level contrast intended to characterize whether pointwise suitability ranking and occurrence-conditioned finite-set selection lead to the same or different survey decisions. Any recovery difference is specific to the frozen benchmark and does not establish universal superiority.",
+        "prohibited_wording": "ACSP is better than SDM, or similar recall proves that ACSP and SDM are equivalent methods.",
     },
 )
 
