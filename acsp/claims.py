@@ -12,6 +12,13 @@ CLAIM_MATRIX: tuple[dict[str, str], ...] = (
         "prohibited_wording": "ACSP predicts occupied exact sites.",
     },
     {
+        "claim_id": "selection_component_attribution",
+        "status": "secondary_support",
+        "scope": "Predeclared 2026-07-24 reconstruction benchmark on the same frozen taxon-region cohorts using refreshed GBIF records and newly generated spatial folds",
+        "permitted_wording": "The secondary comparator benchmark supports focal-taxon local-habitat ranking as the principal observed selection signal. Animal ACSP was not detectably better than local-evidence-only Top-5, while ACSP exceeded generic environmental maximin; differences from geographic maximin were unresolved.",
+        "prohibited_wording": "Geographic complementarity has been independently validated as the source of ACSP performance.",
+    },
+    {
         "claim_id": "general_5km_precision",
         "status": "not_supported",
         "scope": "General name-only workflow",
@@ -35,7 +42,7 @@ CLAIM_MATRIX: tuple[dict[str, str], ...] = (
     {
         "claim_id": "sdm_superiority",
         "status": "not_tested",
-        "scope": "Comparison with SDM-led and other established site-selection methods",
+        "scope": "Direct comparison with fitted SDM-led survey policies",
         "permitted_wording": "ACSP addresses a downstream finite-set decision estimand and has not established universal superiority over SDMs or survey-design algorithms.",
         "prohibited_wording": "ACSP is better than SDM.",
     },
