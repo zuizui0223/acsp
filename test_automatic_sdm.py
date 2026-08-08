@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import unittest
 
 import numpy as np
@@ -103,13 +105,17 @@ class AutomaticSdmCoreTests(unittest.TestCase):
         selected = select_sdm_top_k(candidates, 2)
         self.assertEqual(selected["candidate_id"].tolist(), ["a", "m"])
 
-    def test_manifest_is_stable_and_bounded(self):
+    def test_manifest_is_stable_and_matches_frozen_core_protocol(self):
         config = AutomaticSdmCoreConfig()
         first = config.manifest()
         second = config.manifest()
         self.assertEqual(first["fingerprint"], second["fingerprint"])
         self.assertEqual(first["variables"], list(AUTO_SDM_VARIABLES))
         self.assertIn("not calibrated occupancy probability", first["score_interpretation"])
+        frozen = json.loads(Path("validation/automatic_sdm_core_protocol.json").read_text())
+        self.assertEqual(first["fingerprint"], frozen["core_fingerprint"])
+        self.assertEqual(first["variables"], frozen["variables"])
+        self.assertEqual(first["algorithms"], frozen["algorithms"])
 
 
 if __name__ == "__main__":
