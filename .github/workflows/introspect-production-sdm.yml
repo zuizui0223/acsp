@@ -1,0 +1,48 @@
+name: Introspect production SDM helpers
+
+on:
+  push:
+    branches:
+      - agent/introspect-production-sdm
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Print production helper signatures and sources
+        run: |
+          python - <<'PY'
+          import inspect
+          import gbif_fieldmap_builder_app as app
+          names = [
+              "add_automatic_sdm_support",
+              "fit_sdm",
+              "select_environment_variables",
+              "auto_sdm_partition",
+              "prediction_area_geometry",
+              "build_presence_background",
+              "extract_environment",
+              "clean_environment_table",
+              "predict_suitability",
+          ]
+          for name in names:
+              print("\n===", name, "===")
+              value = getattr(app, name, None)
+              if value is None:
+                  print("MISSING")
+                  continue
+              print("SIGNATURE", inspect.signature(value))
+              try:
+                  print(inspect.getsource(value))
+              except Exception as exc:
+                  print("SOURCE_ERROR", type(exc).__name__, str(exc))
+          PY
