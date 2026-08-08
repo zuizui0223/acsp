@@ -74,6 +74,12 @@ def _expected_rows(cohort: pd.DataFrame, repeats: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _series(frame: pd.DataFrame, column: str, default: object) -> pd.Series:
+    if column in frame.columns:
+        return frame[column]
+    return pd.Series(default, index=frame.index)
+
+
 def _complete_fold_table(raw: pd.DataFrame, cohort: pd.DataFrame, repeats: int) -> pd.DataFrame:
     expected = _expected_rows(cohort, repeats)
     keys = ["pair_id", "repeat", "decision_method"]
@@ -91,12 +97,24 @@ def _complete_fold_table(raw: pd.DataFrame, cohort: pd.DataFrame, repeats: int) 
             on=keys,
             how="left",
         )
-    merged["heldout_recall"] = pd.to_numeric(merged.get("heldout_recall"), errors="coerce").fillna(0.0)
-    merged["method_status"] = merged.get("method_status", pd.Series(index=merged.index, dtype=str)).fillna("artifact_missing")
-    merged["heldout_records"] = pd.to_numeric(merged.get("heldout_records"), errors="coerce").fillna(0).astype(int)
-    merged["candidate_pool"] = pd.to_numeric(merged.get("candidate_pool"), errors="coerce").fillna(0).astype(int)
-    merged["sdm_fold_ok"] = merged.get("sdm_fold_ok", pd.Series(False, index=merged.index)).fillna(False).astype(bool)
-    merged["selected_ids"] = merged.get("selected_ids", pd.Series("", index=merged.index)).fillna("").astype(str)
+    merged["heldout_recall"] = pd.to_numeric(
+        _series(merged, "heldout_recall", np.nan), errors="coerce"
+    ).fillna(0.0)
+    merged["method_status"] = _series(
+        merged, "method_status", "artifact_missing"
+    ).fillna("artifact_missing").astype(str)
+    merged["heldout_records"] = pd.to_numeric(
+        _series(merged, "heldout_records", 0), errors="coerce"
+    ).fillna(0).astype(int)
+    merged["candidate_pool"] = pd.to_numeric(
+        _series(merged, "candidate_pool", 0), errors="coerce"
+    ).fillna(0).astype(int)
+    merged["sdm_fold_ok"] = _series(
+        merged, "sdm_fold_ok", False
+    ).fillna(False).astype(bool)
+    merged["selected_ids"] = _series(
+        merged, "selected_ids", ""
+    ).fillna("").astype(str)
     return merged.sort_values(keys, kind="mergesort").reset_index(drop=True)
 
 
