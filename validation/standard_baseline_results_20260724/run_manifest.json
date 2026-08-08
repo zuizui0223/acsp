@@ -1,0 +1,51 @@
+{
+  "snapshot_id": "standard_baseline_results_20260724",
+  "reviewed_on": "2026-08-08",
+  "protocol_fingerprint": "23773fd0b94f69f96813eb00a49aba3cae25849de27b0dfb5f729a355d61fbce",
+  "primary_endpoint": {
+    "top_k": 5,
+    "recovery_radius_km": 10.0,
+    "spatial_block_degrees": 0.1,
+    "repeats": 5,
+    "random_draws_per_fold": 200
+  },
+  "runs": [
+    {
+      "cohort": "mixed_20260705",
+      "workflow_run_id": 30091294481,
+      "head_sha": "de8f07760d2d47a21ea71009b541891c4bc7fad0",
+      "artifact_id": 8596114627,
+      "artifact_name": "standard-baselines-mixed_20260705",
+      "artifact_sha256": "fd5c8e1acd359e4941d1767bc516b72eff973acf12bc47112864023ce033c0bc",
+      "declared_pairs": 24,
+      "fold_manifests_verified": 120,
+      "checksum_mismatches": 0
+    },
+    {
+      "cohort": "plants_20260706",
+      "workflow_run_id": 30091305081,
+      "head_sha": "b04d34e33df8ec367810c252790b560852950d11",
+      "artifact_id": 8596066737,
+      "artifact_name": "standard-baselines-plants_20260706",
+      "artifact_sha256": "08066b7f893beda5faec5c953b4bedac4f424f30366c4dd427a303e8fe8807d3",
+      "declared_pairs": 24,
+      "fold_manifests_verified": 120,
+      "checksum_mismatches": 0
+    }
+  ],
+  "provenance_boundary": {
+    "frozen": "taxon-region cohort membership, ACSP plant and animal policies, comparator protocol, Top-k budget, recovery radius, comparator definitions",
+    "regenerated": "GBIF occurrence records, candidate surfaces, and spatial-block holdout assignments on 2026-07-24",
+    "interpretation": "Secondary predeclared reconstruction benchmark. It is not a reanalysis of the exact candidate pools used in the original 2026-07-05/06 confirmatory results and does not replace Table 1."
+  },
+  "eligibility_notes": [
+    "Fulmarus glacialis was ineligible for environmental and dual-space comparisons because the predeclared terrain schema was incomplete across its folds.",
+    "Arachniodes rhomboidea had only one evaluable fold in the plant reconstruction; universal methods retained the pair with zero contribution from missing folds, whereas environmental/dual-space comparisons excluded it by the predeclared complete-schema rule."
+  ],
+  "headline_interpretation": [
+    "Animal ACSP exceeded same-pool random selection in the reconstruction benchmark, but its incremental difference from local-evidence-only Top-5 was near zero and unresolved.",
+    "Pooled plant ACSP is identical to local-evidence-only ranking by design and exceeded same-pool random selection.",
+    "ACSP exceeded generic environmental maximin in animals and pooled plants; differences from geographic maximin were not resolved.",
+    "The comparator results support focal-taxon local-habitat evidence as the principal validated selection signal and do not establish a general benefit of complementarity itself."
+  ]
+}
