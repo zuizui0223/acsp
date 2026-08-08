@@ -1,0 +1,7 @@
+triggered_at=2026-08-08T12:47:00+09:00
+source_run_id=31236963484
+source_pair_artifacts=sdm-topk-pair-*
+protocol_fingerprint=cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652
+execution_contract_fingerprint=1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1
+qa_fix=verify_only_fold_ddd_directories_not_fold_results_csv
+scientific_recomputation=false
