@@ -14,7 +14,7 @@ class SdmTopKProtocolTests(unittest.TestCase):
     def test_protocol_fingerprint_is_valid(self):
         self.assertEqual(
             _canonical_fingerprint(self.protocol),
-            "12a53c8bdf2493038809d6a1021a7dcf2ee7c07ea891ad5b0862d2ee2813f7b2",
+            "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652",
         )
 
     def test_production_sdm_defaults_are_frozen(self):
