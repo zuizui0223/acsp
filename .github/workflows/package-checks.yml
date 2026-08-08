@@ -43,9 +43,12 @@ jobs:
           acsp/sdm.py
           acsp/validated_core.py
           acsp_discover.py
+          aggregate_sdm_topk_benchmark.py
           audit_random_validation_stability.py
+          execute_sdm_topk_pair.py
           export_standard_baseline_folds.py
           predeclare_sdm_topk_cohort.py
+          run_sdm_topk_pair.py
           run_standard_baseline_benchmark.py
           paper/build_paper_outputs.py
       - name: Run Python tests
