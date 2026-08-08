@@ -45,7 +45,7 @@ jobs:
           sample = pd.read_csv(root / "predeclared_taxon_region_pairs.csv")
           declared = sample[sample["status"].eq("predeclared")]
           assert manifest["status"] == "ready"
-          assert manifest["protocol_fingerprint"] == "12a53c8bdf2493038809d6a1021a7dcf2ee7c07ea891ad5b0862d2ee2813f7b2"
+          assert manifest["protocol_fingerprint"] == "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652"
           assert manifest["declared_pairs_obtained"] == 24
           assert manifest["outcomes_inspected"] is False
           assert manifest["candidate_generation_run"] is False
