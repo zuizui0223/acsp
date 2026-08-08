@@ -48,10 +48,10 @@ CLAIM_MATRIX: tuple[dict[str, str], ...] = (
     },
     {
         "claim_id": "sdm_decision_comparison",
-        "status": "benchmark_in_progress",
-        "scope": "Frozen same-training-fold, same-candidate-pool Top-5 comparison with ACSP's production fitted-SDM ranking",
-        "permitted_wording": "The direct fitted-SDM benchmark is a controlled decision-level contrast intended to characterize whether pointwise suitability ranking and occurrence-conditioned finite-set selection lead to the same or different survey decisions. Any recovery difference is specific to the frozen benchmark and does not establish universal superiority.",
-        "prohibited_wording": "ACSP is better than SDM, or similar recall proves that ACSP and SDM are equivalent methods.",
+        "status": "secondary_decision_contrast_complete",
+        "scope": "Predeclared untouched 24-pair same-training-fold, same-candidate-pool Top-5 comparison with ACSP's production fitted-SDM ranking",
+        "permitted_wording": "In the frozen matched-pool benchmark, ACSP and fitted-SDM Top-5 ranking had similar 10-km regional recovery but usually selected different candidates: among 101 SDM-evaluable folds, the mean Top-5 Jaccard overlap was 0.264 and exact set agreement occurred in one fold. This supports an operational distinction between pointwise fitted-model ranking and occurrence-conditioned finite-set survey selection, not universal superiority of either method.",
+        "prohibited_wording": "ACSP is better than SDM, SDM is generally inferior for survey planning, or similar recall proves that ACSP and SDM are equivalent methods.",
     },
 )
 
