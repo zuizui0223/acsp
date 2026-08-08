@@ -33,6 +33,8 @@
     "candidate_environment_function": "extract_environment",
     "candidate_prediction_function": "predict_suitability",
     "candidate_missing_environment_rule": "retain rows in the shared pool; only finite sdm_suitability rows are rankable by SDM",
+    "candidate_environment_cleaning": "clean_environment_table on a copy of the shared candidates; merge predictions back by candidate_id so the shared pool itself is unchanged",
+    "prediction_rounding": "production predict_suitability rounds mean ensemble probability to 3 decimals before Top-k ranking",
     "minimum_finite_sdm_candidates": 5,
     "sdm_fold_failure_rule": "if fitting fails or fewer than five shared candidates receive finite SDM suitability, fitted_sdm_top_k recall is zero in the primary all-declared estimand"
   },
@@ -41,6 +43,7 @@
     "post_outcome_only": ["heldout_greedy_oracle", "coverage_calculation"],
     "guardrail": "held-out coordinates and IDs are not passed to candidate generation, SDM fitting, SDM scoring, or operational selectors"
   },
+  "secondary_estimand": "within each pair, restrict both ACSP and SDM to folds with status sdm_ok and average over those same folds; include pairs with at least one sdm_ok fold",
   "randomness": {
     "outer_fold_seed": "20260808 + pair_id",
     "same_pool_random_seed": "20260808 + pair_id*1000 + repeat",
@@ -51,5 +54,5 @@
     "per_pair": ["fold_results.csv", "pair_manifest.json"],
     "aggregate": ["all_fold_results.csv", "pair_level_intention_to_evaluate.csv", "pair_level_sdm_evaluable.csv", "pair_level_inference.csv", "benchmark_manifest.json"]
   },
-  "contract_fingerprint": "e4f7a398cde62fede844cc10b488e914da8f5ab2af9c4594a86f5b5258e41ac2"
+  "contract_fingerprint": "1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1"
 }
