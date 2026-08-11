@@ -45,7 +45,7 @@ jobs:
           assert cohort["pair_id"].astype(int).nunique() == 192
           assert set(cohort["pair_id"].astype(int)) == set(range(1, 193))
           assert cohort["scientific_name"].astype(str).nunique() == 192
-          assert cohort["taxon_group"].value_counts().to_dict() == {"plant": 96, "animal": 96} or cohort["taxon_group"].value_counts().to_dict() == {"animal": 96, "plant": 96}
+          assert cohort["taxon_group"].value_counts().to_dict() in ({"plant": 96, "animal": 96}, {"animal": 96, "plant": 96})
           assert set(cohort["record_count_stratum"].value_counts().to_dict().values()) == {48}
           assert set(cohort["region_name"].value_counts().to_dict().values()) == {16}
           PY
@@ -140,7 +140,7 @@ jobs:
           merge-multiple: true
       - name: Aggregate complete intention-to-evaluate cohort
         run: |
-          python aggregate_practical_core_confirmation.py \
+          python execute_aggregate_practical_core_confirmation.py \
             --cohort validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
             --pair-root practical-core-pair-artifacts \
             --output practical-core-confirmation-aggregate
