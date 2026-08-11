@@ -12,8 +12,11 @@ on:
       - run_practical_core_confirmation_pair.py
       - aggregate_practical_core_confirmation.py
       - execute_aggregate_practical_core_confirmation.py
+      - evaluate_practical_core_claim_guardrails.py
+      - validation/acsp_practical_core_claim_guardrail.json
       - test_practical_core_confirmation_runner.py
       - test_practical_core_production_aggregator.py
+      - test_practical_core_claim_guardrails.py
       - .github/workflows/practical-core-confirmation-runner.yml
   pull_request:
     paths:
@@ -23,8 +26,11 @@ on:
       - run_practical_core_confirmation_pair.py
       - aggregate_practical_core_confirmation.py
       - execute_aggregate_practical_core_confirmation.py
+      - evaluate_practical_core_claim_guardrails.py
+      - validation/acsp_practical_core_claim_guardrail.json
       - test_practical_core_confirmation_runner.py
       - test_practical_core_production_aggregator.py
+      - test_practical_core_claim_guardrails.py
       - .github/workflows/practical-core-confirmation-runner.yml
 
 permissions:
@@ -48,13 +54,16 @@ jobs:
             run_practical_core_confirmation_pair.py \
             aggregate_practical_core_confirmation.py \
             execute_aggregate_practical_core_confirmation.py \
+            evaluate_practical_core_claim_guardrails.py \
             test_practical_core_confirmation_runner.py \
-            test_practical_core_production_aggregator.py
-      - name: Run leakage and inference contract tests
+            test_practical_core_production_aggregator.py \
+            test_practical_core_claim_guardrails.py
+      - name: Run leakage, inference, and claim contract tests
         run: |
           python -m unittest -v \
             test_practical_core_confirmation_runner.py \
-            test_practical_core_production_aggregator.py
+            test_practical_core_production_aggregator.py \
+            test_practical_core_claim_guardrails.py
       - name: Audit frozen fingerprints in source
         run: |
           python - <<'PY'
@@ -64,6 +73,7 @@ jobs:
           checks = [
               (Path("validation/acsp_practical_core_protocol.json"), "fingerprint", "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"),
               (Path("validation/acsp_practical_core_untouched_confirmation_protocol.json"), "protocol_fingerprint", "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"),
+              (Path("validation/acsp_practical_core_claim_guardrail.json"), "fingerprint", "e654d7e0c652effa938f7cd04235156fab9f9c3da2c369200cfa120453eebdfc"),
           ]
           for path, field, expected in checks:
               payload = json.loads(path.read_text())
