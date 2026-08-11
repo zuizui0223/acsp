@@ -1,0 +1,103 @@
+name: Freeze final Practical Rescue model after GRTS development gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/practical_rescue_final_refit_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  refit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install exact frozen development runtime
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
+          python -m pip install -e .
+      - name: Download official GRTS development gate
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-official-grts-72-development
+          path: grts-gate
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31545927389
+      - name: Require a complete passed frozen GRTS gate before loading development outcomes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          gate = json.loads(Path("grts-gate/development_manifest.json").read_text())
+          assert gate["protocol_fingerprint"] == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          assert gate["declared_pairs"] == gate["complete_pairs"] == 72
+          assert gate["development_grts_gate_passed"] is True
+          assert gate["outcomes_available_to_grts_selector"] is False
+          assert gate["no_retuning_after_grts_outcome"] is True
+          PY
+      - name: Download reviewed mixed 24-pair development source
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-mixed_20260705
+          path: final-refit/mixed
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091294481
+      - name: Download reviewed plant 24-pair development source
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-plants_20260706
+          path: final-refit/plants
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091305081
+      - name: Download locked former-SDM 24-pair development source
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdm-topk-recovered-pair-*
+          path: final-refit/sdm24
+          merge-multiple: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31238895064
+      - name: Fit unchanged rescue estimator on all 72 development pairs
+        run: |
+          python fit_practical_rescue_final_model.py \
+            --standard-root final-refit/mixed \
+            --standard-root final-refit/plants \
+            --sdm-root final-refit/sdm24 \
+            --rescue-protocol validation/acsp_practical_rescue_development_protocol.json \
+            --grts-gate-manifest grts-gate/development_manifest.json \
+            --output final-rescue-model
+      - name: Audit final freeze contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("final-rescue-model/model_manifest.json").read_text())
+          assert manifest["status"] == "final_rescue_model_fitted_after_official_grts_development_gate"
+          assert manifest["rescue_protocol_fingerprint"] == "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48"
+          assert manifest["grts_development_protocol_fingerprint"] == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          assert manifest["development_pairs"] == 72
+          assert manifest["development_folds"] == 360
+          assert manifest["grts_outcomes_used_as_model_features_or_targets"] is False
+          assert manifest["model_hyperparameters_changed_after_grts_gate"] is False
+          assert manifest["fresh_confirmation_required"] is True
+          print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-final-72-model
+          path: final-rescue-model
+          if-no-files-found: error
+          retention-days: 90
