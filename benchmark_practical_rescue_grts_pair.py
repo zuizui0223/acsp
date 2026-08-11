@@ -12,7 +12,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
-EXPECTED_PROTOCOL = "47afc2acf0807998ca13b04cce72e71cea2baffff7df7b33fb9b66a82559885b"
+EXPECTED_PROTOCOL = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
 EARTH_RADIUS_KM = 6_371.0088
 KNOWN_PATTERN = "occurrence-supported|known-location|known anchor"
 
