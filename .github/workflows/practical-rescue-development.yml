@@ -24,9 +24,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install ACSP
-        run: python -m pip install -e .
+          python-version: "3.13.5"
+      - name: Install frozen development runtime and ACSP
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
+          python -m pip install -e .
       - name: Verify frozen rescue policy tests
         run: python -m unittest -v test_practical_rescue.py
       - name: Download reviewed mixed 24-pair development source
@@ -68,7 +70,7 @@ jobs:
           import json
           from pathlib import Path
           manifest = json.loads(Path("rescue-development-results/development_manifest.json").read_text())
-          assert manifest["protocol_fingerprint"] == "03a6641b488c2aa2d5d2abe89b10798754e3b1c85428d1a2b3d9b723093f4c3a"
+          assert manifest["protocol_fingerprint"] == "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48"
           assert manifest["model_selection_pairs"] == 48
           assert manifest["locked_extension_pairs"] == 24
           assert manifest["combined_pairs"] == 72
