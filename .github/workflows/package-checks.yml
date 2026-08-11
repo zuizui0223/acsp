@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "${{ matrix.python-version }}"
       - name: Install package and build tools
         run: |
           python -m pip install --upgrade pip build
@@ -40,6 +40,7 @@ jobs:
           acsp/decision_baselines.py
           acsp/planning.py
           acsp/modeling.py
+          acsp/practical_core.py
           acsp/sdm.py
           acsp/validated_core.py
           acsp_discover.py
