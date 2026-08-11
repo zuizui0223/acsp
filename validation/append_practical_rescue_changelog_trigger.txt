@@ -1,1 +1,1 @@
-Finalize only the GRTS protocol self-fingerprint references (950f7d... -> canonical 47afc2...), prepend the required CHANGELOG_AI entry, then remove this marker and the one-shot helper. Scientific payload, seeds, GRTS settings, model settings, and outcomes must remain unchanged.
+Append the required Practical Rescue development entry only after verifying the current GRTS protocol canonical self-hash is 950f7d...bddf2. Do not modify scientific payload or fingerprint references. Remove this marker and the one-shot helper after success.
