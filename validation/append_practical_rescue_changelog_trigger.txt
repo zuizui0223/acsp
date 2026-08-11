@@ -1,1 +1,2 @@
 Append the required 2026-08-12 Practical Rescue / GRTS development entry to CHANGELOG_AI.md, then remove this marker and the one-shot helper workflow in the same bot commit.
+Retry: safe base64 payload encoding.
