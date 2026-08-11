@@ -33,6 +33,7 @@ jobs:
           checks = [
               (Path("validation/acsp_practical_core_protocol.json"), "fingerprint", "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"),
               (Path("validation/acsp_practical_core_untouched_confirmation_protocol.json"), "protocol_fingerprint", "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"),
+              (Path("validation/acsp_practical_core_claim_guardrail.json"), "fingerprint", "e654d7e0c652effa938f7cd04235156fab9f9c3da2c369200cfa120453eebdfc"),
           ]
           for path, field, expected in checks:
               payload = json.loads(path.read_text())
@@ -144,21 +145,32 @@ jobs:
             --cohort validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
             --pair-root practical-core-pair-artifacts \
             --output practical-core-confirmation-aggregate
-      - name: Require complete primary inference output without conditioning on success
+      - name: Evaluate predeclared claim guardrails without changing primary inference
+        run: |
+          python evaluate_practical_core_claim_guardrails.py \
+            --aggregate-dir practical-core-confirmation-aggregate \
+            --output practical-core-confirmation-aggregate/claim_guardrails.json
+      - name: Require complete primary and claim outputs without conditioning on success
         run: |
           test -s practical-core-confirmation-aggregate/confirmation_manifest.json
           test -s practical-core-confirmation-aggregate/primary_gate.json
+          test -s practical-core-confirmation-aggregate/claim_guardrails.json
           test -s practical-core-confirmation-aggregate/pair_level_recall.csv
           test -s practical-core-confirmation-aggregate/pair_level_inference.csv
           python - <<'PY'
           import json
           from pathlib import Path
           manifest = json.loads(Path("practical-core-confirmation-aggregate/confirmation_manifest.json").read_text())
+          claims = json.loads(Path("practical-core-confirmation-aggregate/claim_guardrails.json").read_text())
           assert manifest["declared_pairs"] == 192
           assert manifest["practical_core_fingerprint"] == "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
           assert manifest["confirmation_protocol_fingerprint"] == "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"
           assert manifest["no_retuning_after_outcome"] is True
+          assert claims["guardrail_fingerprint"] == "e654d7e0c652effa938f7cd04235156fab9f9c3da2c369200cfa120453eebdfc"
+          assert claims["existing_tool_superiority"]["passed"] is False
+          assert claims["no_retuning_after_outcome"] is True
           print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          print(json.dumps(claims, indent=2, ensure_ascii=False))
           PY
       - uses: actions/upload-artifact@v4
         with:
