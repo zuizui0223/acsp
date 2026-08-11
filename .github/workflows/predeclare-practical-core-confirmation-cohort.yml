@@ -1,0 +1,70 @@
+name: Predeclare ACSP Practical Core untouched confirmation cohort
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - benchmark/practical-core-confirmation-cohort
+    paths:
+      - validation/practical_core_confirmation_cohort_trigger.txt
+
+permissions:
+  contents: read
+
+jobs:
+  predeclare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify frozen protocol and network-free sampler tests
+        run: python -m unittest -v test_practical_core_confirmation_cohort.py
+      - name: Draw taxon-region cohort only
+        run: |
+          python predeclare_practical_core_confirmation_cohort.py \
+            --protocol validation/acsp_practical_core_untouched_confirmation_protocol.json \
+            --output practical-core-confirmation-cohort
+      - name: Audit no-outcome cohort contract
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+
+          root = Path("practical-core-confirmation-cohort")
+          manifest = json.loads((root / "cohort_manifest.json").read_text())
+          declared = pd.read_csv(root / "predeclared_taxon_region_pairs.csv")
+          audit = pd.read_csv(root / "sampling_frame_audit.csv")
+
+          assert manifest["status"] == "ready"
+          assert manifest["protocol_fingerprint"] == "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"
+          assert manifest["practical_core_fingerprint"] == "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
+          assert manifest["declared_pairs"] == 192
+          assert manifest["unique_declared_taxa"] == 192
+          assert manifest["taxon_group_counts"] == {"animal": 96, "plant": 96}
+          assert set(manifest["record_count_stratum_counts"].values()) == {48}
+          assert set(manifest["region_cell_counts"].values()) == {16}
+          assert len(declared) == 192
+          assert declared["scientific_name"].nunique() == 192
+          assert len(audit) == 96
+          assert manifest["outcomes_inspected"] is False
+          assert manifest["occurrence_rows_fetched_for_declared_taxa"] is False
+          assert manifest["candidate_generation_run"] is False
+          assert manifest["practical_core_run"] is False
+          assert manifest["grts_run"] is False
+          assert manifest["sdm_fitting_run"] is False
+          assert manifest["heldout_recovery_run"] is False
+          assert manifest["taxon_replacement_after_declaration_allowed"] is False
+          print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-core-untouched-confirmation-cohort
+          path: practical-core-confirmation-cohort
+          if-no-files-found: error
+          retention-days: 90
