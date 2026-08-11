@@ -77,6 +77,31 @@ write_method <- function(frame, output_path, method, seed, budget, native_parame
   invisible(out)
 }
 
+# biosurvey 0.1.2's uniformE_selection() passes master$data_matrix through
+# terra::as.data.frame(..., geom="XY") even though prepare_master_matrix()
+# returns a base data.frame. With current terra this dispatch path fails before
+# the published thinning algorithm is reached. Representing the *same* PC1/PC2
+# rows as a SpatVector makes that internal conversion explicit while preserving
+# all attributes, coordinates, seed, candidate universe, and biosurvey's own
+# uniformE_selection() implementation. This is a representation compatibility
+# shim only; it does not reimplement or alter the environmental selection rule.
+prepare_uniformE_compat_master <- function(master) {
+  data <- master$data_matrix
+  if (!is.data.frame(data)) {
+    stop("biosurvey master data_matrix is not a data.frame before compatibility conversion")
+  }
+  if (!all(c("PC1", "PC2") %in% names(data))) {
+    stop("biosurvey master data_matrix lacks PC1/PC2")
+  }
+  compat <- master
+  compat$data_matrix <- terra::vect(data, geom = c("PC1", "PC2"))
+  attr(compat, "uniformE_compatibility_shim") <- paste0(
+    "biosurvey-", BIOSURVEY_VERSION,
+    ":data.frame-to-SpatVector-PC1-PC2-for-internal-terra-as.data.frame"
+  )
+  compat
+}
+
 run_biosurvey_end_to_end <- function(
   region_path,
   variables_path,
@@ -131,8 +156,9 @@ run_biosurvey_end_to_end <- function(
     stop("uniformG did not return exactly the declared budget")
   }
 
+  environmental_master <- prepare_uniformE_compat_master(master)
   environmental <- biosurvey::uniformE_selection(
-    master,
+    environmental_master,
     variable_1 = "PC1",
     variable_2 = "PC2",
     selection_from = "all_points",
@@ -250,6 +276,8 @@ run_biosurvey_end_to_end <- function(
     pca = list(do_pca = TRUE, center = TRUE, scale = TRUE, variables = c("PC1", "PC2")),
     uniformG_sites = nrow(g_out),
     uniformE_sites = nrow(e_out),
+    uniformE_compatibility_shim = attr(environmental_master, "uniformE_compatibility_shim"),
+    uniformE_native_function_called = TRUE,
     EG_sites = nrow(eg_out),
     EG_chosen_n_blocks = chosen_n_blocks,
     EG_budget_rule = "largest native selected-site count <= declared budget; tie chooses larger n_blocks; never truncate native EG output",
