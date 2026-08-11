@@ -1,0 +1,168 @@
+name: ACSP Practical Core untouched confirmation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - benchmark/practical-core-untouched-confirmation
+    paths:
+      - validation/practical_core_confirmation_run_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Require frozen committed cohort and protocols
+        run: |
+          test -s validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          import pandas as pd
+
+          checks = [
+              (Path("validation/acsp_practical_core_protocol.json"), "fingerprint", "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"),
+              (Path("validation/acsp_practical_core_untouched_confirmation_protocol.json"), "protocol_fingerprint", "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"),
+          ]
+          for path, field, expected in checks:
+              payload = json.loads(path.read_text())
+              stored = payload.pop(field)
+              actual = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+              assert stored == expected == actual, (path, stored, actual)
+
+          cohort = pd.read_csv("validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv")
+          assert len(cohort) == 192
+          assert cohort["pair_id"].astype(int).nunique() == 192
+          assert set(cohort["pair_id"].astype(int)) == set(range(1, 193))
+          assert cohort["scientific_name"].astype(str).nunique() == 192
+          assert cohort["taxon_group"].value_counts().to_dict() == {"plant": 96, "animal": 96} or cohort["taxon_group"].value_counts().to_dict() == {"animal": 96, "plant": 96}
+          assert set(cohort["record_count_stratum"].value_counts().to_dict().values()) == {48}
+          assert set(cohort["region_name"].value_counts().to_dict().values()) == {16}
+          PY
+      - name: Build immutable pair matrix
+        id: matrix
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pandas as pd
+          cohort = pd.read_csv("validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv")
+          matrix = [{"pair_id": int(value)} for value in cohort["pair_id"].astype(int).sort_values()]
+          print("matrix=" + json.dumps({"include": matrix}, separators=(",", ":")))
+          PY
+
+  pair:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::spsurvey
+            any::sf
+      - name: Require frozen official GRTS implementation
+        run: |
+          Rscript - <<'RSCRIPT'
+          stopifnot(as.character(packageVersion("spsurvey")) == "5.6.1")
+          RSCRIPT
+      - name: Execute frozen primary pair analysis
+        id: execute
+        continue-on-error: true
+        run: |
+          python execute_practical_core_confirmation_pair.py \
+            --pair-id ${{ matrix.pair_id }} \
+            --cohort validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
+            --output practical-core-pairs
+      - name: Preserve unexpected infrastructure failure
+        if: steps.execute.outcome != 'success'
+        run: |
+          mkdir -p practical-core-pairs/pair_$(printf '%03d' ${{ matrix.pair_id }})
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pair_id = int("${{ matrix.pair_id }}")
+          root = Path("practical-core-pairs") / f"pair_{pair_id:03d}"
+          marker = {
+              "pair_id": pair_id,
+              "pair_status": "unexpected_workflow_failure",
+              "primary_operational_estimand": "score zero during aggregation if no verified scientific artifact exists",
+              "taxon_replacement_allowed": False,
+          }
+          (root / "unexpected_workflow_failure.json").write_text(json.dumps(marker, indent=2) + "\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: practical-core-pair-${{ matrix.pair_id }}
+          path: practical-core-pairs/pair_*
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: [prepare, pair]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Download all declared pair artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: practical-core-pair-*
+          path: practical-core-pair-artifacts
+          merge-multiple: true
+      - name: Aggregate complete intention-to-evaluate cohort
+        run: |
+          python aggregate_practical_core_confirmation.py \
+            --cohort validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
+            --pair-root practical-core-pair-artifacts \
+            --output practical-core-confirmation-aggregate
+      - name: Require complete primary inference output without conditioning on success
+        run: |
+          test -s practical-core-confirmation-aggregate/confirmation_manifest.json
+          test -s practical-core-confirmation-aggregate/primary_gate.json
+          test -s practical-core-confirmation-aggregate/pair_level_recall.csv
+          test -s practical-core-confirmation-aggregate/pair_level_inference.csv
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("practical-core-confirmation-aggregate/confirmation_manifest.json").read_text())
+          assert manifest["declared_pairs"] == 192
+          assert manifest["practical_core_fingerprint"] == "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
+          assert manifest["confirmation_protocol_fingerprint"] == "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"
+          assert manifest["no_retuning_after_outcome"] is True
+          print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-core-untouched-confirmation-aggregate
+          path: practical-core-confirmation-aggregate
+          if-no-files-found: error
+          retention-days: 90
