@@ -13,5 +13,8 @@ Unique taxa: 192
 Plant/animal: 96/96
 No taxon replacement: true
 No retuning after outcome: true
+Confirmation attempt: 2
+
+Attempt 1 stopped in prepare before the immutable pair matrix was built because the prepare job imported pandas without installing it. The only change before this retry is adding the missing prepare dependency; no cohort, scientific policy, comparator, threshold, inference rule, or outcome has changed.
 
 This run is confirmatory. Do not change the candidate policy, comparator definition, cohort membership, thresholds, or inference rules based on observed recovery outcomes.
