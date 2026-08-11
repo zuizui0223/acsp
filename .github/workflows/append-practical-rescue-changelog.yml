@@ -1,0 +1,76 @@
+name: Append Practical Rescue AI changelog
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/append_practical_rescue_changelog_trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepend required AI changelog entry and remove helper
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("CHANGELOG_AI.md")
+          original = path.read_text(encoding="utf-8")
+          header = "# AI Change Log\n"
+          assert original.startswith(header)
+          entry = r'''
+
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development and strong GRTS promotion gate
+
+Changed files:
+- acsp/practical_rescue.py
+- benchmark_practical_rescue_development.py
+- benchmark_practical_rescue_grts_pair.py
+- aggregate_practical_rescue_grts_development.py
+- fit_practical_rescue_final_model.py
+- benchmark_methods/grts_rescue_primary_batch.R
+- test_practical_rescue.py
+- test_practical_rescue_grts_development.py
+- validation/acsp_practical_rescue_development_protocol.json
+- validation/acsp_practical_rescue_grts_development_protocol.json
+- validation/practical_rescue_development_taxa.csv
+- .github/workflows/practical-rescue-development.yml
+- .github/workflows/practical-rescue-grts-development.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Closed the earlier learned-router v2.1 path after its fully nested 72-pair gain over local-only remained below the predeclared practical threshold.
+- Developed a new finite Top-5 `local-anchor + learned rescue` policy: retain one highest-local-evidence anchor, then fill four rescue slots using cross-taxon predicted residual 10-km recovery with a fixed geographic-diversity multiplier.
+- Kept SDM optional and excluded SDM suitability, held-out coordinates/outcomes, scientific name, absolute region identity, and GRTS output from inference-time rescue features.
+- Froze an exact Python/scikit-learn/pandas/NumPy development runtime after detecting model-version sensitivity before accepting the locked 24-pair extension.
+- The locked 48+24 development evaluation passed the predeclared local-only gate on all 72 pairs: mean absolute 10-km recall gain +0.01888, pair-bootstrap 95% CI +0.00677 to +0.03221, sign-flip p=0.00350. The locked 24-pair extension remained directionally positive (+0.01356) but uncertain on its own, so this is still development evidence rather than promotion.
+- Froze all 72 development taxa for exclusion from any future confirmation cohort.
+- Added a stricter development promotion gate against the pinned official `spsurvey::grts` 5.6.1 implementation using the same eligible finite candidate frame, proportional local-evidence inclusion, requested 10-km minimum distance, and 50 predeclared draws per fold.
+- GRTS selections are written before held-out coordinates are loaded; missing local evidence is retained as zero local evidence then mapped to the fixed positive auxiliary floor. No GRTS result may be used to retune the rescue policy.
+- Added a gated final 72-pair refit helper that refuses to fit unless the official GRTS development gate passes and explicitly excludes GRTS outcomes from model features and targets.
+
+Features preserved:
+- Occurrence-supported candidates remain available without SDM; the rescue policy operates on occurrence-conditioned candidate evidence and does not make SDM mandatory.
+- SDM/SSDM remain optional and separate from the observed-data candidate workflow.
+- Existing map-first UI, CSV-upload parity, candidate exports, VIF/spatial-validation behavior, genus/SSDM workflows, and prospective field-validation goals are unchanged.
+- The 10-km retrospective endpoint remains a regional candidate-zone validation claim, not an exact-site occupancy, access, detectability, phenology, or field-effort claim.
+
+Known risks / TODO:
+- Development success versus local-only is not sufficient for promotion. The frozen official GRTS development gate must pass first, followed by an unchanged final-model freeze and a genuinely fresh excluded-taxon confirmation cohort.
+- The old 192-pair Practical Core confirmation aggregate is scientifically invalid because pair jobs failed at R dependency resolution before analysis and were aggregated as missing-zero artifacts; it must not be interpreted as a negative biological result.
+- A broad claim against existing survey-planning tools additionally remains gated on the separately frozen native `biosurvey` end-to-end comparison.
+'''
+          path.write_text(header + entry + original[len(header):], encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/append-practical-rescue-changelog.yml
+          git rm validation/append_practical_rescue_changelog_trigger.txt
+          git add CHANGELOG_AI.md
+          git commit -m "Document Practical Rescue development and GRTS promotion gate"
+          git push origin HEAD:agent/practical-coverage-v3-development
