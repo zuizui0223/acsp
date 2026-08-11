@@ -29,7 +29,7 @@ from benchmark_practical_rescue_development import (
     _standard_folds,
 )
 
-EXPECTED_GRTS_DEVELOPMENT_PROTOCOL = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+EXPECTED_GRTS_DEVELOPMENT_PROTOCOL = "47afc2acf0807998ca13b04cce72e71cea2baffff7df7b33fb9b66a82559885b"
 EARTH_RADIUS_KM = 6_371.0088
 
 
@@ -216,10 +216,11 @@ def parser() -> argparse.ArgumentParser:
 
 
 if __name__ == "__main__":
+    args = parser().parse_args()
     print(json.dumps(run(
-        parser().parse_args().standard_root,
-        parser().parse_args().sdm_root,
-        parser().parse_args().rescue_protocol,
-        parser().parse_args().grts_gate_manifest,
-        parser().parse_args().output,
+        args.standard_root,
+        args.sdm_root,
+        args.rescue_protocol,
+        args.grts_gate_manifest,
+        args.output,
     ), indent=2, ensure_ascii=False))
