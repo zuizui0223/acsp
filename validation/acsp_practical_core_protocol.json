@@ -1,1 +1,68 @@
-placeholder
+{
+  "protocol_id": "acsp-practical-local-core-v1",
+  "status": "development_frozen_pending_untouched_existing_tool_confirmation",
+  "decision_estimand": "Top-5 regional survey-zone decision under a fixed training-only candidate pool and a 10-km held-out recovery endpoint",
+  "selection": {
+    "score_col": "component_local_habitat_score",
+    "top_k": 5,
+    "geographic_complementarity_weight": 0.0,
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "tie_break": "descending local score, then stable candidate/site ID",
+    "taxon_group_rule": "identical plant and animal policy",
+    "score_interpretation": "occurrence-conditioned local environmental support; not occupancy probability or calibrated habitat suitability"
+  },
+  "validation_geometry": {
+    "recovery_radius_km": 10.0,
+    "block_degrees": 0.1,
+    "repeats": 5,
+    "holdout_fraction": 0.2
+  },
+  "development_evidence": {
+    "2026-07-24_reconstruction": {
+      "plant_pairs": 36,
+      "plant_local_mean_recall": 0.148917765910393,
+      "plant_random_mean_recall": 0.09997290305342894,
+      "animal_pairs": 12,
+      "animal_local_mean_recall": 0.0776497210155932,
+      "animal_random_mean_recall": 0.0388821849649772,
+      "note": "secondary reconstruction; local-only equaled frozen plant ACSP and was close to frozen animal ACSP"
+    },
+    "2026-08-08_former_untouched_now_development": {
+      "pairs": 24,
+      "local_mean_recall": 0.11585239055434356,
+      "frozen_v1_mean_recall": 0.08331296029136619,
+      "local_minus_v1": 0.03253943026297737,
+      "bootstrap_95ci": [0.009084442927133425, 0.059363564387013415],
+      "sign_flip_p": 0.026399120029332354,
+      "animal_local_mean_recall": 0.179567494282002,
+      "animal_v1_mean_recall": 0.114488862516008,
+      "animal_difference": 0.065078631765994,
+      "note": "these outcomes were inspected during v2 development and are not independent confirmation for the practical core"
+    }
+  },
+  "negative_development": {
+    "fully_nested_72_pair_router_gain_vs_local": 0.005914347544161109,
+    "router_bootstrap_95ci": [-0.008092499135131038, 0.019764228925414757],
+    "router_sign_flip_p": 0.4221525949135029,
+    "fully_nested_group_blend_gain_vs_local": 0.006476790576906392,
+    "blend_bootstrap_95ci": [-0.0064593882152299414, 0.018768831559645958],
+    "blend_sign_flip_p": 0.3338222059264691,
+    "fully_nested_set_complementarity_gain_vs_local": 0.0011796641361858746,
+    "set_complementarity_bootstrap_95ci": [-0.0005978835978835978, 0.003671497584541061],
+    "set_complementarity_sign_flip_p": 0.5004833172227593,
+    "decision": "do not promote learned/router/complementarity v2 variants; retain the simpler local-only rule"
+  },
+  "untouched_confirmation": {
+    "required": true,
+    "pair_count": 192,
+    "primary_same_pool_comparator": "official spsurvey::grts proportional to local evidence with requested 10-km minimum distance",
+    "minimum_practical_absolute_recall_gain": 0.015,
+    "inference": "pair bootstrap lower 95% bound > 0 and sign-flip p < 0.05; negative/equivalent results retained; no retuning",
+    "broad_tool_claim_requires": "separate predeclared end-to-end biosurvey comparison using native region+raster site generation"
+  },
+  "claim_boundary": {
+    "allowed_before_confirmation": "local-only is the parsimonious practical-core candidate selected after development; it is not yet validated as superior to established survey-design tools",
+    "not_allowed_before_confirmation": "ACSP Practical Core is superior to GRTS, biosurvey, SDM, or existing survey-planning tools"
+  },
+  "fingerprint": "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
+}
