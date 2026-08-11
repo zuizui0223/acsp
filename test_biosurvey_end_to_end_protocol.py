@@ -14,7 +14,7 @@ class BiosurveyEndToEndProtocolTests(unittest.TestCase):
         ).hexdigest()
         self.assertEqual(
             stored,
-            "2252d1fb9fc8e4883f4c473e5c7b48487344dd1952633354372f6a1dd21912b7",
+            "33881b4176c4c8bcda5485189eb5b8a22ee495d766b90c4e159a584265710b2b",
         )
         self.assertEqual(stored, actual)
         self.assertEqual(payload["biosurvey_implementation"]["version"], "0.1.2")
@@ -22,7 +22,14 @@ class BiosurveyEndToEndProtocolTests(unittest.TestCase):
             payload["biosurvey_implementation"]["commit"],
             "035fbebf3d47f823fa55b41a56a74b35dc510753",
         )
-        self.assertEqual(payload["common_environment"]["master_grid_resolutions_degrees"], [0.025, 0.05])
+        self.assertEqual(
+            payload["common_environment"]["master_grid_resolutions_degrees"],
+            [0.05, 0.1],
+        )
+        self.assertIn(
+            "10-km recovery objective",
+            payload["common_environment"]["reason_for_two_resolutions"],
+        )
         self.assertEqual(payload["stochastic_design"]["draws_per_region_resolution"], 10)
         self.assertEqual(len(payload["comparison"]["configurations"]), 6)
         self.assertIn(
