@@ -1,0 +1,73 @@
+name: ACSP v2 grouped development validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/acsp-v2-policy-router
+    paths:
+      - acsp/practical_v2.py
+      - benchmark_acsp_v2_development.py
+      - validation/acsp_v2_candidate_utility_protocol.json
+      - test_practical_v2.py
+      - .github/workflows/acsp-v2-development.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reproduce-development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Download reviewed mixed development artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-mixed_20260705
+          path: v2-development/mixed
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091294481
+      - name: Download reviewed plant development artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-plants_20260706
+          path: v2-development/plants
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091305081
+      - name: Reproduce grouped cross-taxon development result
+        run: |
+          python benchmark_acsp_v2_development.py \
+            --artifact-root v2-development/mixed \
+            --artifact-root v2-development/plants \
+            --protocol validation/acsp_v2_candidate_utility_protocol.json \
+            --output v2-development-results
+      - name: Audit claim boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("v2-development-results")
+          manifest = json.loads((root / "development_manifest.json").read_text())
+          assert manifest["status"] == "development_reproduced_pending_untouched_confirmation"
+          assert manifest["protocol_fingerprint"] == "1760e57c5ab2c1f1f7e0cbcfd3e395f0cee9486e60a6a1783b30c2ee10dafc5d"
+          assert manifest["development_pairs"] == 48
+          assert manifest["expected_folds"] == 240
+          assert manifest["independent_confirmation_required"] is True
+          assert manifest["overall_pair_mean_recall"]["acsp_v2_candidate_utility"] > manifest["overall_pair_mean_recall"]["frozen_acsp"]
+          print(json.dumps(manifest, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-v2-development-reproduction
+          path: v2-development-results
+          if-no-files-found: error
+          retention-days: 90
