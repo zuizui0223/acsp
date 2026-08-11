@@ -1,0 +1,73 @@
+source,group_id,taxon_group,scientific_name,region_name
+locked_extension_24,sdm_1,plant,Ilex crenata Thunb.,Tohoku
+locked_extension_24,sdm_10,plant,Corylus sieboldiana Blume,Chubu mountains
+locked_extension_24,sdm_11,plant,Arachniodes chinensis (Rosenst.) Ching,Kinki
+locked_extension_24,sdm_12,plant,Diplazium dilatatum Blume,Ryukyu
+locked_extension_24,sdm_13,animal,Japonica lutea,Tohoku
+locked_extension_24,sdm_14,animal,"Mnais pruinosa Selys, 1853",Chubu mountains
+locked_extension_24,sdm_15,animal,"Charadrius alexandrinus Linnaeus, 1758",Shikoku
+locked_extension_24,sdm_16,animal,"Turdus eunomus Temminck, 1831",Southern Kyushu
+locked_extension_24,sdm_17,plant,Carex japonica Thunb.,Hokkaido east
+locked_extension_24,sdm_18,plant,Salix udensis (Wimm.) Trautv. & C.A.Mey.,Chubu mountains
+locked_extension_24,sdm_19,plant,Pteris multifida Poir.,Kinki
+locked_extension_24,sdm_2,plant,Aconitum japonicum Thunb.,Kanto
+locked_extension_24,sdm_20,plant,Camellia japonica L.,Southern Kyushu
+locked_extension_24,sdm_21,animal,"Charadrius dubius Scopoli, 1786",Hokkaido east
+locked_extension_24,sdm_22,animal,"Accipiter nisus (Linnaeus, 1758)",Chubu mountains
+locked_extension_24,sdm_23,animal,"Paguma larvata (C.E.H.Smith, 1827)",Shikoku
+locked_extension_24,sdm_24,animal,"Columba livia J.F.Gmelin, 1789",Northern Kyushu
+locked_extension_24,sdm_3,plant,Coryphopteris japonica (Baker) L.J.He & X.C.Zhang,Kinki
+locked_extension_24,sdm_4,plant,Symplocos nakaharae (Hayata) Masam.,Southern Kyushu
+locked_extension_24,sdm_5,animal,"Limosa limosa (Linnaeus, 1758)",Hokkaido east
+locked_extension_24,sdm_6,animal,"Ficedula narcissina (Temminck, 1836)",Izu
+locked_extension_24,sdm_7,animal,"Carassius auratus (Linnaeus, 1758)",Kinki
+locked_extension_24,sdm_8,animal,"Horornis diphone (Kittlitz, 1830)",Southern Kyushu
+locked_extension_24,sdm_9,plant,Carex mollicula Boott,Hokkaido west
+model_selection_48,mixed_1,plant,Symplocos sawafutagi Nagam.,Tohoku
+model_selection_48,mixed_10,plant,Arisaema angustatum Franch. & Sav.,Izu
+model_selection_48,mixed_11,plant,Onychium japonicum (Thunb.) Kunze,Kinki
+model_selection_48,mixed_12,plant,Grypothrix triphylla (Sw.) S.E.Fawc. & A.R.Sm.,Ryukyu
+model_selection_48,mixed_13,animal,"Cygnus olor (J.F.Gmelin, 1789)",Hokkaido west
+model_selection_48,mixed_14,animal,"Sternula albifrons (Pallas, 1764)",Kanto
+model_selection_48,mixed_15,animal,"Tringa brevipes (Vieillot, 1816)",Shikoku
+model_selection_48,mixed_16,animal,"Pluvialis squatarola (Linnaeus, 1758)",Northern Kyushu
+model_selection_48,mixed_17,plant,Sitobolium wilfordii (T.Moore) L.A.Triana & Sundue,Tohoku
+model_selection_48,mixed_18,plant,Diabelia spathulata (Siebold & Zucc.) Landrein,Kanto
+model_selection_48,mixed_19,plant,Deparia lancea (Thunb.) Fraser-Jenk.,Shikoku
+model_selection_48,mixed_2,plant,Christella acuminata (Houtt.) Holttum,Kanto
+model_selection_48,mixed_20,plant,Ctenitis subglandulosa (Hance) Ching,Ryukyu
+model_selection_48,mixed_21,animal,"Cynops pyrrhogaster (Boie, 1826)",Tohoku
+model_selection_48,mixed_22,animal,"Plestiodon finitimus Okamoto & Hikida, 2012",Kanto
+model_selection_48,mixed_23,animal,"Eophona personata (Temminck & Schlegel, 1848)",Kinki
+model_selection_48,mixed_24,animal,"Spatula clypeata (Linnaeus, 1758)",Northern Kyushu
+model_selection_48,mixed_3,plant,Aucuba japonica Thunb.,Kinki
+model_selection_48,mixed_4,plant,Pteris semipinnata L.,Ryukyu
+model_selection_48,mixed_5,animal,"Carabus arvensis Herbst, 1784",Hokkaido west
+model_selection_48,mixed_6,animal,"Fulmarus glacialis (Linnaeus, 1761)",Izu
+model_selection_48,mixed_7,animal,"Fringilla montifringilla Linnaeus, 1758",Chugoku
+model_selection_48,mixed_8,animal,"Mareca penelope (Linnaeus, 1758)",Southern Kyushu
+model_selection_48,mixed_9,plant,Osmundastrum cinnamomeum (L.) C.Presl,Tohoku
+model_selection_48,plants_1,plant,Dryopteris erythrosora (D.C.Eaton) Kuntze,Tohoku
+model_selection_48,plants_10,plant,Cirsium nipponicum (Maxim.) Makino,Izu
+model_selection_48,plants_11,plant,Odontosoria chinensis (L.) J.Sm.,Chugoku
+model_selection_48,plants_12,plant,Diplazium hachijoense Nakai,Southern Kyushu
+model_selection_48,plants_13,plant,Dianthus superbus L.,Hokkaido west
+model_selection_48,plants_14,plant,Symplocos coreana (H.Lév.) Ohwi,Chubu mountains
+model_selection_48,plants_15,plant,Dryopteris hondoensis Koidz.,Chugoku
+model_selection_48,plants_16,plant,Arachniodes rhomboidea (Schott) Ching,Southern Kyushu
+model_selection_48,plants_17,plant,Petasites japonicus (Siebold & Zucc.) Maxim.,Tohoku
+model_selection_48,plants_18,plant,Rosa luciae Franch. & Rochebr. ex Crép.,Izu
+model_selection_48,plants_19,plant,Polystichum tripteron (Kunze) C.Presl,Kinki
+model_selection_48,plants_2,plant,Coniogramme intermedia Hieron.,Kanto
+model_selection_48,plants_20,plant,Pteris fauriei Hieron.,Ryukyu
+model_selection_48,plants_21,plant,Sphagnum fallax (H.Klinggr.) H.Klinggr.,Hokkaido east
+model_selection_48,plants_22,plant,Akebia trifoliata (Thunb.) Koidz.,Kanto
+model_selection_48,plants_23,plant,Cyrtomium falcatum (L.fil.) C.Presl,Shikoku
+model_selection_48,plants_24,plant,Neolitsea sericea (Blume) Koidz.,Northern Kyushu
+model_selection_48,plants_3,plant,Polystichum polyblepharon (Roem. ex Kunze) C.Presl,Chugoku
+model_selection_48,plants_4,plant,Rhaphiolepis umbellata (Thunb.) Makino,Ryukyu
+model_selection_48,plants_5,plant,Rhododendron diversipilosum (Nakai) Harmaja,Hokkaido east
+model_selection_48,plants_6,plant,Athyrium melanolepis (Franch. & Sav.) Christ,Chubu mountains
+model_selection_48,plants_7,plant,Callicarpa japonica Thunb.,Chugoku
+model_selection_48,plants_8,plant,Rhododendron tashiroi Maxim.,Ryukyu
+model_selection_48,plants_9,plant,Actinidia arguta (Siebold & Zucc.) Planch. ex Miq.,Hokkaido west
