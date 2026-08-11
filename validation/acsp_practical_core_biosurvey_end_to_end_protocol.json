@@ -1,0 +1,102 @@
+{
+  "protocol_id": "acsp-practical-core-biosurvey-end-to-end-v1",
+  "status": "frozen_before_untouched_cohort_sampling_or_outcome_inspection",
+  "practical_core_fingerprint": "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905",
+  "primary_confirmation_protocol_fingerprint": "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9",
+  "biosurvey_implementation": {
+    "repository": "claununez/biosurvey",
+    "commit": "035fbebf3d47f823fa55b41a56a74b35dc510753",
+    "version": "0.1.2",
+    "adapter_contract": "native region + environmental SpatRaster; never ACSP finite candidate frame"
+  },
+  "objective": "focal-taxon held-out regional recovery under a maximum five-site field budget",
+  "cohort_and_outcomes": {
+    "cohort": "the exact frozen 192 taxon-region pairs used by the Practical Core primary confirmation",
+    "outer_folds": "the exact five frozen primary holdout folds per pair; biosurvey designs are frozen before the held_out_occurrences.csv file is opened",
+    "recovery_radius_km": 10.0,
+    "no_taxon_replacement": true
+  },
+  "common_environment": {
+    "source": "same Japan GSI terrain information family used by ACSP local candidate generation",
+    "raw_variables": [
+      "elevation",
+      "slope",
+      "aspect",
+      "roughness",
+      "tpi"
+    ],
+    "biosurvey_pca_layers": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "aspect_transform": "sin/cos derived from the same aspect values before PCA",
+    "region": "the exact fixed cohort region rectangle; no occurrence-conditioned mask",
+    "master_grid_resolutions_degrees": [
+      0.05,
+      0.1
+    ],
+    "grid_rule": "regular lon/lat grid covering the region; extract the same GSI terrain information at cell centers; cells with incomplete terrain are removed without outcome-dependent replacement",
+    "reason_for_two_resolutions": "predeclare a regional-scale sensitivity aligned with the 10-km recovery objective and 0.1-degree validation blocks while retaining a finer 0.05-degree grid; avoid infeasible full-region near-native GSI rasterization"
+  },
+  "biosurvey_methods": {
+    "uniformG": {
+      "function": "uniformG_selection",
+      "expected_points": 5,
+      "replicates": 10,
+      "max_n_samplings": 1,
+      "use_preselected_sites": false
+    },
+    "uniformE": {
+      "function": "uniformE_selection",
+      "environment": "PC1/PC2 from centered and scaled PCA of the six common terrain layers",
+      "selection_from": "all_points",
+      "expected_points": 5,
+      "replicates": 10,
+      "max_n_samplings": 1,
+      "use_preselected_sites": false
+    },
+    "EG": {
+      "function": "EG_selection",
+      "environment": "PC1/PC2 from the same PCA",
+      "block_grid": "10 x 10 equal-area environmental blocks",
+      "n_blocks_rule": "evaluate native n_blocks=1..5 without outcomes and retain the native design with the largest selected-site count <=5; ties choose larger n_blocks; never truncate",
+      "replicates": 10,
+      "max_n_samplings": 1,
+      "select_point": "E_centroid",
+      "cluster_method": "hierarchical",
+      "sample_for_distance": 250
+    }
+  },
+  "stochastic_design": {
+    "draws_per_region_resolution": 10,
+    "seed_formula": "20260811 + region_cell_index*1000 + draw_index",
+    "reuse_rule": "because biosurvey is taxon-independent under this native contract, the same pre-outcome region/resolution/seed design library is reused for every declared taxon and fold in that region",
+    "fold_estimand": "mean held-out recovery over the 10 frozen designs for a biosurvey method/resolution configuration"
+  },
+  "comparison": {
+    "configurations": [
+      "biosurvey_uniformG_0.05deg",
+      "biosurvey_uniformE_0.05deg",
+      "biosurvey_EG_0.05deg",
+      "biosurvey_uniformG_0.1deg",
+      "biosurvey_uniformE_0.1deg",
+      "biosurvey_EG_0.1deg"
+    ],
+    "unit": "taxon-region pair after averaging five frozen outer folds",
+    "minimum_practical_absolute_recall_gain": 0.015,
+    "pair_bootstrap_draws": 30000,
+    "pair_sign_flip_draws": 30000,
+    "region_cluster_bootstrap_draws": 30000,
+    "configuration_pass_rule": "Practical Core minus configuration mean difference >=0.015 AND pair-bootstrap 95% lower >0 AND pair sign-flip p<0.05 AND 12-region cluster-bootstrap 95% lower >0 on all 192 declared pairs",
+    "biosurvey_family_pass_rule": "all six predeclared method-resolution configurations pass",
+    "claim_if_passed": "For this focal-taxon regional recovery objective and five-site budget, Practical Core outperformed all predeclared native biosurvey configurations across the two frozen terrain-grid resolutions",
+    "claim_if_failed": "report every configuration; do not claim general superiority over biosurvey or existing survey-planning tools"
+  },
+  "relationship_to_grts_claim": "broad existing-tool superiority requires both the separately frozen GRTS-family guardrail and this biosurvey-family gate to pass",
+  "no_retuning_after_outcome": true,
+  "fingerprint": "33881b4176c4c8bcda5485189eb5b8a22ee495d766b90c4e159a584265710b2b"
+}
