@@ -1,4 +1,5 @@
 name: ACSP practical rescue official GRTS development gate
+# Metadata-only rerun: current protocol self-hash is verified canonical 950f7d...bddf2.
 
 on:
   workflow_dispatch:
