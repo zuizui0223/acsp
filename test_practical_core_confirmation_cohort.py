@@ -29,6 +29,14 @@ class PracticalCoreConfirmationCohortTests(unittest.TestCase):
             "acsp_practical_core - official_grts_proportional_local_mindis10km",
         )
 
+    def test_cli_protocol_argument_maps_to_run_signature(self):
+        args = sampler.parser().parse_args(
+            ["--protocol", "validation/example.json", "--output", "example-output"]
+        )
+        self.assertEqual(args.protocol_path, Path("validation/example.json"))
+        self.assertEqual(args.output, Path("example-output"))
+        self.assertNotIn("protocol", vars(args))
+
     def test_record_strata_are_balanced(self):
         frame = pd.DataFrame({
             "speciesKey": np.arange(40),
