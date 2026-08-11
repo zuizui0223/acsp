@@ -57,6 +57,12 @@ from .planning import (
     zone_agreement_summary,
 )
 from .modeling import DEFAULT_ENSEMBLE_ALGORITHMS, make_classifier, predict_equal_weight_ensemble
+from .practical_core import (
+    PRACTICAL_CORE_FINGERPRINT,
+    PRACTICAL_CORE_PROTOCOL_ID,
+    PracticalCorePolicy,
+    select_practical_core,
+)
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
@@ -78,6 +84,9 @@ __all__ = [
     "ComparatorFold",
     "DecisionBaselineConfig",
     "ENVIRONMENTAL_METHODS",
+    "PRACTICAL_CORE_FINGERPRINT",
+    "PRACTICAL_CORE_PROTOCOL_ID",
+    "PracticalCorePolicy",
     "StandardBaselineProtocol",
     "UNIVERSAL_METHODS",
     "ValidatedCorePolicy",
@@ -111,6 +120,7 @@ __all__ = [
     "select_environmental_farthest",
     "select_geographic_farthest",
     "select_heldout_greedy_oracle",
+    "select_practical_core",
     "select_score_top_k",
     "select_sdm_top_k",
     "select_validated_core",
