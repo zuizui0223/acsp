@@ -13,6 +13,10 @@ on:
       - test_practical_rescue_grts_development.py
       - .github/workflows/practical-rescue-grts-development.yml
 
+concurrency:
+  group: practical-rescue-grts-development-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   actions: read
