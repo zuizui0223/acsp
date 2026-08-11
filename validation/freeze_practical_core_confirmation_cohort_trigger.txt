@@ -4,5 +4,8 @@ Artifact ID: 9119529058
 Artifact digest: sha256:1859228abd985c2ca73afee5a7bbeea1eab348ace73c7f54a8d13c871b650806
 Protocol fingerprint: cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9
 Practical Core fingerprint: 3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905
+Freeze attempt: 2
+
+Freeze attempt 1 confirmed all four file SHA256 hashes, then stopped only because the audit helper imported pandas on a minimal runner. This retry uses Python stdlib csv/json only and does not redraw the cohort.
 
 No new cohort draw is allowed in this freeze step; it must only download, hash-check, audit, and commit the exact successful artifact.
