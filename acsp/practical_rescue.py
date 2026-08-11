@@ -16,15 +16,27 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 EARTH_RADIUS_KM = 6_371.0088
 PRACTICAL_RESCUE_PROTOCOL_ID = "acsp-practical-local-anchor-rescue-development-v1"
-PRACTICAL_RESCUE_PROTOCOL_FINGERPRINT = "03a6641b488c2aa2d5d2abe89b10798754e3b1c85428d1a2b3d9b723093f4c3a"
+PRACTICAL_RESCUE_PROTOCOL_FINGERPRINT = "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48"
 KNOWN_CANDIDATE_PATTERN = "occurrence-supported|known-location|known anchor"
 RESCUE_NUMERIC_FEATURES: tuple[str, ...] = (
-    "local_score", "local_rank_pct", "geo_nn_km", "geo_avg_km",
-    "dist_local1_km", "neighbor_local_mass_10km", "neighbor_count_10km",
-    "candidate_pool", "pool_local_sd", "pool_local_q90",
-    "integrated_support_score", "survey_gap_score", "environmental_novelty",
-    "access_score", "evidence_agreement_score", "evidence_divergence_score",
-    "distance_excluded_validation_score", "component_macro_model_score",
+    "local_score",
+    "local_rank_pct",
+    "geo_nn_km",
+    "geo_avg_km",
+    "dist_local1_km",
+    "neighbor_local_mass_10km",
+    "neighbor_count_10km",
+    "candidate_pool",
+    "pool_local_sd",
+    "pool_local_q90",
+    "integrated_support_score",
+    "survey_gap_score",
+    "environmental_novelty",
+    "access_score",
+    "evidence_agreement_score",
+    "evidence_divergence_score",
+    "distance_excluded_validation_score",
+    "component_macro_model_score",
 )
 RESCUE_CATEGORICAL_FEATURES: tuple[str, ...] = ("taxon_group", "candidate_type")
 
@@ -55,7 +67,8 @@ def _stable_candidate_id(frame: pd.DataFrame) -> pd.Series:
             return frame[column].astype(str)
     return pd.Series(
         [f"candidate-{index + 1:06d}" for index in range(len(frame))],
-        index=frame.index, dtype=str,
+        index=frame.index,
+        dtype=str,
     )
 
 
@@ -98,10 +111,7 @@ def prepare_rescue_candidates(
     return work
 
 
-def local_order(
-    candidates: pd.DataFrame,
-    score_col: str = "component_local_habitat_score",
-) -> list[int]:
+def local_order(candidates: pd.DataFrame, score_col: str = "component_local_habitat_score") -> list[int]:
     if candidates.empty:
         return []
     if score_col not in candidates.columns:
@@ -114,7 +124,8 @@ def local_order(
         "stable_id": stable.to_numpy(str),
     }).sort_values(
         ["score", "stable_id", "index"],
-        ascending=[False, True, True], kind="mergesort",
+        ascending=[False, True, True],
+        kind="mergesort",
     )
     return order["index"].astype(int).tolist()
 
@@ -170,9 +181,14 @@ def build_rescue_features(
     features["pool_local_sd"] = float(np.std(local))
     features["pool_local_q90"] = float(np.quantile(local, 0.90))
     for column in (
-        "integrated_support_score", "survey_gap_score", "environmental_novelty",
-        "access_score", "evidence_agreement_score", "evidence_divergence_score",
-        "distance_excluded_validation_score", "component_macro_model_score",
+        "integrated_support_score",
+        "survey_gap_score",
+        "environmental_novelty",
+        "access_score",
+        "evidence_agreement_score",
+        "evidence_divergence_score",
+        "distance_excluded_validation_score",
+        "component_macro_model_score",
     ):
         source = work[column] if column in work.columns else pd.Series(np.nan, index=work.index)
         features[column] = pd.to_numeric(source, errors="coerce")
@@ -197,8 +213,11 @@ def make_rescue_estimator() -> Pipeline:
     return Pipeline([
         ("preprocess", preprocess),
         ("model", GradientBoostingRegressor(
-            n_estimators=100, max_depth=2, min_samples_leaf=10,
-            loss="huber", random_state=42,
+            n_estimators=100,
+            max_depth=2,
+            min_samples_leaf=10,
+            loss="huber",
+            random_state=42,
         )),
     ])
 
@@ -240,19 +259,26 @@ def select_local_anchor_rescue(
         remaining = [index for index in range(len(work)) if index not in selected]
         if not remaining:
             break
-        scored: list[tuple[float, float, float, str, int, float]] = []
+        candidates_with_scores: list[tuple[float, float, float, str, int, float]] = []
         for index in remaining:
             nearest = float(np.min(distance[index, selected]))
             multiplier = 1.0 - math.exp(-nearest / float(cfg.diversity_scale_km))
             score = float(predictions[index]) * multiplier
-            scored.append((score, float(predictions[index]), float(local[index]), str(stable[index]), int(index), multiplier))
-        best_score = max(item[0] for item in scored)
-        ties = [item for item in scored if math.isclose(item[0], best_score, rel_tol=0.0, abs_tol=1e-12)]
-        best_prediction = max(item[1] for item in ties)
-        ties = [item for item in ties if math.isclose(item[1], best_prediction, rel_tol=0.0, abs_tol=1e-12)]
-        best_local = max(item[2] for item in ties)
-        ties = [item for item in ties if math.isclose(item[2], best_local, rel_tol=0.0, abs_tol=1e-12)]
-        chosen = min(ties, key=lambda item: (item[3], item[4]))
+            candidates_with_scores.append((
+                score,
+                float(predictions[index]),
+                float(local[index]),
+                str(stable[index]),
+                int(index),
+                multiplier,
+            ))
+        best_score = max(item[0] for item in candidates_with_scores)
+        score_ties = [item for item in candidates_with_scores if math.isclose(item[0], best_score, rel_tol=0.0, abs_tol=1e-12)]
+        best_prediction = max(item[1] for item in score_ties)
+        prediction_ties = [item for item in score_ties if math.isclose(item[1], best_prediction, rel_tol=0.0, abs_tol=1e-12)]
+        best_local = max(item[2] for item in prediction_ties)
+        local_ties = [item for item in prediction_ties if math.isclose(item[2], best_local, rel_tol=0.0, abs_tol=1e-12)]
+        chosen = min(local_ties, key=lambda item: (item[3], item[4]))
         selected.append(chosen[4])
         roles.append("learned_rescue")
         selection_scores.append(chosen[0])
