@@ -13,10 +13,14 @@ on:
       - aggregate_practical_core_confirmation.py
       - execute_aggregate_practical_core_confirmation.py
       - evaluate_practical_core_claim_guardrails.py
+      - score_practical_core_secondary_sdm.py
+      - aggregate_practical_core_secondary_sdm.py
       - validation/acsp_practical_core_claim_guardrail.json
+      - validation/acsp_practical_core_secondary_sdm_protocol.json
       - test_practical_core_confirmation_runner.py
       - test_practical_core_production_aggregator.py
       - test_practical_core_claim_guardrails.py
+      - test_practical_core_secondary_sdm.py
       - .github/workflows/practical-core-confirmation-runner.yml
   pull_request:
     paths:
@@ -27,10 +31,14 @@ on:
       - aggregate_practical_core_confirmation.py
       - execute_aggregate_practical_core_confirmation.py
       - evaluate_practical_core_claim_guardrails.py
+      - score_practical_core_secondary_sdm.py
+      - aggregate_practical_core_secondary_sdm.py
       - validation/acsp_practical_core_claim_guardrail.json
+      - validation/acsp_practical_core_secondary_sdm_protocol.json
       - test_practical_core_confirmation_runner.py
       - test_practical_core_production_aggregator.py
       - test_practical_core_claim_guardrails.py
+      - test_practical_core_secondary_sdm.py
       - .github/workflows/practical-core-confirmation-runner.yml
 
 permissions:
@@ -55,15 +63,19 @@ jobs:
             aggregate_practical_core_confirmation.py \
             execute_aggregate_practical_core_confirmation.py \
             evaluate_practical_core_claim_guardrails.py \
+            score_practical_core_secondary_sdm.py \
+            aggregate_practical_core_secondary_sdm.py \
             test_practical_core_confirmation_runner.py \
             test_practical_core_production_aggregator.py \
-            test_practical_core_claim_guardrails.py
-      - name: Run leakage, inference, and claim contract tests
+            test_practical_core_claim_guardrails.py \
+            test_practical_core_secondary_sdm.py
+      - name: Run leakage, inference, claim, and secondary-SDM contract tests
         run: |
           python -m unittest -v \
             test_practical_core_confirmation_runner.py \
             test_practical_core_production_aggregator.py \
-            test_practical_core_claim_guardrails.py
+            test_practical_core_claim_guardrails.py \
+            test_practical_core_secondary_sdm.py
       - name: Audit frozen fingerprints in source
         run: |
           python - <<'PY'
@@ -74,6 +86,7 @@ jobs:
               (Path("validation/acsp_practical_core_protocol.json"), "fingerprint", "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"),
               (Path("validation/acsp_practical_core_untouched_confirmation_protocol.json"), "protocol_fingerprint", "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"),
               (Path("validation/acsp_practical_core_claim_guardrail.json"), "fingerprint", "e654d7e0c652effa938f7cd04235156fab9f9c3da2c369200cfa120453eebdfc"),
+              (Path("validation/acsp_practical_core_secondary_sdm_protocol.json"), "fingerprint", "50fac79ce26378a56aaf497564ce85574986580096275c4d26de67170e6f3d63"),
           ]
           for path, field, expected in checks:
               payload = json.loads(path.read_text())
