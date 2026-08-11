@@ -1,1 +1,0 @@
-Append the required Practical Rescue development entry only after verifying the current GRTS protocol canonical self-hash is 950f7d...bddf2. Do not modify scientific payload or fingerprint references. Remove this marker and the one-shot helper after success.

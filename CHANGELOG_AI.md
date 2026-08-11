@@ -1,5 +1,30 @@
 # AI Change Log
 
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development and GRTS gate
+
+Changed files:
+- `acsp/practical_rescue.py`
+- `benchmark_practical_rescue_development.py`
+- `benchmark_practical_rescue_grts_pair.py`
+- `aggregate_practical_rescue_grts_development.py`
+- `fit_practical_rescue_final_model.py`
+- `benchmark_methods/grts_rescue_primary_batch.R`
+- rescue/GRTS validation protocols, tests, and workflows
+
+Summary:
+- Replaced the unsuccessful fully nested v2.1 router track with a Top-5 local-anchor + learned-rescue policy.
+- Frozen 48-pair cross-fit evidence was +0.02154 over local-only (95% CI +0.00728 to +0.03760; sign-flip p=0.00440). The unchanged policy remained positive on the locked 24-pair extension (+0.01356); combined 72-pair gain was +0.01888 (95% CI +0.00677 to +0.03221; p=0.00350), passing the predeclared local-only development gate.
+- Exact Python/scikit-learn/pandas/NumPy runtime and all 72 development taxa are frozen before strong-comparator evaluation.
+- Added a predeclared official `spsurvey::grts` 5.6.1 development gate on the same eligible finite candidate frame: proportional local evidence, requested 10-km minimum distance, Top-5, 50 draws per fold, with GRTS selections frozen before held-out coordinates are loaded.
+- SDM remains optional; SDM suitability, held-out outcomes/coordinates, scientific name, absolute region identity, and GRTS outputs are excluded from inference-time rescue features.
+- The prior 192-pair Practical Core aggregate is not biological evidence because pair jobs failed during R dependency setup before analysis and missing artifacts were aggregated as zeros.
+- Promotion remains blocked until the official GRTS development gate passes, the unchanged 72-pair model is frozen, and a genuinely fresh excluded-taxon confirmation cohort passes. Broad existing-tool superiority additionally requires the native biosurvey end-to-end gate.
+
+Features preserved:
+- Observed-data candidate generation remains primary; SDM/SSDM remain optional.
+- Existing map-first UI, CSV-upload parity, candidate exports, VIF/spatial-validation behavior, genus/SSDM workflows, and prospective field-validation goals are unchanged.
+- The 10-km retrospective endpoint remains a regional candidate-zone validation claim, not exact-site occupancy, access, detectability, phenology, or field-effort evidence.
+
 ## 2026-07-03 - Codex (OpenAI) - Mobile map rendering performance
 
 Summary:
