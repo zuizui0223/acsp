@@ -40,13 +40,17 @@ jobs:
           echo "fe20fbe02c85af344133cd0feb62a1319ff5285ede84ccaebc3fd23c779cc02d  predeclared_taxon_region_pairs.csv" | sha256sum -c -
           echo "9cdf6cbedbddf5d37299dc1b9deddd67574543d7fce62ad69939268653fd495f  sampling_frame_audit.csv" | sha256sum -c -
           python - <<'PY'
+          import csv
           import json
-          import pandas as pd
+          from collections import Counter
           from pathlib import Path
 
           manifest = json.loads(Path("cohort_manifest.json").read_text())
-          cohort = pd.read_csv("predeclared_taxon_region_pairs.csv")
-          audit = pd.read_csv("sampling_frame_audit.csv")
+          with open("predeclared_taxon_region_pairs.csv", newline="", encoding="utf-8") as handle:
+              cohort = list(csv.DictReader(handle))
+          with open("sampling_frame_audit.csv", newline="", encoding="utf-8") as handle:
+              audit = list(csv.DictReader(handle))
+
           assert manifest["status"] == "ready"
           assert manifest["protocol_fingerprint"] == "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"
           assert manifest["practical_core_fingerprint"] == "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
@@ -56,15 +60,22 @@ jobs:
           assert set(manifest["region_cell_counts"].values()) == {16}
           assert set(manifest["record_count_stratum_counts"].values()) == {48}
           assert manifest["minimum_available_unused_in_cell_stratum"] == 35
-          assert manifest["outcomes_inspected"] is False
-          assert manifest["occurrence_rows_fetched_for_declared_taxa"] is False
-          assert manifest["candidate_generation_run"] is False
-          assert manifest["practical_core_run"] is False
-          assert manifest["grts_run"] is False
-          assert manifest["sdm_fitting_run"] is False
-          assert manifest["heldout_recovery_run"] is False
-          assert manifest["taxon_replacement_after_declaration_allowed"] is False
-          assert len(cohort) == 192 and cohort["scientific_name"].nunique() == 192
+          for key in (
+              "outcomes_inspected",
+              "occurrence_rows_fetched_for_declared_taxa",
+              "candidate_generation_run",
+              "practical_core_run",
+              "grts_run",
+              "sdm_fitting_run",
+              "heldout_recovery_run",
+              "taxon_replacement_after_declaration_allowed",
+          ):
+              assert manifest[key] is False, key
+          assert len(cohort) == 192
+          assert len({row["scientific_name"] for row in cohort}) == 192
+          assert Counter(row["taxon_group"] for row in cohort) == {"animal": 96, "plant": 96}
+          assert set(Counter(row["region_name"] for row in cohort).values()) == {16}
+          assert set(Counter(row["record_count_stratum"] for row in cohort).values()) == {48}
           assert len(audit) == 96
           PY
       - name: Commit exact cohort snapshot
@@ -91,6 +102,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "${TARGET}"
-          git diff --cached --exit-code && { echo "No cohort files staged" >&2; exit 1; } || true
+          if git diff --cached --quiet; then
+            echo "No cohort files staged" >&2
+            exit 1
+          fi
           git commit -m "Freeze exact 192-pair untouched Practical Core cohort"
           git push origin HEAD:benchmark/practical-core-confirmation-cohort
