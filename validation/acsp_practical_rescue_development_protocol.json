@@ -1,0 +1,110 @@
+{
+  "protocol_id": "acsp-practical-local-anchor-rescue-development-v1",
+  "status": "development_candidate_frozen_before_former_sdm_24_pair_extension_evaluation",
+  "decision_object": "Top-5 finite survey set",
+  "policy": {
+    "top_k": 5,
+    "local_anchor_count": 1,
+    "local_anchor_rule": "highest finite component_local_habitat_score with stable candidate-id tie break; missing local score ranks below finite values",
+    "rescue_slots": 4,
+    "rescue_model_target": "candidate fraction of all held-out occurrences covered within 10 km that remain uncovered by the single local anchor",
+    "rescue_model_family": "sklearn GradientBoostingRegressor",
+    "rescue_model_parameters": {
+      "n_estimators": 100,
+      "max_depth": 2,
+      "min_samples_leaf": 10,
+      "loss": "huber",
+      "random_state": 42
+    },
+    "rescue_diversity": "max(predicted_rescue_gain,0) * (1-exp(-nearest_selected_distance_km/10))",
+    "diversity_scale_km": 10.0,
+    "selection_tie_break": "higher diversity-adjusted rescue score, then higher raw predicted rescue gain, then higher local score, then stable candidate/site id",
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor"
+  },
+  "inference_features": {
+    "numeric": [
+      "local_score",
+      "local_rank_pct",
+      "geo_nn_km",
+      "geo_avg_km",
+      "dist_local1_km",
+      "neighbor_local_mass_10km",
+      "neighbor_count_10km",
+      "candidate_pool",
+      "pool_local_sd",
+      "pool_local_q90",
+      "integrated_support_score",
+      "survey_gap_score",
+      "environmental_novelty",
+      "access_score",
+      "evidence_agreement_score",
+      "evidence_divergence_score",
+      "distance_excluded_validation_score",
+      "component_macro_model_score"
+    ],
+    "categorical": [
+      "taxon_group",
+      "candidate_type"
+    ],
+    "numeric_preprocess": "median imputation then standard scaling within model training set",
+    "categorical_preprocess": "one-hot encoding with unknown categories ignored",
+    "forbidden": [
+      "held-out coordinates",
+      "covered_heldout_ids",
+      "heldout_distances_km",
+      "all_heldout_ids",
+      "held-out recovery",
+      "scientific name",
+      "absolute region identity",
+      "SDM suitability",
+      "GRTS output"
+    ]
+  },
+  "development_design": {
+    "model_selection_pairs": 48,
+    "model_selection_runs": [
+      30091294481,
+      30091305081
+    ],
+    "model_selection_artifact_digests": [
+      "sha256:fd5c8e1acd359e4941d1767bc516b72eff973acf12bc47112864023ce033c0bc",
+      "sha256:08066b7f893beda5faec5c953b4bedac4f424f30366c4dd427a303e8fe8807d3"
+    ],
+    "model_selection_validation": "8-fold GroupKFold by complete taxon-region pair; every candidate prediction comes from a model excluding its pair",
+    "locked_extension_pairs": 24,
+    "locked_extension_source_run": 31238895064,
+    "locked_extension_role": "apply the unchanged 48-pair-selected policy after fitting on all 48 model-selection pairs; do not use extension outcomes to choose features, model or policy",
+    "combined_development_pairs": 72,
+    "note": "the former SDM cohort is no longer confirmatory for ACSP because its outcomes were previously inspected for another comparison; it is used only as a locked extension development set for this new policy",
+    "model_selection_result": {
+      "mean_difference": 0.021541730922882793,
+      "bootstrap_95ci": [
+        0.007282893735039003,
+        0.037599103973659516
+      ],
+      "sign_flip_p": 0.004399853338222059,
+      "positive_pairs": 21,
+      "negative_pairs": 7,
+      "tied_pairs": 20,
+      "animal_mean_gain": 0.02695745986986396,
+      "plant_mean_gain": 0.019736487940555686,
+      "warning": "development/model-selection evidence only; all policy choices above were selected before the locked 24-pair extension evaluation"
+    }
+  },
+  "development_gate": {
+    "primary_contrast": "local_anchor_rescue - local_evidence_top_k",
+    "minimum_absolute_recall_gain": 0.015,
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "combined_gate": "72-pair mean gain >= 0.015 AND pair-bootstrap 95% lower bound > 0 AND sign-flip p < 0.05",
+    "extension_guardrail": "report the 24-pair locked-extension gain separately; reversal or material failure blocks freezing a final all-72 model",
+    "next_gate": "after this gate, refit the unchanged model on all 72 development pairs and compare the fixed policy against official spsurvey::grts proportional-local + requested 10-km mindis on development candidate pools before any new confirmation cohort is sampled"
+  },
+  "future_confirmation": {
+    "fresh_taxa_required": true,
+    "exclude_all_72_development_taxa": true,
+    "exclude_20260811_practical_core_192_taxa": true,
+    "no_retuning_after_outcome": true
+  },
+  "protocol_fingerprint": "03a6641b488c2aa2d5d2abe89b10798754e3b1c85428d1a2b3d9b723093f4c3a"
+}
