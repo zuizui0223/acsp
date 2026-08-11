@@ -39,12 +39,14 @@ jobs:
           acsp/comparator_export.py
           acsp/decision_baselines.py
           acsp/planning.py
+          acsp/practical_v2.py
           acsp/modeling.py
           acsp/sdm.py
           acsp/validated_core.py
           acsp_discover.py
           aggregate_sdm_topk_benchmark.py
           audit_random_validation_stability.py
+          benchmark_acsp_v2_development.py
           execute_sdm_topk_pair.py
           export_standard_baseline_folds.py
           predeclare_sdm_topk_cohort.py
