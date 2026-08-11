@@ -1,4 +1,4 @@
-name: Finalize Practical Rescue development metadata
+name: Append Practical Rescue AI changelog
 
 on:
   push:
@@ -11,45 +11,26 @@ permissions:
   contents: write
 
 jobs:
-  finalize:
+  append:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Correct self-fingerprint references and prepend required AI changelog
+      - name: Validate frozen protocol, prepend changelog, and remove helper
         env:
           CHANGELOG_ENTRY_B64: CiMjIDIwMjYtMDgtMTIgLSBHUFQtNS42IFNvbCAoT3BlbkFJKSAtIExvY2FsLWFuY2hvciByZXNjdWUgZGV2ZWxvcG1lbnQgYW5kIEdSVFMgZ2F0ZQoKQ2hhbmdlZCBmaWxlczoKLSBgYWNzcC9wcmFjdGljYWxfcmVzY3VlLnB5YAotIGBiZW5jaG1hcmtfcHJhY3RpY2FsX3Jlc2N1ZV9kZXZlbG9wbWVudC5weWAKLSBgYmVuY2htYXJrX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19wYWlyLnB5YAotIGBhZ2dyZWdhdGVfcHJhY3RpY2FsX3Jlc2N1ZV9ncnRzX2RldmVsb3BtZW50LnB5YAotIGBmaXRfcHJhY3RpY2FsX3Jlc2N1ZV9maW5hbF9tb2RlbC5weWAKLSBgYmVuY2htYXJrX21ldGhvZHMvZ3J0c19yZXNjdWVfcHJpbWFyeV9iYXRjaC5SYAotIHJlc2N1ZS9HUlRTIHZhbGlkYXRpb24gcHJvdG9jb2xzLCB0ZXN0cywgYW5kIHdvcmtmbG93cwoKU3VtbWFyeToKLSBSZXBsYWNlZCB0aGUgdW5zdWNjZXNzZnVsIGZ1bGx5IG5lc3RlZCB2Mi4xIHJvdXRlciB0cmFjayB3aXRoIGEgVG9wLTUgbG9jYWwtYW5jaG9yICsgbGVhcm5lZC1yZXNjdWUgcG9saWN5LgotIEZyb3plbiA0OC1wYWlyIGNyb3NzLWZpdCBldmlkZW5jZSB3YXMgKzAuMDIxNTQgb3ZlciBsb2NhbC1vbmx5ICg5NSUgQ0kgKzAuMDA3MjggdG8gKzAuMDM3NjA7IHNpZ24tZmxpcCBwPTAuMDA0NDApLiBUaGUgdW5jaGFuZ2VkIHBvbGljeSByZW1haW5lZCBwb3NpdGl2ZSBvbiB0aGUgbG9ja2VkIDI0LXBhaXIgZXh0ZW5zaW9uICgrMC4wMTM1Nik7IGNvbWJpbmVkIDcyLXBhaXIgZ2FpbiB3YXMgKzAuMDE4ODggKDk1JSBDSSArMC4wMDY3NyB0byArMC4wMzIyMTsgcD0wLjAwMzUwKSwgcGFzc2luZyB0aGUgcHJlZGVjbGFyZWQgbG9jYWwtb25seSBkZXZlbG9wbWVudCBnYXRlLgotIEV4YWN0IFB5dGhvbi9zY2lraXQtbGVhcm4vcGFuZGFzL051bVB5IHJ1bnRpbWUgYW5kIGFsbCA3MiBkZXZlbG9wbWVudCB0YXhhIGFyZSBmcm96ZW4gYmVmb3JlIHN0cm9uZy1jb21wYXJhdG9yIGV2YWx1YXRpb24uCi0gQWRkZWQgYSBwcmVkZWNsYXJlZCBvZmZpY2lhbCBgc3BzdXJ2ZXk6OmdydHNgIDUuNi4xIGRldmVsb3BtZW50IGdhdGUgb24gdGhlIHNhbWUgZWxpZ2libGUgZmluaXRlIGNhbmRpZGF0ZSBmcmFtZTogcHJvcG9ydGlvbmFsIGxvY2FsIGV2aWRlbmNlLCByZXF1ZXN0ZWQgMTAta20gbWluaW11bSBkaXN0YW5jZSwgVG9wLTUsIDUwIGRyYXdzIHBlciBmb2xkLCB3aXRoIEdSVFMgc2VsZWN0aW9ucyBmcm96ZW4gYmVmb3JlIGhlbGQtb3V0IGNvb3JkaW5hdGVzIGFyZSBsb2FkZWQuCi0gU0RNIHJlbWFpbnMgb3B0aW9uYWw7IFNETSBzdWl0YWJpbGl0eSwgaGVsZC1vdXQgb3V0Y29tZXMvY29vcmRpbmF0ZXMsIHNjaWVudGlmaWMgbmFtZSwgYWJzb2x1dGUgcmVnaW9uIGlkZW50aXR5LCBhbmQgR1JUUyBvdXRwdXRzIGFyZSBleGNsdWRlZCBmcm9tIGluZmVyZW5jZS10aW1lIHJlc2N1ZSBmZWF0dXJlcy4KLSBUaGUgcHJpb3IgMTkyLXBhaXIgUHJhY3RpY2FsIENvcmUgYWdncmVnYXRlIGlzIG5vdCBiaW9sb2dpY2FsIGV2aWRlbmNlIGJlY2F1c2UgcGFpciBqb2JzIGZhaWxlZCBkdXJpbmcgUiBkZXBlbmRlbmN5IHNldHVwIGJlZm9yZSBhbmFseXNpcyBhbmQgbWlzc2luZyBhcnRpZmFjdHMgd2VyZSBhZ2dyZWdhdGVkIGFzIHplcm9zLgotIFByb21vdGlvbiByZW1haW5zIGJsb2NrZWQgdW50aWwgdGhlIG9mZmljaWFsIEdSVFMgZGV2ZWxvcG1lbnQgZ2F0ZSBwYXNzZXMsIHRoZSB1bmNoYW5nZWQgNzItcGFpciBtb2RlbCBpcyBmcm96ZW4sIGFuZCBhIGdlbnVpbmVseSBmcmVzaCBleGNsdWRlZC10YXhvbiBjb25maXJtYXRpb24gY29ob3J0IHBhc3Nlcy4gQnJvYWQgZXhpc3RpbmctdG9vbCBzdXBlcmlvcml0eSBhZGRpdGlvbmFsbHkgcmVxdWlyZXMgdGhlIG5hdGl2ZSBiaW9zdXJ2ZXkgZW5kLXRvLWVuZCBnYXRlLgoKRmVhdHVyZXMgcHJlc2VydmVkOgotIE9ic2VydmVkLWRhdGEgY2FuZGlkYXRlIGdlbmVyYXRpb24gcmVtYWlucyBwcmltYXJ5OyBTRE0vU1NETSByZW1haW4gb3B0aW9uYWwuCi0gRXhpc3RpbmcgbWFwLWZpcnN0IFVJLCBDU1YtdXBsb2FkIHBhcml0eSwgY2FuZGlkYXRlIGV4cG9ydHMsIFZJRi9zcGF0aWFsLXZhbGlkYXRpb24gYmVoYXZpb3IsIGdlbnVzL1NTRE0gd29ya2Zsb3dzLCBhbmQgcHJvc3BlY3RpdmUgZmllbGQtdmFsaWRhdGlvbiBnb2FscyBhcmUgdW5jaGFuZ2VkLgotIFRoZSAxMC1rbSByZXRyb3NwZWN0aXZlIGVuZHBvaW50IHJlbWFpbnMgYSByZWdpb25hbCBjYW5kaWRhdGUtem9uZSB2YWxpZGF0aW9uIGNsYWltLCBub3QgZXhhY3Qtc2l0ZSBvY2N1cGFuY3ksIGFjY2VzcywgZGV0ZWN0YWJpbGl0eSwgcGhlbm9sb2d5LCBvciBmaWVsZC1lZmZvcnQgZXZpZGVuY2UuCg==
         run: |
           python - <<'PY'
           import base64, hashlib, json, os
           from pathlib import Path
-
-          old = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
-          new = "47afc2acf0807998ca13b04cce72e71cea2baffff7df7b33fb9b66a82559885b"
-          paths = [
-              Path("validation/acsp_practical_rescue_grts_development_protocol.json"),
-              Path("benchmark_practical_rescue_grts_pair.py"),
-              Path("aggregate_practical_rescue_grts_development.py"),
-              Path(".github/workflows/practical-rescue-grts-development.yml"),
-              Path("fit_practical_rescue_final_model.py"),
-              Path(".github/workflows/practical-rescue-final-refit.yml"),
-          ]
-          replacements = 0
-          for path in paths:
-              text = path.read_text(encoding="utf-8")
-              count = text.count(old)
-              replacements += count
-              path.write_text(text.replace(old, new), encoding="utf-8")
-          assert replacements >= 5, replacements
-
-          protocol_path = paths[0]
+          protocol_path = Path("validation/acsp_practical_rescue_grts_development_protocol.json")
           payload = json.loads(protocol_path.read_text(encoding="utf-8"))
           stored = payload.pop("protocol_fingerprint")
           calculated = hashlib.sha256(
               json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
           ).hexdigest()
-          assert stored == calculated == new, (stored, calculated)
+          assert stored == calculated == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2", (stored, calculated)
 
           changelog = Path("CHANGELOG_AI.md")
           original = changelog.read_text(encoding="utf-8")
@@ -64,14 +45,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/append-practical-rescue-changelog.yml
           git rm validation/append_practical_rescue_changelog_trigger.txt
-          git add CHANGELOG_AI.md \
-            validation/acsp_practical_rescue_grts_development_protocol.json \
-            benchmark_practical_rescue_grts_pair.py \
-            aggregate_practical_rescue_grts_development.py \
-            .github/workflows/practical-rescue-grts-development.yml \
-            fit_practical_rescue_final_model.py \
-            .github/workflows/practical-rescue-final-refit.yml
+          git add CHANGELOG_AI.md
           git diff --cached --check
-          git commit -m "Finalize Practical Rescue GRTS development freeze"
+          git commit -m "Document Practical Rescue development and GRTS promotion gate"
           git pull --rebase origin agent/practical-coverage-v3-development
           git push origin HEAD:agent/practical-coverage-v3-development
