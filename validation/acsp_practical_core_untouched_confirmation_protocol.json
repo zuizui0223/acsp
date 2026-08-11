@@ -1,0 +1,121 @@
+{
+  "protocol_id": "acsp-practical-core-untouched-confirmation-v1",
+  "status": "frozen_before_cohort_sampling_candidate_generation_or_outcome_inspection",
+  "practical_core": {
+    "protocol_id": "acsp-practical-local-core-v1",
+    "protocol_fingerprint": "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905",
+    "top_k": 5,
+    "recovery_radius_km": 10.0,
+    "selection": "Top-5 by component_local_habitat_score after known-location filtering; identical plant and animal rule",
+    "promotion_status_before_confirmation": "development_only"
+  },
+  "cohort": {
+    "pair_count": 192,
+    "taxon_groups": ["plant", "animal"],
+    "region_cell_count": 12,
+    "record_count_strata": 4,
+    "taxa_per_region_group_record_stratum": 2,
+    "seed": 20260811,
+    "minimum_records": 20,
+    "facet_limit": 400,
+    "records_per_pair": 150,
+    "sampling_rule": "for every fixed Japanese region cell x plant/animal x within-frame record-count quartile, sample exactly two previously unused species; no substitution across cells/strata and no replacement after declaration"
+  },
+  "exclusion_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+    "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv"
+  ],
+  "explicit_exclusion_prefixes": ["Campanula microdonta"],
+  "outer_validation": {
+    "block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "repeats": 5,
+    "fold_seed_base": 20260811,
+    "candidate_generation": "build_automatic_discover_bundle(..., candidate_generation_only=True) using training occurrences only",
+    "candidate_scoring": "integrated_candidate_scores(..., exclude_occurrence_derived=True) to construct auditable components; practical selector reads only component_local_habitat_score",
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "failure_rule": "declared pair/fold failures remain in intention-to-evaluate denominator as zero for operational methods; taxa are never replaced after cohort freeze"
+  },
+  "same_pool_methods": [
+    "acsp_practical_core",
+    "official_grts_equal",
+    "official_grts_proportional_local",
+    "official_grts_proportional_local_mindis10km",
+    "frozen_acsp_v1_historical",
+    "fitted_sdm_top_k_when_eligible",
+    "geographic_maximin",
+    "environmental_maximin_when_eligible",
+    "dual_space_maximin_when_eligible",
+    "same_pool_random_mean",
+    "heldout_greedy_oracle_nonoperational"
+  ],
+  "grts": {
+    "implementation": "spsurvey::grts",
+    "package": "spsurvey",
+    "package_version": "5.6.1",
+    "frame": "identical finite ACSP candidate rows after training-only generation and known-location exclusion",
+    "draws_per_fold": 50,
+    "seed_base": 20260811,
+    "seed_formula": "seed_base + pair_id*100000 + repeat*1000 + draw_index",
+    "equal": {"seltype": "equal", "mindis_km": 0.0},
+    "proportional_local": {"seltype": "proportional", "aux_var": "pmax(component_local_habitat_score,1e-6)", "mindis_km": 0.0},
+    "proportional_local_mindis10km": {"seltype": "proportional", "aux_var": "pmax(component_local_habitat_score,1e-6)", "mindis_km": 10.0, "maxtry": 20},
+    "replacement_sites": 3,
+    "recovery_estimand": "mean Top-5 held-out recovery over 50 predeclared GRTS draws per fold",
+    "mindis_failure_handling": "retain official grts output and warning/audit; do not tune mindis or rerun with a favorable threshold"
+  },
+  "fitted_sdm": {
+    "status": "secondary_decision_comparator_not_superiority_gate",
+    "implementation": "unchanged production-aligned fitted-SDM Top-5 contract from validation/sdm_topk_protocol.json",
+    "report": "mean recall difference, pair interval, sign-flip p, and selected-set overlap/Jaccard with Practical Core",
+    "interpretation": "used to distinguish a finite occurrence-conditioned survey decision from suitability ranking; not required to be inferior for ACSP to be useful"
+  },
+  "inference": {
+    "unit": "taxon-region pair",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "minimum_practical_absolute_recall_gain": 0.015,
+    "primary_gate": "acsp_practical_core - official_grts_proportional_local_mindis10km",
+    "superiority_gate": "mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05",
+    "secondary_contrasts": [
+      "acsp_practical_core - official_grts_proportional_local",
+      "acsp_practical_core - official_grts_equal",
+      "acsp_practical_core - frozen_acsp_v1_historical",
+      "acsp_practical_core - fitted_sdm_top_k_when_eligible",
+      "acsp_practical_core - same_pool_random_mean"
+    ],
+    "claim_rule": "same-pool superiority is not claimed unless the primary GRTS gate passes on the complete untouched cohort; negative/equivalent results are retained and no retuning is permitted"
+  },
+  "cohort_size_rationale": {
+    "reason_for_192_pairs": "balanced factorial design across 12 fixed region cells x 2 taxon groups x 4 record-count strata x 2 taxa; kept unchanged after the failed v2 development because no new confirmation taxa have been sampled",
+    "power_caution": "paired variance against official GRTS is unknown before confirmation; 192 is retained for balance and sensitivity rather than justified by post-outcome GRTS variance"
+  },
+  "biosurvey_end_to_end": {
+    "status": "separate_practical_comparator_required_before_broad_existing_tool_superiority_claim",
+    "implementation": "claununez/biosurvey 0.1.2 pinned at commit 035fbebf3d47f823fa55b41a56a74b35dc510753",
+    "reason": "biosurvey natively selects from a region and environmental raster master matrix, not an arbitrary ACSP finite candidate frame",
+    "methods": ["uniformG_selection", "uniformE_selection", "EG_selection"],
+    "claim_boundary": "passing the same-pool GRTS gate supports superiority only within the ACSP candidate universe; a broader tool-level superiority claim additionally requires the predeclared native biosurvey end-to-end comparison"
+  },
+  "prospective_field_gate": {
+    "required_for": "claims about access, detection probability, discoveries per field day, route efficiency, or replacement-site utility",
+    "required_fields": [
+      "attempted_site",
+      "detection_or_non_detection",
+      "search_duration",
+      "searched_area_or_standardized_effort",
+      "access_failure_reason",
+      "date_season_phenology",
+      "replacement_used",
+      "realized_travel_time"
+    ]
+  },
+  "leakage_guardrail": "held-out coordinates and outcomes are attached only after every operational selection for that fold is frozen; no method may use held-out recovery as an inference-time feature",
+  "no_retuning_after_outcome": true,
+  "protocol_fingerprint": "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"
+}
