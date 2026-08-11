@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
 
-# Adapter for using the official spsurvey::grts implementation on an ACSP
-# finite candidate frame.  This is a comparator, not an ACSP reimplementation
-# of GRTS.  Candidate IDs are preserved so selections can be scored against
-# the exact same held-out recovery table used by other decision policies.
+# Adapter for the official spsurvey::grts implementation on an ACSP finite
+# candidate frame. This is a comparator, not an ACSP reimplementation of GRTS.
+# Candidate IDs are preserved so selections can be evaluated against the exact
+# same held-out recovery table as other decision policies.
 
 suppressPackageStartupMessages({
   library(sf)
@@ -19,7 +19,9 @@ parse_args <- function(args) {
     replacements = 0L,
     seed = 1L,
     mode = "equal",
-    score_col = "component_local_habitat_score"
+    score_col = "component_local_habitat_score",
+    mindis_km = 0,
+    maxtry = 10L
   )
   i <- 1L
   while (i <= length(args)) {
@@ -35,6 +37,8 @@ parse_args <- function(args) {
   out$k <- as.integer(out$k)
   out$replacements <- as.integer(out$replacements)
   out$seed <- as.integer(out$seed)
+  out$mindis_km <- as.numeric(out$mindis_km)
+  out$maxtry <- as.integer(out$maxtry)
   out
 }
 
@@ -88,6 +92,9 @@ write_selection <- function(sites, frame, id_col, path, selection_type) {
   if (!is.null(sites) && "replsite" %in% names(sites)) {
     selected$grts_replacement_order <- as.character(sites$replsite)
   }
+  if (!is.null(sites) && "ip" %in% names(sites)) {
+    selected$grts_inclusion_probability <- suppressWarnings(as.numeric(sites$ip))
+  }
   write.csv(selected, path, row.names = FALSE, na = "")
   invisible(selected)
 }
@@ -100,7 +107,9 @@ run_grts_candidate_frame <- function(
   replacements = 0L,
   seed = 1L,
   mode = "equal",
-  score_col = "component_local_habitat_score"
+  score_col = "component_local_habitat_score",
+  mindis_km = 0,
+  maxtry = 10L
 ) {
   frame <- read.csv(input, stringsAsFactors = FALSE, check.names = FALSE)
   if (nrow(frame) == 0L) stop("candidate frame is empty")
@@ -111,6 +120,8 @@ run_grts_candidate_frame <- function(
   limit <- min(as.integer(k), nrow(frame))
   if (limit < 1L) stop("k must be positive")
   replacements <- max(0L, as.integer(replacements))
+  mindis_km <- max(0, as.numeric(mindis_km))
+  maxtry <- max(1L, as.integer(maxtry))
   mode <- tolower(trimws(mode))
   if (!mode %in% c("equal", "proportional")) {
     stop("mode must be equal or proportional")
@@ -120,8 +131,8 @@ run_grts_candidate_frame <- function(
     if (!score_col %in% names(frame)) stop("proportional GRTS requires score column: ", score_col)
     evidence <- suppressWarnings(as.numeric(frame[[score_col]]))
     if (any(!is.finite(evidence))) stop("proportional GRTS score must be finite")
-    # spsurvey requires a positive auxiliary variable. Preserve ordering while
-    # allowing zero-valued evidence candidates to remain in the finite frame.
+    # spsurvey requires a positive auxiliary variable. Preserve evidence order
+    # while keeping zero-score candidates in the finite frame.
     frame$grts_aux_score <- pmax(evidence, 1e-6)
   }
 
@@ -132,34 +143,37 @@ run_grts_candidate_frame <- function(
     remove = FALSE
   )
   points <- st_transform(points, crs = local_aeqd_crs(frame$latitude, frame$longitude))
+  mindis_m <- if (mindis_km > 0) mindis_km * 1000 else NULL
 
   set.seed(as.integer(seed))
-  design <- if (mode == "equal") {
-    grts(
-      points,
-      n_base = limit,
-      seltype = "equal",
-      n_over = replacements,
-      projcrs_check = TRUE
-    )
+  common <- list(
+    sframe = points,
+    n_base = limit,
+    n_over = replacements,
+    mindis = mindis_m,
+    maxtry = maxtry,
+    projcrs_check = TRUE
+  )
+  if (mode == "equal") {
+    design <- do.call(grts, c(common, list(seltype = "equal")))
   } else {
-    grts(
-      points,
-      n_base = limit,
+    design <- do.call(grts, c(common, list(
       seltype = "proportional",
-      aux_var = "grts_aux_score",
-      n_over = replacements,
-      projcrs_check = TRUE
-    )
+      aux_var = "grts_aux_score"
+    )))
   }
 
+  selection_label <- paste0(
+    "grts_", mode,
+    if (mindis_km > 0) paste0("_mindis", format(mindis_km, trim = TRUE), "km") else ""
+  )
   dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
   base <- write_selection(
     design$sites_base,
     frame,
     id_col,
     output,
-    paste0("grts_", mode)
+    selection_label
   )
   if (nrow(base) != limit) {
     stop("GRTS returned ", nrow(base), " base sites; expected ", limit)
@@ -173,11 +187,17 @@ run_grts_candidate_frame <- function(
       frame,
       id_col,
       replacements_output,
-      paste0("grts_", mode, "_replacement")
+      paste0(selection_label, "_replacement")
     )
   }
 
-  invisible(list(base = base, design = design))
+  invisible(list(
+    base = base,
+    design = design,
+    mode = mode,
+    mindis_km = mindis_km,
+    seed = as.integer(seed)
+  ))
 }
 
 if (sys.nframe() == 0L) {
@@ -193,6 +213,8 @@ if (sys.nframe() == 0L) {
     replacements = args$replacements,
     seed = args$seed,
     mode = args$mode,
-    score_col = args$score_col
+    score_col = args$score_col,
+    mindis_km = args$mindis_km,
+    maxtry = args$maxtry
   )
 }
