@@ -36,13 +36,27 @@ jobs:
             any::terra
             any::sessioninfo
       - name: Install pinned biosurvey development version
+        shell: bash
         run: |
+          set -euo pipefail
+          BIOSURVEY_COMMIT="035fbebf3d47f823fa55b41a56a74b35dc510753"
+          BIOSURVEY_ARCHIVE="/tmp/biosurvey-${BIOSURVEY_COMMIT}.tar.gz"
+          BIOSURVEY_UNPACK_ROOT="/tmp/biosurvey-src-${BIOSURVEY_COMMIT}"
+          mkdir -p "${BIOSURVEY_UNPACK_ROOT}"
+          curl --fail --location --retry 3 --retry-all-errors \
+            --output "${BIOSURVEY_ARCHIVE}" \
+            "https://codeload.github.com/claununez/biosurvey/tar.gz/${BIOSURVEY_COMMIT}"
+          tar -xzf "${BIOSURVEY_ARCHIVE}" -C "${BIOSURVEY_UNPACK_ROOT}" --strip-components=1
+          test -f "${BIOSURVEY_UNPACK_ROOT}/DESCRIPTION"
+          export BIOSURVEY_UNPACK_ROOT
           Rscript - <<'RSCRIPT'
-          remotes::install_github(
-            "claununez/biosurvey@035fbebf3d47f823fa55b41a56a74b35dc510753",
-            upgrade = "never",
-            dependencies = TRUE
-          )
+          source_dir <- Sys.getenv("BIOSURVEY_UNPACK_ROOT")
+          stopifnot(nzchar(source_dir), file.exists(file.path(source_dir, "DESCRIPTION")))
+          desc <- read.dcf(file.path(source_dir, "DESCRIPTION"))
+          stopifnot(identical(unname(desc[1, "Package"]), "biosurvey"))
+          stopifnot(identical(unname(desc[1, "Version"]), "0.1.2"))
+          remotes::install_deps(source_dir, dependencies = TRUE, upgrade = "never")
+          remotes::install_local(source_dir, upgrade = "never", dependencies = FALSE)
           stopifnot(as.character(packageVersion("biosurvey")) == "0.1.2")
           RSCRIPT
       - name: Run end-to-end comparator smoke test
