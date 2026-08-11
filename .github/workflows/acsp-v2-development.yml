@@ -58,7 +58,7 @@ jobs:
           root = Path("v2-development-results")
           manifest = json.loads((root / "development_manifest.json").read_text())
           assert manifest["status"] == "development_reproduced_pending_untouched_confirmation"
-          assert manifest["protocol_fingerprint"] == "1760e57c5ab2c1f1f7e0cbcfd3e395f0cee9486e60a6a1783b30c2ee10dafc5d"
+          assert manifest["protocol_fingerprint"] == "378e069f982a19abfc0183163fd503b467a1b746c11ba0b354d4f9802c155124"
           assert manifest["development_pairs"] == 48
           assert manifest["expected_folds"] == 240
           assert manifest["independent_confirmation_required"] is True
