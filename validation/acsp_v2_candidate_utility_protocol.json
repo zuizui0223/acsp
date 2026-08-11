@@ -6,17 +6,27 @@
   "interpretation": "logistic output is a candidate decision-utility score learned for survey recovery, not occupancy probability or habitat suitability",
   "model": {
     "family": "logistic_regression",
-    "C": 0.05,
+    "C": 0.03,
     "class_weight": "balanced",
     "solver": "lbfgs_default",
-    "numeric_features": ["local_score", "local_rank_pct", "geo_nn_km", "geo_avg_km", "env_nn", "env_avg", "candidate_pool", "pool_local_sd", "pool_local_q90"],
+    "numeric_features": [
+      "local_score",
+      "local_rank_pct",
+      "geo_nn_km",
+      "geo_avg_km",
+      "env_nn",
+      "env_avg",
+      "candidate_pool",
+      "pool_local_sd",
+      "pool_local_q90"
+    ],
     "numeric_impute_median": {
       "local_score": 0.8703,
       "local_rank_pct": 0.5263157894736842,
       "geo_nn_km": 14.383840777604302,
       "geo_avg_km": 97.95993647079658,
-      "env_nn": 1.0066005144963803,
-      "env_avg": 2.5740099072043954,
+      "env_nn": 1.0160845593404682,
+      "env_avg": 2.581486785765029,
       "candidate_pool": 21.0,
       "pool_local_sd": 0.1838309956703053,
       "pool_local_q90": 0.93819
@@ -26,8 +36,8 @@
       "local_rank_pct": 0.529880982527222,
       "geo_nn_km": 20.203573751741928,
       "geo_avg_km": 99.15105196327129,
-      "env_nn": 1.1940477542171746,
-      "env_avg": 2.8981232248328186,
+      "env_nn": 1.2058836341183297,
+      "env_avg": 2.9281937217042264,
       "candidate_pool": 19.67763990883768,
       "pool_local_sd": 0.197047712160393,
       "pool_local_q90": 0.93695358825019
@@ -37,47 +47,85 @@
       "local_rank_pct": 0.28930706446459675,
       "geo_nn_km": 17.92582769344763,
       "geo_avg_km": 33.96562305335991,
-      "env_nn": 0.8876319723766338,
-      "env_avg": 1.2833818211916377,
+      "env_nn": 0.8783572584749634,
+      "env_avg": 1.244787228311497,
       "candidate_pool": 4.383855704071777,
       "pool_local_sd": 0.08834649466515469,
       "pool_local_q90": 0.05372084147682438
     },
-    "categorical_features": ["taxon_group", "candidate_type"],
+    "categorical_features": [
+      "taxon_group",
+      "candidate_type"
+    ],
     "categories": {
-      "taxon_group": ["animal", "plant"],
-      "candidate_type": ["environmental", "habitat", "other", "survey_gap"]
+      "taxon_group": [
+        "animal",
+        "plant"
+      ],
+      "candidate_type": [
+        "environmental",
+        "habitat",
+        "other",
+        "survey_gap"
+      ]
     },
     "transformed_feature_names": [
-      "num__local_score", "num__local_rank_pct", "num__geo_nn_km", "num__geo_avg_km", "num__env_nn", "num__env_avg", "num__candidate_pool", "num__pool_local_sd", "num__pool_local_q90",
-      "cat__taxon_group_animal", "cat__taxon_group_plant", "cat__candidate_type_environmental", "cat__candidate_type_habitat", "cat__candidate_type_other", "cat__candidate_type_survey_gap"
+      "num__local_score",
+      "num__local_rank_pct",
+      "num__geo_nn_km",
+      "num__geo_avg_km",
+      "num__env_nn",
+      "num__env_avg",
+      "num__candidate_pool",
+      "num__pool_local_sd",
+      "num__pool_local_q90",
+      "cat__taxon_group_animal",
+      "cat__taxon_group_plant",
+      "cat__candidate_type_environmental",
+      "cat__candidate_type_habitat",
+      "cat__candidate_type_other",
+      "cat__candidate_type_survey_gap"
     ],
     "coefficients": {
-      "num__local_score": 0.006030599484862476,
-      "num__local_rank_pct": -0.21811435291209347,
-      "num__geo_nn_km": -0.13253359053112598,
-      "num__geo_avg_km": -0.06277564332541806,
-      "num__env_nn": 0.048214458447591466,
-      "num__env_avg": -0.057985577960096193,
-      "num__candidate_pool": -0.22535984310414284,
-      "num__pool_local_sd": 0.0770771827336847,
-      "num__pool_local_q90": -0.08834664036910538,
-      "cat__taxon_group_animal": -0.5811712996350226,
-      "cat__taxon_group_plant": 0.5807287209533523,
-      "cat__candidate_type_environmental": -0.7907596217459656,
-      "cat__candidate_type_habitat": 0.17539563320948082,
-      "cat__candidate_type_other": 0.7617014015702326,
-      "cat__candidate_type_survey_gap": -0.1467799917154143
+      "num__local_score": 0.001365823784233943,
+      "num__local_rank_pct": -0.2292411486645918,
+      "num__geo_nn_km": -0.12328032920259416,
+      "num__geo_avg_km": -0.05578437738212702,
+      "num__env_nn": 0.06389165001390519,
+      "num__env_avg": -0.12988711135391312,
+      "num__candidate_pool": -0.2123124267637981,
+      "num__pool_local_sd": 0.07706412858722425,
+      "num__pool_local_q90": -0.09362648330870571,
+      "cat__taxon_group_animal": -0.5449813092213169,
+      "cat__taxon_group_plant": 0.5446721731192732,
+      "cat__candidate_type_environmental": -0.7101635694171469,
+      "cat__candidate_type_habitat": 0.1567657656890962,
+      "cat__candidate_type_other": 0.6870599751691854,
+      "cat__candidate_type_survey_gap": -0.1339713075431855
     },
-    "intercept": -0.19556410627906032
+    "intercept": -0.2056901276961428
   },
   "feature_engineering": {
     "local_score_source": "component_local_habitat_score",
     "local_rank": "descending local score with deterministic stable candidate-id tie breaking",
     "geographic_context": "candidate-pool nearest-neighbour and mean great-circle distance in km",
     "environmental_context": "candidate-pool nearest-neighbour and mean Euclidean distance after robust scaling elevation/slope/roughness/tpi and sine-cosine aspect",
-    "candidate_type_mapping": ["environmental", "habitat", "survey_gap", "other"],
-    "forbidden_inference_features": ["held-out coordinates", "covered_heldout_ids", "heldout_distances_km", "all_heldout_ids", "scientific name", "absolute geographic stratum", "held-out recovery"]
+    "environmental_missingness": "all five terrain columns absent is a supported no-terrain context and yields missing env_nn/env_avg for frozen median imputation; a partial terrain schema is rejected and falls back to v1",
+    "candidate_type_mapping": [
+      "environmental",
+      "habitat",
+      "survey_gap",
+      "other"
+    ],
+    "forbidden_inference_features": [
+      "held-out coordinates",
+      "covered_heldout_ids",
+      "heldout_distances_km",
+      "all_heldout_ids",
+      "scientific name",
+      "absolute geographic stratum",
+      "held-out recovery"
+    ]
   },
   "selection": {
     "top_k": 5,
@@ -90,35 +138,90 @@
   "fallback": {
     "unsupported_taxon_group": "frozen ValidatedCorePolicy",
     "missing_required_coordinates_or_local_score": "frozen ValidatedCorePolicy",
+    "partial_environmental_schema": "frozen ValidatedCorePolicy",
+    "all_environmental_columns_absent": "supported; environmental context is median-imputed from the frozen development model",
     "note": "v2 never makes v1 publication claims retroactively stronger"
   },
   "development": {
     "development_scope": "secondary reconstruction artifacts only; not independent confirmation",
-    "source_runs": [30091294481, 30091305081],
-    "source_artifact_digests": ["sha256:fd5c8e1acd359e4941d1767bc516b72eff973acf12bc47112864023ce033c0bc", "sha256:08066b7f893beda5faec5c953b4bedac4f424f30366c4dd427a303e8fe8807d3"],
+    "source_runs": [
+      30091294481,
+      30091305081
+    ],
+    "source_artifact_digests": [
+      "sha256:fd5c8e1acd359e4941d1767bc516b72eff973acf12bc47112864023ce033c0bc",
+      "sha256:08066b7f893beda5faec5c953b4bedac4f424f30366c4dd427a303e8fe8807d3"
+    ],
     "unique_taxon_region_pairs": 48,
     "expected_folds": 240,
     "outer_group_folds": {
-      "mixed_1": 1, "mixed_23": 1, "mixed_24": 1, "mixed_9": 1, "plants_15": 1, "plants_3": 1,
-      "mixed_12": 2, "mixed_18": 2, "mixed_5": 2, "mixed_6": 2, "plants_18": 2, "plants_22": 2,
-      "mixed_2": 3, "mixed_21": 3, "mixed_4": 3, "mixed_7": 3, "plants_12": 3, "plants_23": 3,
-      "mixed_13": 4, "mixed_14": 4, "mixed_22": 4, "mixed_8": 4, "plants_10": 4, "plants_24": 4,
-      "mixed_15": 5, "plants_1": 5, "plants_11": 5, "plants_13": 5, "plants_17": 5, "plants_20": 5,
-      "mixed_16": 6, "mixed_19": 6, "plants_16": 6, "plants_19": 6, "plants_21": 6, "plants_6": 6,
-      "mixed_10": 7, "mixed_17": 7, "plants_14": 7, "plants_4": 7, "plants_7": 7, "plants_9": 7,
-      "mixed_11": 8, "mixed_20": 8, "mixed_3": 8, "plants_2": 8, "plants_5": 8, "plants_8": 8
+      "mixed_1": 1,
+      "mixed_23": 1,
+      "mixed_24": 1,
+      "mixed_9": 1,
+      "plants_15": 1,
+      "plants_3": 1,
+      "mixed_12": 2,
+      "mixed_18": 2,
+      "mixed_5": 2,
+      "mixed_6": 2,
+      "plants_18": 2,
+      "plants_22": 2,
+      "mixed_2": 3,
+      "mixed_21": 3,
+      "mixed_4": 3,
+      "mixed_7": 3,
+      "plants_12": 3,
+      "plants_23": 3,
+      "mixed_13": 4,
+      "mixed_14": 4,
+      "mixed_22": 4,
+      "mixed_8": 4,
+      "plants_10": 4,
+      "plants_24": 4,
+      "mixed_15": 5,
+      "plants_1": 5,
+      "plants_11": 5,
+      "plants_13": 5,
+      "plants_17": 5,
+      "plants_20": 5,
+      "mixed_16": 6,
+      "mixed_19": 6,
+      "plants_16": 6,
+      "plants_19": 6,
+      "plants_21": 6,
+      "plants_6": 6,
+      "mixed_10": 7,
+      "mixed_17": 7,
+      "plants_14": 7,
+      "plants_4": 7,
+      "plants_7": 7,
+      "plants_9": 7,
+      "mixed_11": 8,
+      "mixed_20": 8,
+      "mixed_3": 8,
+      "plants_2": 8,
+      "plants_5": 8,
+      "plants_8": 8
     },
     "development_result": {
-      "v2_mean_recall": 0.153153,
-      "frozen_v1_mean_recall": 0.131815,
-      "local_only_mean_recall": 0.131101,
-      "geographic_maximin_mean_recall": 0.104831,
-      "random_same_pool_mean_recall": 0.0847,
-      "v2_minus_v1_mean": 0.021338376304190138,
-      "v2_minus_v1_bootstrap_95ci": [0.00325026, 0.04204798],
-      "v2_minus_v1_sign_flip_p": 0.03476550781640612
+      "v2_mean_recall": 0.15332336241062158,
+      "frozen_v1_mean_recall": 0.13181458368177204,
+      "local_only_mean_recall": 0.13110075468669305,
+      "geographic_maximin_mean_recall": 0.10483055195312752,
+      "random_same_pool_mean_recall": 0.08470022353131601,
+      "v2_minus_v1_mean": 0.021508778728849532,
+      "v2_minus_v1_bootstrap_95ci": [
+        0.0032955937906224775,
+        0.04227577879977175
+      ],
+      "v2_minus_v1_sign_flip_p": 0.03396553448218393,
+      "positive_pairs": 25,
+      "negative_pairs": 12,
+      "tied_pairs": 11,
+      "pair_difference_sd": 0.06969910708977313
     },
-    "warning": "Hyperparameters were selected during development on these artifacts. These estimates are development-only and cannot validate v2."
+    "warning": "Model regularization and final set-selection weights were selected during development on these artifacts. These estimates are development-only and cannot validate v2."
   },
   "independent_confirmation": {
     "required": true,
@@ -126,5 +229,5 @@
     "primary_contrast": "v2 minus strongest predeclared operational baseline under identical Top-5 and 10-km endpoint",
     "no_retuning_after_outcome": true
   },
-  "fingerprint": "1760e57c5ab2c1f1f7e0cbcfd3e395f0cee9486e60a6a1783b30c2ee10dafc5d"
+  "fingerprint": "378e069f982a19abfc0183163fd503b467a1b746c11ba0b354d4f9802c155124"
 }
