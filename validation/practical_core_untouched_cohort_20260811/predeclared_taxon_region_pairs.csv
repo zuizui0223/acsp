@@ -1,0 +1,193 @@
+pair_id,status,taxon_group,kingdomKey,geographic_stratum,region_name,region_cell_index,west,south,east,north,speciesKey,scientific_name,coordinate_records,record_count_stratum,within_cell_stratum_replicate
+1,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2975180,Vicia japonica A.Gray,25,0,1
+2,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2703231,Zizania latifolia (Griseb.) Stapf,28,0,2
+3,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2722046,Carex vesicaria L.,40,1,1
+4,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2688393,Lycopodium clavatum L.,39,1,2
+5,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,3117449,Erigeron annuus (L.) Pers.,60,2,1
+6,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,7331998,Veronica ovata Nakai,43,2,2
+7,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,5332231,Betula ermanii Cham.,309,3,1
+8,predeclared,plant,6,north,Hokkaido west,1,140.0,42.5,142.0,44.5,3794098,Euonymus sachalinensis (F.Schmidt) Maxim.,206,3,2
+9,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,1394936,"Cecidostiba fushica Kamijo, 1981",44,0,1
+10,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,1922713,"Japonica saepestriata (Hewitson, 1865)",44,0,2
+11,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,1887506,"Circobotys nycterina Butler, 1879",54,1,1
+12,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2481784,"Numenius phaeopus (Linnaeus, 1758)",54,1,2
+13,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,9515886,"Hirundo rustica Linnaeus, 1758",134,2,1
+14,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2498285,"Mergellus albellus (Linnaeus, 1758)",220,2,2
+15,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,4472849,"Amara communis (Panzer, 1796)",514,3,1
+16,predeclared,animal,1,north,Hokkaido west,1,140.0,42.5,142.0,44.5,2490725,"Turdus chrysolaus Temminck, 1832",256,3,2
+17,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,3105742,Sonchus brachyotus DC.,47,0,1
+18,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,5585069,Stellaria fenzlii Regel,47,0,2
+19,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,7272312,Filipendula camtschatica (Pall.) Maxim.,57,1,1
+20,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,5642407,Potamogeton maackianus A.Benn.,62,1,2
+21,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,2726470,Carex accrescens Ohwi,73,2,1
+22,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,3856211,Sambucus kamtschatica E.Wolf,84,2,2
+23,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,2650999,Matteuccia struthiopteris (L.) Tod.,149,3,1
+24,predeclared,plant,6,north,Hokkaido east,2,143.0,42.5,145.5,44.5,7266382,Salix integra Thunb.,122,3,2
+25,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,5229180,"Circus spilonotus Kaup, 1847",54,0,1
+26,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,1038066,"Dytiscus dauricus Gebler, 1832",60,0,2
+27,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,9915028,Erebia neriene,129,1,1
+28,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,5146961,"Idaea biselata (Hufnagel, 1767)",79,1,2
+29,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,2481750,"Calidris subminuta (Middendorff, 1853)",207,2,1
+30,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,7788295,"Haematopus ostralegus Linnaeus, 1758",164,2,2
+31,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,5231332,"Acrocephalus bistrigiceps Swinhoe, 1860",653,3,1
+32,predeclared,animal,1,north,Hokkaido east,2,143.0,42.5,145.5,44.5,2474944,"Grus japonensis (Statius Muller, 1776)",3285,3,2
+33,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,2723833,Carex incisa Boott,179,0,1
+34,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,5579615,Tripterygium wilfordii Hook.fil.,176,0,2
+35,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,2705735,Oplismenus undulatifolius (Ard.) Roem. & Schult.,210,1,1
+36,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,4079362,Spicantopsis amabilis Nakai,214,1,2
+37,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,7313629,Asarum sieboldii Miq.,233,2,1
+38,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,5290149,Phragmites australis (Cav.) Trin. ex Steud.,280,2,2
+39,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,5655797,Dryopteris sabaei (Franch. & Sav.) C.Chr.,541,3,1
+40,predeclared,plant,6,north,Tohoku,3,139.5,38.0,141.5,40.5,5275316,Thelypteris palustris Schott,424,3,2
+41,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,1768862,"Conistra fletcheri Sugi, 1958",93,0,1
+42,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,5143022,"Tethea ampliata (Butler, 1878)",91,0,2
+43,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,7478482,"Pterostichus japonicus (Motschulsky, 1861)",100,1,1
+44,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,2468588,"Takydromus tachydromoides (Schlegel, 1838)",128,1,2
+45,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,5217143,"Bufo japonicus Temminck & Schlegel, 1838",280,2,1
+46,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,1949004,"Polytremis pellucida (Murray, 1875)",236,2,2
+47,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,7380227,"Carabus albrechti A.Morawitz, 1862",457,3,1
+48,predeclared,animal,1,north,Tohoku,3,139.5,38.0,141.5,40.5,2493479,"Garrulax canorus (Linnaeus, 1758)",814,3,2
+49,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,2705185,Sorghum halepense (L.) Pers.,531,0,1
+50,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,3856130,Viburnum wrightii Miq.,521,0,2
+51,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,2703723,Bromus catharticus Vahl,725,1,1
+52,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,3190553,Rhus chinensis Mill.,609,1,2
+53,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,7314981,Corydalis incisa (Thunb.) Pers.,910,2,1
+54,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,4081120,Macrothelypteris oligophlebia (Baker) Ching,786,2,2
+55,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,2891707,Oxalis debilis Kunth,1147,3,1
+56,predeclared,plant,6,east,Kanto,4,138.5,35.0,140.5,36.5,7296559,Viola grypoceras A.Gray,2051,3,2
+57,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,4333247,"Acartia omorii Bradford, 1976",311,0,1
+58,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,2489010,"Acridotheres cristatellus (Linnaeus, 1758)",253,0,2
+59,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,7345905,"Cylindera kaleea (Bates, 1866)",592,1,1
+60,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,5017725,"Eugnathus distinctus Roelofs, 1873",534,1,2
+61,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,1341976,"Apis mellifera Linnaeus, 1758",830,2,1
+62,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,2498375,"Mergus serrator Linnaeus, 1758",1350,2,2
+63,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,2481748,"Calidris alba (Pallas, 1764)",1835,3,1
+64,predeclared,animal,1,east,Kanto,4,138.5,35.0,140.5,36.5,6101068,"Poecile varius (Temminck & Schlegel, 1848)",12399,3,2
+65,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,2723688,Carex lenta D.Don,23,0,1
+66,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,3090377,Parasenecio maximowicziana (Nakai & F.Maek. ex H.Hara) H.Koyama,20,0,2
+67,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,3112961,Cirsium hachijoense Nakai,32,1,1
+68,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,7293094,Elaeagnus macrophylla Thunb.,31,1,2
+69,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,7102937,Euonymus japonicus Thunb.,49,2,1
+70,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,3606857,Vandenboschia ×stenosiphon (Christ) Copel.,54,2,2
+71,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,11131846,"Lepisorus buergerianus (Miq.) C.F.Zhao, R.Wei & X.C.Zhang",59,3,1
+72,predeclared,plant,6,east,Izu,5,138.8,34.0,139.8,35.0,7135965,Rhododendron kaempferi Planch.,91,3,2
+73,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,2406270,"Diaphus mollis Tåning, 1928",20,0,1
+74,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,5859532,"Tambja sagamiana (Baba, 1955)",21,0,2
+75,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,2410940,"Lipolagus ochotensis (Schmidt, 1938)",39,1,1
+76,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,2494543,"Pyrrhula pyrrhula (Linnaeus, 1758)",29,1,2
+77,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,9450106,"Anas poecilorhyncha J.R.Forster, 1781",120,2,1
+78,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,7340187,"Ninox japonica (Temminck & Schlegel, 1845)",57,2,2
+79,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,5231838,"Columba janthina Temminck, 1830",643,3,1
+80,predeclared,animal,1,east,Izu,5,138.8,34.0,139.8,35.0,2493064,"Phylloscopus ijimae (Stejneger, 1892)",621,3,2
+81,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,5333249,Castanea crenata Siebold & Zucc.,337,0,1
+82,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,2955621,Lespedeza cyrtobotrya Miq.,364,0,2
+83,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,7135609,Enkianthus campanulatus (Miq.) G.Nicholson,405,1,1
+84,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,5371678,Styrax japonicus Siebold & Zucc.,429,1,2
+85,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,2724871,Carex pisiformis Boott,605,2,1
+86,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,4261376,Tilia japonica (Miq.) Simonk.,535,2,2
+87,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,7263145,Acer rufinerve Siebold & Zucc.,911,3,1
+88,predeclared,plant,6,east,Chubu mountains,6,136.5,35.0,138.5,37.0,7289194,Athyrium vidalii (Franch. & Sav.) Nakai,1636,3,2
+89,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,1340949,"Eucera spurcatipes Pérez, 1905",127,0,1
+90,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,2480331,"Pluvialis fulva (J.F.Gmelin, 1789)",128,0,2
+91,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,9939630,"Euhadra eoa (Crosse, 1868)",172,1,1
+92,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,2426813,"Rana ornativentris Werner, 1903",181,1,2
+93,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,1925918,"Celastrina argiolus (Linnaeus, 1758)",320,2,1
+94,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,7341881,"Cyanopica cyanus (Pallas, 1776)",373,2,2
+95,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,5231774,"Cinclus pallasii Temminck, 1820",544,3,1
+96,predeclared,animal,1,east,Chubu mountains,6,136.5,35.0,138.5,37.0,5227679,"Lagopus muta (Montin, 1781)",530,3,2
+97,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,2726287,Carex stenostachys Franch. & Sav.,209,0,1
+98,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,7740617,Skimmia japonica Thunb.,197,0,2
+99,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,7756434,Davallia bullata Wall. ex Hook.,242,1,1
+100,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,5290253,Elymus ciliaris (Trin.) Tzvelev,251,1,2
+101,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,7335414,Adiantum monochlamys D.C.Eaton,357,2,1
+102,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,5289808,Microstegium vimineum (Trin.) A.Camus,360,2,2
+103,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,5275021,Hypolepis punctata (Thunb. ex Murray) Mett.,591,3,1
+104,predeclared,plant,6,west,Kinki,7,134.5,33.5,136.5,35.5,4046493,Polystichum luctuosum (Kunze) T.Moore,920,3,2
+105,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,2498027,"Anser fabalis (Latham, 1787)",163,0,1
+106,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,1311418,"Vespa ducalis Smith, 1852",173,0,2
+107,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,1427091,"Atrocalopteryx atrata (Selys, 1853)",242,1,1
+108,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,2227619,"Pilumnus vespertilio (Fabricius, 1793)",234,1,2
+109,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,5842728,"Hemicentrotus pulcherrimus (A.Agassiz, 1864)",358,2,1
+110,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,2498009,"Tadorna tadorna (Linnaeus, 1758)",307,2,2
+111,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,2490244,"Anthus hodgsoni Richmond, 1907",717,3,1
+112,predeclared,animal,1,west,Kinki,7,134.5,33.5,136.5,35.5,2443002,"Trachemys scripta (Thunberg In Schoepff, 1792)",654,3,2
+113,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,2685414,Abies firma Siebold & Zucc.,65,0,1
+114,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,3093276,Picris japonica Thunb.,63,0,2
+115,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,3838425,Meliosma tenuis Maxim.,89,1,1
+116,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,5358748,Trifolium repens L.,88,1,2
+117,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,7319234,Dryopteris dickinsii (Franch. & Sav.) C.Chr.,179,2,1
+118,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,5608957,Isodon longitubus (Miq.) Kudô,113,2,2
+119,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,3663105,Cornus macrophylla Wall.,279,3,1
+120,predeclared,plant,6,west,Chugoku,8,131.5,34.0,134.0,35.5,2650436,Lygodium japonicum (Thunb.) Sw.,294,3,2
+121,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,1534979,"Psilota nigripilosa Shiraki, 1968",52,0,1
+122,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,10674422,"Zhangixalus schlegelii (Günther, 1858)",46,0,2
+123,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,2114732,"Centropages abdominalis Sato, 1913",74,1,1
+124,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,1733447,"Dendrolimus spectabilis (Butler, 1877)",72,1,2
+125,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,10860091,Edessena hamada,87,2,1
+126,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,8357478,"Graptopsaltria nigrofuscata (Motschulsky, 1866)",82,2,2
+127,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,2498112,"Anas acuta Linnaeus, 1758",1131,3,1
+128,predeclared,animal,1,west,Chugoku,8,131.5,34.0,134.0,35.5,9480191,"Mareca falcata (Georgi, 1775)",541,3,2
+129,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,2705953,Eleusine indica (L.) Gaertn.,126,0,1
+130,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,4046940,Polystichum ×kiyozumianum Sa.Kurata,136,0,2
+131,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,4039940,Arachniodes miqueliana (Maxim. ex Franch. & Sav.) Ohwi,161,1,1
+132,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,11014066,Sibirotrisetum bifidum (Thunb.) Barberá,161,1,2
+133,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,2650828,Cyrtomium caryotideum (Wall. ex Hook. & Grev.) C.Presl,206,2,1
+134,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,3172301,Ligustrum japonicum Thunb.,248,2,2
+135,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,4016177,Diplazium mettenianum (Miq.) C.Chr.,295,3,1
+136,predeclared,plant,6,west,Shikoku,9,132.5,32.7,134.5,34.5,5665860,Woodwardia orientalis (Sw.) Sw.,299,3,2
+137,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,6933272,"Epeorus ikanonis Takahashi, 1924",27,0,1
+138,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,4299368,"Vanessa cardui (Linnaeus, 1758)",26,0,2
+139,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,5184633,"Acropora glauca (Brook, 1893)",42,1,1
+140,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,7346344,Kaniska canace,32,1,2
+141,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,2395056,"Epigonus denticulatus Dieuzeide, 1950",59,2,1
+142,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,2482054,"Podiceps cristatus (Linnaeus, 1758)",86,2,2
+143,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,1266366,"Meteorus pulchricornis (Wesmael, 1835)",100,3,1
+144,predeclared,animal,1,west,Shikoku,9,132.5,32.7,134.5,34.5,5165788,"Oncaea media Giesbrecht, 1891",115,3,2
+145,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,3133809,Ainsliaea apiculata Sch.Bip.,44,0,1
+146,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,2903461,Damnacanthus indicus C.F.Gaertn.,53,0,2
+147,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,4256156,Asplenium tripteropus Nakai,57,1,1
+148,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,7266357,Salix sieboldiana Blume,66,1,2
+149,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,5656035,Dryopteris bissetiana (Baker) C.Chr.,103,2,1
+150,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,3020620,Prunus jamasakura (Makino) Nakai,112,2,2
+151,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,5275373,Dicranopteris linearis (Burm.fil.) Underw.,281,3,1
+152,predeclared,plant,6,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,3039270,Elaeagnus pungens Thunb.,158,3,2
+153,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,7874703,"Cryptotympana facialis (Walker, 1858)",36,0,1
+154,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,2384052,"Halichoeres tenuispinis (Günther, 1862)",31,0,2
+155,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,1269196,"Aphidius salicis Haliday, 1834",60,1,1
+156,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,8719089,"Euhadra herklotsi (E.von Martens, 1861)",63,1,2
+157,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,9037947,"Fejervarya kawamurai Djong, Matsui, Kuramoto, Nishioka & Sumida, 2011",82,2,1
+158,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,6092830,"Spinus spinus (Linnaeus, 1758)",100,2,2
+159,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,2480880,"Egretta intermedia (Wagler, 1829)",310,3,1
+160,predeclared,animal,1,south,Northern Kyushu,10,129.5,32.5,131.5,34.0,5231398,"Leiothrix lutea (Scopoli, 1786)",546,3,2
+161,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2985963,Deutzia crenata Siebold & Zucc.,52,0,1
+162,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,4016123,Diplazium doederleinii (Luerss.) Makino,51,0,2
+163,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,3037361,Chengiopanax sciadophylloides (Franch. & Sav.) C.B.Shang & J.Y.Huang,65,1,1
+164,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,3023356,Prunus zippeliana Miq.,65,1,2
+165,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,5331797,Betula grossa Siebold & Zucc.,127,2,1
+166,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2668282,Meristotheca papulosa (Montagne) J.Agardh,130,2,2
+167,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,11099069,Amauropelta angustifrons (Miq.) Y.H.Chang,150,3,1
+168,predeclared,plant,6,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,7265907,Microlepia marginata (Houtt.) C.Chr.,373,3,2
+169,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2386144,"Eleotris acanthopoma Bleeker, 1853",54,0,1
+170,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2396768,"Upeneus moluccensis (Bleeker, 1855)",56,0,2
+171,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,9483055,"Crenimugil seheli (Forsskål, 1775)",64,1,1
+172,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2384863,"Lutjanus rufolineatus (Valenciennes, 1830)",59,1,2
+173,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2416199,"Coelorinchus jordani Smith & Pope, 1906",113,2,1
+174,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2411929,"Hypoatherina tsurugae (Jordan & Starks, 1901)",168,2,2
+175,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2374396,"Pempheris xanthoptera Tominaga, 1963",571,3,1
+176,predeclared,animal,1,south,Southern Kyushu,11,130.0,30.8,131.8,32.5,2492509,"Tarsiger cyanurus (Pallas, 1773)",336,3,2
+177,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,5558312,Ardisia pusilla A.DC.,57,0,1
+178,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,2702911,Thuarea involuta (G.Forst.) R.Br. ex Sm.,61,0,2
+179,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,3874170,"Kandelia obovata Sheue, H.Y.Liu & J.W.H.Yong",79,1,1
+180,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,7318821,Symplocos stellaris Brand,67,1,2
+181,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,4160046,Celtis boninensis Koidz.,91,2,1
+182,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,8677924,Pittosporum tobira (Murray) Aiton fil.,112,2,2
+183,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,8134433,Arachniodes cornu-cervi (D.Don) Fraser-Jenk.,207,3,1
+184,predeclared,plant,6,south,Ryukyu,12,126.0,24.0,130.0,28.5,3189637,Camellia sasanqua Thunb.,160,3,2
+185,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,2381781,"Labracinus cyclophthalmus (Müller & Troschel, 1849)",81,0,1
+186,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,4359792,"Phyllidia coelestis Bergh, 1905",71,0,2
+187,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,1423702,"Coeliccia ryukyuensis Asahina, 1951",88,1,1
+188,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,8790531,"Lissachatina fulica (Bowdich, 1822)",106,1,2
+189,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,2334538,"Dendrochirus zebra (Cuvier, 1829)",197,2,1
+190,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,1937892,"Papilio memnon Linnaeus, 1758",188,2,2
+191,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,1904948,"Cyrestis thyodamas Boisduval, 1836",281,3,1
+192,predeclared,animal,1,south,Ryukyu,12,126.0,24.0,130.0,28.5,2490773,"Turdus pallidus Gmelin, 1789",1656,3,2

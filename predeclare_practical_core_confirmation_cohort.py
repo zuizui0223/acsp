@@ -271,7 +271,7 @@ def run(protocol_path: Path, output: Path) -> dict[str, object]:
 
 def parser() -> argparse.ArgumentParser:
     command = argparse.ArgumentParser(description=__doc__)
-    command.add_argument("--protocol", type=Path, default=PROTOCOL_PATH)
+    command.add_argument("--protocol", dest="protocol_path", type=Path, default=PROTOCOL_PATH)
     command.add_argument(
         "--output", type=Path, default=Path("practical_core_confirmation_cohort")
     )

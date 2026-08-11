@@ -1,0 +1,97 @@
+geographic_stratum,region_name,taxon_group,record_count_stratum,raw_taxon_frame,post_protocol_exclusion_frame,stratum_frame,available_unused_before_draw,required_draws
+north,Hokkaido west,plant,0,400,372,93,93,2
+north,Hokkaido west,plant,1,400,372,93,93,2
+north,Hokkaido west,plant,2,400,372,93,93,2
+north,Hokkaido west,plant,3,400,372,93,93,2
+north,Hokkaido west,animal,0,400,365,92,92,2
+north,Hokkaido west,animal,1,400,365,91,91,2
+north,Hokkaido west,animal,2,400,365,91,91,2
+north,Hokkaido west,animal,3,400,365,91,91,2
+north,Hokkaido east,plant,0,400,379,95,93,2
+north,Hokkaido east,plant,1,400,379,95,95,2
+north,Hokkaido east,plant,2,400,379,94,92,2
+north,Hokkaido east,plant,3,400,379,95,94,2
+north,Hokkaido east,animal,0,400,365,92,91,2
+north,Hokkaido east,animal,1,400,365,91,90,2
+north,Hokkaido east,animal,2,400,365,91,91,2
+north,Hokkaido east,animal,3,400,365,91,88,2
+north,Tohoku,plant,0,400,358,90,87,2
+north,Tohoku,plant,1,400,358,89,89,2
+north,Tohoku,plant,2,400,358,89,88,2
+north,Tohoku,plant,3,400,358,90,89,2
+north,Tohoku,animal,0,400,367,92,91,2
+north,Tohoku,animal,1,400,367,92,91,2
+north,Tohoku,animal,2,400,367,91,89,2
+north,Tohoku,animal,3,400,367,92,89,2
+east,Kanto,plant,0,400,350,88,86,2
+east,Kanto,plant,1,400,350,87,85,2
+east,Kanto,plant,2,400,350,87,87,2
+east,Kanto,plant,3,400,350,88,87,2
+east,Kanto,animal,0,400,362,91,90,2
+east,Kanto,animal,1,400,362,90,89,2
+east,Kanto,animal,2,400,362,90,87,2
+east,Kanto,animal,3,400,362,91,85,2
+east,Izu,plant,0,358,294,74,73,2
+east,Izu,plant,1,358,294,73,73,2
+east,Izu,plant,2,358,294,73,73,2
+east,Izu,plant,3,358,294,74,71,2
+east,Izu,animal,0,172,147,37,35,2
+east,Izu,animal,1,172,147,37,36,2
+east,Izu,animal,2,172,147,36,36,2
+east,Izu,animal,3,172,147,37,35,2
+east,Chubu mountains,plant,0,400,352,88,86,2
+east,Chubu mountains,plant,1,400,352,88,86,2
+east,Chubu mountains,plant,2,400,352,88,84,2
+east,Chubu mountains,plant,3,400,352,88,84,2
+east,Chubu mountains,animal,0,400,364,91,90,2
+east,Chubu mountains,animal,1,400,364,91,90,2
+east,Chubu mountains,animal,2,400,364,91,87,2
+east,Chubu mountains,animal,3,400,364,91,86,2
+west,Kinki,plant,0,400,347,87,83,2
+west,Kinki,plant,1,400,347,87,81,2
+west,Kinki,plant,2,400,347,86,83,2
+west,Kinki,plant,3,400,347,87,82,2
+west,Kinki,animal,0,400,362,91,87,2
+west,Kinki,animal,1,400,362,90,88,2
+west,Kinki,animal,2,400,362,90,87,2
+west,Kinki,animal,3,400,362,91,85,2
+west,Chugoku,plant,0,400,348,87,85,2
+west,Chugoku,plant,1,400,348,87,82,2
+west,Chugoku,plant,2,400,348,87,81,2
+west,Chugoku,plant,3,400,348,87,78,2
+west,Chugoku,animal,0,400,364,91,90,2
+west,Chugoku,animal,1,400,364,91,91,2
+west,Chugoku,animal,2,400,364,91,85,2
+west,Chugoku,animal,3,400,364,91,83,2
+west,Shikoku,plant,0,400,346,87,84,2
+west,Shikoku,plant,1,400,346,86,81,2
+west,Shikoku,plant,2,400,346,86,81,2
+west,Shikoku,plant,3,400,346,87,79,2
+west,Shikoku,animal,0,400,366,92,88,2
+west,Shikoku,animal,1,400,366,91,90,2
+west,Shikoku,animal,2,400,366,91,87,2
+west,Shikoku,animal,3,400,366,92,79,2
+south,Northern Kyushu,plant,0,400,345,87,81,2
+south,Northern Kyushu,plant,1,400,345,86,80,2
+south,Northern Kyushu,plant,2,400,345,86,79,2
+south,Northern Kyushu,plant,3,400,345,86,77,2
+south,Northern Kyushu,animal,0,400,364,91,89,2
+south,Northern Kyushu,animal,1,400,364,91,88,2
+south,Northern Kyushu,animal,2,400,364,91,81,2
+south,Northern Kyushu,animal,3,400,364,91,80,2
+south,Southern Kyushu,plant,0,400,350,88,86,2
+south,Southern Kyushu,plant,1,400,350,87,78,2
+south,Southern Kyushu,plant,2,400,350,87,82,2
+south,Southern Kyushu,plant,3,400,350,88,79,2
+south,Southern Kyushu,animal,0,400,369,93,89,2
+south,Southern Kyushu,animal,1,400,369,92,89,2
+south,Southern Kyushu,animal,2,400,369,92,89,2
+south,Southern Kyushu,animal,3,400,369,92,82,2
+south,Ryukyu,plant,0,400,374,94,93,2
+south,Ryukyu,plant,1,400,374,93,89,2
+south,Ryukyu,plant,2,400,374,93,91,2
+south,Ryukyu,plant,3,400,374,94,91,2
+south,Ryukyu,animal,0,400,375,94,91,2
+south,Ryukyu,animal,1,400,375,94,89,2
+south,Ryukyu,animal,2,400,375,93,90,2
+south,Ryukyu,animal,3,400,375,94,85,2
