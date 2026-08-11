@@ -34,6 +34,29 @@ from run_practical_core_confirmation_pair import (
     score_frozen_decisions,
 )
 
+GRTS_PRE_OUTCOME_COLUMNS = [
+    "pair_id",
+    "repeat",
+    "variant",
+    "draw_index",
+    "seed",
+    "requested_k",
+    "base_count",
+    "base_ids",
+    "requested_replacements",
+    "replacement_count",
+    "replacement_ids",
+    "realized_min_distance_km",
+    "warning_message",
+    "error_message",
+    "spsurvey_version",
+    "outcomes_available_to_selector",
+]
+
+
+def _empty_grts_draws() -> pd.DataFrame:
+    return pd.DataFrame(columns=GRTS_PRE_OUTCOME_COLUMNS)
+
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(
@@ -92,11 +115,13 @@ def _freeze_grts_artifacts(
             confirmation,
         )
         if not draw_path.exists():
-            # Preserve an explicit empty pre-outcome table even on process failure.
-            pd.DataFrame().to_csv(draw_path, index=False)
+            # Keep a parseable, schema-fixed pre-outcome artifact even when the
+            # external R process fails before writing any draws.
+            draws = _empty_grts_draws()
+            draws.to_csv(draw_path, index=False)
     else:
-        draws = pd.DataFrame()
-        pd.DataFrame().to_csv(draw_path, index=False)
+        draws = _empty_grts_draws()
+        draws.to_csv(draw_path, index=False)
         audit = {
             "status": "shared_candidate_failure",
             "returncode": None,
