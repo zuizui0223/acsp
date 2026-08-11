@@ -1,0 +1,84 @@
+name: ACSP practical rescue locked 72-pair development
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - acsp/practical_rescue.py
+      - benchmark_practical_rescue_development.py
+      - validation/acsp_practical_rescue_development_protocol.json
+      - test_practical_rescue.py
+      - .github/workflows/practical-rescue-development.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  locked-extension:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify frozen rescue policy tests
+        run: python -m unittest -v test_practical_rescue.py
+      - name: Download reviewed mixed 24-pair development source
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-mixed_20260705
+          path: rescue-development/mixed
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091294481
+      - name: Download reviewed plant 24-pair development source
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-plants_20260706
+          path: rescue-development/plants
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091305081
+      - name: Download locked former-SDM 24-pair extension
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdm-topk-recovered-pair-*
+          path: rescue-development/sdm24
+          merge-multiple: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31238895064
+      - name: Evaluate unchanged policy on 48 cross-fit plus locked 24 extension
+        run: |
+          python benchmark_practical_rescue_development.py \
+            --standard-root rescue-development/mixed \
+            --standard-root rescue-development/plants \
+            --sdm-root rescue-development/sdm24 \
+            --protocol validation/acsp_practical_rescue_development_protocol.json \
+            --output rescue-development-results
+      - name: Audit frozen development boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("rescue-development-results/development_manifest.json").read_text())
+          assert manifest["protocol_fingerprint"] == "03a6641b488c2aa2d5d2abe89b10798754e3b1c85428d1a2b3d9b723093f4c3a"
+          assert manifest["model_selection_pairs"] == 48
+          assert manifest["locked_extension_pairs"] == 24
+          assert manifest["combined_pairs"] == 72
+          assert manifest["extension_outcomes_used_for_model_or_policy_selection"] is False
+          assert manifest["fresh_confirmation_required"] is True
+          print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-72-pair-development
+          path: rescue-development-results
+          if-no-files-found: error
+          retention-days: 90
