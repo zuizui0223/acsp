@@ -1,14 +1,14 @@
 """Experimental ACSP v2 practical finite-decision policy.
 
-ACSP v1 remains frozen in :mod:`acsp.validated_core`.  This module is a
-separate development track.  It scores candidates with a cross-taxon learned
-survey-decision utility and then selects a finite Top-k set while penalising
+ACSP v1 remains frozen in :mod:`acsp.validated_core`. This module is a
+separate development track. It scores candidates with a cross-taxon learned
+survey-decision utility and selects a finite Top-k set while penalising
 short-range geographic redundancy.
 
-The learned score is *not* an occupancy probability or habitat-suitability
-estimate.  Its training target was whether a candidate recovered at least one
-spatially held-out occurrence within the predeclared 10-km regional endpoint
-in development folds from other taxon-region pairs.
+The learned score is not an occupancy probability or habitat-suitability
+estimate. Its development target is whether a candidate recovered at least
+one spatially held-out occurrence within the predeclared 10-km regional
+endpoint in folds belonging to other taxon-region pairs.
 """
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from dataclasses import dataclass
 import hashlib
 import json
 import math
-from typing import Sequence
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,7 @@ from .validated_core import ValidatedCorePolicy, select_validated_core
 
 EARTH_RADIUS_KM = 6_371.0088
 V2_PROTOCOL_ID = "acsp-v2-practical-candidate-utility-development-v1"
-V2_PROTOCOL_FINGERPRINT = "1760e57c5ab2c1f1f7e0cbcfd3e395f0cee9486e60a6a1783b30c2ee10dafc5d"
+V2_PROTOCOL_FINGERPRINT = "378e069f982a19abfc0183163fd503b467a1b746c11ba0b354d4f9802c155124"
 V2_ENVIRONMENTAL_COLUMNS: tuple[str, ...] = (
     "elevation",
     "slope",
@@ -47,15 +46,16 @@ V2_NUMERIC_FEATURES: tuple[str, ...] = (
 )
 V2_CATEGORICAL_FEATURES: tuple[str, ...] = ("taxon_group", "candidate_type")
 
-# Frozen development-model preprocessing and coefficients.  The matching
-# machine-readable artifact lives at validation/acsp_v2_candidate_utility_protocol.json.
+# Frozen all-development model. C=0.03 and the set-selection parameters were
+# selected using development artifacts and must not change after untouched
+# confirmation outcomes are generated.
 _NUMERIC_IMPUTE_MEDIAN = {
     "local_score": 0.8703,
     "local_rank_pct": 0.5263157894736842,
     "geo_nn_km": 14.383840777604302,
     "geo_avg_km": 97.95993647079658,
-    "env_nn": 1.0066005144963803,
-    "env_avg": 2.5740099072043954,
+    "env_nn": 1.0160845593404682,
+    "env_avg": 2.581486785765029,
     "candidate_pool": 21.0,
     "pool_local_sd": 0.1838309956703053,
     "pool_local_q90": 0.93819,
@@ -65,8 +65,8 @@ _NUMERIC_MEAN = {
     "local_rank_pct": 0.529880982527222,
     "geo_nn_km": 20.203573751741928,
     "geo_avg_km": 99.15105196327129,
-    "env_nn": 1.1940477542171746,
-    "env_avg": 2.8981232248328186,
+    "env_nn": 1.2058836341183297,
+    "env_avg": 2.9281937217042264,
     "candidate_pool": 19.67763990883768,
     "pool_local_sd": 0.197047712160393,
     "pool_local_q90": 0.93695358825019,
@@ -76,8 +76,8 @@ _NUMERIC_SCALE = {
     "local_rank_pct": 0.28930706446459675,
     "geo_nn_km": 17.92582769344763,
     "geo_avg_km": 33.96562305335991,
-    "env_nn": 0.8876319723766338,
-    "env_avg": 1.2833818211916377,
+    "env_nn": 0.8783572584749634,
+    "env_avg": 1.244787228311497,
     "candidate_pool": 4.383855704071777,
     "pool_local_sd": 0.08834649466515469,
     "pool_local_q90": 0.05372084147682438,
@@ -87,28 +87,28 @@ _CATEGORIES = {
     "candidate_type": ("environmental", "habitat", "other", "survey_gap"),
 }
 _COEFFICIENTS = {
-    "num__local_score": 0.006030599484862476,
-    "num__local_rank_pct": -0.21811435291209347,
-    "num__geo_nn_km": -0.13253359053112598,
-    "num__geo_avg_km": -0.06277564332541806,
-    "num__env_nn": 0.048214458447591466,
-    "num__env_avg": -0.057985577960096193,
-    "num__candidate_pool": -0.22535984310414284,
-    "num__pool_local_sd": 0.0770771827336847,
-    "num__pool_local_q90": -0.08834664036910538,
-    "cat__taxon_group_animal": -0.5811712996350226,
-    "cat__taxon_group_plant": 0.5807287209533523,
-    "cat__candidate_type_environmental": -0.7907596217459656,
-    "cat__candidate_type_habitat": 0.17539563320948082,
-    "cat__candidate_type_other": 0.7617014015702326,
-    "cat__candidate_type_survey_gap": -0.1467799917154143,
+    "num__local_score": 0.001365823784233943,
+    "num__local_rank_pct": -0.2292411486645918,
+    "num__geo_nn_km": -0.12328032920259416,
+    "num__geo_avg_km": -0.05578437738212702,
+    "num__env_nn": 0.06389165001390519,
+    "num__env_avg": -0.12988711135391312,
+    "num__candidate_pool": -0.2123124267637981,
+    "num__pool_local_sd": 0.07706412858722425,
+    "num__pool_local_q90": -0.09362648330870571,
+    "cat__taxon_group_animal": -0.5449813092213169,
+    "cat__taxon_group_plant": 0.5446721731192732,
+    "cat__candidate_type_environmental": -0.7101635694171469,
+    "cat__candidate_type_habitat": 0.1567657656890962,
+    "cat__candidate_type_other": 0.6870599751691854,
+    "cat__candidate_type_survey_gap": -0.1339713075431855,
 }
-_INTERCEPT = -0.19556410627906032
+_INTERCEPT = -0.2056901276961428
 
 
 @dataclass(frozen=True)
 class CandidateDecisionUtilityPolicy:
-    """Frozen development configuration for the experimental ACSP v2 policy."""
+    """Frozen development configuration for the experimental v2 policy."""
 
     top_k: int = 5
     candidate_utility_weight: float = 0.60
@@ -149,7 +149,7 @@ def _haversine_matrix_km(latitude: np.ndarray, longitude: np.ndarray) -> np.ndar
 
 
 def normalize_v2_candidate_type(value: object) -> str:
-    """Map production candidate labels to the frozen four-level development role."""
+    """Map production candidate labels to the frozen four-level role."""
     text = str(value or "").strip().lower()
     if "habitat" in text or "analogue" in text:
         return "habitat"
@@ -164,10 +164,28 @@ def _candidate_id_series(frame: pd.DataFrame) -> pd.Series:
     for column in ("candidate_id", "site_id"):
         if column in frame.columns:
             return frame[column].astype(str)
-    return pd.Series([f"candidate-{index + 1:06d}" for index in range(len(frame))], index=frame.index)
+    return pd.Series(
+        [f"candidate-{index + 1:06d}" for index in range(len(frame))],
+        index=frame.index,
+        dtype=str,
+    )
 
 
-def _environmental_distance_matrix(frame: pd.DataFrame) -> np.ndarray:
+def _environmental_distance_matrix(frame: pd.DataFrame) -> np.ndarray | None:
+    """Return robust within-pool environmental distances or None for no-terrain pools.
+
+    The development artifacts contained one marine taxon with none of the five
+    terrain columns. That is a supported missing-context state and is handled by
+    the frozen model imputer. A partial terrain schema is treated as an input
+    inconsistency rather than silently changing the environmental definition.
+    """
+    present = [column in frame.columns for column in V2_ENVIRONMENTAL_COLUMNS]
+    if not any(present):
+        return None
+    if not all(present):
+        missing = [column for column, available in zip(V2_ENVIRONMENTAL_COLUMNS, present) if not available]
+        raise ValueError(f"v2 candidate utility has a partial environmental schema; missing: {', '.join(missing)}")
+
     parts: list[np.ndarray] = []
     for column in V2_ENVIRONMENTAL_COLUMNS:
         values = pd.to_numeric(frame[column], errors="coerce").to_numpy(float)
@@ -197,13 +215,15 @@ def build_candidate_decision_utility_features(
     candidates: pd.DataFrame,
     taxon_group: str,
 ) -> pd.DataFrame:
-    """Build outcome-free candidate features used by the frozen v2 development model."""
+    """Build the frozen outcome-free candidate feature table."""
     if candidates is None:
         raise ValueError("candidates must be a DataFrame")
+    if candidates.empty:
+        return candidates.head(0).copy()
     group = str(taxon_group).strip().lower()
     if group not in _CATEGORIES["taxon_group"]:
         raise ValueError("v2 candidate utility currently supports only plant or animal groups")
-    required = {"latitude", "longitude", "component_local_habitat_score", *V2_ENVIRONMENTAL_COLUMNS}
+    required = {"latitude", "longitude", "component_local_habitat_score"}
     missing = required - set(candidates.columns)
     if missing:
         raise ValueError(f"v2 candidate utility is missing: {', '.join(sorted(missing))}")
@@ -216,12 +236,18 @@ def build_candidate_decision_utility_features(
         return work
 
     stable_id = _candidate_id_series(work)
-    local = pd.to_numeric(work["component_local_habitat_score"], errors="coerce").fillna(0.0).clip(0.0, 1.0)
+    local = pd.to_numeric(
+        work["component_local_habitat_score"], errors="coerce"
+    ).fillna(0.0).clip(0.0, 1.0)
     ordering = pd.DataFrame({
         "index": np.arange(len(work)),
         "score": local.to_numpy(float),
         "stable_id": stable_id.to_numpy(str),
-    }).sort_values(["score", "stable_id", "index"], ascending=[False, True, True], kind="mergesort")
+    }).sort_values(
+        ["score", "stable_id", "index"],
+        ascending=[False, True, True],
+        kind="mergesort",
+    )
     ranks = np.empty(len(work), dtype=float)
     ranks[ordering["index"].to_numpy(int)] = np.arange(1, len(work) + 1, dtype=float)
 
@@ -229,19 +255,22 @@ def build_candidate_decision_utility_features(
     longitude = work["longitude"].to_numpy(float)
     geographic = _haversine_matrix_km(latitude, longitude)
     if len(work) > 1:
-        nearest_matrix = geographic.copy()
-        np.fill_diagonal(nearest_matrix, np.inf)
-        geo_nn = np.min(nearest_matrix, axis=1)
+        nearest = geographic.copy()
+        np.fill_diagonal(nearest, np.inf)
+        geo_nn = np.min(nearest, axis=1)
         geo_avg = np.sum(geographic, axis=1) / (len(work) - 1)
     else:
         geo_nn = np.zeros(1, dtype=float)
         geo_avg = np.zeros(1, dtype=float)
 
     environmental = _environmental_distance_matrix(work)
-    if len(work) > 1:
-        environmental_nearest = environmental.copy()
-        np.fill_diagonal(environmental_nearest, np.inf)
-        env_nn = np.min(environmental_nearest, axis=1)
+    if environmental is None:
+        env_nn = np.full(len(work), np.nan, dtype=float)
+        env_avg = np.full(len(work), np.nan, dtype=float)
+    elif len(work) > 1:
+        nearest = environmental.copy()
+        np.fill_diagonal(nearest, np.inf)
+        env_nn = np.min(nearest, axis=1)
         env_avg = np.sum(environmental, axis=1) / (len(work) - 1)
     else:
         env_nn = np.zeros(1, dtype=float)
@@ -269,7 +298,7 @@ def score_candidate_decision_utility(
     candidates: pd.DataFrame,
     taxon_group: str,
 ) -> pd.DataFrame:
-    """Attach the frozen cross-taxon decision-utility score to candidate rows."""
+    """Attach the frozen cross-taxon candidate decision-utility score."""
     features = build_candidate_decision_utility_features(candidates, taxon_group)
     if features.empty:
         return candidates.head(0).copy()
@@ -283,10 +312,10 @@ def score_candidate_decision_utility(
     for feature in V2_CATEGORICAL_FEATURES:
         values = features[feature].astype(str).to_numpy()
         for category in _CATEGORIES[feature]:
-            linear += (values == category).astype(float) * _COEFFICIENTS[f"cat__{feature}_{category}"]
+            linear += (values == category).astype(float) * _COEFFICIENTS[
+                f"cat__{feature}_{category}"
+            ]
 
-    # Numerically stable sigmoid.  Keep the interpretation as a ranking score,
-    # not a calibrated occupancy or detection probability.
     positive = linear >= 0
     score = np.empty(len(linear), dtype=float)
     score[positive] = 1.0 / (1.0 + np.exp(-linear[positive]))
@@ -308,15 +337,16 @@ def select_candidate_decision_utility(
     taxon_group: str,
     policy: CandidateDecisionUtilityPolicy | None = None,
 ) -> pd.DataFrame:
-    """Select a finite Top-k set from candidate utility plus short-range representation."""
+    """Select Top-k from learned candidate utility plus short-range representation."""
     cfg = policy or CandidateDecisionUtilityPolicy()
     scored = score_candidate_decision_utility(candidates, taxon_group)
     if scored.empty:
         return scored
     score = scored["v2_candidate_decision_utility_score"].to_numpy(float)
-    latitude = scored["latitude"].to_numpy(float)
-    longitude = scored["longitude"].to_numpy(float)
-    geographic = _haversine_matrix_km(latitude, longitude)
+    geographic = _haversine_matrix_km(
+        scored["latitude"].to_numpy(float),
+        scored["longitude"].to_numpy(float),
+    )
     stable_id = _candidate_id_series(scored).to_numpy(str)
 
     selected: list[int] = []
@@ -362,7 +392,11 @@ def select_practical_v2(
     taxon_group: str,
     policy: CandidateDecisionUtilityPolicy | None = None,
 ) -> pd.DataFrame:
-    """Use experimental v2 when supported, otherwise transparently fall back to frozen v1."""
+    """Use v2 when supported, otherwise transparently fall back to frozen v1."""
+    if candidates is None:
+        raise ValueError("candidates must be a DataFrame")
+    if candidates.empty:
+        return candidates.copy()
     cfg = policy or CandidateDecisionUtilityPolicy()
     try:
         return select_candidate_decision_utility(candidates, taxon_group, cfg)
