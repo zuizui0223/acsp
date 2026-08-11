@@ -1,0 +1,188 @@
+name: ACSP practical rescue official GRTS development gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/acsp_practical_rescue_grts_development_protocol.json
+      - benchmark_methods/grts_rescue_primary_batch.R
+      - benchmark_practical_rescue_grts_pair.py
+      - aggregate_practical_rescue_grts_development.py
+      - test_practical_rescue_grts_development.py
+      - .github/workflows/practical-rescue-grts-development.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install audit dependencies
+        run: python -m pip install "numpy==2.3.5" "pandas==2.2.3"
+      - name: Verify frozen GRTS development contract
+        run: python -m unittest -v test_practical_rescue_grts_development.py
+      - name: Build immutable 72-pair matrix
+        id: matrix
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          rows = []
+          for source in ("mixed", "plants", "sdm"):
+              for pair_id in range(1, 25):
+                  rows.append({
+                      "group_id": f"{source}_{pair_id}",
+                      "source": source,
+                      "source_pair_id": pair_id,
+                  })
+          print("matrix=" + json.dumps({"include": rows}, separators=(",", ":")))
+          PY
+
+  pair:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install frozen Python scoring runtime
+        run: python -m pip install "numpy==2.3.5" "pandas==2.2.3"
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install only official GRTS hard dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::sf
+            any::survey
+            any::boot
+            any::crossdes
+            any::deldir
+            any::lme4
+            any::sampling
+            any::units
+      - name: Install pinned official spsurvey 5.6.1
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-all-errors \
+            -o /tmp/spsurvey-5.6.1.tar.gz \
+            https://codeload.github.com/USEPA/spsurvey/tar.gz/0914fcd071713fdab19f43d8d9a66436830bd917
+          R CMD INSTALL /tmp/spsurvey-5.6.1.tar.gz
+          Rscript - <<'RSCRIPT'
+          stopifnot(as.character(packageVersion("spsurvey")) == "5.6.1")
+          RSCRIPT
+      - name: Smoke-test pinned official GRTS adapter
+        run: Rscript benchmark_methods/test_grts_candidate_frame.R
+      - name: Download frozen rescue 72-pair decisions
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-72-pair-development
+          path: rescue72
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31544341871
+      - name: Download mixed source artifact
+        if: matrix.source == 'mixed'
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-mixed_20260705
+          path: source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091294481
+      - name: Download plant source artifact
+        if: matrix.source == 'plants'
+        uses: actions/download-artifact@v4
+        with:
+          name: standard-baselines-plants_20260706
+          path: source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 30091305081
+      - name: Download locked extension pair artifact
+        if: matrix.source == 'sdm'
+        uses: actions/download-artifact@v4
+        with:
+          name: sdm-topk-recovered-pair-${{ matrix.source_pair_id }}
+          path: source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31238895064
+      - name: Freeze GRTS draws then score pair
+        run: |
+          python benchmark_practical_rescue_grts_pair.py \
+            --group-id "${{ matrix.group_id }}" \
+            --source-root source \
+            --rescue-fold-table rescue72/fold_method_comparison.csv \
+            --protocol validation/acsp_practical_rescue_grts_development_protocol.json \
+            --output rescue-grts-development-pairs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rescue-grts-dev-pair-${{ matrix.group_id }}
+          path: rescue-grts-development-pairs/${{ matrix.group_id }}
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: [prepare, pair]
+    if: needs.prepare.result == 'success' && needs.pair.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install frozen aggregation runtime
+        run: python -m pip install "numpy==2.3.5" "pandas==2.2.3"
+      - name: Download all 72 pair artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rescue-grts-dev-pair-*
+          path: rescue-grts-pair-artifacts
+          merge-multiple: true
+      - name: Evaluate frozen pair-level GRTS gate
+        run: |
+          python aggregate_practical_rescue_grts_development.py \
+            --pair-root rescue-grts-pair-artifacts \
+            --protocol validation/acsp_practical_rescue_grts_development_protocol.json \
+            --output rescue-grts-development-aggregate
+      - name: Require complete 72-pair result
+        run: |
+          test -s rescue-grts-development-aggregate/development_manifest.json
+          test -s rescue-grts-development-aggregate/pair_level_comparison.csv
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("rescue-grts-development-aggregate/development_manifest.json").read_text())
+          assert result["protocol_fingerprint"] == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          assert result["declared_pairs"] == result["complete_pairs"] == 72
+          assert result["folds"] == 360
+          assert result["spsurvey_version"] == "5.6.1"
+          assert result["spsurvey_tag_commit"] == "0914fcd071713fdab19f43d8d9a66436830bd917"
+          assert result["outcomes_available_to_grts_selector"] is False
+          assert result["no_retuning_after_grts_outcome"] is True
+          print(json.dumps(result, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-official-grts-72-development
+          path: rescue-grts-development-aggregate
+          if-no-files-found: error
+          retention-days: 90
