@@ -16,56 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Prepend required AI changelog entry and remove helper
+        env:
+          CHANGELOG_ENTRY_B64: CiMjIDIwMjYtMDgtMTIgLSBHUFQtNS42IFNvbCAoT3BlbkFJKSAtIExvY2FsLWFuY2hvciByZXNjdWUgZGV2ZWxvcG1lbnQgYW5kIHN0cm9uZyBHUlRTIHByb21vdGlvbiBnYXRlCgpDaGFuZ2VkIGZpbGVzOgotIGFjc3AvcHJhY3RpY2FsX3Jlc2N1ZS5weQotIGJlbmNobWFya19wcmFjdGljYWxfcmVzY3VlX2RldmVsb3BtZW50LnB5Ci0gYmVuY2htYXJrX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19wYWlyLnB5Ci0gYWdncmVnYXRlX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19kZXZlbG9wbWVudC5weQotIGZpdF9wcmFjdGljYWxfcmVzY3VlX2ZpbmFsX21vZGVsLnB5Ci0gYmVuY2htYXJrX21ldGhvZHMvZ3J0c19yZXNjdWVfcHJpbWFyeV9iYXRjaC5SCi0gdGVzdF9wcmFjdGljYWxfcmVzY3VlLnB5Ci0gdGVzdF9wcmFjdGljYWxfcmVzY3VlX2dydHNfZGV2ZWxvcG1lbnQucHkKLSB2YWxpZGF0aW9uL2Fjc3BfcHJhY3RpY2FsX3Jlc2N1ZV9kZXZlbG9wbWVudF9wcm90b2NvbC5qc29uCi0gdmFsaWRhdGlvbi9hY3NwX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19kZXZlbG9wbWVudF9wcm90b2NvbC5qc29uCi0gdmFsaWRhdGlvbi9wcmFjdGljYWxfcmVzY3VlX2RldmVsb3BtZW50X3RheGEuY3N2Ci0gLmdpdGh1Yi93b3JrZmxvd3MvcHJhY3RpY2FsLXJlc2N1ZS1kZXZlbG9wbWVudC55bWwKLSAuZ2l0aHViL3dvcmtmbG93cy9wcmFjdGljYWwtcmVzY3VlLWdydHMtZGV2ZWxvcG1lbnQueW1sCi0gQ0hBTkdFTE9HX0FJLm1kCgpTdW1tYXJ5OgotIENsb3NlZCB0aGUgZWFybGllciBsZWFybmVkLXJvdXRlciB2Mi4xIHBhdGggYWZ0ZXIgaXRzIGZ1bGx5IG5lc3RlZCA3Mi1wYWlyIGdhaW4gb3ZlciBsb2NhbC1vbmx5IHJlbWFpbmVkIGJlbG93IHRoZSBwcmVkZWNsYXJlZCBwcmFjdGljYWwgdGhyZXNob2xkLgotIERldmVsb3BlZCBhIG5ldyBmaW5pdGUgVG9wLTUgYGxvY2FsLWFuY2hvciArIGxlYXJuZWQgcmVzY3VlYCBwb2xpY3k6IHJldGFpbiBvbmUgaGlnaGVzdC1sb2NhbC1ldmlkZW5jZSBhbmNob3IsIHRoZW4gZmlsbCBmb3VyIHJlc2N1ZSBzbG90cyB1c2luZyBjcm9zcy10YXhvbiBwcmVkaWN0ZWQgcmVzaWR1YWwgMTAta20gcmVjb3Zlcnkgd2l0aCBhIGZpeGVkIGdlb2dyYXBoaWMtZGl2ZXJzaXR5IG11bHRpcGxpZXIuCi0gS2VwdCBTRE0gb3B0aW9uYWwgYW5kIGV4Y2x1ZGVkIFNETSBzdWl0YWJpbGl0eSwgaGVsZC1vdXQgY29vcmRpbmF0ZXMvb3V0Y29tZXMsIHNjaWVudGlmaWMgbmFtZSwgYWJzb2x1dGUgcmVnaW9uIGlkZW50aXR5LCBhbmQgR1JUUyBvdXRwdXQgZnJvbSBpbmZlcmVuY2UtdGltZSByZXNjdWUgZmVhdHVyZXMuCi0gRnJvemUgYW4gZXhhY3QgUHl0aG9uL3NjaWtpdC1sZWFybi9wYW5kYXMvTnVtUHkgZGV2ZWxvcG1lbnQgcnVudGltZSBhZnRlciBkZXRlY3RpbmcgbW9kZWwtdmVyc2lvbiBzZW5zaXRpdml0eSBiZWZvcmUgYWNjZXB0aW5nIHRoZSBsb2NrZWQgMjQtcGFpciBleHRlbnNpb24uCi0gVGhlIGxvY2tlZCA0OCsyNCBkZXZlbG9wbWVudCBldmFsdWF0aW9uIHBhc3NlZCB0aGUgcHJlZGVjbGFyZWQgbG9jYWwtb25seSBnYXRlIG9uIGFsbCA3MiBwYWlyczogbWVhbiBhYnNvbHV0ZSAxMC1rbSByZWNhbGwgZ2FpbiArMC4wMTg4OCwgcGFpci1ib290c3RyYXAgOTUlIENJICswLjAwNjc3IHRvICswLjAzMjIxLCBzaWduLWZsaXAgcD0wLjAwMzUwLiBUaGUgbG9ja2VkIDI0LXBhaXIgZXh0ZW5zaW9uIHJlbWFpbmVkIGRpcmVjdGlvbmFsbHkgcG9zaXRpdmUgKCswLjAxMzU2KSBidXQgdW5jZXJ0YWluIG9uIGl0cyBvd24sIHNvIHRoaXMgaXMgc3RpbGwgZGV2ZWxvcG1lbnQgZXZpZGVuY2UgcmF0aGVyIHRoYW4gcHJvbW90aW9uLgotIEZyb3plIGFsbCA3MiBkZXZlbG9wbWVudCB0YXhhIGZvciBleGNsdXNpb24gZnJvbSBhbnkgZnV0dXJlIGNvbmZpcm1hdGlvbiBjb2hvcnQuCi0gQWRkZWQgYSBzdHJpY3RlciBkZXZlbG9wbWVudCBwcm9tb3Rpb24gZ2F0ZSBhZ2FpbnN0IHRoZSBwaW5uZWQgb2ZmaWNpYWwgYHNwc3VydmV5OjpncnRzYCA1LjYuMSBpbXBsZW1lbnRhdGlvbiB1c2luZyB0aGUgc2FtZSBlbGlnaWJsZSBmaW5pdGUgY2FuZGlkYXRlIGZyYW1lLCBwcm9wb3J0aW9uYWwgbG9jYWwtZXZpZGVuY2UgaW5jbHVzaW9uLCByZXF1ZXN0ZWQgMTAta20gbWluaW11bSBkaXN0YW5jZSwgYW5kIDUwIHByZWRlY2xhcmVkIGRyYXdzIHBlciBmb2xkLgotIEdSVFMgc2VsZWN0aW9ucyBhcmUgd3JpdHRlbiBiZWZvcmUgaGVsZC1vdXQgY29vcmRpbmF0ZXMgYXJlIGxvYWRlZDsgbWlzc2luZyBsb2NhbCBldmlkZW5jZSBpcyByZXRhaW5lZCBhcyB6ZXJvIGxvY2FsIGV2aWRlbmNlIHRoZW4gbWFwcGVkIHRvIHRoZSBmaXhlZCBwb3NpdGl2ZSBhdXhpbGlhcnkgZmxvb3IuIE5vIEdSVFMgcmVzdWx0IG1heSBiZSB1c2VkIHRvIHJldHVuZSB0aGUgcmVzY3VlIHBvbGljeS4KLSBBZGRlZCBhIGdhdGVkIGZpbmFsIDcyLXBhaXIgcmVmaXQgaGVscGVyIHRoYXQgcmVmdXNlcyB0byBmaXQgdW5sZXNzIHRoZSBvZmZpY2lhbCBHUlRTIGRldmVsb3BtZW50IGdhdGUgcGFzc2VzIGFuZCBleHBsaWNpdGx5IGV4Y2x1ZGVzIEdSVFMgb3V0Y29tZXMgZnJvbSBtb2RlbCBmZWF0dXJlcyBhbmQgdGFyZ2V0cy4KCkZlYXR1cmVzIHByZXNlcnZlZDoKLSBPY2N1cnJlbmNlLXN1cHBvcnRlZCBjYW5kaWRhdGVzIHJlbWFpbiBhdmFpbGFibGUgd2l0aG91dCBTRE07IHRoZSByZXNjdWUgcG9saWN5IG9wZXJhdGVzIG9uIG9jY3VycmVuY2UtY29uZGl0aW9uZWQgY2FuZGlkYXRlIGV2aWRlbmNlIGFuZCBkb2VzIG5vdCBtYWtlIFNETSBtYW5kYXRvcnkuCi0gU0RNL1NTRE0gcmVtYWluIG9wdGlvbmFsIGFuZCBzZXBhcmF0ZSBmcm9tIHRoZSBvYnNlcnZlZC1kYXRhIGNhbmRpZGF0ZSB3b3JrZmxvdy4KLSBFeGlzdGluZyBtYXAtZmlyc3QgVUksIENTVi11cGxvYWQgcGFyaXR5LCBjYW5kaWRhdGUgZXhwb3J0cywgVklGL3NwYXRpYWwtdmFsaWRhdGlvbiBiZWhhdmlvciwgZ2VudXMvU1NETSB3b3JrZmxvd3MsIGFuZCBwcm9zcGVjdGl2ZSBmaWVsZC12YWxpZGF0aW9uIGdvYWxzIGFyZSB1bmNoYW5nZWQuCi0gVGhlIDEwLWttIHJldHJvc3BlY3RpdmUgZW5kcG9pbnQgcmVtYWlucyBhIHJlZ2lvbmFsIGNhbmRpZGF0ZS16b25lIHZhbGlkYXRpb24gY2xhaW0sIG5vdCBhbiBleGFjdC1zaXRlIG9jY3VwYW5jeSwgYWNjZXNzLCBkZXRlY3RhYmlsaXR5LCBwaGVub2xvZ3ksIG9yIGZpZWxkLWVmZm9ydCBjbGFpbS4KCktub3duIHJpc2tzIC8gVE9ETzoKLSBEZXZlbG9wbWVudCBzdWNjZXNzIHZlcnN1cyBsb2NhbC1vbmx5IGlzIG5vdCBzdWZmaWNpZW50IGZvciBwcm9tb3Rpb24uIFRoZSBmcm96ZW4gb2ZmaWNpYWwgR1JUUyBkZXZlbG9wbWVudCBnYXRlIG11c3QgcGFzcyBmaXJzdCwgZm9sbG93ZWQgYnkgYW4gdW5jaGFuZ2VkIGZpbmFsLW1vZGVsIGZyZWV6ZSBhbmQgYSBnZW51aW5lbHkgZnJlc2ggZXhjbHVkZWQtdGF4b24gY29uZmlybWF0aW9uIGNvaG9ydC4KLSBUaGUgb2xkIDE5Mi1wYWlyIFByYWN0aWNhbCBDb3JlIGNvbmZpcm1hdGlvbiBhZ2dyZWdhdGUgaXMgc2NpZW50aWZpY2FsbHkgaW52YWxpZCBiZWNhdXNlIHBhaXIgam9icyBmYWlsZWQgYXQgUiBkZXBlbmRlbmN5IHJlc29sdXRpb24gYmVmb3JlIGFuYWx5c2lzIGFuZCB3ZXJlIGFnZ3JlZ2F0ZWQgYXMgbWlzc2luZy16ZXJvIGFydGlmYWN0czsgaXQgbXVzdCBub3QgYmUgaW50ZXJwcmV0ZWQgYXMgYSBuZWdhdGl2ZSBiaW9sb2dpY2FsIHJlc3VsdC4KLSBBIGJyb2FkIGNsYWltIGFnYWluc3QgZXhpc3Rpbmcgc3VydmV5LXBsYW5uaW5nIHRvb2xzIGFkZGl0aW9uYWxseSByZW1haW5zIGdhdGVkIG9uIHRoZSBzZXBhcmF0ZWx5IGZyb3plbiBuYXRpdmUgYGJpb3N1cnZleWAgZW5kLXRvLWVuZCBjb21wYXJpc29uLgo=
         run: |
           python - <<'PY'
+          import base64
           from pathlib import Path
           path = Path("CHANGELOG_AI.md")
           original = path.read_text(encoding="utf-8")
           header = "# AI Change Log\n"
           assert original.startswith(header)
-          entry = r'''
-
-## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development and strong GRTS promotion gate
-
-Changed files:
-- acsp/practical_rescue.py
-- benchmark_practical_rescue_development.py
-- benchmark_practical_rescue_grts_pair.py
-- aggregate_practical_rescue_grts_development.py
-- fit_practical_rescue_final_model.py
-- benchmark_methods/grts_rescue_primary_batch.R
-- test_practical_rescue.py
-- test_practical_rescue_grts_development.py
-- validation/acsp_practical_rescue_development_protocol.json
-- validation/acsp_practical_rescue_grts_development_protocol.json
-- validation/practical_rescue_development_taxa.csv
-- .github/workflows/practical-rescue-development.yml
-- .github/workflows/practical-rescue-grts-development.yml
-- CHANGELOG_AI.md
-
-Summary:
-- Closed the earlier learned-router v2.1 path after its fully nested 72-pair gain over local-only remained below the predeclared practical threshold.
-- Developed a new finite Top-5 `local-anchor + learned rescue` policy: retain one highest-local-evidence anchor, then fill four rescue slots using cross-taxon predicted residual 10-km recovery with a fixed geographic-diversity multiplier.
-- Kept SDM optional and excluded SDM suitability, held-out coordinates/outcomes, scientific name, absolute region identity, and GRTS output from inference-time rescue features.
-- Froze an exact Python/scikit-learn/pandas/NumPy development runtime after detecting model-version sensitivity before accepting the locked 24-pair extension.
-- The locked 48+24 development evaluation passed the predeclared local-only gate on all 72 pairs: mean absolute 10-km recall gain +0.01888, pair-bootstrap 95% CI +0.00677 to +0.03221, sign-flip p=0.00350. The locked 24-pair extension remained directionally positive (+0.01356) but uncertain on its own, so this is still development evidence rather than promotion.
-- Froze all 72 development taxa for exclusion from any future confirmation cohort.
-- Added a stricter development promotion gate against the pinned official `spsurvey::grts` 5.6.1 implementation using the same eligible finite candidate frame, proportional local-evidence inclusion, requested 10-km minimum distance, and 50 predeclared draws per fold.
-- GRTS selections are written before held-out coordinates are loaded; missing local evidence is retained as zero local evidence then mapped to the fixed positive auxiliary floor. No GRTS result may be used to retune the rescue policy.
-- Added a gated final 72-pair refit helper that refuses to fit unless the official GRTS development gate passes and explicitly excludes GRTS outcomes from model features and targets.
-
-Features preserved:
-- Occurrence-supported candidates remain available without SDM; the rescue policy operates on occurrence-conditioned candidate evidence and does not make SDM mandatory.
-- SDM/SSDM remain optional and separate from the observed-data candidate workflow.
-- Existing map-first UI, CSV-upload parity, candidate exports, VIF/spatial-validation behavior, genus/SSDM workflows, and prospective field-validation goals are unchanged.
-- The 10-km retrospective endpoint remains a regional candidate-zone validation claim, not an exact-site occupancy, access, detectability, phenology, or field-effort claim.
-
-Known risks / TODO:
-- Development success versus local-only is not sufficient for promotion. The frozen official GRTS development gate must pass first, followed by an unchanged final-model freeze and a genuinely fresh excluded-taxon confirmation cohort.
-- The old 192-pair Practical Core confirmation aggregate is scientifically invalid because pair jobs failed at R dependency resolution before analysis and were aggregated as missing-zero artifacts; it must not be interpreted as a negative biological result.
-- A broad claim against existing survey-planning tools additionally remains gated on the separately frozen native `biosurvey` end-to-end comparison.
-'''
-          path.write_text(header + entry + original[len(header):], encoding="utf-8")
+          entry = base64.b64decode(__import__("os").environ["CHANGELOG_ENTRY_B64"]).decode("utf-8")
+          if "## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development" not in original:
+              path.write_text(header + entry + original[len(header):], encoding="utf-8")
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
