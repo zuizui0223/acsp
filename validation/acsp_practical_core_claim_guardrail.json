@@ -1,0 +1,41 @@
+{
+  "protocol_id": "acsp-practical-core-claim-guardrail-v1",
+  "status": "frozen_before_untouched_cohort_sampling_or_outcome_inspection",
+  "statistical_primary_protocol_fingerprint": "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9",
+  "practical_core_fingerprint": "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905",
+  "objective": "focal-taxon held-out regional recovery under identical Top-5 candidate budget",
+  "claim_levels": {
+    "primary_same_pool_result": {
+      "required_contrast": "acsp_practical_core - official_grts_proportional_local_mindis10km",
+      "rule": "mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05 on all 192 declared pairs",
+      "allowed_claim_if_passed": "Practical Core exceeded the predeclared evidence-aware spatially balanced GRTS comparator with a 10-km minimum-distance constraint for this focal-taxon recovery objective"
+    },
+    "grts_family_superiority": {
+      "required_all": [
+        "primary_same_pool_result passes",
+        "acsp_practical_core - official_grts_proportional_local: mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05 on all 192 declared pairs",
+        "acsp_practical_core - official_grts_equal: pair-bootstrap 95% CI lower bound > 0 on all 192 declared pairs"
+      ],
+      "allowed_claim_if_passed": "Practical Core outperformed the predeclared official GRTS variants for this focal-taxon recovery objective",
+      "if_failed": "report method-specific results and do not generalize a win against one GRTS configuration to the GRTS family"
+    },
+    "existing_tool_superiority": {
+      "required_all": [
+        "grts_family_superiority passes",
+        "separate native biosurvey end-to-end protocol passes its own predeclared gate"
+      ],
+      "if_failed": "do not claim general superiority over existing survey-planning tools"
+    }
+  },
+  "sdm_positioning": {
+    "role": "secondary decision-level comparator, not a superiority gate",
+    "required_reporting": [
+      "pair-level recall difference",
+      "selected-set overlap/Jaccard",
+      "failure/evaluable counts"
+    ],
+    "interpretation": "different decision target from continuous suitability; ACSP need not outperform fitted SDM to be differentiated"
+  },
+  "no_retuning_after_outcome": true,
+  "fingerprint": "e654d7e0c652effa938f7cd04235156fab9f9c3da2c369200cfa120453eebdfc"
+}
