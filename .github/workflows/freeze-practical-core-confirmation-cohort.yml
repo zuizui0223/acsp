@@ -1,0 +1,96 @@
+name: Freeze exact Practical Core confirmation cohort artifact
+
+on:
+  push:
+    branches:
+      - benchmark/practical-core-confirmation-cohort
+    paths:
+      - validation/freeze_practical_core_confirmation_cohort_trigger.txt
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact successful predeclaration artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ARTIFACT_ID=9119529058
+          ZIP=/tmp/practical-core-cohort.zip
+          curl --fail --location --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -o "${ZIP}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip"
+          mkdir -p /tmp/practical-core-cohort
+          unzip -q "${ZIP}" -d /tmp/practical-core-cohort
+      - name: Verify immutable artifact contents
+        run: |
+          set -euo pipefail
+          cd /tmp/practical-core-cohort
+          echo "94e6823a335b9737e598c3de9ba35a7be76db8092e58a19bab642629df0bd0fe  cohort_manifest.json" | sha256sum -c -
+          echo "06c3f2c5ab4f35ebcf6c380cf3bebf8373085a6ac7f189ca29436a74b5a887e4  excluded_taxa.csv" | sha256sum -c -
+          echo "fe20fbe02c85af344133cd0feb62a1319ff5285ede84ccaebc3fd23c779cc02d  predeclared_taxon_region_pairs.csv" | sha256sum -c -
+          echo "9cdf6cbedbddf5d37299dc1b9deddd67574543d7fce62ad69939268653fd495f  sampling_frame_audit.csv" | sha256sum -c -
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+
+          manifest = json.loads(Path("cohort_manifest.json").read_text())
+          cohort = pd.read_csv("predeclared_taxon_region_pairs.csv")
+          audit = pd.read_csv("sampling_frame_audit.csv")
+          assert manifest["status"] == "ready"
+          assert manifest["protocol_fingerprint"] == "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9"
+          assert manifest["practical_core_fingerprint"] == "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
+          assert manifest["declared_pairs"] == 192
+          assert manifest["unique_declared_taxa"] == 192
+          assert manifest["taxon_group_counts"] == {"animal": 96, "plant": 96}
+          assert set(manifest["region_cell_counts"].values()) == {16}
+          assert set(manifest["record_count_stratum_counts"].values()) == {48}
+          assert manifest["minimum_available_unused_in_cell_stratum"] == 35
+          assert manifest["outcomes_inspected"] is False
+          assert manifest["occurrence_rows_fetched_for_declared_taxa"] is False
+          assert manifest["candidate_generation_run"] is False
+          assert manifest["practical_core_run"] is False
+          assert manifest["grts_run"] is False
+          assert manifest["sdm_fitting_run"] is False
+          assert manifest["heldout_recovery_run"] is False
+          assert manifest["taxon_replacement_after_declaration_allowed"] is False
+          assert len(cohort) == 192 and cohort["scientific_name"].nunique() == 192
+          assert len(audit) == 96
+          PY
+      - name: Commit exact cohort snapshot
+        run: |
+          set -euo pipefail
+          TARGET=validation/practical_core_untouched_cohort_20260811
+          mkdir -p "${TARGET}"
+          cp /tmp/practical-core-cohort/cohort_manifest.json "${TARGET}/"
+          cp /tmp/practical-core-cohort/predeclared_taxon_region_pairs.csv "${TARGET}/"
+          cp /tmp/practical-core-cohort/sampling_frame_audit.csv "${TARGET}/"
+          cp /tmp/practical-core-cohort/excluded_taxa.csv "${TARGET}/"
+          cat > "${TARGET}/ARTIFACT_PROVENANCE.txt" <<'EOF'
+          source_workflow_run=31537602828
+          source_artifact_id=9119529058
+          source_artifact_name=acsp-practical-core-untouched-confirmation-cohort
+          source_artifact_digest=sha256:1859228abd985c2ca73afee5a7bbeea1eab348ace73c7f54a8d13c871b650806
+          cohort_manifest_sha256=94e6823a335b9737e598c3de9ba35a7be76db8092e58a19bab642629df0bd0fe
+          excluded_taxa_sha256=06c3f2c5ab4f35ebcf6c380cf3bebf8373085a6ac7f189ca29436a74b5a887e4
+          predeclared_taxon_region_pairs_sha256=fe20fbe02c85af344133cd0feb62a1319ff5285ede84ccaebc3fd23c779cc02d
+          sampling_frame_audit_sha256=9cdf6cbedbddf5d37299dc1b9deddd67574543d7fce62ad69939268653fd495f
+          first_attempt_failure=CLI argument mapping TypeError before sampler run; no taxon draw or outcome generated
+          no_retuning_after_outcome=true
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${TARGET}"
+          git diff --cached --exit-code && { echo "No cohort files staged" >&2; exit 1; } || true
+          git commit -m "Freeze exact 192-pair untouched Practical Core cohort"
+          git push origin HEAD:benchmark/practical-core-confirmation-cohort
