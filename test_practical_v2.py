@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from acsp.practical_v2 import (
+    V2_ENVIRONMENTAL_COLUMNS,
     V2_PROTOCOL_FINGERPRINT,
     build_candidate_decision_utility_features,
     development_protocol_fingerprint,
@@ -53,6 +54,16 @@ class PracticalV2Tests(unittest.TestCase):
         self.assertTrue(np.isfinite(features["geo_nn_km"]).all())
         self.assertTrue(np.isfinite(features["env_nn"]).all())
 
+    def test_no_terrain_context_is_supported_and_imputed_by_frozen_model(self):
+        candidates = self.candidates().drop(columns=list(V2_ENVIRONMENTAL_COLUMNS))
+        features = build_candidate_decision_utility_features(candidates, "animal")
+        self.assertTrue(features["env_nn"].isna().all())
+        self.assertTrue(features["env_avg"].isna().all())
+        selected = select_practical_v2(candidates, "animal")
+        self.assertEqual(len(selected), 5)
+        self.assertFalse(selected["v2_fallback_used"].any())
+        self.assertTrue(np.isfinite(selected["v2_candidate_decision_utility_score"]).all())
+
     def test_heldout_columns_cannot_change_scores_or_selection(self):
         candidates = self.candidates()
         first = candidates.copy()
@@ -91,12 +102,17 @@ class PracticalV2Tests(unittest.TestCase):
         self.assertEqual(first["v2_selection_rank"].tolist(), [1, 2, 3, 4, 5])
         self.assertFalse(first["v2_fallback_used"].any())
 
-    def test_missing_v2_schema_falls_back_to_frozen_v1(self):
+    def test_partial_terrain_schema_falls_back_to_frozen_v1(self):
         candidates = self.candidates().drop(columns="tpi")
         selected = select_practical_v2(candidates, "plant")
         self.assertTrue(selected["v2_fallback_used"].all())
-        self.assertTrue(selected["v2_fallback_reason"].str.contains("tpi").all())
+        self.assertTrue(selected["v2_fallback_reason"].str.contains("partial environmental schema").all())
         self.assertIn("validated_core_policy", selected.columns)
+
+    def test_empty_pool_is_stable(self):
+        empty = self.candidates().head(0)
+        selected = select_practical_v2(empty, "plant")
+        self.assertTrue(selected.empty)
 
 
 if __name__ == "__main__":
