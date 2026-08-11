@@ -1,0 +1,47 @@
+{
+  "protocol_id": "acsp-practical-core-secondary-sdm-v1",
+  "status": "frozen_before_untouched_cohort_sampling_or_outcome_inspection",
+  "practical_core_fingerprint": "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905",
+  "primary_confirmation_protocol_fingerprint": "cd27dc5416057b574e58742bfe001307338a20aedb63ce1bac431588dc58eee9",
+  "source_sdm_execution_contract": {
+    "contract_id": "acsp-sdm-topk-execution-v1",
+    "contract_fingerprint": "1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1",
+    "reuse_rule": "reuse production_sdm_execution unchanged except outer-fold and candidate-generation steps are not rerun; read the already frozen training_occurrences.csv and candidate_pool_pre_outcome.csv from the primary confirmation artifact"
+  },
+  "decision": {
+    "top_k": 5,
+    "candidate_universe": "exact frozen Practical Core candidate_pool_pre_outcome rows",
+    "training_occurrences": "exact frozen primary training_occurrences rows",
+    "fitting_and_scoring": "unchanged production-aligned fitted-SDM execution contract",
+    "tie_break": "descending rounded sdm_suitability then stable candidate_id",
+    "minimum_finite_sdm_candidates": 5,
+    "failure_rule": "fit/extraction/fewer-than-five-finite-candidate failure scores zero for fitted_sdm_top_k in the all-declared secondary estimand; evaluable-only estimand is also reported",
+    "decision_freeze": "write SDM audit and selected candidate IDs before reading held_out_occurrences.csv"
+  },
+  "reporting": {
+    "primary_role": "secondary decision-positioning analysis only; never changes or gates the Practical Core-vs-GRTS primary result",
+    "all_declared_pair_outputs": [
+      "Practical Core mean recall",
+      "fitted SDM mean recall",
+      "pair recall difference"
+    ],
+    "sdm_evaluable_outputs": [
+      "same paired recall metrics restricted to folds with status sdm_ok",
+      "evaluable pair/fold counts"
+    ],
+    "set_difference_outputs": [
+      "Top-5 Jaccard overlap per SDM-evaluable fold",
+      "exact set agreement",
+      "mean Jaccard",
+      "median Jaccard"
+    ],
+    "inference_unit": "taxon-region pair",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "superiority_gate": null,
+    "claim_rule": "report equivalence, advantage, or disadvantage as observed; use set overlap to demonstrate decision differentiation only when supported"
+  },
+  "leakage_guardrail": "held-out coordinates and outcomes are unavailable to SDM fitting, candidate environment extraction, suitability scoring, and Top-5 selection; they are read only after the SDM decision artifact is frozen",
+  "no_retuning_after_outcome": true,
+  "fingerprint": "50fac79ce26378a56aaf497564ce85574986580096275c4d26de67170e6f3d63"
+}
