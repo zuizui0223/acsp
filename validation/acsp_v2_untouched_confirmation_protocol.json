@@ -1,0 +1,121 @@
+{
+  "protocol_id": "acsp-v2-untouched-confirmation-v1",
+  "status": "frozen_before_cohort_sampling_candidate_generation_or_outcome_inspection",
+  "v2_policy": {
+    "protocol_id": "acsp-v2-practical-candidate-utility-development-v1",
+    "protocol_fingerprint": "378e069f982a19abfc0183163fd503b467a1b746c11ba0b354d4f9802c155124",
+    "top_k": 5,
+    "recovery_radius_km": 10.0,
+    "promotion_status_before_confirmation": "development_only"
+  },
+  "cohort": {
+    "pair_count": 192,
+    "taxon_groups": ["plant", "animal"],
+    "region_cell_count": 12,
+    "record_count_strata": 4,
+    "taxa_per_region_group_record_stratum": 2,
+    "seed": 20260811,
+    "minimum_records": 20,
+    "facet_limit": 400,
+    "records_per_pair": 150,
+    "sampling_rule": "for every fixed Japanese region cell x plant/animal x within-frame record-count quartile, sample exactly two previously unused species; no substitution across cells/strata and no replacement after declaration"
+  },
+  "exclusion_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+    "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv"
+  ],
+  "explicit_exclusion_prefixes": ["Campanula microdonta"],
+  "outer_validation": {
+    "block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "repeats": 5,
+    "fold_seed_base": 20260811,
+    "candidate_generation": "build_automatic_discover_bundle(..., candidate_generation_only=True) using training occurrences only",
+    "candidate_scoring": "integrated_candidate_scores(..., exclude_occurrence_derived=True)",
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "failure_rule": "declared pair/fold failures remain in intention-to-evaluate denominator as zero for operational methods; taxa are never replaced after cohort freeze"
+  },
+  "same_pool_methods": [
+    "acsp_v2_candidate_decision_utility",
+    "frozen_acsp_v1",
+    "local_evidence_top_k",
+    "official_grts_equal",
+    "official_grts_proportional_local",
+    "official_grts_proportional_local_mindis10km",
+    "geographic_maximin",
+    "environmental_maximin_when_eligible",
+    "dual_space_maximin_when_eligible",
+    "same_pool_random_mean",
+    "heldout_greedy_oracle_nonoperational"
+  ],
+  "grts": {
+    "implementation": "spsurvey::grts",
+    "package": "spsurvey",
+    "package_version": "5.6.1",
+    "frame": "identical finite ACSP candidate rows after training-only generation and known-location exclusion",
+    "draws_per_fold": 50,
+    "seed_base": 20260811,
+    "seed_formula": "seed_base + pair_id*100000 + repeat*1000 + draw_index",
+    "equal": {"seltype": "equal", "mindis_km": 0.0},
+    "proportional_local": {"seltype": "proportional", "aux_var": "pmax(component_local_habitat_score,1e-6)", "mindis_km": 0.0},
+    "proportional_local_mindis10km": {"seltype": "proportional", "aux_var": "pmax(component_local_habitat_score,1e-6)", "mindis_km": 10.0, "maxtry": 20},
+    "replacement_sites": 3,
+    "recovery_estimand": "mean Top-5 held-out recovery over the 50 predeclared GRTS draws per fold",
+    "mindis_failure_handling": "retain official grts output and warning/audit; do not tune mindis or rerun with a favorable threshold"
+  },
+  "fitted_sdm": {
+    "status": "secondary_optional_when_production_SDM_is_evaluable",
+    "implementation": "unchanged production-aligned fitted-SDM Top-5 contract from validation/sdm_topk_protocol.json",
+    "interpretation": "decision-level secondary contrast, not universal model comparison"
+  },
+  "inference": {
+    "unit": "taxon-region pair",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "minimum_practical_absolute_recall_gain": 0.015,
+    "primary_gate_order": [
+      "acsp_v2 - local_evidence_top_k",
+      "acsp_v2 - official_grts_proportional_local_mindis10km",
+      "acsp_v2 - frozen_acsp_v1"
+    ],
+    "superiority_gate": {
+      "local_evidence_top_k": "mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05",
+      "official_grts_proportional_local_mindis10km": "mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05",
+      "frozen_acsp_v1": "pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05"
+    },
+    "claim_rule": "ACSP v2 is not promoted as superior unless every ordered gate passes on the complete untouched cohort; negative/equivalent results are retained and no retuning is permitted on this cohort"
+  },
+  "power_basis": {
+    "development_pair_difference_sd": 0.06969910708977313,
+    "development_observed_v2_minus_v1": 0.021508778728849532,
+    "target_minimum_practical_gain": 0.015,
+    "reason_for_192_pairs": "192 balances 12 fixed region cells x 2 taxon groups x 4 record-count strata x 2 taxa and provides >80% approximate paired-normal power for a 0.015 gain at the observed development SD"
+  },
+  "biosurvey_end_to_end": {
+    "status": "separate_practical_comparator_required_before_broad_existing-tool_superiority_claim",
+    "reason": "biosurvey natively selects from a region and environmental raster master matrix, not an arbitrary ACSP finite candidate frame",
+    "methods": ["uniformG_selection", "uniformE_selection", "EG_selection"],
+    "claim_boundary": "same-pool confirmation can support superiority over GRTS/local/v1 under the ACSP candidate universe; a broader tool-level superiority claim additionally requires a predeclared end-to-end biosurvey comparison"
+  },
+  "prospective_field_gate": {
+    "required_for": "claims about access, detection probability, discoveries per field day, route efficiency, or replacement-site utility",
+    "required_fields": [
+      "attempted_site",
+      "detection_or_non_detection",
+      "search_duration",
+      "searched_area_or_standardized_effort",
+      "access_failure_reason",
+      "date_season_phenology",
+      "replacement_used",
+      "realized_travel_time"
+    ]
+  },
+  "leakage_guardrail": "held-out coordinates and outcomes are attached only after every operational selection for that fold is frozen; no method may use held-out recovery as an inference-time feature",
+  "no_retuning_after_outcome": true,
+  "protocol_fingerprint": "8b540a965e25789174ce97a976c36d8b659c3c0d2919693b8fcd766330532ebb"
+}
