@@ -1,0 +1,89 @@
+{
+  "protocol_id": "acsp-practical-local-anchor-rescue-grts-development-v1",
+  "status": "frozen_after_72_pair_rescue_gate_before_official_grts_outcome_evaluation",
+  "rescue_policy": {
+    "protocol_id": "acsp-practical-local-anchor-rescue-development-v1",
+    "protocol_fingerprint": "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48",
+    "top_k": 5,
+    "local_anchor_count": 1,
+    "rescue_slots": 4,
+    "diversity_scale_km": 10.0
+  },
+  "rescue_72_development_result": {
+    "workflow_run": 31544341871,
+    "artifact_id": 9121943417,
+    "artifact_digest": "sha256:e7613844d8937f0a5c1c73ee6580f1d76c1b0c4ff0305430179d5d556e52dbe0",
+    "development_manifest_sha256": "6daa58576550b89b1573b46565011fc018ecbdc358f289a2af01d4989dfc8c31",
+    "pair_level_comparison_sha256": "c7156c435faffdceaf173ac1efc1756f036a86b5ab0ee6d753e270e9c777354b",
+    "fold_method_comparison_sha256": "801f43ed11a61e44188a5c67b4dd994e88cc7316513eebeef5791d9d73d407e8",
+    "model_selection_48_mean_gain_vs_local": 0.021541730922882793,
+    "locked_extension_24_mean_gain_vs_local": 0.013556432042319955,
+    "combined_72_mean_gain_vs_local": 0.01887996462936185,
+    "combined_72_bootstrap_95ci": [0.0067731398929250395, 0.032213546309697014],
+    "combined_72_sign_flip_p": 0.0034998833372220928,
+    "development_gate_passed": true
+  },
+  "development_sources": {
+    "mixed_24": {
+      "workflow_run": 30091294481,
+      "artifact_name": "standard-baselines-mixed_20260705",
+      "artifact_digest": "sha256:fd5c8e1acd359e4941d1767bc516b72eff973acf12bc47112864023ce033c0bc"
+    },
+    "plants_24": {
+      "workflow_run": 30091305081,
+      "artifact_name": "standard-baselines-plants_20260706",
+      "artifact_digest": "sha256:08066b7f893beda5faec5c953b4bedac4f424f30366c4dd427a303e8fe8807d3"
+    },
+    "locked_extension_24": {
+      "workflow_run": 31238895064,
+      "artifact_pattern": "sdm-topk-recovered-pair-*",
+      "role": "development_only"
+    }
+  },
+  "official_grts": {
+    "implementation": "USEPA/spsurvey::grts",
+    "spsurvey_version": "5.6.1",
+    "spsurvey_tag_commit": "0914fcd071713fdab19f43d8d9a66436830bd917",
+    "candidate_frame": "identical eligible ACSP finite candidate rows for each stored development fold after known-location filtering",
+    "score_col": "component_local_habitat_score",
+    "missing_local_evidence": "retain the candidate row; map non-finite local evidence to zero before the positive auxiliary transform",
+    "seltype": "proportional",
+    "aux_var": "pmax(ifelse(is.finite(component_local_habitat_score), component_local_habitat_score, 0), 1e-6)",
+    "mindis_km": 10.0,
+    "maxtry": 20,
+    "top_k": 5,
+    "replacement_sites": 3,
+    "draws_per_fold": 50,
+    "seed_base": 20260811,
+    "seed_formula": "seed_base + global_pair_id*100000 + repeat*1000 + draw_index",
+    "global_pair_id_mapping": "mixed_1..24 => 1..24; plants_1..24 => 25..48; sdm_1..24 => 49..72",
+    "draw_failure_rule": "a draw without a verified base design contributes zero recovery; warnings and errors are retained and no distance threshold is relaxed",
+    "outcome_separation": "all 50 GRTS base-site sets are written before held-out recovery is scored"
+  },
+  "estimand": {
+    "radius_km": 10.0,
+    "fold_rescue_recovery": "recovery of the already-frozen rescue selected IDs from the 72-pair development artifact",
+    "fold_grts_recovery": "mean held-out recovery across 50 predeclared official GRTS draws",
+    "pair_recovery": "mean across five spatial-block repeats",
+    "inference_unit": "taxon-region pair"
+  },
+  "inference": {
+    "primary_contrast": "local_anchor_rescue - official_grts_proportional_local_mindis10km",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "minimum_absolute_recall_gain": 0.015,
+    "gate": "all 72 pairs retained AND mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05",
+    "secondary_report": ["rescue vs local_evidence_top_k", "GRTS warning/error rate", "realized minimum distance"],
+    "no_retuning_after_grts_outcome": true
+  },
+  "next_if_pass": {
+    "action": "refit the unchanged rescue estimator on all 72 development pairs under the frozen software contract, freeze model/training hashes, then sample a fresh confirmation cohort",
+    "fresh_confirmation_exclusions": [
+      "all 72 rescue development taxa",
+      "all 192 taxa in validation/practical_core_untouched_cohort_20260811"
+    ],
+    "confirmation_primary_comparator": "same official GRTS 5.6.1 proportional-local mindis10km contract",
+    "promotion_requires_fresh_confirmation": true
+  },
+  "protocol_fingerprint": "806c97b8c75c421b7cbd725bdd56f2f0e630fdc414bace302da4e29e9681cd18"
+}
