@@ -1,0 +1,53 @@
+name: Strong survey-design comparators
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/strong-survey-comparators
+    paths:
+      - benchmark_methods/grts_candidate_frame.R
+      - benchmark_methods/test_grts_candidate_frame.R
+      - .github/workflows/strong-survey-comparators.yml
+  pull_request:
+    paths:
+      - benchmark_methods/grts_candidate_frame.R
+      - benchmark_methods/test_grts_candidate_frame.R
+      - .github/workflows/strong-survey-comparators.yml
+
+permissions:
+  contents: read
+
+jobs:
+  grts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::spsurvey
+            any::sf
+      - name: Run official GRTS adapter regression tests
+        run: Rscript benchmark_methods/test_grts_candidate_frame.R | tee grts-comparator-test.log
+      - name: Record comparator package versions
+        run: |
+          Rscript - <<'RSCRIPT'
+          writeLines(c(
+            paste0("spsurvey=", as.character(packageVersion("spsurvey"))),
+            paste0("sf=", as.character(packageVersion("sf"))),
+            paste0("R=", paste(R.version$major, R.version$minor, sep = "."))
+          ), "grts-comparator-versions.txt")
+          RSCRIPT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grts-comparator-smoke-test
+          path: |
+            grts-comparator-test.log
+            grts-comparator-versions.txt
+          if-no-files-found: error
+          retention-days: 90
