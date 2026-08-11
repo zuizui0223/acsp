@@ -171,7 +171,7 @@ jobs:
           import json
           from pathlib import Path
           result = json.loads(Path("rescue-grts-development-aggregate/development_manifest.json").read_text())
-          assert result["protocol_fingerprint"] == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          assert result["protocol_fingerprint"] == "47afc2acf0807998ca13b04cce72e71cea2baffff7df7b33fb9b66a82559885b"
           assert result["declared_pairs"] == result["complete_pairs"] == 72
           assert result["folds"] == 360
           assert result["spsurvey_version"] == "5.6.1"
