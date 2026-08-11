@@ -60,6 +60,8 @@ Candidate-pool environmental context:
 - mean environmental distance;
 - robust-scaled elevation, slope, roughness and TPI plus sine/cosine aspect.
 
+One development taxon used a marine candidate surface with none of those five terrestrial terrain columns. That state is explicitly supported: `env_nn` and `env_avg` are missing and receive the frozen development-model median at inference. A **partial** five-variable terrain schema is treated as inconsistent and triggers a v1 fallback rather than silently changing the environmental representation.
+
 Pool diagnostics:
 
 - candidate-pool size;
@@ -79,9 +81,13 @@ The committed machine-readable artifact is:
 
 `validation/acsp_v2_candidate_utility_protocol.json`
 
+Protocol fingerprint:
+
+`378e069f982a19abfc0183163fd503b467a1b746c11ba0b354d4f9802c155124`
+
 It fixes:
 
-- logistic regression with `C=0.05` and balanced classes;
+- logistic regression with `C=0.03` and balanced classes;
 - preprocessing medians, means and scales;
 - one-hot category order;
 - fitted all-development coefficients;
@@ -110,23 +116,25 @@ The development benchmark uses the exact reviewed secondary reconstruction artif
 
 Together they contain 48 unique taxon-region pairs and 240 expected folds. Candidate-utility models are fitted only on other taxon-region pairs in each of eight frozen outer folds.
 
-Approximate grouped development results used to justify freezing this candidate policy were:
+The reproducible grouped development target is:
 
 | method | mean 10-km pair recall |
 |---|---:|
-| ACSP v2 candidate utility | 0.1532 |
-| frozen ACSP v1 | 0.1318 |
-| local evidence Top-5 | 0.1311 |
-| geographic maximin | 0.1048 |
-| same-pool random | 0.0847 |
+| ACSP v2 candidate utility | 0.15332 |
+| frozen ACSP v1 | 0.13181 |
+| local evidence Top-5 | 0.13110 |
+| geographic maximin | 0.10483 |
+| same-pool random | 0.08470 |
 
-The pair-level v2-minus-v1 development difference was approximately `+0.0213`; the development bootstrap interval was above zero and the sign-flip p-value was about `0.035`.
+The pair-level v2-minus-v1 development difference is `+0.02151`; the 30,000-draw pair bootstrap interval is `0.00330–0.04228`, and the sign-flip p-value is `0.03397`. Of 48 pair differences, 25 are positive, 12 negative and 11 tied.
 
-**These are development estimates, not confirmation.** The regularization and final set-selection weights were selected while these source artifacts were available. The repository therefore must reproduce these results, but must not cite them as evidence that v2 is validated.
+**These are development estimates, not confirmation.** The regularization and final set-selection weights were selected while these source artifacts were available. The repository must reproduce these results, but must not cite them as evidence that v2 is validated.
 
 ## Fallback
 
 When the v2 feature contract cannot be satisfied, `select_practical_v2()` falls back to the frozen taxon-group v1 policy and records the reason. Missing data must never silently produce a different learned model.
+
+The one explicitly supported exception is a candidate pool with none of the five terrestrial terrain columns, matching the marine development case. Such a pool uses the frozen median-imputed environmental-context features rather than inventing terrestrial values.
 
 ## Independent confirmation gate
 
