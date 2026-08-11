@@ -1,2 +1,1 @@
-Append the required 2026-08-12 Practical Rescue / GRTS development entry to CHANGELOG_AI.md, then remove this marker and the one-shot helper workflow in the same bot commit.
-Retry: safe base64 payload encoding.
+Finalize only the GRTS protocol self-fingerprint references (950f7d... -> canonical 47afc2...), prepend the required CHANGELOG_AI entry, then remove this marker and the one-shot helper. Scientific payload, seeds, GRTS settings, model settings, and outcomes must remain unchanged.
