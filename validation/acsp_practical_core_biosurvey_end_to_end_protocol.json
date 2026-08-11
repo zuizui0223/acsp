@@ -36,11 +36,11 @@
     "aspect_transform": "sin/cos derived from the same aspect values before PCA",
     "region": "the exact fixed cohort region rectangle; no occurrence-conditioned mask",
     "master_grid_resolutions_degrees": [
-      0.025,
-      0.05
+      0.05,
+      0.1
     ],
     "grid_rule": "regular lon/lat grid covering the region; extract the same GSI terrain information at cell centers; cells with incomplete terrain are removed without outcome-dependent replacement",
-    "reason_for_two_resolutions": "predeclare a moderate resolution sensitivity rather than choose one raster discretization after outcomes"
+    "reason_for_two_resolutions": "predeclare a regional-scale sensitivity aligned with the 10-km recovery objective and 0.1-degree validation blocks while retaining a finer 0.05-degree grid; avoid infeasible full-region near-native GSI rasterization"
   },
   "biosurvey_methods": {
     "uniformG": {
@@ -79,12 +79,12 @@
   },
   "comparison": {
     "configurations": [
-      "biosurvey_uniformG_0.025deg",
-      "biosurvey_uniformE_0.025deg",
-      "biosurvey_EG_0.025deg",
       "biosurvey_uniformG_0.05deg",
       "biosurvey_uniformE_0.05deg",
-      "biosurvey_EG_0.05deg"
+      "biosurvey_EG_0.05deg",
+      "biosurvey_uniformG_0.1deg",
+      "biosurvey_uniformE_0.1deg",
+      "biosurvey_EG_0.1deg"
     ],
     "unit": "taxon-region pair after averaging five frozen outer folds",
     "minimum_practical_absolute_recall_gain": 0.015,
@@ -98,5 +98,5 @@
   },
   "relationship_to_grts_claim": "broad existing-tool superiority requires both the separately frozen GRTS-family guardrail and this biosurvey-family gate to pass",
   "no_retuning_after_outcome": true,
-  "fingerprint": "2252d1fb9fc8e4883f4c473e5c7b48487344dd1952633354372f6a1dd21912b7"
+  "fingerprint": "33881b4176c4c8bcda5485189eb5b8a22ee495d766b90c4e159a584265710b2b"
 }
