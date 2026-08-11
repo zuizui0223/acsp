@@ -35,9 +35,7 @@ base <- terra::rast(
   crs = "EPSG:4326"
 )
 xy <- terra::xyFromCell(base, seq_len(terra::ncell(base)))
-variables <- c(
-  base, base, base, base, base
-)
+variables <- c(base, base, base, base, base)
 values(variables[[1]]) <- xy[, 2]
 values(variables[[2]]) <- xy[, 1]
 values(variables[[3]]) <- sin(xy[, 1] * 8) + cos(xy[, 2] * 5)
@@ -62,6 +60,8 @@ stopifnot(manifest$biosurvey_commit == "035fbebf3d47f823fa55b41a56a74b35dc510753
 stopifnot(manifest$declared_budget == 5L)
 stopifnot(manifest$uniformG_sites == 5L)
 stopifnot(manifest$uniformE_sites == 5L)
+stopifnot(manifest$uniformE_native_function_called == TRUE)
+stopifnot(grepl("data.frame-to-SpatVector-PC1-PC2", manifest$uniformE_compatibility_shim, fixed = TRUE))
 stopifnot(manifest$EG_sites >= 1L)
 stopifnot(manifest$EG_sites <= 5L)
 stopifnot(manifest$acsp_candidate_frame_used == FALSE)
@@ -82,6 +82,7 @@ stopifnot(any(audit$status == "ok"))
 
 cat("biosurvey_version=", as.character(packageVersion("biosurvey")), "\n", sep = "")
 cat("biosurvey_commit=035fbebf3d47f823fa55b41a56a74b35dc510753\n")
+cat("uniformE_compatibility_shim=", manifest$uniformE_compatibility_shim, "\n", sep = "")
 cat("uniformG_sites=", manifest$uniformG_sites, "\n", sep = "")
 cat("uniformE_sites=", manifest$uniformE_sites, "\n", sep = "")
 cat("EG_sites=", manifest$EG_sites, "\n", sep = "")
