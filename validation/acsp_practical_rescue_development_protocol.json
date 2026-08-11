@@ -106,5 +106,12 @@
     "exclude_20260811_practical_core_192_taxa": true,
     "no_retuning_after_outcome": true
   },
-  "protocol_fingerprint": "03a6641b488c2aa2d5d2abe89b10798754e3b1c85428d1a2b3d9b723093f4c3a"
+  "software_contract": {
+    "python": "3.13.5",
+    "scikit_learn": "1.8.0",
+    "pandas": "2.2.3",
+    "numpy": "2.3.5",
+    "reason": "freeze the exact model-selection runtime before locked 24-pair extension evaluation after an unrevealed extension run exposed a 48-pair reproducibility mismatch under scikit-learn 1.9.0 / Python 3.11"
+  },
+  "protocol_fingerprint": "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48"
 }
