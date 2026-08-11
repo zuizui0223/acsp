@@ -58,19 +58,15 @@
     "package": "spsurvey",
     "package_version": "5.6.1",
     "frame": "identical finite ACSP candidate rows after training-only generation and known-location exclusion",
+    "draws_per_fold": 50,
     "seed_base": 20260811,
     "seed_formula": "seed_base + pair_id*100000 + repeat*1000 + draw_index",
     "equal": {"seltype": "equal", "mindis_km": 0.0},
     "proportional_local": {"seltype": "proportional", "aux_var": "pmax(component_local_habitat_score,1e-6)", "mindis_km": 0.0},
     "proportional_local_mindis10km": {"seltype": "proportional", "aux_var": "pmax(component_local_habitat_score,1e-6)", "mindis_km": 10.0, "maxtry": 20},
     "replacement_sites": 3,
-    "recovery_estimand": "mean Top-5 held-out recovery over the predeclared GRTS draws per fold; 50 draws for the primary proportional-local+10km comparator and 10 draws for each secondary GRTS variant",
-    "mindis_failure_handling": "retain official grts output and warning/audit; do not tune mindis or rerun with a favorable threshold",
-    "draws_per_fold_by_variant": {
-      "equal": 10,
-      "proportional_local": 10,
-      "proportional_local_mindis10km": 50
-    }
+    "recovery_estimand": "mean Top-5 held-out recovery over the 50 predeclared GRTS draws per fold",
+    "mindis_failure_handling": "retain official grts output and warning/audit; do not tune mindis or rerun with a favorable threshold"
   },
   "fitted_sdm": {
     "status": "secondary_optional_when_production_SDM_is_evaluable",
@@ -121,5 +117,5 @@
   },
   "leakage_guardrail": "held-out coordinates and outcomes are attached only after every operational selection for that fold is frozen; no method may use held-out recovery as an inference-time feature",
   "no_retuning_after_outcome": true,
-  "protocol_fingerprint": "33add26e5beddc9d6c3d564cb4e5e9acf5e64999fc9cb8c89c54dae453b9c132"
+  "protocol_fingerprint": "8b540a965e25789174ce97a976c36d8b659c3c0d2919693b8fcd766330532ebb"
 }
