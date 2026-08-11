@@ -11,7 +11,9 @@ on:
       - execute_practical_core_confirmation_pair.py
       - run_practical_core_confirmation_pair.py
       - aggregate_practical_core_confirmation.py
+      - execute_aggregate_practical_core_confirmation.py
       - test_practical_core_confirmation_runner.py
+      - test_practical_core_production_aggregator.py
       - .github/workflows/practical-core-confirmation-runner.yml
   pull_request:
     paths:
@@ -20,7 +22,9 @@ on:
       - execute_practical_core_confirmation_pair.py
       - run_practical_core_confirmation_pair.py
       - aggregate_practical_core_confirmation.py
+      - execute_aggregate_practical_core_confirmation.py
       - test_practical_core_confirmation_runner.py
+      - test_practical_core_production_aggregator.py
       - .github/workflows/practical-core-confirmation-runner.yml
 
 permissions:
@@ -43,9 +47,14 @@ jobs:
             execute_practical_core_confirmation_pair.py \
             run_practical_core_confirmation_pair.py \
             aggregate_practical_core_confirmation.py \
-            test_practical_core_confirmation_runner.py
+            execute_aggregate_practical_core_confirmation.py \
+            test_practical_core_confirmation_runner.py \
+            test_practical_core_production_aggregator.py
       - name: Run leakage and inference contract tests
-        run: python -m unittest -v test_practical_core_confirmation_runner.py
+        run: |
+          python -m unittest -v \
+            test_practical_core_confirmation_runner.py \
+            test_practical_core_production_aggregator.py
       - name: Audit frozen fingerprints in source
         run: |
           python - <<'PY'
