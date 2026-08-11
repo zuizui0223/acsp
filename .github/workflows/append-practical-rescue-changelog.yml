@@ -1,4 +1,4 @@
-name: Append Practical Rescue AI changelog
+name: Finalize Practical Rescue development metadata
 
 on:
   push:
@@ -11,29 +11,67 @@ permissions:
   contents: write
 
 jobs:
-  append:
+  finalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepend required AI changelog entry and remove helper
+        with:
+          fetch-depth: 0
+      - name: Correct self-fingerprint references and prepend required AI changelog
         env:
-          CHANGELOG_ENTRY_B64: CiMjIDIwMjYtMDgtMTIgLSBHUFQtNS42IFNvbCAoT3BlbkFJKSAtIExvY2FsLWFuY2hvciByZXNjdWUgZGV2ZWxvcG1lbnQgYW5kIHN0cm9uZyBHUlRTIHByb21vdGlvbiBnYXRlCgpDaGFuZ2VkIGZpbGVzOgotIGFjc3AvcHJhY3RpY2FsX3Jlc2N1ZS5weQotIGJlbmNobWFya19wcmFjdGljYWxfcmVzY3VlX2RldmVsb3BtZW50LnB5Ci0gYmVuY2htYXJrX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19wYWlyLnB5Ci0gYWdncmVnYXRlX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19kZXZlbG9wbWVudC5weQotIGZpdF9wcmFjdGljYWxfcmVzY3VlX2ZpbmFsX21vZGVsLnB5Ci0gYmVuY2htYXJrX21ldGhvZHMvZ3J0c19yZXNjdWVfcHJpbWFyeV9iYXRjaC5SCi0gdGVzdF9wcmFjdGljYWxfcmVzY3VlLnB5Ci0gdGVzdF9wcmFjdGljYWxfcmVzY3VlX2dydHNfZGV2ZWxvcG1lbnQucHkKLSB2YWxpZGF0aW9uL2Fjc3BfcHJhY3RpY2FsX3Jlc2N1ZV9kZXZlbG9wbWVudF9wcm90b2NvbC5qc29uCi0gdmFsaWRhdGlvbi9hY3NwX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19kZXZlbG9wbWVudF9wcm90b2NvbC5qc29uCi0gdmFsaWRhdGlvbi9wcmFjdGljYWxfcmVzY3VlX2RldmVsb3BtZW50X3RheGEuY3N2Ci0gLmdpdGh1Yi93b3JrZmxvd3MvcHJhY3RpY2FsLXJlc2N1ZS1kZXZlbG9wbWVudC55bWwKLSAuZ2l0aHViL3dvcmtmbG93cy9wcmFjdGljYWwtcmVzY3VlLWdydHMtZGV2ZWxvcG1lbnQueW1sCi0gQ0hBTkdFTE9HX0FJLm1kCgpTdW1tYXJ5OgotIENsb3NlZCB0aGUgZWFybGllciBsZWFybmVkLXJvdXRlciB2Mi4xIHBhdGggYWZ0ZXIgaXRzIGZ1bGx5IG5lc3RlZCA3Mi1wYWlyIGdhaW4gb3ZlciBsb2NhbC1vbmx5IHJlbWFpbmVkIGJlbG93IHRoZSBwcmVkZWNsYXJlZCBwcmFjdGljYWwgdGhyZXNob2xkLgotIERldmVsb3BlZCBhIG5ldyBmaW5pdGUgVG9wLTUgYGxvY2FsLWFuY2hvciArIGxlYXJuZWQgcmVzY3VlYCBwb2xpY3k6IHJldGFpbiBvbmUgaGlnaGVzdC1sb2NhbC1ldmlkZW5jZSBhbmNob3IsIHRoZW4gZmlsbCBmb3VyIHJlc2N1ZSBzbG90cyB1c2luZyBjcm9zcy10YXhvbiBwcmVkaWN0ZWQgcmVzaWR1YWwgMTAta20gcmVjb3Zlcnkgd2l0aCBhIGZpeGVkIGdlb2dyYXBoaWMtZGl2ZXJzaXR5IG11bHRpcGxpZXIuCi0gS2VwdCBTRE0gb3B0aW9uYWwgYW5kIGV4Y2x1ZGVkIFNETSBzdWl0YWJpbGl0eSwgaGVsZC1vdXQgY29vcmRpbmF0ZXMvb3V0Y29tZXMsIHNjaWVudGlmaWMgbmFtZSwgYWJzb2x1dGUgcmVnaW9uIGlkZW50aXR5LCBhbmQgR1JUUyBvdXRwdXQgZnJvbSBpbmZlcmVuY2UtdGltZSByZXNjdWUgZmVhdHVyZXMuCi0gRnJvemUgYW4gZXhhY3QgUHl0aG9uL3NjaWtpdC1sZWFybi9wYW5kYXMvTnVtUHkgZGV2ZWxvcG1lbnQgcnVudGltZSBhZnRlciBkZXRlY3RpbmcgbW9kZWwtdmVyc2lvbiBzZW5zaXRpdml0eSBiZWZvcmUgYWNjZXB0aW5nIHRoZSBsb2NrZWQgMjQtcGFpciBleHRlbnNpb24uCi0gVGhlIGxvY2tlZCA0OCsyNCBkZXZlbG9wbWVudCBldmFsdWF0aW9uIHBhc3NlZCB0aGUgcHJlZGVjbGFyZWQgbG9jYWwtb25seSBnYXRlIG9uIGFsbCA3MiBwYWlyczogbWVhbiBhYnNvbHV0ZSAxMC1rbSByZWNhbGwgZ2FpbiArMC4wMTg4OCwgcGFpci1ib290c3RyYXAgOTUlIENJICswLjAwNjc3IHRvICswLjAzMjIxLCBzaWduLWZsaXAgcD0wLjAwMzUwLiBUaGUgbG9ja2VkIDI0LXBhaXIgZXh0ZW5zaW9uIHJlbWFpbmVkIGRpcmVjdGlvbmFsbHkgcG9zaXRpdmUgKCswLjAxMzU2KSBidXQgdW5jZXJ0YWluIG9uIGl0cyBvd24sIHNvIHRoaXMgaXMgc3RpbGwgZGV2ZWxvcG1lbnQgZXZpZGVuY2UgcmF0aGVyIHRoYW4gcHJvbW90aW9uLgotIEZyb3plIGFsbCA3MiBkZXZlbG9wbWVudCB0YXhhIGZvciBleGNsdXNpb24gZnJvbSBhbnkgZnV0dXJlIGNvbmZpcm1hdGlvbiBjb2hvcnQuCi0gQWRkZWQgYSBzdHJpY3RlciBkZXZlbG9wbWVudCBwcm9tb3Rpb24gZ2F0ZSBhZ2FpbnN0IHRoZSBwaW5uZWQgb2ZmaWNpYWwgYHNwc3VydmV5OjpncnRzYCA1LjYuMSBpbXBsZW1lbnRhdGlvbiB1c2luZyB0aGUgc2FtZSBlbGlnaWJsZSBmaW5pdGUgY2FuZGlkYXRlIGZyYW1lLCBwcm9wb3J0aW9uYWwgbG9jYWwtZXZpZGVuY2UgaW5jbHVzaW9uLCByZXF1ZXN0ZWQgMTAta20gbWluaW11bSBkaXN0YW5jZSwgYW5kIDUwIHByZWRlY2xhcmVkIGRyYXdzIHBlciBmb2xkLgotIEdSVFMgc2VsZWN0aW9ucyBhcmUgd3JpdHRlbiBiZWZvcmUgaGVsZC1vdXQgY29vcmRpbmF0ZXMgYXJlIGxvYWRlZDsgbWlzc2luZyBsb2NhbCBldmlkZW5jZSBpcyByZXRhaW5lZCBhcyB6ZXJvIGxvY2FsIGV2aWRlbmNlIHRoZW4gbWFwcGVkIHRvIHRoZSBmaXhlZCBwb3NpdGl2ZSBhdXhpbGlhcnkgZmxvb3IuIE5vIEdSVFMgcmVzdWx0IG1heSBiZSB1c2VkIHRvIHJldHVuZSB0aGUgcmVzY3VlIHBvbGljeS4KLSBBZGRlZCBhIGdhdGVkIGZpbmFsIDcyLXBhaXIgcmVmaXQgaGVscGVyIHRoYXQgcmVmdXNlcyB0byBmaXQgdW5sZXNzIHRoZSBvZmZpY2lhbCBHUlRTIGRldmVsb3BtZW50IGdhdGUgcGFzc2VzIGFuZCBleHBsaWNpdGx5IGV4Y2x1ZGVzIEdSVFMgb3V0Y29tZXMgZnJvbSBtb2RlbCBmZWF0dXJlcyBhbmQgdGFyZ2V0cy4KCkZlYXR1cmVzIHByZXNlcnZlZDoKLSBPY2N1cnJlbmNlLXN1cHBvcnRlZCBjYW5kaWRhdGVzIHJlbWFpbiBhdmFpbGFibGUgd2l0aG91dCBTRE07IHRoZSByZXNjdWUgcG9saWN5IG9wZXJhdGVzIG9uIG9jY3VycmVuY2UtY29uZGl0aW9uZWQgY2FuZGlkYXRlIGV2aWRlbmNlIGFuZCBkb2VzIG5vdCBtYWtlIFNETSBtYW5kYXRvcnkuCi0gU0RNL1NTRE0gcmVtYWluIG9wdGlvbmFsIGFuZCBzZXBhcmF0ZSBmcm9tIHRoZSBvYnNlcnZlZC1kYXRhIGNhbmRpZGF0ZSB3b3JrZmxvdy4KLSBFeGlzdGluZyBtYXAtZmlyc3QgVUksIENTVi11cGxvYWQgcGFyaXR5LCBjYW5kaWRhdGUgZXhwb3J0cywgVklGL3NwYXRpYWwtdmFsaWRhdGlvbiBiZWhhdmlvciwgZ2VudXMvU1NETSB3b3JrZmxvd3MsIGFuZCBwcm9zcGVjdGl2ZSBmaWVsZC12YWxpZGF0aW9uIGdvYWxzIGFyZSB1bmNoYW5nZWQuCi0gVGhlIDEwLWttIHJldHJvc3BlY3RpdmUgZW5kcG9pbnQgcmVtYWlucyBhIHJlZ2lvbmFsIGNhbmRpZGF0ZS16b25lIHZhbGlkYXRpb24gY2xhaW0sIG5vdCBhbiBleGFjdC1zaXRlIG9jY3VwYW5jeSwgYWNjZXNzLCBkZXRlY3RhYmlsaXR5LCBwaGVub2xvZ3ksIG9yIGZpZWxkLWVmZm9ydCBjbGFpbS4KCktub3duIHJpc2tzIC8gVE9ETzoKLSBEZXZlbG9wbWVudCBzdWNjZXNzIHZlcnN1cyBsb2NhbC1vbmx5IGlzIG5vdCBzdWZmaWNpZW50IGZvciBwcm9tb3Rpb24uIFRoZSBmcm96ZW4gb2ZmaWNpYWwgR1JUUyBkZXZlbG9wbWVudCBnYXRlIG11c3QgcGFzcyBmaXJzdCwgZm9sbG93ZWQgYnkgYW4gdW5jaGFuZ2VkIGZpbmFsLW1vZGVsIGZyZWV6ZSBhbmQgYSBnZW51aW5lbHkgZnJlc2ggZXhjbHVkZWQtdGF4b24gY29uZmlybWF0aW9uIGNvaG9ydC4KLSBUaGUgb2xkIDE5Mi1wYWlyIFByYWN0aWNhbCBDb3JlIGNvbmZpcm1hdGlvbiBhZ2dyZWdhdGUgaXMgc2NpZW50aWZpY2FsbHkgaW52YWxpZCBiZWNhdXNlIHBhaXIgam9icyBmYWlsZWQgYXQgUiBkZXBlbmRlbmN5IHJlc29sdXRpb24gYmVmb3JlIGFuYWx5c2lzIGFuZCB3ZXJlIGFnZ3JlZ2F0ZWQgYXMgbWlzc2luZy16ZXJvIGFydGlmYWN0czsgaXQgbXVzdCBub3QgYmUgaW50ZXJwcmV0ZWQgYXMgYSBuZWdhdGl2ZSBiaW9sb2dpY2FsIHJlc3VsdC4KLSBBIGJyb2FkIGNsYWltIGFnYWluc3QgZXhpc3Rpbmcgc3VydmV5LXBsYW5uaW5nIHRvb2xzIGFkZGl0aW9uYWxseSByZW1haW5zIGdhdGVkIG9uIHRoZSBzZXBhcmF0ZWx5IGZyb3plbiBuYXRpdmUgYGJpb3N1cnZleWAgZW5kLXRvLWVuZCBjb21wYXJpc29uLgo=
+          CHANGELOG_ENTRY_B64: CiMjIDIwMjYtMDgtMTIgLSBHUFQtNS42IFNvbCAoT3BlbkFJKSAtIExvY2FsLWFuY2hvciByZXNjdWUgZGV2ZWxvcG1lbnQgYW5kIEdSVFMgZ2F0ZQoKQ2hhbmdlZCBmaWxlczoKLSBgYWNzcC9wcmFjdGljYWxfcmVzY3VlLnB5YAotIGBiZW5jaG1hcmtfcHJhY3RpY2FsX3Jlc2N1ZV9kZXZlbG9wbWVudC5weWAKLSBgYmVuY2htYXJrX3ByYWN0aWNhbF9yZXNjdWVfZ3J0c19wYWlyLnB5YAotIGBhZ2dyZWdhdGVfcHJhY3RpY2FsX3Jlc2N1ZV9ncnRzX2RldmVsb3BtZW50LnB5YAotIGBmaXRfcHJhY3RpY2FsX3Jlc2N1ZV9maW5hbF9tb2RlbC5weWAKLSBgYmVuY2htYXJrX21ldGhvZHMvZ3J0c19yZXNjdWVfcHJpbWFyeV9iYXRjaC5SYAotIHJlc2N1ZS9HUlRTIHZhbGlkYXRpb24gcHJvdG9jb2xzLCB0ZXN0cywgYW5kIHdvcmtmbG93cwoKU3VtbWFyeToKLSBSZXBsYWNlZCB0aGUgdW5zdWNjZXNzZnVsIGZ1bGx5IG5lc3RlZCB2Mi4xIHJvdXRlciB0cmFjayB3aXRoIGEgVG9wLTUgbG9jYWwtYW5jaG9yICsgbGVhcm5lZC1yZXNjdWUgcG9saWN5LgotIEZyb3plbiA0OC1wYWlyIGNyb3NzLWZpdCBldmlkZW5jZSB3YXMgKzAuMDIxNTQgb3ZlciBsb2NhbC1vbmx5ICg5NSUgQ0kgKzAuMDA3MjggdG8gKzAuMDM3NjA7IHNpZ24tZmxpcCBwPTAuMDA0NDApLiBUaGUgdW5jaGFuZ2VkIHBvbGljeSByZW1haW5lZCBwb3NpdGl2ZSBvbiB0aGUgbG9ja2VkIDI0LXBhaXIgZXh0ZW5zaW9uICgrMC4wMTM1Nik7IGNvbWJpbmVkIDcyLXBhaXIgZ2FpbiB3YXMgKzAuMDE4ODggKDk1JSBDSSArMC4wMDY3NyB0byArMC4wMzIyMTsgcD0wLjAwMzUwKSwgcGFzc2luZyB0aGUgcHJlZGVjbGFyZWQgbG9jYWwtb25seSBkZXZlbG9wbWVudCBnYXRlLgotIEV4YWN0IFB5dGhvbi9zY2lraXQtbGVhcm4vcGFuZGFzL051bVB5IHJ1bnRpbWUgYW5kIGFsbCA3MiBkZXZlbG9wbWVudCB0YXhhIGFyZSBmcm96ZW4gYmVmb3JlIHN0cm9uZy1jb21wYXJhdG9yIGV2YWx1YXRpb24uCi0gQWRkZWQgYSBwcmVkZWNsYXJlZCBvZmZpY2lhbCBgc3BzdXJ2ZXk6OmdydHNgIDUuNi4xIGRldmVsb3BtZW50IGdhdGUgb24gdGhlIHNhbWUgZWxpZ2libGUgZmluaXRlIGNhbmRpZGF0ZSBmcmFtZTogcHJvcG9ydGlvbmFsIGxvY2FsIGV2aWRlbmNlLCByZXF1ZXN0ZWQgMTAta20gbWluaW11bSBkaXN0YW5jZSwgVG9wLTUsIDUwIGRyYXdzIHBlciBmb2xkLCB3aXRoIEdSVFMgc2VsZWN0aW9ucyBmcm96ZW4gYmVmb3JlIGhlbGQtb3V0IGNvb3JkaW5hdGVzIGFyZSBsb2FkZWQuCi0gU0RNIHJlbWFpbnMgb3B0aW9uYWw7IFNETSBzdWl0YWJpbGl0eSwgaGVsZC1vdXQgb3V0Y29tZXMvY29vcmRpbmF0ZXMsIHNjaWVudGlmaWMgbmFtZSwgYWJzb2x1dGUgcmVnaW9uIGlkZW50aXR5LCBhbmQgR1JUUyBvdXRwdXRzIGFyZSBleGNsdWRlZCBmcm9tIGluZmVyZW5jZS10aW1lIHJlc2N1ZSBmZWF0dXJlcy4KLSBUaGUgcHJpb3IgMTkyLXBhaXIgUHJhY3RpY2FsIENvcmUgYWdncmVnYXRlIGlzIG5vdCBiaW9sb2dpY2FsIGV2aWRlbmNlIGJlY2F1c2UgcGFpciBqb2JzIGZhaWxlZCBkdXJpbmcgUiBkZXBlbmRlbmN5IHNldHVwIGJlZm9yZSBhbmFseXNpcyBhbmQgbWlzc2luZyBhcnRpZmFjdHMgd2VyZSBhZ2dyZWdhdGVkIGFzIHplcm9zLgotIFByb21vdGlvbiByZW1haW5zIGJsb2NrZWQgdW50aWwgdGhlIG9mZmljaWFsIEdSVFMgZGV2ZWxvcG1lbnQgZ2F0ZSBwYXNzZXMsIHRoZSB1bmNoYW5nZWQgNzItcGFpciBtb2RlbCBpcyBmcm96ZW4sIGFuZCBhIGdlbnVpbmVseSBmcmVzaCBleGNsdWRlZC10YXhvbiBjb25maXJtYXRpb24gY29ob3J0IHBhc3Nlcy4gQnJvYWQgZXhpc3RpbmctdG9vbCBzdXBlcmlvcml0eSBhZGRpdGlvbmFsbHkgcmVxdWlyZXMgdGhlIG5hdGl2ZSBiaW9zdXJ2ZXkgZW5kLXRvLWVuZCBnYXRlLgoKRmVhdHVyZXMgcHJlc2VydmVkOgotIE9ic2VydmVkLWRhdGEgY2FuZGlkYXRlIGdlbmVyYXRpb24gcmVtYWlucyBwcmltYXJ5OyBTRE0vU1NETSByZW1haW4gb3B0aW9uYWwuCi0gRXhpc3RpbmcgbWFwLWZpcnN0IFVJLCBDU1YtdXBsb2FkIHBhcml0eSwgY2FuZGlkYXRlIGV4cG9ydHMsIFZJRi9zcGF0aWFsLXZhbGlkYXRpb24gYmVoYXZpb3IsIGdlbnVzL1NTRE0gd29ya2Zsb3dzLCBhbmQgcHJvc3BlY3RpdmUgZmllbGQtdmFsaWRhdGlvbiBnb2FscyBhcmUgdW5jaGFuZ2VkLgotIFRoZSAxMC1rbSByZXRyb3NwZWN0aXZlIGVuZHBvaW50IHJlbWFpbnMgYSByZWdpb25hbCBjYW5kaWRhdGUtem9uZSB2YWxpZGF0aW9uIGNsYWltLCBub3QgZXhhY3Qtc2l0ZSBvY2N1cGFuY3ksIGFjY2VzcywgZGV0ZWN0YWJpbGl0eSwgcGhlbm9sb2d5LCBvciBmaWVsZC1lZmZvcnQgZXZpZGVuY2UuCg==
         run: |
           python - <<'PY'
-          import base64
+          import base64, hashlib, json, os
           from pathlib import Path
-          path = Path("CHANGELOG_AI.md")
-          original = path.read_text(encoding="utf-8")
+
+          old = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          new = "47afc2acf0807998ca13b04cce72e71cea2baffff7df7b33fb9b66a82559885b"
+          paths = [
+              Path("validation/acsp_practical_rescue_grts_development_protocol.json"),
+              Path("benchmark_practical_rescue_grts_pair.py"),
+              Path("aggregate_practical_rescue_grts_development.py"),
+              Path(".github/workflows/practical-rescue-grts-development.yml"),
+              Path("fit_practical_rescue_final_model.py"),
+              Path(".github/workflows/practical-rescue-final-refit.yml"),
+          ]
+          replacements = 0
+          for path in paths:
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              replacements += count
+              path.write_text(text.replace(old, new), encoding="utf-8")
+          assert replacements >= 5, replacements
+
+          protocol_path = paths[0]
+          payload = json.loads(protocol_path.read_text(encoding="utf-8"))
+          stored = payload.pop("protocol_fingerprint")
+          calculated = hashlib.sha256(
+              json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+          ).hexdigest()
+          assert stored == calculated == new, (stored, calculated)
+
+          changelog = Path("CHANGELOG_AI.md")
+          original = changelog.read_text(encoding="utf-8")
           header = "# AI Change Log\n"
           assert original.startswith(header)
-          entry = base64.b64decode(__import__("os").environ["CHANGELOG_ENTRY_B64"]).decode("utf-8")
-          if "## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development" not in original:
-              path.write_text(header + entry + original[len(header):], encoding="utf-8")
+          marker = "## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development and GRTS gate"
+          if marker not in original:
+              entry = base64.b64decode(os.environ["CHANGELOG_ENTRY_B64"]).decode("utf-8")
+              changelog.write_text(header + entry + original[len(header):], encoding="utf-8")
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/append-practical-rescue-changelog.yml
           git rm validation/append_practical_rescue_changelog_trigger.txt
-          git add CHANGELOG_AI.md
-          git commit -m "Document Practical Rescue development and GRTS promotion gate"
+          git add CHANGELOG_AI.md \
+            validation/acsp_practical_rescue_grts_development_protocol.json \
+            benchmark_practical_rescue_grts_pair.py \
+            aggregate_practical_rescue_grts_development.py \
+            .github/workflows/practical-rescue-grts-development.yml \
+            fit_practical_rescue_final_model.py \
+            .github/workflows/practical-rescue-final-refit.yml
+          git diff --cached --check
+          git commit -m "Finalize Practical Rescue GRTS development freeze"
+          git pull --rebase origin agent/practical-coverage-v3-development
           git push origin HEAD:agent/practical-coverage-v3-development
