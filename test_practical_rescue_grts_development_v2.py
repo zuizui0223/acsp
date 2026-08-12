@@ -5,6 +5,8 @@ import json
 import unittest
 from pathlib import Path
 
+import pandas as pd
+
 import benchmark_practical_rescue_grts_pair_v2 as pair_v2
 import aggregate_practical_rescue_grts_development_v2 as aggregate_v2
 
@@ -64,6 +66,17 @@ class PracticalRescueGrtsDevelopmentV2Tests(unittest.TestCase):
             Path("validation/acsp_practical_rescue_grts_development_protocol_v2.json").read_text()
         )
         self.assertEqual(payload["protocol_fingerprint"], pair_v2.EXPECTED_PROTOCOL)
+
+    def test_nonempty_grts_errors_fail_closed(self):
+        ok = pd.DataFrame({"error_message": ["", None, ""]})
+        pair_v2._assert_nonempty_grts_draws_error_free(ok)
+        bad = pd.DataFrame({"error_message": ["", "simpleError: adapter failure"]})
+        with self.assertRaisesRegex(RuntimeError, "refusing failure-as-zero"):
+            pair_v2._assert_nonempty_grts_draws_error_free(bad)
+
+    def test_nonempty_grts_error_column_is_required(self):
+        with self.assertRaisesRegex(RuntimeError, "lacks error_message"):
+            pair_v2._assert_nonempty_grts_draws_error_free(pd.DataFrame({"seed": [1]}))
 
 
 if __name__ == "__main__":
