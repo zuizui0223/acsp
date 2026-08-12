@@ -1,4 +1,4 @@
-name: Freeze final Practical Rescue model after GRTS development gate
+name: Freeze final Practical Rescue model after corrected GRTS v2 development gate
 
 on:
   workflow_dispatch:
@@ -25,21 +25,28 @@ jobs:
         run: |
           python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
           python -m pip install -e .
-      - name: Download official GRTS development gate
+      - name: Resolve corrected GRTS v2 run from immutable trigger
+        id: gate_run
+        run: |
+          set -euo pipefail
+          value=$(tr -d '[:space:]' < validation/practical_rescue_final_refit_trigger.txt)
+          case "$value" in ''|*[!0-9]*) echo "final refit trigger must contain one numeric GRTS v2 workflow run ID" >&2; exit 1;; esac
+          echo "run_id=$value" >> "$GITHUB_OUTPUT"
+      - name: Download corrected official GRTS v2 development gate
         uses: actions/download-artifact@v4
         with:
-          name: acsp-practical-rescue-official-grts-72-development
+          name: acsp-practical-rescue-corrected-grts-v2-72-development
           path: grts-gate
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          run-id: 31554662739
-      - name: Require a complete passed frozen GRTS gate before loading development outcomes
+          run-id: ${{ steps.gate_run.outputs.run_id }}
+      - name: Require a complete passed corrected GRTS v2 gate before loading development outcomes
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           gate = json.loads(Path("grts-gate/development_manifest.json").read_text())
-          assert gate["protocol_fingerprint"] == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          assert gate["protocol_fingerprint"] == "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
           assert gate["declared_pairs"] == gate["complete_pairs"] == 72
           assert gate["development_grts_gate_passed"] is True
           assert gate["outcomes_available_to_grts_selector"] is False
@@ -87,7 +94,7 @@ jobs:
           manifest = json.loads(Path("final-rescue-model/model_manifest.json").read_text())
           assert manifest["status"] == "final_rescue_model_fitted_after_official_grts_development_gate"
           assert manifest["rescue_protocol_fingerprint"] == "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48"
-          assert manifest["grts_development_protocol_fingerprint"] == "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+          assert manifest["grts_development_protocol_fingerprint"] == "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
           assert manifest["development_pairs"] == 72
           assert manifest["development_folds"] == 360
           assert manifest["grts_outcomes_used_as_model_features_or_targets"] is False
