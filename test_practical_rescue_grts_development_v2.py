@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
 import unittest
 from pathlib import Path
@@ -14,9 +15,23 @@ import aggregate_practical_rescue_grts_development_v2 as aggregate_v2
 V1_PROTOCOL = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
 
 
+def _canonical_v2_protocol(path: Path) -> tuple[dict[str, object], str]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    stored = str(payload.pop("protocol_fingerprint", ""))
+    calculated = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    if stored != calculated:
+        raise ValueError(
+            f"corrected GRTS v2 protocol self-hash mismatch: stored={stored}, calculated={calculated}"
+        )
+    payload["protocol_fingerprint"] = stored
+    return payload, calculated
+
+
 class PracticalRescueGrtsDevelopmentV2Tests(unittest.TestCase):
     def test_corrected_protocol_fingerprint_is_frozen(self):
-        payload, fingerprint = pair_v2.base._canonical_protocol(
+        payload, fingerprint = _canonical_v2_protocol(
             Path("validation/acsp_practical_rescue_grts_development_protocol_v2.json")
         )
         self.assertEqual(fingerprint, pair_v2.EXPECTED_PROTOCOL)
