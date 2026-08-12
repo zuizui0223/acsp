@@ -1,5 +1,18 @@
 # AI Change Log
 
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Fresh confirmation CLI wiring hardening
+
+Changed files:
+- `aggregate_practical_rescue_fresh_confirmation.py`
+- `predeclare_practical_rescue_fresh_confirmation_cohort.py`
+- `test_practical_rescue_fresh_confirmation.py`
+- `test_practical_rescue_fresh_protocol.py`
+
+Summary:
+- Fixed two downstream CLI-to-function bindings before expensive fresh confirmation execution: `--protocol` now maps to the existing `protocol_path` argument in both fresh cohort predeclaration and fresh confirmation aggregation.
+- Added regression tests for both bindings so the failure mode cannot recur after 192-pair execution.
+- No cohort design, model, GRTS settings, inference threshold, taxon exclusions, seed, or promotion criterion changed.
+
 ## 2026-08-12 - GPT-5.6 Sol (OpenAI) - GRTS aggregate infrastructure hardening
 
 Changed files:
