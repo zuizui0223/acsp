@@ -14,8 +14,21 @@ import subprocess
 import numpy as np
 import pandas as pd
 
-import benchmark_practical_rescue_grts_pair_v2 as development_grts_v2
 import run_practical_rescue_fresh_confirmation_pair as base
+
+
+def _assert_nonempty_grts_draws_error_free(draws: pd.DataFrame) -> None:
+    """Fail closed on official-GRTS implementation errors for eligible frames."""
+    if "error_message" not in draws.columns:
+        raise RuntimeError("corrected GRTS artifact lacks error_message")
+    errors = draws["error_message"].fillna("").astype(str).str.strip()
+    bad = errors.ne("")
+    if bad.any():
+        examples = sorted(set(errors.loc[bad].tolist()))[:3]
+        raise RuntimeError(
+            "corrected official GRTS produced draw errors on a non-empty candidate frame; "
+            f"refusing failure-as-zero promotion scoring (draws={int(bad.sum())}, examples={examples})"
+        )
 
 
 def _run_grts_v2(
@@ -67,7 +80,7 @@ def _run_grts_v2(
     # at least Top-k rows; smaller pools are already explicit scientific zeroes.
     # Therefore any GRTS error here is an implementation failure on a non-empty,
     # scientifically eligible frame and must abort rather than weaken the comparator.
-    development_grts_v2._assert_nonempty_grts_draws_error_free(draws)
+    _assert_nonempty_grts_draws_error_free(draws)
     return draws
 
 
