@@ -22,6 +22,27 @@ EXPECTED_PROTOCOL = "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d
 base.EXPECTED_PROTOCOL = EXPECTED_PROTOCOL
 
 
+def _assert_nonempty_grts_draws_error_free(result: pd.DataFrame) -> None:
+    """Reject implementation failures on non-empty candidate frames.
+
+    Empty candidate frames are handled before R is called and retain the frozen
+    protocol's explicit zero-recovery artifact. Once a non-empty frame reaches
+    official GRTS, however, an implementation error must not silently become a
+    zero comparator score because that would bias the promotion contrast toward
+    Rescue.
+    """
+    if "error_message" not in result.columns:
+        raise RuntimeError("corrected GRTS artifact lacks error_message")
+    errors = result["error_message"].fillna("").astype(str).str.strip()
+    bad = errors.ne("")
+    if bad.any():
+        examples = sorted(set(errors.loc[bad].tolist()))[:3]
+        raise RuntimeError(
+            "corrected official GRTS produced draw errors on a non-empty candidate frame; "
+            f"refusing failure-as-zero promotion scoring (draws={int(bad.sum())}, examples={examples})"
+        )
+
+
 def _run_grts_v2(
     input_path: Path,
     output_path: Path,
@@ -79,6 +100,7 @@ def _run_grts_v2(
     expected_effective = (frame_rows - base_requested).clip(lower=0, upper=requested)
     if not effective.equals(expected_effective.astype(effective.dtype)):
         raise RuntimeError("corrected GRTS artifact violates the frozen feasible-replacement rule")
+    _assert_nonempty_grts_draws_error_free(result)
     return result
 
 
