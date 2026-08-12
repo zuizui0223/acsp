@@ -84,9 +84,18 @@ def _run_grts_v2(
     return draws
 
 
-base._run_grts = _run_grts_v2
 parser = base.parser
-run = base.run
+
+
+def run(args):
+    # Scope the adapter substitution to this invocation. Importing the v2 wrapper
+    # must not mutate the retained v1 fresh-confirmation runner used for audit.
+    original = base._run_grts
+    try:
+        base._run_grts = _run_grts_v2
+        return base.run(args)
+    finally:
+        base._run_grts = original
 
 
 if __name__ == "__main__":
