@@ -1,5 +1,25 @@
 # AI Change Log
 
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Corrected GRTS v2 promotion chain
+
+Changed files:
+- `validation/acsp_practical_rescue_grts_development_protocol_v2.json`
+- `benchmark_methods/grts_rescue_primary_batch_v2.R`
+- `benchmark_methods/test_grts_rescue_primary_batch_v2.R`
+- `benchmark_practical_rescue_grts_pair_v2.py`
+- `aggregate_practical_rescue_grts_development_v2.py`
+- `fit_practical_rescue_final_model_v2.py`
+- `freeze_practical_rescue_fresh_confirmation_protocol_v2.py`
+- `run_practical_rescue_fresh_confirmation_pair_v2.py`
+- promotion-chain workflows and v2 tests
+
+Summary:
+- Pre-outcome candidate-frame auditing showed that v1 fixed diagnostic oversample n=3 could invalidate an otherwise feasible primary GRTS Top-5 sample when fewer than three spare candidate rows remained.
+- Froze corrected strong-comparator v2 fingerprint `74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a` before evaluating v2 outcomes. Requested replacements remain three; effective diagnostic replacements are capped by rows remaining after the primary base sample.
+- Rescue features, estimator, hyperparameters, 10-km estimand, Top-5 primary sample, 50 GRTS draws/fold, seeds, and the >=0.015/CI/sign-flip gate are unchanged.
+- v1 results remain audit evidence only and are not promotion-eligible because diagnostic oversample infeasibility weakened the comparator.
+- Final refit, fresh protocol freeze, and fresh 192-pair confirmation are now bound through thin wrappers to corrected GRTS v2; no fresh outcome is used in those bindings.
+
 ## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Fresh confirmation CLI wiring hardening
 
 Changed files:
