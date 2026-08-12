@@ -14,6 +14,7 @@ from freeze_practical_rescue_fresh_confirmation_protocol import (
     RESCUE_PROTOCOL_FINGERPRINT,
     run,
 )
+from predeclare_practical_rescue_fresh_confirmation_cohort import parser as cohort_parser
 
 
 def _sha256(path: Path) -> str:
@@ -86,6 +87,15 @@ class FreshRescueProtocolTests(unittest.TestCase):
             }) + "\n")
             with self.assertRaisesRegex(ValueError, "complete 72-pair"):
                 run(model, model_manifest, excluded, exclusion_manifest, root / "protocol.json")
+
+    def test_fresh_cohort_cli_maps_protocol_to_protocol_path(self) -> None:
+        args = cohort_parser().parse_args([
+            "--protocol", "fresh-freeze/protocol.json",
+            "--output", "fresh-cohort",
+        ])
+        self.assertEqual(args.protocol_path, Path("fresh-freeze/protocol.json"))
+        self.assertEqual(args.output, Path("fresh-cohort"))
+        self.assertNotIn("protocol", vars(args))
 
 
 if __name__ == "__main__":
