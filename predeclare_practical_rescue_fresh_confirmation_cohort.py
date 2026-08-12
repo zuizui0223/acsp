@@ -222,7 +222,7 @@ def run(protocol_path: Path, output: Path) -> dict[str, object]:
 
 def parser() -> argparse.ArgumentParser:
     command = argparse.ArgumentParser(description=__doc__)
-    command.add_argument("--protocol", type=Path, required=True)
+    command.add_argument("--protocol", dest="protocol_path", type=Path, required=True)
     command.add_argument("--output", type=Path, required=True)
     return command
 
