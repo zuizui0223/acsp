@@ -117,6 +117,14 @@ jobs:
             done
           done
           wait
+      - name: Preserve frozen pair-level GRTS outputs before aggregation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-official-grts-72-development-pairs
+          path: rescue-grts-development-pairs
+          if-no-files-found: warn
+          retention-days: 90
       - name: Evaluate frozen pair-level GRTS gate
         run: |
           python aggregate_practical_rescue_grts_development.py \
