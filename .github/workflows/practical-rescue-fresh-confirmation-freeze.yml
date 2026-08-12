@@ -1,0 +1,167 @@
+name: Freeze Practical Rescue fresh confirmation before sampling
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/practical_rescue_fresh_confirmation_freeze_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      final_model_run_id: ${{ steps.trigger.outputs.final_model_run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install frozen protocol dependencies
+        run: python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0" joblib
+      - name: Resolve only the already-frozen final model run
+        id: trigger
+        run: |
+          set -euo pipefail
+          value=$(tr -d '[:space:]' < validation/practical_rescue_fresh_confirmation_freeze_trigger.txt)
+          case "$value" in
+            ''|*[!0-9]*) echo "trigger must contain one numeric final-model workflow run id" >&2; exit 1;;
+          esac
+          echo "final_model_run_id=$value" >> "$GITHUB_OUTPUT"
+      - name: Download frozen final 72-pair rescue model
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-final-72-model
+          path: inputs/final-model
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.final_model_run_id }}
+      - name: Download invalidated old 192 cohort identities only
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-core-untouched-confirmation-cohort
+          path: inputs/old192
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31537602828
+      - name: Download frozen rescue 72-pair development identities only
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-72-pair-development
+          path: inputs/rescue72
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31544341871
+      - name: Freeze exact 264-taxon exclusion union without sampling
+        run: |
+          set -euo pipefail
+          old=$(find inputs/old192 -name predeclared_taxon_region_pairs.csv -print -quit)
+          rescue=$(find inputs/rescue72 -name fold_method_comparison.csv -print -quit)
+          test -n "$old" && test -n "$rescue"
+          python prepare_practical_rescue_fresh_exclusions.py \
+            --old-cohort "$old" \
+            --rescue-development "$rescue" \
+            --output fresh-inputs
+      - name: Freeze final-model-bound scientific protocol before any new taxon draw
+        run: |
+          set -euo pipefail
+          model=$(find inputs/final-model -name practical_rescue_final_72.joblib -print -quit)
+          manifest=$(find inputs/final-model -name model_manifest.json -print -quit)
+          test -n "$model" && test -n "$manifest"
+          python freeze_practical_rescue_fresh_confirmation_protocol.py \
+            --model "$model" \
+            --model-manifest "$manifest" \
+            --excluded-taxa fresh-inputs/excluded_taxa.csv \
+            --exclusion-manifest fresh-inputs/exclusion_manifest.json \
+            --output fresh-freeze/acsp_practical_rescue_fresh_confirmation_protocol.json
+      - name: Audit pre-sampling freeze contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          p = json.loads(Path("fresh-freeze/acsp_practical_rescue_fresh_confirmation_protocol.json").read_text())
+          e = json.loads(Path("fresh-inputs/exclusion_manifest.json").read_text())
+          x = pd.read_csv("fresh-inputs/excluded_taxa.csv")
+          assert p["status"] == "frozen_after_final_72_model_before_fresh_cohort_sampling_or_outcome_inspection"
+          assert p["confirmation_taxa_sampled_at_protocol_freeze"] is False
+          assert p["confirmation_occurrence_outcomes_inspected_at_protocol_freeze"] is False
+          assert p["missing_pair_artifacts_scored_as_zero"] is False
+          assert p["cohort"]["pair_count"] == 192
+          assert p["inference"]["minimum_absolute_recall_gain"] == 0.015
+          assert p["official_grts"]["draws_per_fold"] == 50
+          assert e["excluded_unique_taxa"] == len(x) == x["scientific_name"].nunique() == 264
+          assert e["new_confirmation_taxa_sampled"] is False
+          assert e["occurrence_outcomes_inspected"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-protocol-freeze
+          path: |
+            fresh-inputs
+            fresh-freeze
+          if-no-files-found: error
+          retention-days: 90
+
+  sample-cohort:
+    needs: freeze-protocol
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install sampler dependencies
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3"
+          python -m pip install -e .
+      - name: Download physically prior protocol freeze artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-protocol-freeze
+          path: frozen
+      - name: Restore frozen directory layout without modifying bytes
+        run: |
+          set -euo pipefail
+          cp -a frozen/fresh-inputs .
+          cp -a frozen/fresh-freeze .
+      - name: Draw fresh balanced cohort only after protocol artifact exists
+        run: |
+          python predeclare_practical_rescue_fresh_confirmation_cohort.py \
+            --protocol fresh-freeze/acsp_practical_rescue_fresh_confirmation_protocol.json \
+            --output fresh-cohort
+      - name: Require untouched 192-pair predeclaration
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          m = json.loads(Path("fresh-cohort/cohort_manifest.json").read_text())
+          c = pd.read_csv("fresh-cohort/predeclared_taxon_region_pairs.csv")
+          x = pd.read_csv("fresh-inputs/excluded_taxa.csv")
+          assert m["status"] == "fresh_confirmation_cohort_ready"
+          assert m["declared_pairs"] == m["unique_declared_taxa"] == 192
+          assert len(c) == c["pair_id"].nunique() == c["scientific_name"].nunique() == 192
+          assert not (set(c["scientific_name"].astype(str)) & set(x["scientific_name"].astype(str)))
+          assert m["occurrence_rows_fetched_for_declared_taxa"] is False
+          assert m["candidate_generation_run"] is False
+          assert m["rescue_selector_run"] is False
+          assert m["grts_run"] is False
+          assert m["heldout_recovery_run"] is False
+          assert m["taxon_replacement_after_declaration_allowed"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-predeclaration
+          path: |
+            fresh-inputs
+            fresh-freeze
+            fresh-cohort
+          if-no-files-found: error
+          retention-days: 90
