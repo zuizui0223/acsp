@@ -1,5 +1,18 @@
 # AI Change Log
 
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - GRTS aggregate infrastructure hardening
+
+Changed files:
+- `aggregate_practical_rescue_grts_development.py`
+- `test_practical_rescue_grts_development.py`
+- `.github/workflows/practical-rescue-grts-development.yml`
+
+Summary:
+- Fixed the post-design aggregate CLI binding so `--protocol` is passed to the existing `protocol_path` argument instead of raising a `TypeError` after all 72 pair jobs finish.
+- Added a regression test for the CLI-to-run argument contract.
+- Added a pre-aggregation upload of the complete pair-level GRTS output tree so a later aggregation or reporting failure cannot discard the frozen scientific draws.
+- The frozen official GRTS protocol fingerprint, spsurvey 5.6.1 commit, seed formula, Top-5 design, 10-km requested minimum distance, 50 draws per fold, failure-as-zero rule, and promotion gate are unchanged.
+
 ## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Local-anchor rescue development and GRTS gate
 
 Changed files:
