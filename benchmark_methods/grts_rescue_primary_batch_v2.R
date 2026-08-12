@@ -95,6 +95,30 @@ draw_primary_v2 <- function(prepared, seed, k, effective_replacements) {
   frame <- prepared$frame
   points <- prepared$points
   id_col <- prepared$id_col
+
+  # Frozen v2 defines n_base = min(top_k, candidate_frame_rows). With exactly
+  # one eligible row, the probability design is degenerate: that row has
+  # inclusion probability one and is the unique possible base sample. spsurvey
+  # 5.6.1 errors inside its spatial-balancing internals for N=1, so record the
+  # mathematically identical full-frame census directly rather than weakening
+  # the comparator to an implementation-error zero. No outcome information is
+  # available here and no seed-dependent choice exists in this case.
+  if (nrow(frame) == 1L && min(as.integer(k), nrow(frame)) == 1L) {
+    base_ids <- as.character(frame[[id_col]])
+    return(data.frame(
+      variant = PRIMARY_VARIANT,
+      seed = as.integer(seed),
+      base_count = 1L,
+      base_ids = base_ids,
+      replacement_count = 0L,
+      replacement_ids = "",
+      realized_min_distance_km = NA_real_,
+      warning_message = "",
+      error_message = "",
+      stringsAsFactors = FALSE
+    ))
+  }
+
   warnings <- character()
   error_message <- ""
   design <- tryCatch(
