@@ -70,7 +70,7 @@ jobs:
           protocol = json.loads(Path(os.environ["PROTOCOL"]).read_text())
           manifest = json.loads(Path(os.environ["MANIFEST"]).read_text())
           assert len(cohort) == cohort["pair_id"].nunique() == cohort["scientific_name"].nunique() == 192
-          assert set(cohort["pair_id"].astype(int)) == set(range(1, 193))
+          assert cohort["pair_id"].astype(int).sort_values().tolist() == list(range(1, 193))
           assert protocol["protocol_id"] == "acsp-practical-rescue-fresh-confirmation-v2"
           assert protocol["status"] == "frozen_after_final_72_model_before_fresh_cohort_sampling_or_outcome_inspection"
           assert protocol["final_model"]["grts_development_protocol_fingerprint"] == "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
@@ -81,38 +81,41 @@ jobs:
           assert protocol["missing_pair_artifacts_scored_as_zero"] is False
           assert protocol["no_retuning_after_confirmation_outcome"] is True
           PY
-      - name: Build immutable 192-pair matrix
+      - name: Build immutable 24-batch matrix covering all 192 declared pairs
         id: matrix
         run: |
-          cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
-          COHORT="$cohort" python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json, os, pandas as pd
-          cohort = pd.read_csv(os.environ["COHORT"])
-          matrix = [{"pair_id": int(value)} for value in cohort["pair_id"].astype(int).sort_values()]
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          matrix = [
+              {"batch_id": batch, "start_pair": (batch - 1) * 8 + 1, "end_pair": batch * 8}
+              for batch in range(1, 25)
+          ]
+          covered = [pair for item in matrix for pair in range(item["start_pair"], item["end_pair"] + 1)]
+          assert covered == list(range(1, 193))
           print("matrix=" + json.dumps({"include": matrix}, separators=(",", ":")))
           PY
 
-  pair:
+  batch:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 12
+      max-parallel: 8
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13.5"
-      - name: Install exact frozen Python runtime
+      - name: Install exact frozen Python runtime once per 8-pair batch
         run: |
           python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0" joblib
           python -m pip install -e .
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
-      - name: Install only official GRTS hard dependencies
+      - name: Install official GRTS dependencies once per 8-pair batch
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -134,9 +137,9 @@ jobs:
           Rscript - <<'RSCRIPT'
           stopifnot(as.character(packageVersion("spsurvey")) == "5.6.1")
           RSCRIPT
-      - name: Verify corrected sparse-frame GRTS behavior
+      - name: Verify corrected sparse-frame GRTS behavior before any fresh outcome
         run: Rscript benchmark_methods/test_grts_rescue_primary_batch_v2.R
-      - name: Download frozen fresh predeclaration
+      - name: Download frozen fresh predeclaration once per batch
         uses: actions/download-artifact@v4
         with:
           name: acsp-practical-rescue-fresh-confirmation-predeclaration
@@ -144,7 +147,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.prepare.outputs.predeclaration_run_id }}
-      - name: Download frozen final rescue model
+      - name: Download frozen final rescue model once per batch
         uses: actions/download-artifact@v4
         with:
           name: acsp-practical-rescue-final-72-model
@@ -152,28 +155,28 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.prepare.outputs.final_model_run_id }}
-      - name: Execute one frozen fresh pair against corrected GRTS v2
-        id: execute
-        continue-on-error: true
+      - name: Execute eight immutable fresh pairs; preserve failures without manufacturing zeroes
         run: |
           set -euo pipefail
           cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
           protocol=$(find predecl -name acsp_practical_rescue_fresh_confirmation_protocol.json -print -quit)
           model=$(find final-model -name practical_rescue_final_72.joblib -print -quit)
           manifest=$(find final-model -name model_manifest.json -print -quit)
-          python run_practical_rescue_fresh_confirmation_pair_v2.py \
-            --pair-id ${{ matrix.pair_id }} \
-            --cohort "$cohort" \
-            --model "$model" \
-            --model-manifest "$manifest" \
-            --protocol "$protocol" \
-            --output practical-rescue-fresh-pairs
-      - name: Preserve infrastructure failure without manufacturing scientific zero
-        if: steps.execute.outcome != 'success'
-        run: |
-          root=practical-rescue-fresh-pairs/pair_$(printf '%03d' ${{ matrix.pair_id }})
-          mkdir -p "$root"
-          PAIR_ID=${{ matrix.pair_id }} ROOT="$root" python - <<'PY'
+          test -n "$cohort" && test -n "$protocol" && test -n "$model" && test -n "$manifest"
+          for pair_id in $(seq ${{ matrix.start_pair }} ${{ matrix.end_pair }}); do
+            echo "=== fresh pair ${pair_id} (batch ${{ matrix.batch_id }}) ==="
+            if python run_practical_rescue_fresh_confirmation_pair_v2.py \
+              --pair-id "$pair_id" \
+              --cohort "$cohort" \
+              --model "$model" \
+              --model-manifest "$manifest" \
+              --protocol "$protocol" \
+              --output practical-rescue-fresh-pairs; then
+              test -s "practical-rescue-fresh-pairs/pair_$(printf '%03d' "$pair_id")/pair_summary.json"
+            else
+              root="practical-rescue-fresh-pairs/pair_$(printf '%03d' "$pair_id")"
+              mkdir -p "$root"
+              PAIR_ID="$pair_id" ROOT="$root" python - <<'PY'
           import json, os
           from pathlib import Path
           marker = {
@@ -183,18 +186,24 @@ jobs:
               "scientific_zero_created": False,
               "taxon_replacement_allowed": False,
           }
-          Path(os.environ["ROOT"], "infrastructure_failure.json").write_text(json.dumps(marker, indent=2) + "\n")
+          Path(os.environ["ROOT"], "infrastructure_failure.json").write_text(
+              json.dumps(marker, indent=2) + "\n", encoding="utf-8"
+          )
           PY
+            fi
+          done
+          count=$(find practical-rescue-fresh-pairs -maxdepth 1 -type d -name 'pair_*' | wc -l)
+          test "$count" -eq 8
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: practical-rescue-fresh-pair-${{ matrix.pair_id }}
+          name: practical-rescue-fresh-batch-${{ matrix.batch_id }}
           path: practical-rescue-fresh-pairs/pair_*
           if-no-files-found: error
           retention-days: 90
 
   aggregate:
-    needs: [prepare, pair]
+    needs: [prepare, batch]
     if: always() && needs.prepare.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -213,16 +222,21 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.prepare.outputs.predeclaration_run_id }}
-      - name: Download every declared pair artifact
+      - name: Download every declared batch artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: practical-rescue-fresh-pair-*
+          pattern: practical-rescue-fresh-batch-*
           path: pair-artifacts
           merge-multiple: true
-      - name: Strictly aggregate without zero-filling missing artifacts
+      - name: Strictly require 192 verified pair artifacts and aggregate without zero-filling
         run: |
           cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
           protocol=$(find predecl -name acsp_practical_rescue_fresh_confirmation_protocol.json -print -quit)
+          summaries=$(find pair-artifacts -name pair_summary.json | wc -l)
+          failures=$(find pair-artifacts -name infrastructure_failure.json | wc -l)
+          echo "verified_pair_summaries=$summaries infrastructure_failures=$failures"
+          test "$summaries" -eq 192
+          test "$failures" -eq 0
           python aggregate_practical_rescue_fresh_confirmation.py \
             --cohort "$cohort" \
             --pair-root pair-artifacts \
