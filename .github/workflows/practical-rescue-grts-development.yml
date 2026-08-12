@@ -98,20 +98,25 @@ jobs:
       - name: Freeze all 18,000 official GRTS designs then score all 72 development pairs
         run: |
           set -euo pipefail
+          max_jobs=4
           for source in mixed plants sdm; do
             if [ "$source" = mixed ]; then root=sources/mixed; fi
             if [ "$source" = plants ]; then root=sources/plants; fi
             if [ "$source" = sdm ]; then root=sources/sdm24; fi
             for pair_id in $(seq 1 24); do
-              echo "=== ${source}_${pair_id} ==="
+              echo "=== queue ${source}_${pair_id} ==="
               python benchmark_practical_rescue_grts_pair.py \
                 --group-id "${source}_${pair_id}" \
                 --source-root "$root" \
                 --rescue-fold-table rescue72/fold_method_comparison.csv \
                 --protocol validation/acsp_practical_rescue_grts_development_protocol.json \
-                --output rescue-grts-development-pairs
+                --output rescue-grts-development-pairs &
+              while [ "$(jobs -rp | wc -l)" -ge "$max_jobs" ]; do
+                wait -n
+              done
             done
           done
+          wait
       - name: Evaluate frozen pair-level GRTS gate
         run: |
           python aggregate_practical_rescue_grts_development.py \
