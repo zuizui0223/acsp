@@ -152,7 +152,7 @@ def parser() -> argparse.ArgumentParser:
     command = argparse.ArgumentParser(description=__doc__)
     command.add_argument("--cohort", type=Path, required=True)
     command.add_argument("--pair-root", type=Path, required=True)
-    command.add_argument("--protocol", type=Path, required=True)
+    command.add_argument("--protocol", dest="protocol_path", type=Path, required=True)
     command.add_argument("--output", type=Path, required=True)
     return command
 
