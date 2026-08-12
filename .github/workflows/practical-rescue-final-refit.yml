@@ -79,7 +79,7 @@ jobs:
           run-id: 31238895064
       - name: Fit unchanged rescue estimator on all 72 development pairs
         run: |
-          python fit_practical_rescue_final_model.py \
+          python fit_practical_rescue_final_model_v2.py \
             --standard-root final-refit/mixed \
             --standard-root final-refit/plants \
             --sdm-root final-refit/sdm24 \
