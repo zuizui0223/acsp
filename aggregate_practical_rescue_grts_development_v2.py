@@ -9,7 +9,6 @@ from pathlib import Path
 import aggregate_practical_rescue_grts_development as base
 
 EXPECTED_PROTOCOL = "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
-base.EXPECTED_PROTOCOL = EXPECTED_PROTOCOL
 
 
 def parser() -> argparse.ArgumentParser:
@@ -26,7 +25,14 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(pair_root: Path, protocol_path: Path, output: Path):
-    return base.run(pair_root, protocol_path, output)
+    # Avoid mutating the retained v1 aggregate contract merely by importing this
+    # wrapper; bind corrected-v2 identity only for the aggregate invocation.
+    original = base.EXPECTED_PROTOCOL
+    try:
+        base.EXPECTED_PROTOCOL = EXPECTED_PROTOCOL
+        return base.run(pair_root, protocol_path, output)
+    finally:
+        base.EXPECTED_PROTOCOL = original
 
 
 if __name__ == "__main__":
