@@ -23,23 +23,33 @@ parse_rescue_args <- function(args) {
     draws = 50L,
     seed_base = 20260811L,
     global_pair_id = 1L,
-    repeat = 1L,
+    repeat_id = 1L,
     k = 5L,
     replacements = 3L,
     score_col = "component_local_habitat_score"
   )
+  arg_names <- c(
+    "--input" = "input",
+    "--output" = "output",
+    "--draws" = "draws",
+    "--seed-base" = "seed_base",
+    "--global-pair-id" = "global_pair_id",
+    "--repeat" = "repeat_id",
+    "--k" = "k",
+    "--replacements" = "replacements",
+    "--score-col" = "score_col"
+  )
   i <- 1L
   while (i <= length(args)) {
     key <- args[[i]]
-    if (!startsWith(key, "--")) stop("unexpected argument: ", key)
+    if (!key %in% names(arg_names)) stop("unknown argument: ", key)
     if (i == length(args)) stop("missing value for ", key)
     value <- args[[i + 1L]]
-    name <- gsub("-", "_", substring(key, 3L), fixed = TRUE)
-    if (!name %in% names(out)) stop("unknown argument: ", key)
+    name <- unname(arg_names[[key]])
     out[[name]] <- value
     i <- i + 2L
   }
-  for (name in c("draws", "seed_base", "global_pair_id", "repeat", "k", "replacements")) {
+  for (name in c("draws", "seed_base", "global_pair_id", "repeat_id", "k", "replacements")) {
     out[[name]] <- as.integer(out[[name]])
   }
   out
@@ -72,7 +82,7 @@ run_rescue_primary_batch <- function(
   draws = 50L,
   seed_base = 20260811L,
   global_pair_id = 1L,
-  repeat = 1L,
+  repeat_id = 1L,
   k = 5L,
   replacements = 3L,
   score_col = "component_local_habitat_score"
@@ -85,7 +95,7 @@ run_rescue_primary_batch <- function(
   rows <- vector("list", as.integer(draws))
   for (draw_index in seq_len(as.integer(draws))) {
     seed <- as.integer(seed_base) + as.integer(global_pair_id) * 100000L +
-      as.integer(repeat) * 1000L + as.integer(draw_index)
+      as.integer(repeat_id) * 1000L + as.integer(draw_index)
     row <- draw_one(
       prepared,
       PRIMARY_VARIANT,
@@ -95,7 +105,7 @@ run_rescue_primary_batch <- function(
     )
     row$draw_index <- as.integer(draw_index)
     row$global_pair_id <- as.integer(global_pair_id)
-    row$repeat <- as.integer(repeat)
+    row[["repeat"]] <- as.integer(repeat_id)
     row$requested_k <- as.integer(k)
     row$requested_replacements <- as.integer(replacements)
     row$spsurvey_version <- actual_version
@@ -127,7 +137,7 @@ if (sys.nframe() == 0L) {
     draws = args$draws,
     seed_base = args$seed_base,
     global_pair_id = args$global_pair_id,
-    repeat = args$repeat,
+    repeat_id = args$repeat_id,
     k = args$k,
     replacements = args$replacements,
     score_col = args$score_col
