@@ -14,6 +14,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 
+import benchmark_practical_rescue_grts_pair_v2 as development_grts_v2
 import run_practical_rescue_fresh_confirmation_pair as base
 
 
@@ -62,6 +63,11 @@ def _run_grts_v2(
     expected_effective = np.minimum(requested, np.maximum(frame_rows - n_base, 0))
     if not np.array_equal(effective, expected_effective):
         raise RuntimeError("corrected GRTS artifact violates feasible diagnostic replacement rule")
+    # Fresh base code calls GRTS only when the training-only candidate pool has
+    # at least Top-k rows; smaller pools are already explicit scientific zeroes.
+    # Therefore any GRTS error here is an implementation failure on a non-empty,
+    # scientifically eligible frame and must abort rather than weaken the comparator.
+    development_grts_v2._assert_nonempty_grts_draws_error_free(draws)
     return draws
 
 
