@@ -1,0 +1,54 @@
+name: Record GRTS aggregate infrastructure fix
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - .github/workflows/ai-changelog-grts-aggregate-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/practical-coverage-v3-development
+          fetch-depth: 0
+      - name: Prepend AI changelog entry and remove helper
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CHANGELOG_AI.md")
+          text = path.read_text(encoding="utf-8")
+          marker = "# AI Change Log\n\n"
+          if not text.startswith(marker):
+              raise SystemExit("unexpected CHANGELOG_AI.md header")
+          heading = "## 2026-08-12 - GPT-5.6 Sol (OpenAI) - GRTS aggregate infrastructure hardening"
+          if heading not in text:
+              entry = '''## 2026-08-12 - GPT-5.6 Sol (OpenAI) - GRTS aggregate infrastructure hardening
+
+Changed files:
+- `aggregate_practical_rescue_grts_development.py`
+- `test_practical_rescue_grts_development.py`
+- `.github/workflows/practical-rescue-grts-development.yml`
+
+Summary:
+- Fixed the post-design aggregate CLI binding so `--protocol` is passed to the existing `protocol_path` argument instead of raising a `TypeError` after all 72 pair jobs finish.
+- Added a regression test for the CLI-to-run argument contract.
+- Added a pre-aggregation upload of the complete pair-level GRTS output tree so a later aggregation or reporting failure cannot discard the frozen scientific draws.
+- The frozen official GRTS protocol fingerprint, spsurvey 5.6.1 commit, seed formula, Top-5 design, 10-km requested minimum distance, 50 draws per fold, failure-as-zero rule, and promotion gate are unchanged.
+
+'''
+              path.write_text(marker + entry + text[len(marker):], encoding="utf-8")
+          PY
+          git rm .github/workflows/ai-changelog-grts-aggregate-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG_AI.md
+          git commit -m "Record GRTS aggregate infrastructure fix"
+          git push origin HEAD:agent/practical-coverage-v3-development
