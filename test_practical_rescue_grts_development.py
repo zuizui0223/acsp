@@ -60,6 +60,20 @@ class PracticalRescueGrtsDevelopmentTests(unittest.TestCase):
         self.assertFalse(draws["outcomes_available_to_selector"].any())
         self.assertEqual(draws["draw_index"].tolist(), list(range(1, 51)))
 
+    def test_aggregate_cli_maps_protocol_to_run_argument(self):
+        args = aggregate.parser().parse_args([
+            "--pair-root", "pairs",
+            "--protocol", "validation/acsp_practical_rescue_grts_development_protocol.json",
+            "--output", "aggregate",
+        ])
+        self.assertEqual(args.pair_root, Path("pairs"))
+        self.assertEqual(
+            args.protocol_path,
+            Path("validation/acsp_practical_rescue_grts_development_protocol.json"),
+        )
+        self.assertEqual(args.output, Path("aggregate"))
+        self.assertNotIn("protocol", vars(args))
+
 
 if __name__ == "__main__":
     unittest.main()
