@@ -1,4 +1,4 @@
-name: Record fresh confirmation batching change
+name: Record corrected GRTS v2 edge hardening
 
 on:
   push:
@@ -18,14 +18,14 @@ jobs:
         with:
           ref: agent/practical-coverage-v3-development
           fetch-depth: 0
-      - name: Prepend changelog entry
+      - name: Prepend changelog entry and remove helper
         run: |
           python - <<'PY'
           from pathlib import Path
           path = Path('CHANGELOG_AI.md')
           text = path.read_text(encoding='utf-8')
           marker = '# AI Change Log\n\n'
-          heading = '## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Fresh confirmation execution batching'
+          heading = '## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Corrected GRTS v2 sparse-frame hardening'
           if not text.startswith(marker):
               raise SystemExit('unexpected changelog header')
           if heading not in text:
@@ -33,13 +33,15 @@ jobs:
                   heading,
                   '',
                   'Changed files:',
-                  '- `.github/workflows/practical-rescue-fresh-confirmation.yml`',
+                  '- `benchmark_methods/grts_rescue_primary_batch_v2.R`',
+                  '- `benchmark_practical_rescue_grts_pair_v2.py`',
+                  '- `test_practical_rescue_grts_development_v2.py`',
                   '',
                   'Summary:',
-                  '- Rescheduled the frozen 192-pair fresh confirmation from 192 separate R environments to 24 immutable batches of 8 pair IDs, reducing repeated setup without changing any pair identity, seed, candidate generation, rescue model, corrected GRTS v2 design, or estimand.',
-                  '- Each pair still produces its own scientific artifact. Pair-level infrastructure failures create explicit non-scientific markers and are never converted to zero.',
-                  '- Aggregation now explicitly requires exactly 192 verified pair summaries and zero infrastructure-failure markers before inference.',
-                  '- The corrected GRTS v2 promotion criterion remains mean gain >=0.015, bootstrap lower bound >0, and sign-flip p<0.05.',
+                  '- Fixed the pinned spsurvey 5.6.1 zero-oversample edge case by omitting `n_over` when the frozen feasible replacement count is zero. spsurvey documents zero and NULL as equivalent, while its output assembly checks only NULL; Top-5, 10-km mindis, seeds, proportional local evidence, and all promotion thresholds are unchanged.',
+                  '- Added fail-closed handling for non-empty candidate frames: any official GRTS draw error now aborts the pair instead of being scored as zero, preventing implementation failures from biasing the Rescue contrast upward.',
+                  '- Empty candidate frames remain explicit zero-recovery artifacts under the frozen protocol.',
+                  '- These infrastructure changes were made while corrected-v2 execution was still blocked in pre-outcome sparse-frame smoke tests; no corrected-v2 scientific outcome had been evaluated.',
                   '',
                   '',
               ]
@@ -47,6 +49,7 @@ jobs:
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/ai-changelog-fresh-batch.yml
           git add CHANGELOG_AI.md
-          git commit -m "Record fresh confirmation execution batching"
+          git commit -m "Record corrected GRTS v2 sparse-frame hardening"
           git push origin HEAD:agent/practical-coverage-v3-development
