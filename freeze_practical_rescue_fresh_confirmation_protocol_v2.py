@@ -14,13 +14,20 @@ import json
 import freeze_practical_rescue_fresh_confirmation_protocol as base
 
 GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT = "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
-base.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT = GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT
 
 parser = base.parser
 
 
 def run(model, model_manifest, excluded_taxa, exclusion_manifest, output):
-    base.run(model, model_manifest, excluded_taxa, exclusion_manifest, output)
+    # Keep the v2 identity override local to this call. Module import must not
+    # mutate the frozen v1 implementation because the repository intentionally
+    # retains both protocols for audit/reproduction.
+    original = base.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT
+    try:
+        base.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT = GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT
+        base.run(model, model_manifest, excluded_taxa, exclusion_manifest, output)
+    finally:
+        base.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT = original
     payload = json.loads(output.read_text(encoding="utf-8"))
     payload.pop("protocol_fingerprint", None)
     payload["protocol_id"] = "acsp-practical-rescue-fresh-confirmation-v2"
