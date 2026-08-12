@@ -17,10 +17,6 @@ import benchmark_practical_rescue_grts_pair as base
 
 EXPECTED_PROTOCOL = "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
 
-# Reuse the frozen v1 protocol parser, scoring, leakage separation, pair mapping,
-# and held-out recovery code against the corrected v2 fingerprint.
-base.EXPECTED_PROTOCOL = EXPECTED_PROTOCOL
-
 
 def _assert_nonempty_grts_draws_error_free(result: pd.DataFrame) -> None:
     """Reject implementation failures on non-empty candidate frames.
@@ -104,10 +100,6 @@ def _run_grts_v2(
     return result
 
 
-# base.run resolves this module attribute dynamically from base's globals.
-base._run_grts = _run_grts_v2
-
-
 def parser():
     command = base.parser()
     for action in command._actions:
@@ -119,7 +111,18 @@ def parser():
 
 
 def run(args):
-    return base.run(args)
+    # Scope v2 bindings to this invocation. Importing this audit wrapper must not
+    # mutate the retained v1 protocol or GRTS runner used by repository tests and
+    # historical reproduction.
+    original_protocol = base.EXPECTED_PROTOCOL
+    original_runner = base._run_grts
+    try:
+        base.EXPECTED_PROTOCOL = EXPECTED_PROTOCOL
+        base._run_grts = _run_grts_v2
+        return base.run(args)
+    finally:
+        base.EXPECTED_PROTOCOL = original_protocol
+        base._run_grts = original_runner
 
 
 if __name__ == "__main__":
