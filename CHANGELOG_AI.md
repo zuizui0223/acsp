@@ -1,5 +1,16 @@
 # AI Change Log
 
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Fresh confirmation execution batching
+
+Changed files:
+- `.github/workflows/practical-rescue-fresh-confirmation.yml`
+
+Summary:
+- Rescheduled the frozen 192-pair fresh confirmation from 192 separate R environments to 24 immutable batches of 8 pair IDs, reducing repeated setup without changing any pair identity, seed, candidate generation, rescue model, corrected GRTS v2 design, or estimand.
+- Each pair still produces its own scientific artifact. Pair-level infrastructure failures create explicit non-scientific markers and are never converted to zero.
+- Aggregation now explicitly requires exactly 192 verified pair summaries and zero infrastructure-failure markers before inference.
+- The corrected GRTS v2 promotion criterion remains mean gain >=0.015, bootstrap lower bound >0, and sign-flip p<0.05.
+
 ## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Corrected GRTS v2 promotion chain
 
 Changed files:
