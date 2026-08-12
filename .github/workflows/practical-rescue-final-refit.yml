@@ -42,12 +42,18 @@ jobs:
           run-id: ${{ steps.gate_run.outputs.run_id }}
       - name: Require a complete passed corrected GRTS v2 gate before loading development outcomes
         run: |
-          python - <<'PY'
-          import json
+          set -euo pipefail
+          gate=$(find grts-gate -name development_manifest.json -print -quit)
+          test -n "$gate"
+          GATE="$gate" python - <<'PY'
+          import json, os
           from pathlib import Path
-          gate = json.loads(Path("grts-gate/development_manifest.json").read_text())
+          gate = json.loads(Path(os.environ["GATE"]).read_text())
           assert gate["protocol_fingerprint"] == "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
           assert gate["declared_pairs"] == gate["complete_pairs"] == 72
+          assert gate["folds"] == 360
+          assert gate["total_grts_draws"] == 18000
+          assert gate["grts_valid_base_draws"] + gate["grts_error_draws"] == 18000
           assert gate["development_grts_gate_passed"] is True
           assert gate["outcomes_available_to_grts_selector"] is False
           assert gate["no_retuning_after_grts_outcome"] is True
@@ -79,12 +85,15 @@ jobs:
           run-id: 31238895064
       - name: Fit unchanged rescue estimator on all 72 development pairs
         run: |
+          set -euo pipefail
+          gate=$(find grts-gate -name development_manifest.json -print -quit)
+          test -n "$gate"
           python fit_practical_rescue_final_model_v2.py \
             --standard-root final-refit/mixed \
             --standard-root final-refit/plants \
             --sdm-root final-refit/sdm24 \
             --rescue-protocol validation/acsp_practical_rescue_development_protocol.json \
-            --grts-gate-manifest grts-gate/development_manifest.json \
+            --grts-gate-manifest "$gate" \
             --output final-rescue-model
       - name: Audit final freeze contract
         run: |
