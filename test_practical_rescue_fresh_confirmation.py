@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from aggregate_practical_rescue_fresh_confirmation import run
+from aggregate_practical_rescue_fresh_confirmation import parser, run
 
 
 def _protocol(path: Path, pair_count: int = 4) -> str:
@@ -89,6 +89,19 @@ class FreshRescueConfirmationTests(unittest.TestCase):
                 )
             with self.assertRaisesRegex(RuntimeError, "missing or duplicate verified pair artifacts"):
                 run(cohort, pair_root, protocol, root / "aggregate")
+
+    def test_cli_maps_protocol_to_protocol_path(self) -> None:
+        args = parser().parse_args([
+            "--cohort", "cohort.csv",
+            "--pair-root", "pairs",
+            "--protocol", "protocol.json",
+            "--output", "aggregate",
+        ])
+        self.assertEqual(args.cohort, Path("cohort.csv"))
+        self.assertEqual(args.pair_root, Path("pairs"))
+        self.assertEqual(args.protocol_path, Path("protocol.json"))
+        self.assertEqual(args.output, Path("aggregate"))
+        self.assertNotIn("protocol", vars(args))
 
 
 if __name__ == "__main__":
