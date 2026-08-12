@@ -1,0 +1,41 @@
+name: Fresh confirmation batch QA
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - .github/workflows/ai-fresh-batch-qa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install validation dependencies
+        run: python -m pip install pyyaml "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0" joblib
+      - name: Validate fresh batch workflow and promotion code
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          workflow = Path('.github/workflows/practical-rescue-fresh-confirmation.yml')
+          payload = yaml.safe_load(workflow.read_text(encoding='utf-8'))
+          assert set(payload['jobs']) == {'prepare', 'batch', 'aggregate'}
+          text = workflow.read_text(encoding='utf-8')
+          assert 'range(1, 25)' in text
+          assert '(batch - 1) * 8 + 1' in text
+          assert 'batch * 8' in text
+          assert 'test "$summaries" -eq 192' in text
+          assert 'test "$failures" -eq 0' in text
+          assert 'run_practical_rescue_fresh_confirmation_pair_v2.py' in text
+          print('fresh batch workflow YAML and 24x8 coverage contract validated')
+          PY
+          python -m unittest -v test_practical_rescue_promotion_chain_v2.py test_practical_rescue_fresh_confirmation.py
+          python -m py_compile gbif_fieldmap_builder_app.py run_practical_rescue_fresh_confirmation_pair_v2.py aggregate_practical_rescue_fresh_confirmation.py
