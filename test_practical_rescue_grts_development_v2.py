@@ -11,6 +11,9 @@ import benchmark_practical_rescue_grts_pair_v2 as pair_v2
 import aggregate_practical_rescue_grts_development_v2 as aggregate_v2
 
 
+V1_PROTOCOL = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
+
+
 class PracticalRescueGrtsDevelopmentV2Tests(unittest.TestCase):
     def test_corrected_protocol_fingerprint_is_frozen(self):
         payload, fingerprint = pair_v2.base._canonical_protocol(
@@ -24,6 +27,7 @@ class PracticalRescueGrtsDevelopmentV2Tests(unittest.TestCase):
             "0914fcd071713fdab19f43d8d9a66436830bd917",
         )
         self.assertEqual(grts["top_k"], 5)
+        self.assertEqual(grts["n_base_rule"], "min(top_k, candidate_frame_rows)")
         self.assertEqual(grts["replacement_sites_requested"], 3)
         self.assertEqual(
             grts["replacement_sites_effective_rule"],
@@ -66,6 +70,11 @@ class PracticalRescueGrtsDevelopmentV2Tests(unittest.TestCase):
             Path("validation/acsp_practical_rescue_grts_development_protocol_v2.json").read_text()
         )
         self.assertEqual(payload["protocol_fingerprint"], pair_v2.EXPECTED_PROTOCOL)
+
+    def test_v2_import_does_not_mutate_v1_protocol_contracts(self):
+        self.assertEqual(pair_v2.base.EXPECTED_PROTOCOL, V1_PROTOCOL)
+        self.assertEqual(aggregate_v2.base.EXPECTED_PROTOCOL, V1_PROTOCOL)
+        self.assertIsNot(pair_v2.base._run_grts, pair_v2._run_grts_v2)
 
     def test_nonempty_grts_errors_fail_closed(self):
         ok = pd.DataFrame({"error_message": ["", None, ""]})
