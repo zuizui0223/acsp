@@ -1,5 +1,18 @@
 # AI Change Log
 
+## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Corrected GRTS v2 sparse-frame hardening
+
+Changed files:
+- `benchmark_methods/grts_rescue_primary_batch_v2.R`
+- `benchmark_practical_rescue_grts_pair_v2.py`
+- `test_practical_rescue_grts_development_v2.py`
+
+Summary:
+- Fixed the pinned spsurvey 5.6.1 zero-oversample edge case by omitting `n_over` when the frozen feasible replacement count is zero. spsurvey documents zero and NULL as equivalent, while its output assembly checks only NULL; Top-5, 10-km mindis, seeds, proportional local evidence, and all promotion thresholds are unchanged.
+- Added fail-closed handling for non-empty candidate frames: any official GRTS draw error now aborts the pair instead of being scored as zero, preventing implementation failures from biasing the Rescue contrast upward.
+- Empty candidate frames remain explicit zero-recovery artifacts under the frozen protocol.
+- These infrastructure changes were made while corrected-v2 execution was still blocked in pre-outcome sparse-frame smoke tests; no corrected-v2 scientific outcome had been evaluated.
+
 ## 2026-08-12 - GPT-5.6 Sol (OpenAI) - Fresh confirmation execution batching
 
 Changed files:
