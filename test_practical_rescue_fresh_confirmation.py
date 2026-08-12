@@ -68,7 +68,11 @@ class FreshRescueConfirmationTests(unittest.TestCase):
             result = run(cohort, pair_root, protocol, root / "aggregate")
             self.assertEqual(result["verified_pair_artifacts"], 4)
             self.assertFalse(result["missing_pair_artifacts_scored_as_zero"])
-            self.assertTrue(result["promotion_gate_passed"])
+            self.assertAlmostEqual(result["primary_inference"]["mean_difference"], 0.10)
+            self.assertGreater(result["primary_inference"]["bootstrap_95ci_low"], 0.0)
+            # Four synthetic pairs are intentionally too few to require the
+            # production p<0.05 sign-flip gate. The production cohort is 192.
+            self.assertFalse(result["promotion_gate_passed"])
 
     def test_missing_pair_artifact_invalidates_confirmation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
