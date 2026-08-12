@@ -15,6 +15,7 @@ import run_practical_rescue_fresh_confirmation_pair_v2 as fresh_pair_v2
 
 
 V2_FP = "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
+V1_FP = "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2"
 RESCUE_FP = "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48"
 
 
@@ -23,14 +24,20 @@ def sha(path: Path) -> str:
 
 
 class PromotionChainV2Tests(unittest.TestCase):
-    def test_final_fit_wrapper_binds_only_corrected_grts_identity(self):
+    def test_final_fit_wrapper_scopes_corrected_grts_identity(self):
         self.assertEqual(fit_v2.EXPECTED_GRTS_DEVELOPMENT_PROTOCOL, V2_FP)
-        self.assertEqual(fit_v2.base.EXPECTED_GRTS_DEVELOPMENT_PROTOCOL, V2_FP)
+        self.assertEqual(fit_v2.base.EXPECTED_GRTS_DEVELOPMENT_PROTOCOL, V1_FP)
+        self.assertIsNot(fit_v2.run, fit_v2.base.run)
 
-    def test_fresh_pair_wrapper_substitutes_only_grts_runner(self):
-        self.assertIs(fresh_pair_v2.run, fresh_pair_v2.base.run)
+    def test_fresh_pair_wrapper_scopes_only_grts_runner(self):
+        self.assertIsNot(fresh_pair_v2.run, fresh_pair_v2.base.run)
         self.assertIs(fresh_pair_v2.parser, fresh_pair_v2.base.parser)
-        self.assertIs(fresh_pair_v2.base._run_grts, fresh_pair_v2._run_grts_v2)
+        self.assertIsNot(fresh_pair_v2.base._run_grts, fresh_pair_v2._run_grts_v2)
+
+    def test_fresh_protocol_wrapper_does_not_mutate_v1_identity_on_import(self):
+        self.assertEqual(freeze_v2.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT, V2_FP)
+        self.assertEqual(base_value := freeze_v2.base.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT, V1_FP)
+        self.assertEqual(base_value, V1_FP)
 
     def test_fresh_protocol_freeze_is_model_bound_and_corrected(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -79,6 +86,8 @@ class PromotionChainV2Tests(unittest.TestCase):
             self.assertFalse(payload["confirmation_taxa_sampled_at_protocol_freeze"])
             self.assertFalse(payload["confirmation_occurrence_outcomes_inspected_at_protocol_freeze"])
             self.assertFalse(payload["missing_pair_artifacts_scored_as_zero"])
+            # The temporary override must be restored after the v2 freeze call.
+            self.assertEqual(freeze_v2.base.GRTS_DEVELOPMENT_PROTOCOL_FINGERPRINT, V1_FP)
 
 
 if __name__ == "__main__":
