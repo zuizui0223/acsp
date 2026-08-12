@@ -32,7 +32,7 @@ jobs:
           path: grts-gate
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          run-id: 31554080472
+          run-id: 31554662739
       - name: Require a complete passed frozen GRTS gate before loading development outcomes
         run: |
           python - <<'PY'
