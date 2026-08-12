@@ -3,13 +3,18 @@
 # Corrected official GRTS primary comparator for Practical Rescue development v2.
 # Diagnostic oversample sites are requested up to three, but lack of spare frame
 # rows must not invalidate an otherwise valid primary base sample.
+#
+# This adapter deliberately reuses the same unqualified do.call(grts, ...)
+# invocation exercised by test_grts_candidate_frame.R under pinned spsurvey
+# 5.6.1. It does not source the older batch helper whose namespaced invocation
+# failed the sparse-frame smoke before any v2 scientific outcome was evaluated.
 
 suppressPackageStartupMessages({
   library(sf)
   library(spsurvey)
 })
 
-source("benchmark_methods/grts_batch_candidate_frame.R")
+source("benchmark_methods/grts_candidate_frame.R")
 
 EXPECTED_SPSURVEY_VERSION <- "5.6.1"
 EXPECTED_SPSURVEY_COMMIT <- "0914fcd071713fdab19f43d8d9a66436830bd917"
@@ -75,6 +80,81 @@ prepare_rescue_grts_frame <- function(input, score_col) {
   list(frame = frame, points = points, id_col = id_col)
 }
 
+pairwise_min_distance_km_v2 <- function(points, ids, id_col) {
+  if (length(ids) < 2L) return(NA_real_)
+  positions <- match(ids, as.character(points[[id_col]]))
+  if (anyNA(positions)) return(NA_real_)
+  selected <- points[positions, , drop = FALSE]
+  distances <- as.matrix(sf::st_distance(selected))
+  values <- distances[upper.tri(distances)]
+  if (length(values) == 0L) return(NA_real_)
+  min(as.numeric(values), na.rm = TRUE) / 1000
+}
+
+draw_primary_v2 <- function(prepared, seed, k, effective_replacements) {
+  frame <- prepared$frame
+  points <- prepared$points
+  id_col <- prepared$id_col
+  warnings <- character()
+  error_message <- ""
+  design <- tryCatch(
+    withCallingHandlers({
+      set.seed(as.integer(seed))
+      common <- list(
+        sframe = points,
+        n_base = min(as.integer(k), nrow(frame)),
+        n_over = max(0L, as.integer(effective_replacements)),
+        mindis = 10000,
+        maxtry = 20L,
+        projcrs_check = TRUE
+      )
+      # Keep this call shape identical to the already-green finite-frame adapter
+      # in grts_candidate_frame.R / test_grts_candidate_frame.R.
+      do.call(grts, c(common, list(
+        seltype = "proportional",
+        aux_var = "grts_aux_score"
+      )))
+    }, warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }),
+    error = function(e) {
+      error_message <<- paste0(class(e)[1], ": ", conditionMessage(e))
+      NULL
+    }
+  )
+
+  if (is.null(design)) {
+    return(data.frame(
+      variant = PRIMARY_VARIANT,
+      seed = as.integer(seed),
+      base_count = 0L,
+      base_ids = "",
+      replacement_count = 0L,
+      replacement_ids = "",
+      realized_min_distance_km = NA_real_,
+      warning_message = paste(unique(warnings), collapse = " | "),
+      error_message = error_message,
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  base_ids <- extract_original_id(design$sites_base, id_col)
+  replacement_ids <- extract_original_id(design$sites_over, id_col)
+  data.frame(
+    variant = PRIMARY_VARIANT,
+    seed = as.integer(seed),
+    base_count = length(base_ids),
+    base_ids = paste(base_ids, collapse = ";"),
+    replacement_count = length(replacement_ids),
+    replacement_ids = paste(replacement_ids, collapse = ";"),
+    realized_min_distance_km = pairwise_min_distance_km_v2(points, base_ids, id_col),
+    warning_message = paste(unique(warnings), collapse = " | "),
+    error_message = error_message,
+    stringsAsFactors = FALSE
+  )
+}
+
 run_rescue_primary_batch_v2 <- function(
   input,
   output,
@@ -100,9 +180,8 @@ run_rescue_primary_batch_v2 <- function(
   for (draw_index in seq_len(as.integer(draws))) {
     seed <- as.integer(seed_base) + as.integer(global_pair_id) * 100000L +
       as.integer(repeat_id) * 1000L + as.integer(draw_index)
-    row <- draw_one(
+    row <- draw_primary_v2(
       prepared,
-      PRIMARY_VARIANT,
       seed,
       as.integer(k),
       as.integer(effective_replacements)
