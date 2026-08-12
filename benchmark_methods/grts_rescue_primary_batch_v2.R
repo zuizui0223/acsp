@@ -103,11 +103,17 @@ draw_primary_v2 <- function(prepared, seed, k, effective_replacements) {
       common <- list(
         sframe = points,
         n_base = min(as.integer(k), nrow(frame)),
-        n_over = max(0L, as.integer(effective_replacements)),
         mindis = 10000,
         maxtry = 20L,
         projcrs_check = TRUE
       )
+      # spsurvey 5.6.1 documents n_over = 0 and NULL as equivalent, but its
+      # output assembly tests only is.null(n_over). Omitting n_over when zero
+      # therefore preserves the frozen design while avoiding a package edge bug
+      # that tries to assign row names to NULL sites_over.
+      if (as.integer(effective_replacements) > 0L) {
+        common$n_over <- as.integer(effective_replacements)
+      }
       # Keep this call shape identical to the already-green finite-frame adapter
       # in grts_candidate_frame.R / test_grts_candidate_frame.R.
       do.call(grts, c(common, list(
