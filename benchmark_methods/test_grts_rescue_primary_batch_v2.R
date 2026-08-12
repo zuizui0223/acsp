@@ -41,9 +41,17 @@ check_sparse_frame <- function(n, expected_base, expected_over) {
   stopifnot(all(result$base_count == expected_base))
   stopifnot(all(result$error_message == "" | is.na(result$error_message)))
   stopifnot(all(result$outcomes_available_to_selector %in% c(FALSE, "FALSE")))
+  if (n == 1L) {
+    stopifnot(all(result$base_ids == "candidate-01"))
+    stopifnot(all(result$replacement_count == 0L))
+  }
   invisible(result)
 }
 
+# N=1 is a degenerate full-frame census under frozen n_base=min(5,N). The
+# package's internal spatial-balancing code cannot define a meaningful
+# one-point ordering, so the adapter must preserve the unique valid base set.
+check_sparse_frame(1L, 1L, 0L)
 check_sparse_frame(4L, 4L, 0L)
 check_sparse_frame(5L, 5L, 0L)
 check_sparse_frame(7L, 5L, 2L)
