@@ -171,6 +171,7 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument("--pair-root", type=Path, required=True)
     command.add_argument(
         "--protocol",
+        dest="protocol_path",
         type=Path,
         default=Path("validation/acsp_practical_rescue_grts_development_protocol.json"),
     )
