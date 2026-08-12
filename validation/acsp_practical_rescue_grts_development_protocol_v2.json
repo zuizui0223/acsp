@@ -1,0 +1,109 @@
+{
+  "protocol_id": "acsp-practical-local-anchor-rescue-grts-development-v2",
+  "status": "frozen_corrected_strong_comparator_after_v1_oversample_infrastructure_audit_before_v2_outcome_evaluation",
+  "rescue_policy": {
+    "protocol_id": "acsp-practical-local-anchor-rescue-development-v1",
+    "protocol_fingerprint": "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48",
+    "top_k": 5,
+    "local_anchor_count": 1,
+    "rescue_slots": 4,
+    "diversity_scale_km": 10.0
+  },
+  "rescue_72_development_result": {
+    "workflow_run": 31544341871,
+    "artifact_id": 9121943417,
+    "artifact_digest": "sha256:e7613844d8937f0a5c1c73ee6580f1d76c1b0c4ff0305430179d5d556e52dbe0",
+    "development_manifest_sha256": "6daa58576550b89b1573b46565011fc018ecbdc358f289a2af01d4989dfc8c31",
+    "pair_level_comparison_sha256": "c7156c435faffdceaf173ac1efc1756f036a86b5ab0ee6d753e270e9c777354b",
+    "fold_method_comparison_sha256": "801f43ed11a61e44188a5c67b4dd994e88cc7316513eebeef5791d9d73d407e8",
+    "combined_72_mean_gain_vs_local": 0.01887996462936185,
+    "combined_72_bootstrap_95ci": [
+      0.0067731398929250395,
+      0.032213546309697014
+    ],
+    "combined_72_sign_flip_p": 0.0034998833372220928,
+    "development_gate_passed": true
+  },
+  "development_sources": {
+    "mixed_24": {
+      "workflow_run": 30091294481,
+      "artifact_name": "standard-baselines-mixed_20260705",
+      "artifact_digest": "sha256:fd5c8e1acd359e4941d1767bc516b72eff973acf12bc47112864023ce033c0bc"
+    },
+    "plants_24": {
+      "workflow_run": 30091305081,
+      "artifact_name": "standard-baselines-plants_20260706",
+      "artifact_digest": "sha256:08066b7f893beda5faec5c953b4bedac4f424f30366c4dd427a303e8fe8807d3"
+    },
+    "locked_extension_24": {
+      "workflow_run": 31238895064,
+      "artifact_pattern": "sdm-topk-recovered-pair-*",
+      "role": "development_only"
+    }
+  },
+  "v1_comparator_audit": {
+    "v1_protocol_fingerprint": "950f7d9de90da2f2bd2561a18b7cc1eb74a60568ccc801875b96119db53bddf2",
+    "audit_basis": "pre-outcome candidate-frame row counts plus v1 GRTS error counts",
+    "finding": "fixed n_over=3 caused the entire grts call to fail whenever candidate_frame_rows < n_base + 3, including folds where a valid primary base sample could still be drawn",
+    "mixed_exact_match": "all five v1 mixed error-bearing pairs had grts_error_draws exactly equal to 50 times the number of folds with candidate_frame_rows < n_base + 3",
+    "correction_direction": "strictly strengthens the comparator by allowing the primary base sample to be generated when fewer than three diagnostic replacement sites remain",
+    "rescue_model_or_hyperparameters_changed": false,
+    "v1_final_aggregate_used_to_choose_correction": false,
+    "v2_outcomes_inspected_at_freeze": false
+  },
+  "official_grts": {
+    "implementation": "USEPA/spsurvey::grts",
+    "spsurvey_version": "5.6.1",
+    "spsurvey_tag_commit": "0914fcd071713fdab19f43d8d9a66436830bd917",
+    "candidate_frame": "identical eligible ACSP candidate rows for each stored development fold after known-location filtering and finite-coordinate filtering",
+    "score_col": "component_local_habitat_score",
+    "missing_local_evidence": "retain candidate row; map non-finite local evidence to zero before positive auxiliary transform",
+    "seltype": "proportional",
+    "aux_var": "pmax(ifelse(is.finite(component_local_habitat_score), component_local_habitat_score, 0), 1e-6)",
+    "mindis_km": 10.0,
+    "maxtry": 20,
+    "top_k": 5,
+    "n_base_rule": "min(top_k, candidate_frame_rows)",
+    "replacement_sites_requested": 3,
+    "replacement_sites_effective_rule": "min(replacement_sites_requested, max(candidate_frame_rows - n_base, 0))",
+    "replacement_sites_role": "diagnostic oversample only; lack of replacement capacity must not invalidate an otherwise valid primary base design",
+    "draws_per_fold": 50,
+    "seed_base": 20260811,
+    "seed_formula": "seed_base + global_pair_id*100000 + repeat*1000 + draw_index",
+    "global_pair_id_mapping": "mixed_1..24 => 1..24; plants_1..24 => 25..48; sdm_1..24 => 49..72",
+    "draw_failure_rule": "a draw without a verified primary base design after applying the feasible replacement rule contributes zero recovery; warnings and errors are retained and no distance threshold is relaxed",
+    "empty_candidate_frame_rule": "zero recovery with an explicit empty-candidate error artifact",
+    "outcome_separation": "all 50 GRTS base-site sets are written before held-out recovery is scored"
+  },
+  "estimand": {
+    "radius_km": 10.0,
+    "fold_rescue_recovery": "recovery of the already-frozen rescue selected IDs from the 72-pair development artifact",
+    "fold_grts_recovery": "mean held-out recovery across 50 corrected official GRTS draws",
+    "pair_recovery": "mean across five spatial-block repeats",
+    "inference_unit": "taxon-region pair"
+  },
+  "inference": {
+    "primary_contrast": "local_anchor_rescue - corrected_official_grts_proportional_local_mindis10km",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "minimum_absolute_recall_gain": 0.015,
+    "gate": "all 72 pairs retained AND mean difference >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05",
+    "secondary_report": [
+      "rescue vs local_evidence_top_k",
+      "GRTS warning/error rate",
+      "realized minimum distance",
+      "requested vs effective replacement count"
+    ],
+    "no_rescue_retuning_after_grts_outcome": true
+  },
+  "next_if_pass": {
+    "action": "refit the unchanged rescue estimator on all 72 development pairs, freeze model/training hashes, then sample a fresh confirmation cohort",
+    "fresh_confirmation_exclusions": [
+      "all 72 rescue development taxa",
+      "all 192 taxa in validation/practical_core_untouched_cohort_20260811"
+    ],
+    "confirmation_primary_comparator": "same corrected official GRTS 5.6.1 proportional-local mindis10km contract with feasible diagnostic replacements",
+    "promotion_requires_fresh_confirmation": true
+  },
+  "protocol_fingerprint": "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
+}
