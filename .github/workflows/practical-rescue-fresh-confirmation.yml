@@ -1,4 +1,4 @@
-name: ACSP Practical Rescue fully fresh confirmation
+name: ACSP Practical Rescue fully fresh corrected-GRTS-v2 confirmation
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ steps.trigger.outputs.final_model_run_id }}
-      - name: Require a model-bound untouched 192-pair cohort
+      - name: Require a model-bound untouched 192-pair corrected-GRTS-v2 cohort
         run: |
           set -euo pipefail
           cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
@@ -71,9 +71,13 @@ jobs:
           manifest = json.loads(Path(os.environ["MANIFEST"]).read_text())
           assert len(cohort) == cohort["pair_id"].nunique() == cohort["scientific_name"].nunique() == 192
           assert set(cohort["pair_id"].astype(int)) == set(range(1, 193))
+          assert protocol["protocol_id"] == "acsp-practical-rescue-fresh-confirmation-v2"
           assert protocol["status"] == "frozen_after_final_72_model_before_fresh_cohort_sampling_or_outcome_inspection"
+          assert protocol["final_model"]["grts_development_protocol_fingerprint"] == "74fec14b44035e897072b022d82ea30c00b27ce1bb95c16a0e9a5578a3d3da7a"
           assert protocol["final_model"]["model_sha256"] == sha(os.environ["MODEL"])
           assert manifest["model_sha256"] == sha(os.environ["MODEL"])
+          assert protocol["official_grts"]["replacement_sites_requested"] == 3
+          assert protocol["official_grts"]["replacement_sites_effective_rule"] == "min(replacement_sites_requested, max(candidate_frame_rows - n_base, 0))"
           assert protocol["missing_pair_artifacts_scored_as_zero"] is False
           assert protocol["no_retuning_after_confirmation_outcome"] is True
           PY
@@ -130,6 +134,8 @@ jobs:
           Rscript - <<'RSCRIPT'
           stopifnot(as.character(packageVersion("spsurvey")) == "5.6.1")
           RSCRIPT
+      - name: Verify corrected sparse-frame GRTS behavior
+        run: Rscript benchmark_methods/test_grts_rescue_primary_batch_v2.R
       - name: Download frozen fresh predeclaration
         uses: actions/download-artifact@v4
         with:
@@ -146,7 +152,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.prepare.outputs.final_model_run_id }}
-      - name: Execute one frozen fresh pair
+      - name: Execute one frozen fresh pair against corrected GRTS v2
         id: execute
         continue-on-error: true
         run: |
@@ -155,7 +161,7 @@ jobs:
           protocol=$(find predecl -name acsp_practical_rescue_fresh_confirmation_protocol.json -print -quit)
           model=$(find final-model -name practical_rescue_final_72.joblib -print -quit)
           manifest=$(find final-model -name model_manifest.json -print -quit)
-          python run_practical_rescue_fresh_confirmation_pair.py \
+          python run_practical_rescue_fresh_confirmation_pair_v2.py \
             --pair-id ${{ matrix.pair_id }} \
             --cohort "$cohort" \
             --model "$model" \
