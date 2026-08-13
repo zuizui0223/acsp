@@ -82,7 +82,7 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: |
+          packages: |
             any::spsurvey
             any::sf
       - name: Require frozen official GRTS implementation
