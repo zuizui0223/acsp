@@ -13,11 +13,14 @@ Unique taxa: 192
 Plant/animal: 96/96
 No taxon replacement: true
 No retuning after outcome: true
-Confirmation attempt: 3
+Confirmation attempt: 4
 
 Attempt 1 stopped in prepare before the immutable pair matrix was built because the prepare job imported pandas without installing it.
-Attempt 2 completed prepare and built the immutable 192-pair matrix, but every pair job stopped during generic R dependency resolution before the frozen GRTS version check or any scientific pair analysis ran. Current pak scanned repository R sources via deps::. and discovered the separately pinned non-CRAN biosurvey comparator. The only change before this retry is excluding the two biosurvey comparator R files from generic dependency scanning via .renvignore. The dedicated biosurvey workflow remains unchanged and installs its pinned implementation separately.
+Attempt 2 completed prepare and built the immutable 192-pair matrix, but pair jobs stopped during generic R dependency resolution before the frozen GRTS version check or any scientific pair analysis ran. The default setup-r-dependencies packages value included deps::., which scanned repository R sources and discovered the separately pinned non-CRAN biosurvey comparator.
+Attempt 3 tested a .renvignore workaround. That workaround did not alter pak's deps::. scan in this workflow; pair jobs again stopped before the GRTS version check and before scientific pair execution.
 
-No cohort, scientific policy, comparator definition, package-version requirement, threshold, inference rule, or outcome has changed. No pair-level scientific analysis from attempts 1 or 2 is used as confirmation evidence.
+Attempt 4 makes the minimal infrastructure correction: the pair job now supplies `packages:` with only `any::spsurvey` and `any::sf`, overriding setup-r-dependencies' default `deps::., any::sessioninfo` scan. The subsequent frozen check still requires spsurvey exactly 5.6.1.
+
+No cohort, scientific policy, comparator definition, package-version requirement, threshold, inference rule, or outcome has changed. No pair-level scientific analysis from attempts 1-3 is used as confirmation evidence.
 
 This run is confirmatory. Do not change the candidate policy, comparator definition, cohort membership, thresholds, or inference rules based on observed recovery outcomes.
