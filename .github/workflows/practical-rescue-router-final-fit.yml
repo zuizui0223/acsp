@@ -45,6 +45,7 @@ jobs:
           python fit_practical_rescue_router_final.py \
             --development-manifest router-development/development_manifest.json \
             --training-rows router-development/router_training_rows.csv \
+            --fold-level router-development/fold_level_comparison.csv \
             --protocol validation/acsp_practical_rescue_vnext2_router_protocol.json \
             --output final-router
       - name: Audit frozen final-router contract
@@ -56,7 +57,12 @@ jobs:
           assert m["status"] == "final_vnext2_router_fitted_after_complete_development_gate"
           assert m["protocol_fingerprint"] == "988243d9acbb20b16fcf7ec307db8c3a5325c3abd7ba71835da5e9911bc0cad6"
           assert m["development_pairs"] == 192
+          assert m["development_pairs_with_complete_folds"] == 180
+          assert m["development_all_zero_pair_count"] == 12
+          assert len(m["development_all_zero_pairs"]) == 12
+          assert m["development_pairs_with_complete_folds"] + m["development_all_zero_pair_count"] == 192
           assert m["development_complete_folds"] == m["training_rows"] == 873
+          assert m["development_scientific_zero_folds"] == 87
           assert m["decision_threshold_absolute_recall"] == 0.015
           assert m["ridge_alpha"] == 10.0
           assert m["confirmation_outcomes_used_for_fit"] is False
