@@ -1,1 +1,17 @@
-Development-only Role-Aware Patch v0 work. Frozen Practical Core and existing 192-pair confirmation are unchanged.
+Development-only Role-Aware Patch v0 work.
+
+Frozen Practical Core and the exposed 192-pair confirmation are unchanged and may not be reused to promote this post-hoc policy.
+
+Canonical 72-pair fully nested development result:
+- local-only mean recall 0.126018
+- Role-Aware Patch mean recall 0.145223
+- mean gain +0.019205
+- bootstrap 95% CI +0.008244 to +0.031809
+- sign-flip p ~= 0.00075
+- development protocol fingerprint 608d62818696f9ea3ab038635b8ec99d8ebc2bb3a1f5643044d681b54b8830ee
+
+Rejected post-v0 variants: complete-link topology, terrain/environment edge gating, multi-label candidate_roles, direct legacy priority scores, and nested great-circle route-cost guarding.
+
+Operational-only result: keep the exact v0 selected IDs and optimize visit order. Exact Top-5 great-circle open-path ordering reduced median within-set path from about 354 km to 229 km (~37%) across comparable development folds. Great-circle distance is only a route proxy; road/trail travel requires external map or field verification.
+
+A future route_stretch_warning should flag long single-link patches for map/field review without dropping them from scientific selection.
