@@ -1,0 +1,92 @@
+name: ACSP Practical Rescue vNext anchored-fifth development
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - acsp/practical_rescue_vnext.py
+      - benchmark_practical_rescue_vnext_development.py
+      - test_practical_rescue_vnext.py
+      - test_practical_rescue_vnext_development.py
+      - validation/acsp_practical_rescue_vnext_development_protocol.json
+      - .github/workflows/practical-rescue-vnext-development.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: practical-rescue-vnext-development-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  crossfit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install exact frozen vNext development runtime
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
+          python -m pip install -e .
+      - name: Compile relevant Python including the field-map app
+        run: |
+          python -m py_compile \
+            gbif_fieldmap_builder_app.py \
+            acsp/practical_rescue_vnext.py \
+            benchmark_practical_rescue_vnext_development.py
+      - name: Verify vNext policy and development contracts before loading artifacts
+        run: |
+          python -m unittest -v \
+            test_practical_rescue_vnext.py \
+            test_practical_rescue_vnext_development.py
+      - name: Download all 192 inspected fresh-v2 pair artifacts as development input
+        uses: actions/download-artifact@v4
+        with:
+          pattern: practical-rescue-fresh-batch-*
+          path: vnext-source
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31657467683
+      - name: Require the complete reclassified 192-pair source
+        run: |
+          summaries=$(find vnext-source -name pair_summary.json | wc -l)
+          failures=$(find vnext-source -name infrastructure_failure.json | wc -l)
+          echo "verified_pair_summaries=$summaries infrastructure_failures=$failures"
+          test "$summaries" -eq 192
+          test "$failures" -eq 0
+      - name: Run frozen 8-fold pair-level vNext cross-fit
+        run: |
+          python benchmark_practical_rescue_vnext_development.py \
+            --pair-root vnext-source \
+            --protocol validation/acsp_practical_rescue_vnext_development_protocol.json \
+            --output vnext-development
+      - name: Audit complete development result without hiding a failed gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m = json.loads(Path("vnext-development/development_manifest.json").read_text())
+          assert m["protocol_fingerprint"] == "850cd2a6d962308dc6125c1759ebc03f64ac5a39489cb70f19da5a502b0cf686"
+          assert m["source_fresh_run_id"] == 31657467683
+          assert m["source_fresh_confirmation_reclassified_as_development"] is True
+          assert m["declared_pairs"] == m["evaluated_pairs"] == 192
+          assert m["evaluated_folds"] == 960
+          assert m["outer_pair_folds"] == 8
+          assert m["candidate_frames_regenerated"] is False
+          assert m["outcomes_available_to_selector_at_test_inference"] is False
+          assert m["new_untouched_confirmation_required"] is True
+          print(json.dumps(m, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext-192-development
+          path: vnext-development
+          if-no-files-found: error
+          retention-days: 90
