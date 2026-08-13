@@ -1,0 +1,118 @@
+name: ACSP Practical Rescue fresh companion v1 gate
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/practical_rescue_fresh_companion_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install frozen analysis runtime
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
+          python -m pip install -e .
+      - name: Resolve immutable primary fresh run
+        id: trigger
+        run: |
+          set -euo pipefail
+          trigger=validation/practical_rescue_fresh_companion_trigger.txt
+          fresh=$(sed -n 's/^fresh_run_id=//p' "$trigger" | tr -d '[:space:]')
+          predecl=$(sed -n 's/^predeclaration_run_id=//p' "$trigger" | tr -d '[:space:]')
+          for value in "$fresh" "$predecl"; do
+            case "$value" in ''|*[!0-9]*) echo "companion trigger run IDs must be numeric" >&2; exit 1;; esac
+          done
+          echo "fresh_run_id=$fresh" >> "$GITHUB_OUTPUT"
+          echo "predeclaration_run_id=$predecl" >> "$GITHUB_OUTPUT"
+      - name: Verify pre-outcome companion contract
+        run: python -m unittest -v test_practical_rescue_fresh_companion.py
+      - name: Download frozen fresh predeclaration
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-predeclaration
+          path: predecl
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.predeclaration_run_id }}
+      - name: Download completed primary fresh aggregate
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-aggregate
+          path: primary-aggregate
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.fresh_run_id }}
+      - name: Require complete primary artifacts without conditioning on pass/fail
+        run: |
+          manifest=$(find primary-aggregate -name confirmation_manifest.json -print -quit)
+          test -n "$manifest"
+          MANIFEST="$manifest" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          m = json.loads(Path(os.environ["MANIFEST"]).read_text())
+          assert m["protocol_fingerprint"] == "c7d84a3160e9d9b0b05b932c44444be5dfd750200e72749fb413592499bcf8bd"
+          assert m["declared_pairs"] == m["verified_pair_artifacts"] == 192
+          assert m["missing_pair_artifacts_scored_as_zero"] is False
+          assert m["outcomes_available_to_rescue_selector"] is False
+          assert m["outcomes_available_to_grts_selector"] is False
+          assert m["no_retuning_after_confirmation_outcome"] is True
+          # Deliberately do not assert promotion_gate_passed here.
+          PY
+      - name: Download all immutable fresh pair batches
+        uses: actions/download-artifact@v4
+        with:
+          pattern: practical-rescue-fresh-batch-*
+          path: pair-artifacts
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.fresh_run_id }}
+      - name: Require exactly 192 verified pair trees and no infrastructure markers
+        run: |
+          summaries=$(find pair-artifacts -name pair_summary.json | wc -l)
+          failures=$(find pair-artifacts -name infrastructure_failure.json | wc -l)
+          echo "verified_pair_summaries=$summaries infrastructure_failures=$failures"
+          test "$summaries" -eq 192
+          test "$failures" -eq 0
+      - name: Evaluate frozen v1/local/geographic/random companion comparisons
+        run: |
+          cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
+          fresh_protocol=$(find predecl -name acsp_practical_rescue_fresh_confirmation_protocol.json -print -quit)
+          test -n "$cohort" && test -n "$fresh_protocol"
+          python aggregate_practical_rescue_fresh_companion.py \
+            --cohort "$cohort" \
+            --pair-root pair-artifacts \
+            --fresh-protocol "$fresh_protocol" \
+            --companion-protocol validation/acsp_practical_rescue_fresh_companion_protocol.json \
+            --output practical-rescue-fresh-companion
+      - name: Require complete companion manifest without hiding a negative result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m = json.loads(Path("practical-rescue-fresh-companion/companion_manifest.json").read_text())
+          assert m["protocol_fingerprint"] == "ed8e1333cf9638f90aa0fa2eda11d0845b484c6316826a194e02eb1b3dc8847e"
+          assert m["declared_pairs"] == m["verified_pair_artifacts"] == 192
+          assert m["fresh_outcomes_used_for_retuning"] is False
+          assert m["missing_pair_artifacts_scored_as_zero"] is False
+          assert m["primary_grts_gate_changed"] is False
+          print(json.dumps(m, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-companion-v1
+          path: practical-rescue-fresh-companion
+          if-no-files-found: error
+          retention-days: 90
