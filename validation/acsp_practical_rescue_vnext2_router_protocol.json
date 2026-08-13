@@ -1,0 +1,96 @@
+{
+  "protocol_id": "acsp-practical-rescue-vnext2-safe-policy-router-development-v1",
+  "status": "frozen_after_vnext1_failure_and_192-pair_development_diagnostics_before_new_untouched_confirmation",
+  "development_source": {
+    "fresh_v2_run_id": 31657467683,
+    "fresh_v2_protocol_fingerprint": "c7d84a3160e9d9b0b05b932c44444be5dfd750200e72749fb413592499bcf8bd",
+    "pair_count": 192,
+    "folds_per_pair": 5,
+    "status": "reclassified_as_development_after_frozen_v1_companion_failure",
+    "candidate_frames": "reuse exact training-only candidate_pool_pre_outcome.csv; no regeneration"
+  },
+  "available_policies": {
+    "frozen_v1": {
+      "implementation": "acsp.validated_core.select_validated_core",
+      "top_k": 5,
+      "plant_evidence_weight": 1.0,
+      "animal_evidence_weight": 0.75,
+      "separation_scale_m": 25000.0
+    },
+    "frozen_rescue_v2": {
+      "rescue_protocol_fingerprint": "8f4f0a85ca636bf70b445ed1bb70b93a2df7de6a5b687b91d42c436b7e258c48",
+      "final_model_sha256": "e5fde07f4aaad1ae5dcadb989169fd17ef428ac2be7577f5fd382c4f12fb45a3",
+      "top_k": 5
+    }
+  },
+  "router": {
+    "target": "fold-level frozen Rescue-v2 10-km held-out recovery minus frozen-v1 10-km held-out recovery",
+    "estimator": "Ridge",
+    "alpha": 10.0,
+    "preprocessing": {
+      "numeric": "median imputation + StandardScaler",
+      "categorical": "OneHotEncoder(handle_unknown=ignore)"
+    },
+    "training_weight": "each taxon-region pair has equal total weight across its complete spatial folds",
+    "decision_threshold_absolute_recall": 0.015,
+    "decision_rule": "choose frozen Rescue-v2 only when predicted Rescue-v2 minus frozen-v1 fold recall is >= 0.015; otherwise choose frozen-v1",
+    "tie_rule": "threshold comparison is deterministic; no outcome-dependent fallback"
+  },
+  "router_features": {
+    "numeric": [
+      "candidate_pool", "local_mean", "local_sd", "local_q10", "local_q50", "local_q90", "local_max", "local_zero_fraction",
+      "coast_median_km", "coast_near1_fraction", "coast_near5_fraction", "overlap_n", "jaccard", "rescue_only_nearest_v1_mean_km",
+      "candidate_habitat_fraction", "candidate_survey_gap_fraction", "candidate_environmental_fraction",
+      "pool_domain_terrestrial_fraction", "pool_domain_inland_aquatic_fraction", "pool_domain_coastal_fraction", "pool_domain_marine_fraction",
+      "v1_local_mean", "v1_local_min", "v1_local_max", "v1_geo_pair_mean_km", "v1_geo_pair_min_km", "v1_geo_pair_max_km", "v1_coast_mean_km", "v1_coast_min_km", "v1_coast_max_km",
+      "v1_domain_terrestrial_fraction", "v1_domain_inland_aquatic_fraction", "v1_domain_coastal_fraction", "v1_domain_marine_fraction",
+      "rescue_local_mean", "rescue_local_min", "rescue_local_max", "rescue_geo_pair_mean_km", "rescue_geo_pair_min_km", "rescue_geo_pair_max_km", "rescue_coast_mean_km", "rescue_coast_min_km", "rescue_coast_max_km",
+      "rescue_domain_terrestrial_fraction", "rescue_domain_inland_aquatic_fraction", "rescue_domain_coastal_fraction", "rescue_domain_marine_fraction",
+      "delta_local_mean", "delta_local_min", "delta_local_max", "delta_geo_pair_mean_km", "delta_geo_pair_min_km", "delta_geo_pair_max_km", "delta_coast_mean_km", "delta_coast_min_km", "delta_coast_max_km",
+      "delta_domain_terrestrial_fraction", "delta_domain_inland_aquatic_fraction", "delta_domain_coastal_fraction", "delta_domain_marine_fraction"
+    ],
+    "categorical": ["taxon_group", "surface_domain"],
+    "forbidden": ["scientific_name", "absolute region identity", "held-out coordinates", "held-out occurrence IDs", "held-out recovery", "GRTS outcomes", "post-selection field outcomes"]
+  },
+  "development_evaluation": {
+    "outer_pair_folds": 8,
+    "pair_assignment_seed": 20260813,
+    "unit": "taxon-region pair after averaging five frozen spatial folds",
+    "recovery_radius_km": 10.0,
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "inference_seed": 20260813,
+    "primary_gate": "mean router minus frozen-v1 >= 0.015 AND pair-bootstrap 95% lower >0 AND sign-flip p<0.05",
+    "group_guardrail": "plant and animal means each >=0.015, bootstrap 95% lower >0, and sign-flip p<0.05",
+    "observed_fixed_configuration_snapshot": {
+      "overall_mean": 0.022886112597900837,
+      "overall_ci_low": 0.013145213671506605,
+      "overall_ci_high": 0.03369520302577757,
+      "overall_sign_flip_p": 3.333222225925803e-05,
+      "plant_mean": 0.025683337905829762,
+      "plant_ci_low": 0.015506268468807463,
+      "plant_ci_high": 0.03709492482554217,
+      "plant_sign_flip_p": 3.333222225925803e-05,
+      "animal_mean": 0.02008888728997191,
+      "animal_ci_low": 0.003550443953871924,
+      "animal_ci_high": 0.038638906568501497,
+      "animal_sign_flip_p": 0.024065864471184292
+    },
+    "interpretation": "development evidence only because model family/features/threshold were selected after inspection of these 192 reclassified development pairs"
+  },
+  "future_confirmation": {
+    "required": true,
+    "pair_count": 192,
+    "balanced_factorial": "12 region cells x plant/animal x four record-count strata x two taxa",
+    "excluded_taxa_union": "old invalidated 192 + original Rescue72 development + inspected fresh-v2 192 = 456 unique taxa if disjoint; verify exact union before sampling",
+    "must_pass": [
+      "router minus corrected official GRTS v2 >=0.015 with CI lower>0 and p<0.05",
+      "router minus frozen-v1 >=0.015 with CI lower>0 and p<0.05"
+    ],
+    "group_guardrail": "plant and animal primary directions must remain positive; predeclare exact group gate before sampling",
+    "no_retuning_after_outcome": true,
+    "no_taxon_replacement_after_declaration": true
+  },
+  "claim_boundary": "vNext2 is development-only until a new untouched cohort passes; prospective field-effort/access gate and native biosurvey end-to-end gate remain separate.",
+  "protocol_fingerprint": "988243d9acbb20b16fcf7ec307db8c3a5325c3abd7ba71835da5e9911bc0cad6"
+}
