@@ -1,0 +1,171 @@
+name: Freeze and sample ACSP Practical Rescue vNext2 untouched confirmation
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/practical_rescue_vnext2_confirmation_freeze_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      router_run_id: ${{ steps.trigger.outputs.router_run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install frozen protocol dependencies
+        run: python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
+      - name: Resolve final router run only
+        id: trigger
+        run: |
+          set -euo pipefail
+          value=$(tr -d '[:space:]' < validation/practical_rescue_vnext2_confirmation_freeze_trigger.txt)
+          case "$value" in ''|*[!0-9]*) echo "trigger must contain one numeric final-router run ID" >&2; exit 1;; esac
+          echo "router_run_id=$value" >> "$GITHUB_OUTPUT"
+      - name: Download frozen final Rescue-v2 model
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-final-72-model
+          path: inputs/rescue-v2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31564308875
+      - name: Download frozen final vNext2 router
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-final-router
+          path: inputs/router
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.router_run_id }}
+      - name: Download prior 264 exclusions and inspected fresh-v2 192 identities
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-predeclaration
+          path: inputs/prior-fresh-v2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31564488377
+      - name: Freeze exact 456-taxon union without sampling
+        run: |
+          set -euo pipefail
+          prior=$(find inputs/prior-fresh-v2 -path '*/fresh-inputs/excluded_taxa.csv' -print -quit)
+          inspected=$(find inputs/prior-fresh-v2 -path '*/fresh-cohort/predeclared_taxon_region_pairs.csv' -print -quit)
+          test -n "$prior" && test -n "$inspected"
+          python prepare_practical_rescue_vnext2_exclusions.py \
+            --prior-264 "$prior" \
+            --inspected-fresh-v2 "$inspected" \
+            --output vnext2-inputs
+      - name: Freeze model-bound strict vNext2 protocol before any new taxon draw
+        run: |
+          set -euo pipefail
+          rescue=$(find inputs/rescue-v2 -name practical_rescue_final_72.joblib -print -quit)
+          rescue_manifest=$(find inputs/rescue-v2 -name model_manifest.json -print -quit)
+          router=$(find inputs/router -name practical_rescue_vnext2_router.json -print -quit)
+          router_manifest=$(find inputs/router -name model_manifest.json -print -quit)
+          test -n "$rescue" && test -n "$rescue_manifest" && test -n "$router" && test -n "$router_manifest"
+          python freeze_practical_rescue_vnext2_confirmation_protocol.py \
+            --rescue-model "$rescue" \
+            --rescue-model-manifest "$rescue_manifest" \
+            --router-model "$router" \
+            --router-model-manifest "$router_manifest" \
+            --excluded-taxa vnext2-inputs/excluded_taxa.csv \
+            --exclusion-manifest vnext2-inputs/exclusion_manifest.json \
+            --output vnext2-freeze/acsp_practical_rescue_vnext2_confirmation_protocol.json
+      - name: Audit pre-sampling strict freeze contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          p = json.loads(Path("vnext2-freeze/acsp_practical_rescue_vnext2_confirmation_protocol.json").read_text())
+          e = json.loads(Path("vnext2-inputs/exclusion_manifest.json").read_text())
+          x = pd.read_csv("vnext2-inputs/excluded_taxa.csv")
+          assert p["protocol_id"] == "acsp-practical-rescue-vnext2-untouched-confirmation-v1"
+          assert p["status"] == "frozen_after_final_router_before_new_cohort_sampling_or_outcome_inspection"
+          assert p["final_router"]["router_protocol_fingerprint"] == "988243d9acbb20b16fcf7ec307db8c3a5325c3abd7ba71835da5e9911bc0cad6"
+          assert p["final_rescue_v2"]["model_sha256"] == "e5fde07f4aaad1ae5dcadb989169fd17ef428ac2be7577f5fd382c4f12fb45a3"
+          assert p["cohort"]["pair_count"] == 192
+          assert p["inference"]["minimum_absolute_recall_gain"] == 0.015
+          assert p["missing_pair_artifacts_scored_as_zero"] is False
+          assert p["new_confirmation_taxa_sampled_at_protocol_freeze"] is False
+          assert p["new_confirmation_occurrence_outcomes_inspected_at_protocol_freeze"] is False
+          assert e["excluded_unique_taxa"] == len(x) == x["scientific_name"].nunique() == 456
+          assert e["new_confirmation_taxa_sampled"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-confirmation-protocol-freeze
+          path: |
+            vnext2-inputs
+            vnext2-freeze
+          if-no-files-found: error
+          retention-days: 90
+
+  sample-cohort:
+    needs: freeze
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install sampler dependencies
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3"
+          python -m pip install -e .
+      - name: Download physically prior protocol-freeze artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-confirmation-protocol-freeze
+          path: frozen
+      - name: Restore frozen paths without modifying bytes
+        run: |
+          cp -a frozen/vnext2-inputs .
+          cp -a frozen/vnext2-freeze .
+      - name: Draw new 192-pair cohort only after model-bound protocol exists
+        run: |
+          python predeclare_practical_rescue_vnext2_confirmation_cohort.py \
+            --protocol vnext2-freeze/acsp_practical_rescue_vnext2_confirmation_protocol.json \
+            --output vnext2-cohort
+      - name: Require untouched balanced 192-pair predeclaration
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          m = json.loads(Path("vnext2-cohort/cohort_manifest.json").read_text())
+          c = pd.read_csv("vnext2-cohort/predeclared_taxon_region_pairs.csv")
+          x = pd.read_csv("vnext2-inputs/excluded_taxa.csv")
+          assert m["status"] == "vnext2_untouched_confirmation_cohort_ready"
+          assert m["declared_pairs"] == m["unique_declared_taxa"] == 192
+          assert len(c) == c["pair_id"].nunique() == c["scientific_name"].nunique() == 192
+          assert not (set(c["scientific_name"].astype(str)) & set(x["scientific_name"].astype(str)))
+          assert m["excluded_unique_taxa"] == 456
+          assert m["occurrence_rows_fetched_for_declared_taxa"] is False
+          assert m["candidate_generation_run"] is False
+          assert m["router_run"] is False
+          assert m["rescue_v2_run"] is False
+          assert m["grts_run"] is False
+          assert m["heldout_recovery_run"] is False
+          assert m["taxon_replacement_after_declaration_allowed"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-confirmation-predeclaration
+          path: |
+            vnext2-inputs
+            vnext2-freeze
+            vnext2-cohort
+          if-no-files-found: error
+          retention-days: 90
