@@ -1,0 +1,71 @@
+{
+  "protocol_id": "acsp-practical-rescue-fresh-companion-v1",
+  "status": "frozen_after_192_cohort_predeclaration_before_any_fresh_occurrence_fetch_or_outcome_execution",
+  "preexisting_specification": {
+    "issue": 57,
+    "requirement": "compare v2 against frozen v1, local-only, geographic maximin, and same-pool random in the untouched confirmation cohort",
+    "note": "This companion restores the already-written issue-57 comparator requirement without changing the separately frozen corrected-GRTS-v2 primary gate."
+  },
+  "bound_fresh_confirmation": {
+    "fresh_protocol_fingerprint": "c7d84a3160e9d9b0b05b932c44444be5dfd750200e72749fb413592499bcf8bd",
+    "cohort_sha256": "a969e2acf2af9260f0598cc97b2328e04e908816b7416fea2d5706acb2608d4a",
+    "final_model_sha256": "e5fde07f4aaad1ae5dcadb989169fd17ef428ac2be7577f5fd382c4f12fb45a3",
+    "pair_count": 192,
+    "folds_per_pair": 5,
+    "recovery_radius_km": 10.0
+  },
+  "comparators": {
+    "frozen_v1": {
+      "implementation": "acsp.validated_core.select_validated_core",
+      "plant": {
+        "evidence_weight": 1.0,
+        "separation_scale_m": 25000.0
+      },
+      "animal": {
+        "evidence_weight": 0.75,
+        "separation_scale_m": 25000.0
+      },
+      "top_k": 5,
+      "role": "required companion promotion comparator"
+    },
+    "local_only": {
+      "implementation": "acsp.practical_core.select_practical_core",
+      "score_col": "component_local_habitat_score",
+      "top_k": 5,
+      "role": "secondary diagnostic"
+    },
+    "geographic_maximin": {
+      "implementation": "acsp.decision_baselines.select_geographic_farthest",
+      "top_k": 5,
+      "role": "secondary diagnostic"
+    },
+    "same_pool_random": {
+      "implementation": "acsp.decision_baselines.random_same_pool_sets",
+      "top_k": 5,
+      "draws_per_fold": 50,
+      "seed_formula": "20260813 + pair_id*1000 + repeat",
+      "role": "secondary diagnostic"
+    }
+  },
+  "scientific_zero_alignment": {
+    "rule": "If the frozen fresh primary pair artifact marks a fold explicit_scientific_zero, all companion methods receive the same zero fold estimand; no missing artifact is converted to zero.",
+    "reason": "For training-only candidate pools below Top-5 the frozen primary protocol defines the declared zero estimand. This companion must not alter primary eligibility after cohort freeze."
+  },
+  "outcome_separation": "For complete folds, every companion selection is computed from candidate_pool_pre_outcome.csv before held_out_occurrences.csv is opened for scoring.",
+  "inference": {
+    "unit": "taxon-region pair",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "seed": 20260813,
+    "minimum_absolute_recall_gain": 0.015,
+    "required_v2_minus_frozen_v1_gate": "192/192 verified pair artifacts AND mean difference >= 0.015 AND pair-bootstrap 95% CI lower > 0 AND sign-flip p < 0.05",
+    "other_comparators": "report pair-level inference descriptively; they do not replace the separately frozen corrected-GRTS-v2 primary gate"
+  },
+  "fitted_sdm_note": "The original issue requested fitted-SDM Top-5 when applicable. The fresh primary artifacts do not freeze the training-state fitted-SDM object, so no post hoc surrogate will be mislabeled as fitted SDM; the existing separate fitted-SDM decision benchmark remains the supported SDM contrast.",
+  "fresh_outcomes_fetched_or_inspected_at_freeze": false,
+  "taxon_replacement_allowed": false,
+  "changes_to_primary_grts_protocol": false,
+  "changes_to_final_rescue_model": false,
+  "no_retuning_after_outcome": true,
+  "protocol_fingerprint": "ed8e1333cf9638f90aa0fa2eda11d0845b484c6316826a194e02eb1b3dc8847e"
+}
