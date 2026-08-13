@@ -1,0 +1,318 @@
+name: ACSP Practical Rescue vNext2 fully untouched confirmation
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/practical_rescue_vnext2_confirmation_run_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      router_run_id: ${{ steps.trigger.outputs.router_run_id }}
+      predeclaration_run_id: ${{ steps.trigger.outputs.predeclaration_run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install preparation dependency
+        run: python -m pip install "pandas==2.2.3"
+      - name: Resolve only frozen artifact run IDs
+        id: trigger
+        run: |
+          set -euo pipefail
+          trigger=validation/practical_rescue_vnext2_confirmation_run_trigger.txt
+          router=$(sed -n 's/^router_run_id=//p' "$trigger" | tr -d '[:space:]')
+          predecl=$(sed -n 's/^predeclaration_run_id=//p' "$trigger" | tr -d '[:space:]')
+          for value in "$router" "$predecl"; do
+            case "$value" in ''|*[!0-9]*) echo "vNext2 trigger run IDs must be numeric" >&2; exit 1;; esac
+          done
+          echo "router_run_id=$router" >> "$GITHUB_OUTPUT"
+          echo "predeclaration_run_id=$predecl" >> "$GITHUB_OUTPUT"
+      - name: Download frozen vNext2 predeclaration
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-confirmation-predeclaration
+          path: predecl
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.predeclaration_run_id }}
+      - name: Download frozen vNext2 router identity
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-final-router
+          path: router
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.router_run_id }}
+      - name: Download frozen Rescue-v2 identity
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-final-72-model
+          path: rescue-v2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31564308875
+      - name: Require model-bound untouched 192-pair vNext2 cohort
+        run: |
+          set -euo pipefail
+          cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
+          cohort_manifest=$(find predecl -name cohort_manifest.json -print -quit)
+          protocol=$(find predecl -name acsp_practical_rescue_vnext2_confirmation_protocol.json -print -quit)
+          router_model=$(find router -name practical_rescue_vnext2_router.json -print -quit)
+          router_manifest=$(find router -name model_manifest.json -print -quit)
+          rescue_model=$(find rescue-v2 -name practical_rescue_final_72.joblib -print -quit)
+          rescue_manifest=$(find rescue-v2 -name model_manifest.json -print -quit)
+          test -n "$cohort" && test -n "$cohort_manifest" && test -n "$protocol"
+          test -n "$router_model" && test -n "$router_manifest" && test -n "$rescue_model" && test -n "$rescue_manifest"
+          COHORT="$cohort" COHORT_MANIFEST="$cohort_manifest" PROTOCOL="$protocol" ROUTER="$router_model" ROUTER_MANIFEST="$router_manifest" RESCUE="$rescue_model" RESCUE_MANIFEST="$rescue_manifest" python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          import pandas as pd
+          def sha(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          def canonical(path):
+              payload = json.loads(Path(path).read_text())
+              stored = payload.pop("protocol_fingerprint")
+              calculated = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+              assert stored == calculated
+              payload["protocol_fingerprint"] = stored
+              return payload, stored
+          cohort = pd.read_csv(os.environ["COHORT"])
+          cohort_manifest = json.loads(Path(os.environ["COHORT_MANIFEST"]).read_text())
+          protocol, fp = canonical(os.environ["PROTOCOL"])
+          router_manifest = json.loads(Path(os.environ["ROUTER_MANIFEST"]).read_text())
+          rescue_manifest = json.loads(Path(os.environ["RESCUE_MANIFEST"]).read_text())
+          assert protocol["protocol_id"] == "acsp-practical-rescue-vnext2-untouched-confirmation-v1"
+          assert protocol["status"] == "frozen_after_final_router_before_new_cohort_sampling_or_outcome_inspection"
+          assert len(cohort) == cohort["pair_id"].nunique() == cohort["scientific_name"].nunique() == 192
+          assert cohort["pair_id"].astype(int).sort_values().tolist() == list(range(1, 193))
+          assert cohort["taxon_group"].value_counts().to_dict() == {"plant": 96, "animal": 96}
+          assert cohort_manifest["status"] == "vnext2_untouched_confirmation_cohort_ready"
+          assert cohort_manifest["protocol_fingerprint"] == fp
+          assert cohort_manifest["cohort_sha256"] == sha(os.environ["COHORT"])
+          assert cohort_manifest["excluded_unique_taxa"] == 456
+          assert cohort_manifest["occurrence_rows_fetched_for_declared_taxa"] is False
+          assert cohort_manifest["candidate_generation_run"] is False
+          assert cohort_manifest["router_run"] is False
+          assert cohort_manifest["heldout_recovery_run"] is False
+          assert protocol["final_router"]["router_protocol_fingerprint"] == "988243d9acbb20b16fcf7ec307db8c3a5325c3abd7ba71835da5e9911bc0cad6"
+          assert protocol["final_router"]["model_sha256"] == sha(os.environ["ROUTER"])
+          assert protocol["final_router"]["model_fingerprint"] == router_manifest["model_fingerprint"]
+          assert router_manifest["model_sha256"] == sha(os.environ["ROUTER"])
+          assert router_manifest["confirmation_outcomes_used_for_fit"] is False
+          assert router_manifest["hyperparameters_changed_after_development_gate"] is False
+          assert protocol["final_rescue_v2"]["model_sha256"] == sha(os.environ["RESCUE"])
+          assert rescue_manifest["model_sha256"] == sha(os.environ["RESCUE"])
+          assert protocol["inference"]["minimum_absolute_recall_gain"] == 0.015
+          assert protocol["missing_pair_artifacts_scored_as_zero"] is False
+          assert protocol["taxon_replacement_after_declaration_allowed"] is False
+          assert protocol["no_retuning_after_confirmation_outcome"] is True
+          PY
+      - name: Build immutable 24-batch matrix covering all 192 pairs
+        id: matrix
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          matrix = [
+              {"batch_id": batch, "start_pair": (batch - 1) * 8 + 1, "end_pair": batch * 8}
+              for batch in range(1, 25)
+          ]
+          covered = [pair for item in matrix for pair in range(item["start_pair"], item["end_pair"] + 1)]
+          assert covered == list(range(1, 193))
+          print("matrix=" + json.dumps({"include": matrix}, separators=(",", ":")))
+          PY
+
+  batch:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install exact frozen Python runtime once per batch
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0" joblib
+          python -m pip install -e .
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install official GRTS hard dependencies once per batch
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::sf
+            any::survey
+            any::boot
+            any::crossdes
+            any::deldir
+            any::lme4
+            any::sampling
+            any::units
+      - name: Install pinned official spsurvey 5.6.1
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-all-errors \
+            -o /tmp/spsurvey-5.6.1.tar.gz \
+            https://codeload.github.com/USEPA/spsurvey/tar.gz/0914fcd071713fdab19f43d8d9a66436830bd917
+          R CMD INSTALL /tmp/spsurvey-5.6.1.tar.gz
+          Rscript - <<'RSCRIPT'
+          stopifnot(as.character(packageVersion("spsurvey")) == "5.6.1")
+          RSCRIPT
+      - name: Verify corrected sparse-frame GRTS before any untouched outcome
+        run: Rscript benchmark_methods/test_grts_rescue_primary_batch_v2.R
+      - name: Download frozen vNext2 predeclaration once per batch
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-confirmation-predeclaration
+          path: predecl
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.prepare.outputs.predeclaration_run_id }}
+      - name: Download frozen final vNext2 router once per batch
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-final-router
+          path: router
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.prepare.outputs.router_run_id }}
+      - name: Download frozen final Rescue-v2 model once per batch
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-final-72-model
+          path: rescue-v2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31564308875
+      - name: Execute eight immutable untouched pairs; preserve failures without zero filling
+        run: |
+          set -euo pipefail
+          cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
+          protocol=$(find predecl -name acsp_practical_rescue_vnext2_confirmation_protocol.json -print -quit)
+          router_model=$(find router -name practical_rescue_vnext2_router.json -print -quit)
+          router_manifest=$(find router -name model_manifest.json -print -quit)
+          rescue_model=$(find rescue-v2 -name practical_rescue_final_72.joblib -print -quit)
+          rescue_manifest=$(find rescue-v2 -name model_manifest.json -print -quit)
+          test -n "$cohort" && test -n "$protocol" && test -n "$router_model" && test -n "$router_manifest"
+          test -n "$rescue_model" && test -n "$rescue_manifest"
+          for pair_id in $(seq ${{ matrix.start_pair }} ${{ matrix.end_pair }}); do
+            echo "=== vNext2 untouched pair ${pair_id} (batch ${{ matrix.batch_id }}) ==="
+            if python run_practical_rescue_vnext2_confirmation_pair.py \
+              --pair-id "$pair_id" \
+              --cohort "$cohort" \
+              --rescue-model "$rescue_model" \
+              --rescue-model-manifest "$rescue_manifest" \
+              --router-model "$router_model" \
+              --router-model-manifest "$router_manifest" \
+              --protocol "$protocol" \
+              --output vnext2-pairs; then
+              test -s "vnext2-pairs/pair_$(printf '%03d' "$pair_id")/pair_summary.json"
+            else
+              root="vnext2-pairs/pair_$(printf '%03d' "$pair_id")"
+              mkdir -p "$root"
+              PAIR_ID="$pair_id" ROOT="$root" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          marker = {
+              "pair_id": int(os.environ["PAIR_ID"]),
+              "status": "unexpected_infrastructure_failure",
+              "verified_scientific_artifact": False,
+              "scientific_zero_created": False,
+              "taxon_replacement_allowed": False,
+          }
+          Path(os.environ["ROOT"], "infrastructure_failure.json").write_text(
+              json.dumps(marker, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+            fi
+          done
+          count=$(find vnext2-pairs -maxdepth 1 -type d -name 'pair_*' | wc -l)
+          test "$count" -eq 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: practical-rescue-vnext2-batch-${{ matrix.batch_id }}
+          path: vnext2-pairs/pair_*
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: [prepare, batch]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install exact aggregation runtime
+        run: python -m pip install "numpy==2.3.5" "pandas==2.2.3"
+      - name: Download frozen vNext2 predeclaration
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-confirmation-predeclaration
+          path: predecl
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.prepare.outputs.predeclaration_run_id }}
+      - name: Download every declared batch artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: practical-rescue-vnext2-batch-*
+          path: pair-artifacts
+          merge-multiple: true
+      - name: Strictly require 192 verified pair artifacts and no infrastructure failures
+        run: |
+          cohort=$(find predecl -name predeclared_taxon_region_pairs.csv -print -quit)
+          protocol=$(find predecl -name acsp_practical_rescue_vnext2_confirmation_protocol.json -print -quit)
+          summaries=$(find pair-artifacts -name pair_summary.json | wc -l)
+          failures=$(find pair-artifacts -name infrastructure_failure.json | wc -l)
+          echo "verified_pair_summaries=$summaries infrastructure_failures=$failures"
+          test "$summaries" -eq 192
+          test "$failures" -eq 0
+          python aggregate_practical_rescue_vnext2_confirmation.py \
+            --cohort "$cohort" \
+            --pair-root pair-artifacts \
+            --protocol "$protocol" \
+            --output vnext2-confirmation-aggregate
+      - name: Require complete manifest without conditioning CI on promotion outcome
+        run: |
+          test -s vnext2-confirmation-aggregate/confirmation_manifest.json
+          test -s vnext2-confirmation-aggregate/pair_level_comparison.csv
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m = json.loads(Path("vnext2-confirmation-aggregate/confirmation_manifest.json").read_text())
+          assert m["status"] == "vnext2_untouched_confirmation_evaluated"
+          assert m["declared_pairs"] == m["verified_pair_artifacts"] == 192
+          assert m["taxon_group_counts"] == {"plant": 96, "animal": 96} or m["taxon_group_counts"] == {"animal": 96, "plant": 96}
+          assert m["missing_pair_artifacts_scored_as_zero"] is False
+          assert m["grts_error_draws"] == 0
+          assert m["outcomes_available_to_router"] is False
+          assert m["outcomes_available_to_v1_selector"] is False
+          assert m["outcomes_available_to_rescue_selector"] is False
+          assert m["outcomes_available_to_grts_selector"] is False
+          assert m["no_retuning_after_confirmation_outcome"] is True
+          print(json.dumps(m, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-untouched-confirmation-aggregate
+          path: vnext2-confirmation-aggregate
+          if-no-files-found: error
+          retention-days: 90
