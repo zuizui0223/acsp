@@ -1,0 +1,69 @@
+name: ACSP Practical Rescue retrospective ecological promotion gate
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - validation/practical_rescue_retrospective_promotion_trigger.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  combine-fresh-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Resolve immutable primary and companion runs
+        id: trigger
+        run: |
+          set -euo pipefail
+          trigger=validation/practical_rescue_retrospective_promotion_trigger.txt
+          primary=$(sed -n 's/^primary_fresh_run_id=//p' "$trigger" | tr -d '[:space:]')
+          companion=$(sed -n 's/^companion_run_id=//p' "$trigger" | tr -d '[:space:]')
+          for value in "$primary" "$companion"; do
+            case "$value" in ''|*[!0-9]*) echo "promotion trigger run IDs must be numeric" >&2; exit 1;; esac
+          done
+          echo "primary_run_id=$primary" >> "$GITHUB_OUTPUT"
+          echo "companion_run_id=$companion" >> "$GITHUB_OUTPUT"
+      - name: Run promotion-combiner unit tests
+        run: python -m unittest -v test_practical_rescue_retrospective_promotion.py
+      - name: Download fresh corrected-GRTS-v2 aggregate
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-confirmation-aggregate
+          path: primary
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.primary_run_id }}
+      - name: Download fresh frozen-v1 companion aggregate
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-practical-rescue-fresh-companion-v1
+          path: companion
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.trigger.outputs.companion_run_id }}
+      - name: Combine only the two predeclared fresh gates
+        run: |
+          primary=$(find primary -name confirmation_manifest.json -print -quit)
+          companion=$(find companion -name companion_manifest.json -print -quit)
+          test -n "$primary" && test -n "$companion"
+          python evaluate_practical_rescue_retrospective_promotion.py \
+            --primary-manifest "$primary" \
+            --companion-manifest "$companion" \
+            --output practical-rescue-retrospective-promotion/promotion_manifest.json
+      - name: Report promotion state without forcing a positive conclusion
+        run: cat practical-rescue-retrospective-promotion/promotion_manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-retrospective-promotion
+          path: practical-rescue-retrospective-promotion
+          if-no-files-found: error
+          retention-days: 90
