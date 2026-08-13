@@ -1,0 +1,100 @@
+name: ACSP Practical Rescue vNext2 safe-router development
+
+on:
+  push:
+    branches:
+      - agent/practical-coverage-v3-development
+    paths:
+      - acsp/practical_rescue_router.py
+      - benchmark_practical_rescue_router_development.py
+      - test_practical_rescue_router.py
+      - validation/acsp_practical_rescue_vnext2_router_protocol.json
+      - .github/workflows/practical-rescue-router-development.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: practical-rescue-router-development-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  crossfit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+      - name: Install exact frozen router-development runtime
+        run: |
+          python -m pip install "numpy==2.3.5" "pandas==2.2.3" "scikit-learn==1.8.0"
+          python -m pip install -e .
+      - name: Compile field-map app and router sources
+        run: |
+          python -m py_compile \
+            gbif_fieldmap_builder_app.py \
+            acsp/practical_rescue_router.py \
+            benchmark_practical_rescue_router_development.py
+      - name: Run transparent-router unit tests before loading development outcomes
+        run: python -m unittest -v test_practical_rescue_router.py
+      - name: Verify vNext2 protocol self-hash before loading development outcomes
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          path = Path("validation/acsp_practical_rescue_vnext2_router_protocol.json")
+          payload = json.loads(path.read_text())
+          stored = payload.pop("protocol_fingerprint")
+          calculated = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+          assert stored == calculated == "988243d9acbb20b16fcf7ec307db8c3a5325c3abd7ba71835da5e9911bc0cad6"
+          assert payload["router"]["alpha"] == 10.0
+          assert payload["router"]["decision_threshold_absolute_recall"] == 0.015
+          PY
+      - name: Download all 192 reclassified fresh-v2 pair artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: practical-rescue-fresh-batch-*
+          path: router-source
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31657467683
+      - name: Require complete development source without zero-filled infrastructure failures
+        run: |
+          summaries=$(find router-source -name pair_summary.json | wc -l)
+          failures=$(find router-source -name infrastructure_failure.json | wc -l)
+          echo "verified_pair_summaries=$summaries infrastructure_failures=$failures"
+          test "$summaries" -eq 192
+          test "$failures" -eq 0
+      - name: Run fixed vNext2 eight-fold pair cross-fit
+        run: |
+          python benchmark_practical_rescue_router_development.py \
+            --pair-root router-source \
+            --protocol validation/acsp_practical_rescue_vnext2_router_protocol.json \
+            --output router-development
+      - name: Require complete auditable result without conditioning workflow success on the gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m = json.loads(Path("router-development/development_manifest.json").read_text())
+          assert m["protocol_fingerprint"] == "988243d9acbb20b16fcf7ec307db8c3a5325c3abd7ba71835da5e9911bc0cad6"
+          assert m["declared_pairs"] == m["evaluated_pairs"] == 192
+          assert m["evaluated_folds"] == 960
+          assert m["complete_training_rows"] == 873
+          assert m["scientific_zero_folds"] == 87
+          assert m["candidate_frames_regenerated"] is False
+          assert m["outcomes_available_to_router_at_test_inference"] is False
+          assert m["new_untouched_confirmation_required"] is True
+          print(json.dumps(m, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-practical-rescue-vnext2-router-192-development
+          path: router-development
+          if-no-files-found: error
+          retention-days: 90
