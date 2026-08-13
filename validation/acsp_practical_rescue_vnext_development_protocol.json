@@ -1,0 +1,89 @@
+{
+  "protocol_id": "acsp-practical-rescue-vnext-v1-anchored-fifth-slot-development",
+  "status": "frozen_redesign_after_failed_fresh_v2_confirmation_before_vnext_crossfit_evaluation",
+  "redesign_basis": {
+    "failed_confirmation_run_id": 31657467683,
+    "fresh_protocol_fingerprint": "c7d84a3160e9d9b0b05b932c44444be5dfd750200e72749fb413592499bcf8bd",
+    "companion_run_id": 31661036013,
+    "companion_protocol_fingerprint": "ed8e1333cf9638f90aa0fa2eda11d0845b484c6316826a194e02eb1b3dc8847e",
+    "observed_failure": "Rescue-v2 minus frozen-v1 mean +0.01204, bootstrap CI crossed zero, sign-flip p=0.124; the 192 pairs are development data from this point onward.",
+    "retuning_on_same_192_allowed_only_for_development": true,
+    "new_untouched_confirmation_required": true
+  },
+  "candidate_frame": {
+    "source": "the exact immutable training-only candidate_pool_pre_outcome.csv frames from fresh run 31657467683",
+    "regeneration": false,
+    "known_candidate_filter": "occurrence-supported|known-location|known anchor",
+    "reason": "isolate policy redesign from candidate-generation changes"
+  },
+  "base_policy": {
+    "implementation": "acsp.validated_core.select_validated_core",
+    "top_k": 5,
+    "anchors_preserved": 4,
+    "learned_slots": 1,
+    "plant": {
+      "evidence_weight": 1.0,
+      "separation_scale_m": 25000.0
+    },
+    "animal": {
+      "evidence_weight": 0.75,
+      "separation_scale_m": 25000.0
+    }
+  },
+  "learned_fifth_slot": {
+    "target": "absolute held-out 10-km recall newly contributed by one candidate beyond the four frozen-v1 anchors",
+    "estimator": "GradientBoostingRegressor",
+    "n_estimators": 100,
+    "max_depth": 2,
+    "min_samples_leaf": 10,
+    "loss": "huber",
+    "random_state": 42,
+    "replacement_margin_absolute_recall": 0.015,
+    "rule": "retain frozen-v1 fifth unless the best non-anchor candidate prediction exceeds the frozen-v1 fifth prediction by at least 0.015"
+  },
+  "inference_features": {
+    "reuse_practical_rescue_v2_features": true,
+    "additional_numeric": [
+      "anchor_min_km",
+      "anchor_mean_km",
+      "baseline_fifth_local_score",
+      "delta_local_vs_baseline_fifth",
+      "pool_distance_to_coast_median_km",
+      "pool_near_coast_1km_fraction",
+      "v1_selection_rank"
+    ],
+    "additional_categorical": [
+      "surface_domain"
+    ],
+    "forbidden": [
+      "held-out coordinates",
+      "held-out recovery",
+      "held-out occurrence IDs",
+      "scientific_name",
+      "absolute region identity",
+      "GRTS outcomes",
+      "SDM suitability as a required predictor"
+    ]
+  },
+  "development_evaluation": {
+    "pairs": 192,
+    "folds_per_pair": 5,
+    "outer_pair_folds": 8,
+    "pair_assignment_seed": 20260813,
+    "unit": "taxon-region pair after averaging five frozen outer spatial folds",
+    "recovery_radius_km": 10.0,
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "inference_seed": 20260813,
+    "primary_contrast": "vnext_minus_frozen_v1",
+    "gate": "mean difference >=0.015 AND pair-bootstrap 95% lower >0 AND sign-flip p<0.05"
+  },
+  "future_confirmation": {
+    "must_exclude": "all old invalidated 192 identities, original Rescue 72 development taxa, and these 192 inspected fresh-v2 taxa",
+    "minimum_exclusion_union_if_disjoint": 456,
+    "no_taxon_replacement_after_declaration": true,
+    "no_vnext_retuning_after_new_confirmation_outcomes": true
+  },
+  "claim_boundary": "development redesign only; no retrospective promotion claim until a new untouched cohort passes both corrected-GRTS and frozen-v1 gates",
+  "protocol_fingerprint": "850cd2a6d962308dc6125c1759ebc03f64ac5a39489cb70f19da5a502b0cf686"
+}
