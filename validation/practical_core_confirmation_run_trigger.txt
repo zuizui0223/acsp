@@ -13,8 +13,11 @@ Unique taxa: 192
 Plant/animal: 96/96
 No taxon replacement: true
 No retuning after outcome: true
-Confirmation attempt: 2
+Confirmation attempt: 3
 
-Attempt 1 stopped in prepare before the immutable pair matrix was built because the prepare job imported pandas without installing it. The only change before this retry is adding the missing prepare dependency; no cohort, scientific policy, comparator, threshold, inference rule, or outcome has changed.
+Attempt 1 stopped in prepare before the immutable pair matrix was built because the prepare job imported pandas without installing it.
+Attempt 2 completed prepare and built the immutable 192-pair matrix, but every pair job stopped during generic R dependency resolution before the frozen GRTS version check or any scientific pair analysis ran. Current pak scanned repository R sources via deps::. and discovered the separately pinned non-CRAN biosurvey comparator. The only change before this retry is excluding the two biosurvey comparator R files from generic dependency scanning via .renvignore. The dedicated biosurvey workflow remains unchanged and installs its pinned implementation separately.
+
+No cohort, scientific policy, comparator definition, package-version requirement, threshold, inference rule, or outcome has changed. No pair-level scientific analysis from attempts 1 or 2 is used as confirmation evidence.
 
 This run is confirmatory. Do not change the candidate policy, comparator definition, cohort membership, thresholds, or inference rules based on observed recovery outcomes.
