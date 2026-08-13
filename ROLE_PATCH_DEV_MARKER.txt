@@ -1,0 +1,1 @@
+Development-only Role-Aware Patch v0 work. Frozen Practical Core and existing 192-pair confirmation are unchanged.
