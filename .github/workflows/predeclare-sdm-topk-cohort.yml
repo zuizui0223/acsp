@@ -9,11 +9,14 @@ on:
       - .benchmark-triggers/sdm-topk-cohort-predeclare.txt
       - .github/workflows/predeclare-sdm-topk-cohort.yml
       - validation/sdm_topk_protocol.json
-      - predeclare_sdm_topk_cohort.py
-      - benchmark_general_random_taxa_regions.py
+      - research/predeclare_sdm_topk_cohort.py
+      - research/benchmark_general_random_taxa_regions.py
 
 permissions:
   contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
 
 jobs:
   sample:
@@ -28,7 +31,7 @@ jobs:
         run: python -m pip install -e .
       - name: Draw untouched taxon-region cohort only
         run: |
-          python predeclare_sdm_topk_cohort.py \
+          python research/predeclare_sdm_topk_cohort.py \
             --protocol validation/sdm_topk_protocol.json \
             --output sdm_topk_cohort_predeclare
       - name: Verify no outcomes were generated

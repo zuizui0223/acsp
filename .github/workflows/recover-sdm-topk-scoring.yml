@@ -13,6 +13,9 @@ permissions:
   contents: read
   actions: read
 
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
 jobs:
   pair:
     name: Recover pair ${{ matrix.pair_id }}
@@ -40,7 +43,7 @@ jobs:
           run-id: 31236963484
       - name: Recover fitted SDM scoring only
         run: |
-          python recover_sdm_topk_pair.py \
+          python research/recover_sdm_topk_pair.py \
             --pair-id "${{ matrix.pair_id }}" \
             --source-root source_pair \
             --output recovered_pairs
@@ -90,7 +93,7 @@ jobs:
           merge-multiple: true
       - name: Strictly aggregate recovered artifacts
         run: |
-          python reaggregate_sdm_topk_benchmark.py \
+          python research/reaggregate_sdm_topk_benchmark.py \
             --pair-root recovered_pairs \
             --output recovered_aggregate
       - name: Validate recovered aggregate inventory

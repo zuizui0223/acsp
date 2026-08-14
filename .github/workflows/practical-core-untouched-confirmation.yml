@@ -12,6 +12,9 @@ permissions:
   contents: read
   actions: read
 
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -94,7 +97,7 @@ jobs:
         id: execute
         continue-on-error: true
         run: |
-          python execute_practical_core_confirmation_pair.py \
+          python research/execute_practical_core_confirmation_pair.py \
             --pair-id ${{ matrix.pair_id }} \
             --cohort validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
             --output practical-core-pairs
@@ -143,13 +146,13 @@ jobs:
           merge-multiple: true
       - name: Aggregate complete intention-to-evaluate cohort
         run: |
-          python execute_aggregate_practical_core_confirmation.py \
+          python research/execute_aggregate_practical_core_confirmation.py \
             --cohort validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
             --pair-root practical-core-pair-artifacts \
             --output practical-core-confirmation-aggregate
       - name: Evaluate predeclared claim guardrails without changing primary inference
         run: |
-          python evaluate_practical_core_claim_guardrails.py \
+          python research/evaluate_practical_core_claim_guardrails.py \
             --aggregate-dir practical-core-confirmation-aggregate \
             --output practical-core-confirmation-aggregate/claim_guardrails.json
       - name: Require complete primary and claim outputs without conditioning on success

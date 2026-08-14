@@ -8,41 +8,44 @@ on:
     paths:
       - benchmark_methods/grts_batch_candidate_frame.R
       - benchmark_methods/test_grts_batch_candidate_frame.R
-      - execute_practical_core_confirmation_pair.py
-      - run_practical_core_confirmation_pair.py
-      - aggregate_practical_core_confirmation.py
-      - execute_aggregate_practical_core_confirmation.py
-      - evaluate_practical_core_claim_guardrails.py
-      - score_practical_core_secondary_sdm.py
-      - aggregate_practical_core_secondary_sdm.py
+      - research/execute_practical_core_confirmation_pair.py
+      - research/run_practical_core_confirmation_pair.py
+      - research/aggregate_practical_core_confirmation.py
+      - research/execute_aggregate_practical_core_confirmation.py
+      - research/evaluate_practical_core_claim_guardrails.py
+      - research/score_practical_core_secondary_sdm.py
+      - research/aggregate_practical_core_secondary_sdm.py
       - validation/acsp_practical_core_claim_guardrail.json
       - validation/acsp_practical_core_secondary_sdm_protocol.json
-      - test_practical_core_confirmation_runner.py
-      - test_practical_core_production_aggregator.py
-      - test_practical_core_claim_guardrails.py
-      - test_practical_core_secondary_sdm.py
+      - research/test_practical_core_confirmation_runner.py
+      - research/test_practical_core_production_aggregator.py
+      - research/test_practical_core_claim_guardrails.py
+      - research/test_practical_core_secondary_sdm.py
       - .github/workflows/practical-core-confirmation-runner.yml
   pull_request:
     paths:
       - benchmark_methods/grts_batch_candidate_frame.R
       - benchmark_methods/test_grts_batch_candidate_frame.R
-      - execute_practical_core_confirmation_pair.py
-      - run_practical_core_confirmation_pair.py
-      - aggregate_practical_core_confirmation.py
-      - execute_aggregate_practical_core_confirmation.py
-      - evaluate_practical_core_claim_guardrails.py
-      - score_practical_core_secondary_sdm.py
-      - aggregate_practical_core_secondary_sdm.py
+      - research/execute_practical_core_confirmation_pair.py
+      - research/run_practical_core_confirmation_pair.py
+      - research/aggregate_practical_core_confirmation.py
+      - research/execute_aggregate_practical_core_confirmation.py
+      - research/evaluate_practical_core_claim_guardrails.py
+      - research/score_practical_core_secondary_sdm.py
+      - research/aggregate_practical_core_secondary_sdm.py
       - validation/acsp_practical_core_claim_guardrail.json
       - validation/acsp_practical_core_secondary_sdm_protocol.json
-      - test_practical_core_confirmation_runner.py
-      - test_practical_core_production_aggregator.py
-      - test_practical_core_claim_guardrails.py
-      - test_practical_core_secondary_sdm.py
+      - research/test_practical_core_confirmation_runner.py
+      - research/test_practical_core_production_aggregator.py
+      - research/test_practical_core_claim_guardrails.py
+      - research/test_practical_core_secondary_sdm.py
       - .github/workflows/practical-core-confirmation-runner.yml
 
 permissions:
   contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
 
 jobs:
   python-contract:
@@ -58,24 +61,24 @@ jobs:
       - name: Compile confirmation sources
         run: |
           python -m py_compile \
-            execute_practical_core_confirmation_pair.py \
-            run_practical_core_confirmation_pair.py \
-            aggregate_practical_core_confirmation.py \
-            execute_aggregate_practical_core_confirmation.py \
-            evaluate_practical_core_claim_guardrails.py \
-            score_practical_core_secondary_sdm.py \
-            aggregate_practical_core_secondary_sdm.py \
-            test_practical_core_confirmation_runner.py \
-            test_practical_core_production_aggregator.py \
-            test_practical_core_claim_guardrails.py \
-            test_practical_core_secondary_sdm.py
+            research/execute_practical_core_confirmation_pair.py \
+            research/run_practical_core_confirmation_pair.py \
+            research/aggregate_practical_core_confirmation.py \
+            research/execute_aggregate_practical_core_confirmation.py \
+            research/evaluate_practical_core_claim_guardrails.py \
+            research/score_practical_core_secondary_sdm.py \
+            research/aggregate_practical_core_secondary_sdm.py \
+            research/test_practical_core_confirmation_runner.py \
+            research/test_practical_core_production_aggregator.py \
+            research/test_practical_core_claim_guardrails.py \
+            research/test_practical_core_secondary_sdm.py
       - name: Run leakage, inference, claim, and secondary-SDM contract tests
         run: |
           python -m unittest -v \
-            test_practical_core_confirmation_runner.py \
-            test_practical_core_production_aggregator.py \
-            test_practical_core_claim_guardrails.py \
-            test_practical_core_secondary_sdm.py
+            research/test_practical_core_confirmation_runner.py \
+            research/test_practical_core_production_aggregator.py \
+            research/test_practical_core_claim_guardrails.py \
+            research/test_practical_core_secondary_sdm.py
       - name: Audit frozen fingerprints in source
         run: |
           python - <<'PY'

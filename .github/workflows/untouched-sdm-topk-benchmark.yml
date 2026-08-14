@@ -12,6 +12,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
 jobs:
   pair:
     name: Pair ${{ matrix.pair_id }}
@@ -31,7 +34,7 @@ jobs:
         run: python -m pip install -e .
       - name: Run frozen pair benchmark
         run: |
-          python execute_sdm_topk_pair.py \
+          python research/execute_sdm_topk_pair.py \
             --pair-id "${{ matrix.pair_id }}" \
             --output sdm_topk_pair_results
       - name: Verify pair artifact
@@ -76,7 +79,7 @@ jobs:
           merge-multiple: true
       - name: Aggregate pair-level estimands
         run: |
-          python aggregate_sdm_topk_benchmark.py \
+          python research/aggregate_sdm_topk_benchmark.py \
             --pair-root sdm_topk_pairs \
             --output sdm_topk_aggregate
       - name: Validate complete frozen output

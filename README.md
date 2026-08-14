@@ -1,10 +1,20 @@
 # ACSP - Adaptive Complementarity-based Survey Prioritization
 
-ACSP converts occurrence records into ranked, field-ready survey zones. It is a field-survey decision tool, not an all-record SDM platform. SDMs estimate location-indexed fitted quantities; ACSP returns a finite candidate set under a declared survey budget and can use SDM output as one optional evidence source.
+**ACSP picks where to survey next.** Give it a species or genus name; it returns a ranked, field-ready set of survey zones under a declared field budget.
 
-Development status: **alpha (0.1.0)**. Independent retrospective tests support cross-taxon prioritization of 10 km regional candidate zones over random same-pool selection. Exact-site accuracy, access, detection, abundance, and field efficiency remain unvalidated; see [HIERARCHICAL_VALIDATION_REPORT.md](HIERARCHICAL_VALIDATION_REPORT.md).
+## No fitted model required
 
-The investigated 5 km precision ceiling and rejected model variants are recorded in [FINE_SCALE_LIMITS_REPORT.md](FINE_SCALE_LIMITS_REPORT.md). Candidate exports include a technical precision-floor audit so coarse representative points cannot silently acquire an exact-site interpretation.
+ACSP's decision pathway does not need a species distribution model. Candidates are built from occurrence records and local terrain analogues, and the ranking runs to completion with no presence/background classifier anywhere in the loop. SDM and SSDM are **optional extra evidence**, most useful when records are sparse or patchy — they update the same zones rather than producing a separate product.
+
+To be precise about the claim: ACSP requires no fitted classifier, but it is not free of environmental information. The local-habitat score is an occurrence-conditioned terrain analogue, so it is still niche-related. The defensible distinction from conventional SDM is the **estimand**: SDMs estimate a suitability value at every cell, while ACSP returns a finite candidate set under a budget.
+
+## Development status
+
+**Alpha (0.1.0).** Independent retrospective tests support cross-taxon prioritization of 10 km regional candidate zones over random same-pool selection. Exact-site accuracy, access, detection, abundance, and field efficiency remain unvalidated; see [research/HIERARCHICAL_VALIDATION_REPORT.md](research/HIERARCHICAL_VALIDATION_REPORT.md).
+
+ACSP has **not** been shown to beat established survey-design tools. A predeclared 192-pair comparison against `spsurvey::grts()` and `biosurvey` is frozen and awaiting execution; until it runs, no superiority claim over existing survey-planning software is supported. See [docs/ACSP_PRACTICAL_CORE.md](docs/ACSP_PRACTICAL_CORE.md) for the claim boundary.
+
+The investigated 5 km precision ceiling and rejected model variants are recorded in [research/FINE_SCALE_LIMITS_REPORT.md](research/FINE_SCALE_LIMITS_REPORT.md). Candidate exports include a technical precision-floor audit so coarse representative points cannot silently acquire an exact-site interpretation.
 
 ## Main workflow
 
@@ -166,13 +176,21 @@ Streamlit Community Cloud:
 
 ## Repository structure
 
-- `gbif_fieldmap_builder_app.py`: Streamlit application and raster/GBIF orchestration
-- `acsp/`: reusable Python package and packaged app command
-- `r-acsp/`: reusable R package
-- `acsp_discover.py`: retained survey-protocol and legacy set-selection methods
-- `test_*.py`: regression and package tests
-- `CITATION.cff`: software citation metadata
-- `.github/workflows/package-checks.yml`: Python package, app-installation, and R package CI
+The repository root is the **tool**. Validation machinery lives in `research/` and is not part of what users install.
+
+| Path | Role |
+|---|---|
+| `gbif_fieldmap_builder_app.py` | Streamlit application and raster/GBIF orchestration |
+| `acsp/` | reusable Python package and packaged app command |
+| `r-acsp/` | reusable R package |
+| `acsp_discover.py` | retained survey-protocol and legacy set-selection methods |
+| `test_*.py` | tool regression and package tests |
+| `research/` | benchmark runners, cohort samplers, comparators, and their tests — see [research/README.md](research/README.md) |
+| `validation/`, `benchmark_results/`, `benchmark_methods/` | frozen protocols, cohorts, and result artifacts |
+| `paper/`, `field_validation/` | manuscript outputs and prospective field records |
+| `legacy/` | superseded experiments, excluded from normal test discovery |
+| `CITATION.cff` | software citation metadata |
+| `.github/workflows/package-checks.yml` | Python package, app-installation, and R package CI |
 
 ## Validation and publication path
 
@@ -182,7 +200,7 @@ The fitted-SDM benchmark is a **decision-level contrast, not a universal superio
 
 The package now exposes `stratified_random_taxa()`, `spatial_block_candidate_benchmark()`, `multi_taxon_weight_benchmark()`, and `calibrate_candidate_weights()` for reproducible weight studies. The intended design samples taxa across occurrence-count strata with a recorded seed, rebuilds candidates from training spatial blocks only, tunes weights on calibration taxa, and reports performance on completely unseen taxa against same-pool random Top-k, local-only, macro-model-only, and the current default weights. Failed taxa remain in the audit table and are not silently replaced. Retrospective GBIF recovery does not identify accessibility or detectability weights; those require prospective field-validation records.
 
-`benchmark_general_random_taxa_regions.py` is the supported national hierarchical benchmark. Superseded Izu, initial SDM-accuracy, and pre-hierarchy national experiments are retained under [legacy/](legacy/README.md) for reproducibility and are excluded from normal test discovery.
+`research/benchmark_general_random_taxa_regions.py` is the supported national hierarchical benchmark. Superseded Izu, initial SDM-accuracy, and pre-hierarchy national experiments are retained under [legacy/](legacy/README.md) for reproducibility and are excluded from normal test discovery.
 
 For a reproducible paper or report:
 
