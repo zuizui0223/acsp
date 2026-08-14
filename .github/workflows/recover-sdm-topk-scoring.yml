@@ -14,7 +14,7 @@ permissions:
   actions: read
 
 env:
-  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+  PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
   pair:

@@ -29,9 +29,13 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: |
+          # Explicit `packages` replaces the action default of `deps::., any::sessioninfo`.
+          # `deps::.` scans the whole repository and cannot resolve `biosurvey`, which is a
+          # pinned GitHub-only package installed separately by the biosurvey comparator workflow.
+          packages: |
             any::spsurvey
             any::sf
+            any::sessioninfo
       - name: Run official GRTS adapter regression tests
         run: Rscript benchmark_methods/test_grts_candidate_frame.R | tee grts-comparator-test.log
       - name: Record comparator package versions
