@@ -97,8 +97,8 @@ STRATEGIES: dict[str, Strategy] = {
 }
 
 
-def load_pool(cache_dir: Path) -> pd.DataFrame:
-    path = cache_dir / "candidate_pool.csv"
+def load_pool(cache_dir: Path, filename: str = "candidate_pool.csv") -> pd.DataFrame:
+    path = cache_dir / filename
     if not path.exists():
         raise SystemExit(
             f"Missing {path}.\n"
@@ -180,6 +180,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--iterations", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=20260715)
     parser.add_argument("--cache-dir", type=Path, default=CACHE_DIR)
+    parser.add_argument(
+        "--pool",
+        choices=("validation", "survey"),
+        default="validation",
+        help="validation = leakage-controlled pool (known-location candidates stripped, "
+        "occurrence-derived evidence excluded). survey = the pool a surveyor would "
+        "actually be handed. Only the validation pool can support a validation claim.",
+    )
     parser.add_argument("--locations", type=Path, default=LOCATIONS)
     parser.add_argument("--json-out", type=Path, default=None)
     return parser.parse_args()
@@ -187,7 +195,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    pool = load_pool(args.cache_dir)
+    pool = load_pool(
+        args.cache_dir,
+        "candidate_pool.csv" if args.pool == "validation" else "candidate_pool_survey.csv",
+    )
     clusters = load_detection_clusters(args.locations)
     selected = STRATEGIES[args.strategy](pool, args.top_k, args.evidence_weight)
 
@@ -195,6 +206,7 @@ def main() -> None:
     summary = result["summary"]
     benchmark = result["benchmark"]
 
+    print(f"pool                : {args.pool}")
     print(f"strategy            : {args.strategy}")
     print(f"budget              : {args.top_k}")
     print(f"evidence weight     : {args.evidence_weight}")
@@ -229,6 +241,7 @@ def main() -> None:
         args.json_out.write_text(
             json.dumps(
                 {
+                    "pool": args.pool,
                     "strategy": args.strategy,
                     "top_k": args.top_k,
                     "evidence_weight": args.evidence_weight,

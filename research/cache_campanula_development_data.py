@@ -10,7 +10,8 @@ reimplementing candidate generation, and writes small artifacts that let
 
     field_validation/campanula_microdonta/development_data/
         gbif_training_occurrences_through_2025.csv
-        candidate_pool.csv
+        candidate_pool.csv          leakage-controlled, for validation
+        candidate_pool_survey.csv   what a surveyor would be handed
         detection_clusters.csv
         manifest.json
 
@@ -60,6 +61,63 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def build_survey_pool(pipeline, occurrences, metadata):
+    """Build the pool a surveyor would actually be handed.
+
+    `build_frozen_candidates` is the *validation* pool: it strips
+    occurrence-supported / known-location candidates and scores with
+    `exclude_occurrence_derived=True`. Both are correct for leakage control in a
+    retrospective test, and both are wrong for the question "can this tool reach
+    the sites I actually found" — together they delete every candidate anchored
+    on known habitat, leaving an 80% exploratory remainder.
+
+    This function keeps the frozen validation path untouched and builds the
+    other pool alongside it: potential plus known candidates, scored with
+    occurrence-derived evidence left in.
+    """
+    import numpy as np
+    import pandas as pd
+
+    from acsp.planning import integrated_candidate_scores
+    from gbif_fieldmap_builder_app import build_automatic_discover_bundle
+
+    training = occurrences.copy().reset_index(drop=True)
+    training["_row_id"] = np.arange(len(training), dtype=int)
+    features = [
+        pipeline.rectangle_feature(name, bounds)
+        for name, bounds in pipeline.ISLAND_BOUNDS.items()
+    ]
+    bundle = build_automatic_discover_bundle(
+        pipeline.SCIENTIFIC_NAME,
+        training,
+        "GBIF records through 2025; development survey pool",
+        "Izu five-island field region",
+        override_row_ids=training["_row_id"].tolist(),
+        taxon_metadata=metadata,
+        survey_bounds=pipeline.SURVEY_BOUNDS,
+        survey_features=features,
+        candidate_generation_only=True,
+    )
+    parts = [
+        frame.copy()
+        for frame in (bundle.get("potential_candidates"), bundle.get("known_candidates"))
+        if frame is not None and not frame.empty
+    ]
+    if not parts:
+        raise RuntimeError("ACSP produced no candidates for the survey pool.")
+    pool = pd.concat(parts, ignore_index=True)
+    pool = pool.dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
+    scored = integrated_candidate_scores(pool, exclude_occurrence_derived=False)
+    scored["survey_area_id"] = [
+        pipeline.assign_island(lat, lon)
+        for lat, lon in zip(scored["latitude"], scored["longitude"])
+    ]
+    if "site_id" not in scored.columns:
+        scored["site_id"] = np.arange(1, len(scored) + 1)
+    scored["site_id"] = scored["site_id"].astype(str)
+    return scored
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -96,6 +154,16 @@ def main() -> None:
     pool.to_csv(pool_path, index=False)
     print(f"  {len(pool)} candidates -> {pool_path.name}")
 
+    print("building the survey pool (known candidates kept, no leakage filter) ...")
+    survey_pool = build_survey_pool(pipeline, occurrences, provenance)
+    survey_path = out / "candidate_pool_survey.csv"
+    survey_pool.to_csv(survey_path, index=False)
+    types = survey_pool.get("candidate_type")
+    print(f"  {len(survey_pool)} candidates -> {survey_path.name}")
+    if types is not None:
+        for name, count in types.astype(str).value_counts().items():
+            print(f"    {name}: {count}")
+
     locations = pd.read_csv(FIELD_DIR / "locations_2026.csv")
     _assignments, clusters = cluster_field_detections(locations, cluster_radius_m=500.0)
     clusters_path = out / "detection_clusters.csv"
@@ -125,12 +193,13 @@ def main() -> None:
         "counts": {
             "training_occurrences": int(len(occurrences)),
             "candidate_pool": int(len(pool)),
+            "candidate_pool_survey": int(len(survey_pool)),
             "baseline_selected": int(len(selected)),
             "detection_clusters": int(len(clusters)),
         },
         "files": {
             path.name: {"sha256": sha256(path), "bytes": path.stat().st_size}
-            for path in (occ_path, pool_path, clusters_path)
+            for path in (occ_path, pool_path, survey_path, clusters_path)
         },
         "dem_files_not_committed": dem_files,
     }
