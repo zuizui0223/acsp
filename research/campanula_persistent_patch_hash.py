@@ -5,9 +5,9 @@ The original ACSP zone aggregator tests every existing zone for every new cell.
 Complete-link compatibility implies that a compatible zone's first member must
 itself lie within the merge threshold. We spatial-hash those zone anchors, then
 retain the original exact haversine maximum-distance test and same `(maximum
-distance, zone index)` tie-break. Random patch recovery is likewise accelerated
-by precomputing each patch's field-cluster coverage bitmask. These changes alter
-search cost only, not the patch or recovery definitions.
+distance, zone index)` tie-break. Patch-prefix recovery and matched-random
+recovery are accelerated by precomputing each patch's field-cluster coverage.
+These changes alter search cost only, not the patch or recovery definitions.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import campanula_persistent_patch as patch
-from campanula_worldcover_discovery import haversine_km
+from campanula_worldcover_discovery import evaluate, haversine_km
 
 
 def fast_complete_link_zones(
@@ -138,24 +138,11 @@ def fast_complete_link_zones(
     return zones
 
 
-def fast_random_patch_audit(
-    universe,
-    zones,
-    detections,
-    observed,
-    radius_km,
-    iterations,
-    seed,
-):
-    """Exact random-patch estimand using precomputed patch coverage bitmasks."""
-    rng = np.random.default_rng(seed)
+def _zone_coverage_masks(universe, zones, detections, radius_km):
     detection_rows = detections.reset_index(drop=True)
-    target_mask = (1 << len(detection_rows)) - 1
-    zone_masks = {}
-    zone_sizes = {}
-    groups = {}
-
-    for zone_index, zone in zones.iterrows():
+    masks = []
+    sizes = []
+    for _, zone in zones.iterrows():
         member_ids = patch.member_indices(zone)
         members = universe.loc[member_ids]
         island = str(zone["survey_area_id"])
@@ -171,14 +158,75 @@ def fast_random_patch_audit(
             )
             if bool(np.any(distances <= float(radius_km))):
                 mask |= 1 << int(detection_index)
-        zone_masks[int(zone_index)] = mask
-        zone_sizes[int(zone_index)] = int(len(member_ids))
-        groups.setdefault(island, []).append(int(zone_index))
+        masks.append(mask)
+        sizes.append(int(len(member_ids)))
+    return detection_rows, np.asarray(masks, dtype=object), np.asarray(sizes, dtype=int)
+
+
+def fast_prefix_patch_frontier(universe, zones, detections, radius_km):
+    if zones is None or zones.empty:
+        return None
+    ordered = zones.sort_values(
+        ["zone_score", "zone_id"], ascending=[False, True], kind="mergesort"
+    ).reset_index(drop=True)
+    detection_rows, masks, _ = _zone_coverage_masks(
+        universe, ordered, detections, radius_km
+    )
+    earliest = np.full(len(detection_rows), np.inf)
+    for zone_position, mask in enumerate(masks, start=1):
+        mask_int = int(mask)
+        for detection_index in range(len(detection_rows)):
+            if np.isfinite(earliest[detection_index]):
+                continue
+            if mask_int & (1 << detection_index):
+                earliest[detection_index] = zone_position
+    if not np.isfinite(earliest).all():
+        return None
+    n_patches = int(np.max(earliest))
+    selected_zones = ordered.iloc[:n_patches].copy()
+    selected_indices = set()
+    for _, zone in selected_zones.iterrows():
+        selected_indices.update(patch.member_indices(zone))
+    chosen = universe.loc[sorted(selected_indices)]
+    result = evaluate(chosen, detections, radius_km)
+    if result["recovered"] != len(detections):
+        raise RuntimeError("fast patch-prefix calculation failed its exact recovery audit")
+    island_patch_counts = (
+        selected_zones["survey_area_id"].astype(str).value_counts().to_dict()
+    )
+    return {
+        "n_patches": n_patches,
+        "n_cells": int(len(selected_indices)),
+        "grid_fraction": float(len(selected_indices) / len(universe)),
+        "estimated_cell_area_km2": float(len(selected_indices) * 0.01),
+        "island_patch_counts": {str(k): int(v) for k, v in island_patch_counts.items()},
+        "selected_zone_ids": selected_zones["zone_id"].astype(str).tolist(),
+        **result,
+    }
+
+
+def fast_random_patch_audit(
+    universe,
+    zones,
+    detections,
+    observed,
+    radius_km,
+    iterations,
+    seed,
+):
+    """Exact random-patch estimand using precomputed patch coverage bitmasks."""
+    rng = np.random.default_rng(seed)
+    detection_rows, masks, sizes = _zone_coverage_masks(
+        universe, zones.reset_index(drop=True), detections, radius_km
+    )
+    groups = {}
+    for zone_index, zone in zones.reset_index(drop=True).iterrows():
+        groups.setdefault(str(zone["survey_area_id"]), []).append(int(zone_index))
 
     recoveries = np.zeros(int(iterations), dtype=int)
     cell_counts = np.zeros(int(iterations), dtype=int)
     evaluated = 0
-    for iteration in range(int(iterations)):
+    for _ in range(int(iterations)):
         coverage_mask = 0
         cells = 0
         feasible = True
@@ -189,8 +237,8 @@ def fast_random_patch_audit(
                 break
             chosen = rng.choice(pool, size=int(count), replace=False)
             for zone_index in chosen:
-                coverage_mask |= zone_masks[int(zone_index)]
-                cells += zone_sizes[int(zone_index)]
+                coverage_mask |= int(masks[int(zone_index)])
+                cells += int(sizes[int(zone_index)])
         if not feasible:
             continue
         recoveries[evaluated] = int(coverage_mask.bit_count())
@@ -219,12 +267,12 @@ def fast_random_patch_audit(
         "mean_cells": float(np.mean(cell_counts)),
         "q05_cells": float(np.quantile(cell_counts, 0.05)),
         "q95_cells": float(np.quantile(cell_counts, 0.95)),
-        "target_mask_complete": bool(target_mask == (1 << len(detection_rows)) - 1),
     }
 
 
 if __name__ == "__main__":
     patch.aggregate_candidates_to_zones = fast_complete_link_zones
+    patch.prefix_patch_frontier = fast_prefix_patch_frontier
     patch.random_patch_audit = fast_random_patch_audit
     patch.SUPPORT_FRACTIONS = (0.0381, 0.05, 0.075, 0.10)
     patch.MERGE_DISTANCES_M = (500.0, 1000.0)
