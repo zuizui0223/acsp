@@ -1,29 +1,82 @@
 {
   "status": "development_only",
-  "scientific_target": "Reduce candidate area and matched-random success while preserving complete recovery of the 19 Campanula microdonta development clusters.",
-  "generator_leakage_rule": "2026 field coordinates and outcomes are never generator inputs; they are read only after a candidate universe has been frozen for each experiment.",
+  "scientific_target": "Reduce candidate area and matched-random success while preserving complete recovery of the 19 Campanula microdonta development clusters; quantify the smallest defensible recovery envelope when complete local recovery is expensive.",
+  "generator_leakage_rule": "2026 field coordinates and outcomes are never generator inputs; they are read only after a candidate universe or score family has been frozen for each experiment.",
+  "current_frontiers": {
+    "1km_joint_best": {
+      "method": "pre-2026 GBIF nearest-prototype ESA NDVI state",
+      "candidate_count": 867,
+      "grid_fraction": 0.038053,
+      "recovered": "19/19",
+      "max_nearest_km": 0.927891,
+      "matched_random_complete_probability": 0.2975
+    },
+    "500m_count_best": {
+      "method": "NDVI state + GSI physical terrain / coast features",
+      "candidate_count": 6148,
+      "grid_fraction": 0.269838,
+      "recovered": "19/19",
+      "max_nearest_km": 0.488809,
+      "previous_ndvi_only_candidate_count": 7853,
+      "previous_ndvi_only_grid_fraction": 0.344672
+    }
+  },
   "layers": [
     {
       "id": "gsi_dem",
       "source": "Geospatial Information Authority of Japan (GSI) numerical elevation models",
-      "resolution": "1 m / 5 m / 10 m depending on coverage",
-      "role": ["elevation", "slope", "roughness", "TPI", "aspect", "coastal exposure proxy"],
-      "status": "active_baseline",
-      "development_result": "Full-island microterrain search reaches 19/19 at 1 km. Terrain-only reproducible frontier retains about 7.5% of the ~100 m universe; a separate aspect+coast ablation reached about 4% and remains the compression target."
+      "resolution": "1 m / 5 m / 10 m depending on coverage; development features derived on the shared ~25 m terrain surface",
+      "role": ["elevation", "slope", "roughness", "TPI", "aspect", "relative summer solar incidence", "terrain exposure"],
+      "status": "active_fine_scale_refinement",
+      "development_result": "Terrain alone reaches 19/19 at 1 km but needs about 7.5% of the ~100 m universe. Terrain physics does not beat the NDVI 1-km frontier, but NDVI + physical terrain improves the 500-m complete-recovery envelope from 34.47% to 26.98%."
     },
     {
       "id": "esa_worldcover_2021",
       "source": "ESA WorldCover 2021 v200",
       "resolution": "10 m",
-      "role": ["tree cover", "shrubland", "grassland", "built-up", "bare/sparse vegetation", "water", "local cover composition", "edge/transition structure"],
-      "status": "negative_ablation_retained",
-      "development_result": "Simple 100/250 m land-cover composition, entropy, and edge-mix distances did not improve the terrain frontier. The best terrain/cover weight was terrain-only; cover-only required about 36% of the grid for 19/19."
+      "role": ["land-cover class", "water/coast boundary", "local cover composition", "edge/transition structure"],
+      "status": "mixed_use",
+      "development_result": "Simple 100/250 m land-cover composition, entropy, and edge-mix are negative ablations: cover-only needs about 36.46% of the grid for 19/19 at 1 km and the best terrain/cover mixture is terrain-only. The water class remains useful operationally for explicit coast-distance derivation."
     },
     {
       "id": "esa_worldcover_ndvi_2021",
       "source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v2 (p90, p50, p10)",
       "resolution": "10 m",
-      "role": ["vegetation greenness state", "seasonal NDVI amplitude", "within-patch heterogeneity", "NDVI gradient", "vegetation-edge contrast", "terrain-vegetation interaction"],
+      "pinned_s3_key": "ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif",
+      "sha256": "641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638",
+      "role": ["vegetation greenness state", "seasonal NDVI amplitude", "local mean state", "heterogeneity", "gradient", "terrain-vegetation interaction"],
+      "status": "current_1km_joint_best",
+      "development_result": "Full NDVI state (p50, p90-p10 amplitude, 100/250 m local means, local amplitude mean) reaches 19/19 at 1 km with 867 cells = 3.8053% and matched-random complete recovery 29.75%. NDVI gradient/heterogeneity/cover-transition variants do not beat this frontier."
+    },
+    {
+      "id": "ndvi_environmental_modes_and_persistence",
+      "source": "Derived from the pinned ESA NDVI composite and pre-2026 GBIF prototypes",
+      "resolution": "same 10 m source / ~100 m candidate universe",
+      "role": ["KMeans occurrence environmental modes", "second-prototype persistence", "mean-of-two prototype support"],
+      "status": "negative_ablation_retained",
+      "development_result": "These methods shrink candidate counts strongly (as low as 380 cells = 1.67%) but make matched-random complete recovery much easier (about 53-79%). They are rejected because compression alone is not discovery information."
+    },
+    {
+      "id": "disconnected_component_hierarchy",
+      "source": "Derived from pre-2026 occurrence-bearing island/land components",
+      "resolution": "component hierarchy over the same NDVI support universe",
+      "role": ["component-local prototypes", "global shrinkage", "nearest source-component transfer"],
+      "status": "negative_ablation_retained",
+      "development_result": "Explicit island/component conditioning worsens both 1-km and 500-m complete-recovery envelopes. Sparse local occurrence sets over-constrain the environmental envelope; global NDVI transfer is stronger."
+    },
+    {
+      "id": "physical_microclimate_fusion",
+      "source": "GSI DEM + ESA NDVI + WorldCover water/coast",
+      "resolution": "GSI-derived ~25 m terrain features, ESA 10 m vegetation/coast inputs",
+      "role": ["north/east terrain normal", "relative summer solar incidence", "slope", "coast distance", "NDVI x terrain interaction"],
+      "status": "500m_refinement_only",
+      "development_result": "No 1-km score family beats the 867-cell NDVI state frontier. At 500 m, nearest NDVI+physics reduces the complete-recovery envelope to 6148/22783 = 26.98%, from 7853/22783 = 34.47% for NDVI alone."
+    },
+    {
+      "id": "persistent_patch_compression",
+      "source": "Existing ACSP deterministic complete-link zone aggregation applied to the current NDVI support surface",
+      "resolution": "bounded survey patches from ~100 m support cells",
+      "role": ["continuous field-search patches", "anti-chain complete-link aggregation", "patch-count and searched-area endpoint"],
       "status": "active_experiment"
     },
     {
@@ -31,23 +84,29 @@
       "source": "JAXA EORC High-Resolution Land Use and Land Cover Map of Japan",
       "resolution": "10 m",
       "role": ["independent Japanese land-cover representation", "land-cover sensitivity check"],
-      "status": "queued_sensitivity"
+      "status": "queued_sensitivity_only"
     },
     {
       "id": "landsat_c2_surface_temperature",
       "source": "USGS Landsat Collection 2 Level-2 Surface Temperature",
       "resolution": "Landsat thermal product scale",
       "role": ["surface thermal contrast", "microclimate proxy", "terrain-cover thermal interaction"],
-      "status": "queued_if_ndvi_transition_leaves_residuals"
+      "status": "queued_if_patch_and_public_ndvi_ceiling_remains_too_broad"
     }
   ],
   "promotion_rule": {
-    "required": [
-      "complete 19/19 development recovery at the declared radius, or explicit proof that the data layer creates a lower ceiling",
-      "lower candidate-grid fraction or lower route/search budget than the current best",
-      "lower matched-random complete-recovery probability",
+    "cell_support": [
+      "complete 19/19 development recovery at the declared radius, or explicit proof of the achievable ceiling",
+      "lower candidate-grid fraction or route/search budget than the current best",
+      "lower matched-random complete-recovery probability when candidate-count compression is claimed",
       "no inference-time field-coordinate leakage"
     ],
-    "negative_results": "Retain failed layers and harmful feature combinations as ablations; do not add variables merely because they are available."
+    "patch_support": [
+      "fewer operational survey patches or lower searched patch area for 19/19",
+      "bounded non-chain patches using outcome-blind construction",
+      "matched random patch sets reported at the same island-specific patch budget",
+      "no inference-time field-coordinate leakage"
+    ],
+    "negative_results": "Retain failed layers and harmful feature combinations as explicit ablations; do not add variables merely because they are available."
   }
 }
