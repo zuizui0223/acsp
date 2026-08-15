@@ -7,6 +7,7 @@ on:
       - agent/campanula-discovery-development
     paths:
       - research/campanula_patch_policy.py
+      - research/campanula_patch_policy_fast.py
       - research/campanula_patch_policy_runner.py
       - research/campanula_persistent_patch.py
       - research/campanula_persistent_patch_hash.py
@@ -68,7 +69,7 @@ jobs:
 
       - name: Run occurrence-prototype patch survey policy
         run: |
-          python research/campanula_patch_policy_runner.py \
+          python research/campanula_patch_policy_fast.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
