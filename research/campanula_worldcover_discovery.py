@@ -18,7 +18,6 @@ import pandas as pd
 import rasterio
 from pyproj import Transformer
 from rasterio.windows import Window
-from scipy.ndimage import uniform_filter
 
 WORLD_COVER_CLASSES = (10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100)
 CLASS_NAMES = {
@@ -84,9 +83,7 @@ def sample_nearest(src, lon, lat):
     out = np.full(len(rows), np.nan)
     if not ok.any():
         return out
-    # Group by modest windows instead of reading the full 3x3-degree 10m tile.
-    valid_idx = np.flatnonzero(ok)
-    for idx in valid_idx:
+    for idx in np.flatnonzero(ok):
         value = next(src.sample([(x[idx], y[idx])]))[0]
         if src.nodata is None or value != src.nodata:
             out[idx] = value
@@ -98,15 +95,11 @@ def neighborhood_features(src, lon, lat, radii_m=(100, 250)):
     transformer = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
     x, y = transformer.transform(np.asarray(lon), np.asarray(lat))
     rows, cols = rasterio.transform.rowcol(src.transform, x, y)
-    pixel_m = 10.0  # WorldCover nominal resolution; EPSG:4326 pixels are sampled by radius approximation below.
-    # At Izu latitude 1 degree lon ~= 91 km and lat ~= 111 km; use the source pixel
-    # angular resolution converted near 34.5 N to choose a conservative radius.
     deg = abs(float(src.transform.a))
     pixel_m = deg * 111_320.0 * math.cos(math.radians(34.5))
     features = []
     names = []
     for radius in radii_m:
-        half = max(1, int(math.ceil(radius / max(pixel_m, 1e-6))))
         for code in WORLD_COVER_CLASSES:
             names.append(f"wc_{CLASS_NAMES[code]}_frac_{radius}m")
         names.extend([f"wc_entropy_{radius}m", f"wc_edge_mix_{radius}m"])
@@ -123,15 +116,13 @@ def neighborhood_features(src, lon, lat, radii_m=(100, 250)):
                 values.extend([np.nan] * (len(WORLD_COVER_CLASSES) + 2))
                 continue
             arr = src.read(1, window=Window(c0, r0, c1 - c0, r1 - r0))
-            valid = np.isin(arr, WORLD_COVER_CLASSES)
-            sample = arr[valid]
+            sample = arr[np.isin(arr, WORLD_COVER_CLASSES)]
             if sample.size == 0:
                 values.extend([np.nan] * (len(WORLD_COVER_CLASSES) + 2))
                 continue
             fractions = np.array([(sample == code).mean() for code in WORLD_COVER_CLASSES])
             nz = fractions[fractions > 0]
             entropy = float(-(nz * np.log(nz)).sum() / math.log(len(WORLD_COVER_CLASSES)))
-            # Edge-mix proxy: probability that two random pixels have different classes.
             edge_mix = float(1.0 - np.square(fractions).sum())
             values.extend(fractions.tolist() + [entropy, edge_mix])
         features.append(values)
@@ -158,6 +149,32 @@ def evaluate(candidates, detections, radius_km):
         "max_nearest_km": float(max(nearest)),
         "nearest_km": nearest,
     }
+
+
+def minimum_count_for_complete_recovery(universe, detections, order, radius_km):
+    """Exact smallest score-prefix that reaches every detection within radius."""
+    rank = np.empty(len(order), dtype=int)
+    rank[order] = np.arange(len(order), dtype=int)
+    required_rank = -1
+    witness = []
+    for _, point in detections.iterrows():
+        island_mask = universe["island"].eq(point["island"]).to_numpy()
+        indices = np.flatnonzero(island_mask)
+        if not len(indices):
+            return None, []
+        d = haversine_km(
+            float(point["latitude"]),
+            float(point["longitude"]),
+            universe.iloc[indices]["lat"].to_numpy(),
+            universe.iloc[indices]["lon"].to_numpy(),
+        )
+        reachable = indices[d <= radius_km]
+        if not len(reachable):
+            return None, []
+        best = int(rank[reachable].min())
+        required_rank = max(required_rank, best)
+        witness.append(best)
+    return required_rank + 1, witness
 
 
 def matched_random_success(universe, detections, selected, radius_km, iterations, seed):
@@ -224,43 +241,47 @@ def main():
     )
     universe["cover_env_nn"] = cover_distance
 
-    # Combine already-frozen terrain distance with land-cover distance. Weight search
-    # is development-only and evaluated only after both score vectors are computed.
     terrain_rank = universe["env_nn"].rank(method="average", pct=True).to_numpy(float)
     cover_rank = pd.Series(universe["cover_env_nn"]).rank(method="average", pct=True).to_numpy(float)
 
-    # Field outcomes become visible only below this line.
+    # Field outcomes become visible only below this line. The score vectors above
+    # are already frozen from pre-2026 occurrences and public layers.
     detections = pd.read_csv(args.detections)
     experiments = []
     best = None
     for terrain_weight in np.linspace(0.0, 1.0, 21):
         score = terrain_weight * terrain_rank + (1.0 - terrain_weight) * cover_rank
-        order = np.argsort(score)
-        for count in range(max(19, int(0.002 * len(universe))), len(universe) + 1, max(1, int(0.001 * len(universe)))):
-            chosen = universe.iloc[order[:count]].copy()
-            result = evaluate(chosen, detections, args.radius_km)
-            if result["recovered"] == len(detections):
-                random = matched_random_success(
-                    universe,
-                    detections,
-                    chosen,
-                    args.radius_km,
-                    args.random_iterations,
-                    args.seed + int(round(terrain_weight * 1000)),
-                )
-                row = {
-                    "terrain_weight": float(terrain_weight),
-                    "cover_weight": float(1.0 - terrain_weight),
-                    "candidate_count": int(len(chosen)),
-                    "grid_fraction": float(len(chosen) / len(universe)),
-                    **result,
-                    "matched_random": random,
-                }
-                experiments.append(row)
-                key = (row["grid_fraction"], random["complete_recovery_probability"])
-                if best is None or key < best[0]:
-                    best = (key, row, chosen)
-                break
+        order = np.argsort(score, kind="mergesort")
+        count, witness_ranks = minimum_count_for_complete_recovery(
+            universe, detections, order, args.radius_km
+        )
+        if count is None:
+            continue
+        chosen = universe.iloc[order[:count]].copy()
+        result = evaluate(chosen, detections, args.radius_km)
+        if result["recovered"] != len(detections):
+            raise RuntimeError("exact frontier calculation failed its own recovery audit")
+        random = matched_random_success(
+            universe,
+            detections,
+            chosen,
+            args.radius_km,
+            args.random_iterations,
+            args.seed + int(round(terrain_weight * 1000)),
+        )
+        row = {
+            "terrain_weight": float(terrain_weight),
+            "cover_weight": float(1.0 - terrain_weight),
+            "candidate_count": int(len(chosen)),
+            "grid_fraction": float(len(chosen) / len(universe)),
+            "detection_witness_ranks": [int(value) for value in witness_ranks],
+            **result,
+            "matched_random": random,
+        }
+        experiments.append(row)
+        key = (row["grid_fraction"], random["complete_recovery_probability"])
+        if best is None or key < best[0]:
+            best = (key, row, chosen)
 
     args.out.mkdir(parents=True, exist_ok=True)
     universe.to_csv(args.out / "worldcover_scored_universe.csv", index=False)
