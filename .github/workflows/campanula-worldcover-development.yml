@@ -66,7 +66,7 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
-      - name: Run WorldCover microenvironment development experiment
+      - name: Run WorldCover microenvironment development screening
         run: |
           python research/campanula_worldcover_discovery.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
@@ -74,7 +74,7 @@ jobs:
             --worldcover public-layers/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif \
             --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
             --radius-km 1.0 \
-            --random-iterations 2000 \
+            --random-iterations 100 \
             --seed 20260815 \
             --out worldcover-results
 
