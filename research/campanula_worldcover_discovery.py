@@ -68,65 +68,77 @@ def nearest_environment(values, prototypes, chunk=3000):
     return result
 
 
-def sample_nearest(src, lon, lat):
+def _raster_indices(src, lon, lat):
     transformer = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
     x, y = transformer.transform(np.asarray(lon), np.asarray(lat))
     rows, cols = rasterio.transform.rowcol(src.transform, x, y)
-    rows = np.asarray(rows)
-    cols = np.asarray(cols)
-    ok = (
-        (rows >= 0)
-        & (rows < src.height)
-        & (cols >= 0)
-        & (cols < src.width)
-    )
+    return np.asarray(rows, dtype=int), np.asarray(cols, dtype=int), np.asarray(x), np.asarray(y)
+
+
+def sample_nearest(src, lon, lat):
+    rows, cols, x, y = _raster_indices(src, lon, lat)
     out = np.full(len(rows), np.nan)
+    ok = (rows >= 0) & (rows < src.height) & (cols >= 0) & (cols < src.width)
     if not ok.any():
         return out
-    for idx in np.flatnonzero(ok):
-        value = next(src.sample([(x[idx], y[idx])]))[0]
-        if src.nodata is None or value != src.nodata:
-            out[idx] = value
+    samples = src.sample(list(zip(x[ok], y[ok])))
+    values = np.asarray([sample[0] for sample in samples], dtype=float)
+    if src.nodata is not None:
+        values[values == src.nodata] = np.nan
+    out[np.flatnonzero(ok)] = values
     return out
 
 
 def neighborhood_features(src, lon, lat, radii_m=(100, 250)):
-    """Extract local class fractions, entropy, and edge mixing around coordinates."""
-    transformer = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
-    x, y = transformer.transform(np.asarray(lon), np.asarray(lat))
-    rows, cols = rasterio.transform.rowcol(src.transform, x, y)
+    """Extract local class fractions from one cropped WorldCover read."""
+    rows, cols, _, _ = _raster_indices(src, lon, lat)
     deg = abs(float(src.transform.a))
     pixel_m = deg * 111_320.0 * math.cos(math.radians(34.5))
-    features = []
+    half_by_radius = {
+        radius: max(1, int(math.ceil(radius / max(pixel_m, 1e-6))))
+        for radius in radii_m
+    }
+    margin = max(half_by_radius.values()) + 2
+    r0 = max(0, int(rows.min()) - margin)
+    c0 = max(0, int(cols.min()) - margin)
+    r1 = min(src.height, int(rows.max()) + margin + 1)
+    c1 = min(src.width, int(cols.max()) + margin + 1)
+    array = src.read(1, window=Window(c0, r0, c1 - c0, r1 - r0))
+    local_rows = rows - r0
+    local_cols = cols - c0
+
     names = []
     for radius in radii_m:
         for code in WORLD_COVER_CLASSES:
             names.append(f"wc_{CLASS_NAMES[code]}_frac_{radius}m")
         names.extend([f"wc_entropy_{radius}m", f"wc_edge_mix_{radius}m"])
 
-    for row, col in zip(rows, cols):
-        values = []
+    output = np.full((len(rows), len(names)), np.nan, dtype=float)
+    width = len(WORLD_COVER_CLASSES) + 2
+    for index, (row, col) in enumerate(zip(local_rows, local_cols)):
+        offset = 0
         for radius in radii_m:
-            half = max(1, int(math.ceil(radius / max(pixel_m, 1e-6))))
-            r0 = max(0, row - half)
-            c0 = max(0, col - half)
-            r1 = min(src.height, row + half + 1)
-            c1 = min(src.width, col + half + 1)
-            if r1 <= r0 or c1 <= c0:
-                values.extend([np.nan] * (len(WORLD_COVER_CLASSES) + 2))
-                continue
-            arr = src.read(1, window=Window(c0, r0, c1 - c0, r1 - r0))
-            sample = arr[np.isin(arr, WORLD_COVER_CLASSES)]
-            if sample.size == 0:
-                values.extend([np.nan] * (len(WORLD_COVER_CLASSES) + 2))
-                continue
-            fractions = np.array([(sample == code).mean() for code in WORLD_COVER_CLASSES])
-            nz = fractions[fractions > 0]
-            entropy = float(-(nz * np.log(nz)).sum() / math.log(len(WORLD_COVER_CLASSES)))
-            edge_mix = float(1.0 - np.square(fractions).sum())
-            values.extend(fractions.tolist() + [entropy, edge_mix])
-        features.append(values)
-    return pd.DataFrame(features, columns=names)
+            half = half_by_radius[radius]
+            rr0 = max(0, row - half)
+            cc0 = max(0, col - half)
+            rr1 = min(array.shape[0], row + half + 1)
+            cc1 = min(array.shape[1], col + half + 1)
+            sample = array[rr0:rr1, cc0:cc1]
+            sample = sample[np.isin(sample, WORLD_COVER_CLASSES)]
+            if sample.size:
+                fractions = np.asarray(
+                    [(sample == code).mean() for code in WORLD_COVER_CLASSES],
+                    dtype=float,
+                )
+                nonzero = fractions[fractions > 0]
+                entropy = float(
+                    -(nonzero * np.log(nonzero)).sum()
+                    / math.log(len(WORLD_COVER_CLASSES))
+                )
+                edge_mix = float(1.0 - np.square(fractions).sum())
+                output[index, offset : offset + width] = np.r_[fractions, entropy, edge_mix]
+            offset += width
+    return pd.DataFrame(output, columns=names)
 
 
 def evaluate(candidates, detections, radius_km):
@@ -152,14 +164,12 @@ def evaluate(candidates, detections, radius_km):
 
 
 def minimum_count_for_complete_recovery(universe, detections, order, radius_km):
-    """Exact smallest score-prefix that reaches every detection within radius."""
     rank = np.empty(len(order), dtype=int)
     rank[order] = np.arange(len(order), dtype=int)
     required_rank = -1
     witness = []
     for _, point in detections.iterrows():
-        island_mask = universe["island"].eq(point["island"]).to_numpy()
-        indices = np.flatnonzero(island_mask)
+        indices = np.flatnonzero(universe["island"].eq(point["island"]).to_numpy())
         if not len(indices):
             return None, []
         d = haversine_km(
@@ -187,8 +197,9 @@ def matched_random_success(universe, detections, selected, radius_km, iterations
         indices = []
         for island, count in per_island.items():
             pool = groups[island]
-            count = min(int(count), len(pool))
-            indices.extend(rng.choice(pool, size=count, replace=False).tolist())
+            indices.extend(
+                rng.choice(pool, size=min(int(count), len(pool)), replace=False).tolist()
+            )
         result = evaluate(universe.loc[indices], detections, radius_km)
         recovery.append(result["recovered"])
         complete += int(result["recovered"] == len(detections))
@@ -232,7 +243,9 @@ def main():
     if usable_proto.sum() < 3:
         raise RuntimeError("Too few GBIF prototypes have usable WorldCover neighborhoods")
     median, scale = robust_fit(prototypes.loc[usable_proto, cover_cols].to_numpy(float))
-    proto_cover_z = transform(prototypes.loc[usable_proto, cover_cols].to_numpy(float), median, scale)
+    proto_cover_z = transform(
+        prototypes.loc[usable_proto, cover_cols].to_numpy(float), median, scale
+    )
     usable_universe = universe[cover_cols].notna().all(axis=1)
     cover_distance = np.full(len(universe), np.inf)
     cover_distance[usable_universe] = nearest_environment(
@@ -244,8 +257,7 @@ def main():
     terrain_rank = universe["env_nn"].rank(method="average", pct=True).to_numpy(float)
     cover_rank = pd.Series(universe["cover_env_nn"]).rank(method="average", pct=True).to_numpy(float)
 
-    # Field outcomes become visible only below this line. The score vectors above
-    # are already frozen from pre-2026 occurrences and public layers.
+    # Field outcomes become visible only here; generator scores above are frozen.
     detections = pd.read_csv(args.detections)
     experiments = []
     best = None
