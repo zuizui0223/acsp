@@ -28,6 +28,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest
@@ -72,7 +75,7 @@ jobs:
         run: python -m pip install -e .
       - name: Export audited training-only folds
         run: |
-          python export_standard_baseline_folds.py \
+          python research/export_standard_baseline_folds.py \
             --sample-file "${{ steps.cohort.outputs.sample }}" \
             --protocol validation/standard_baseline_protocol.json \
             --output "standard_baseline_exports/${{ steps.cohort.outputs.cohort }}" \
@@ -80,7 +83,7 @@ jobs:
             --records-per-pair "${{ steps.cohort.outputs.records }}"
       - name: Run all frozen selectors
         run: |
-          python run_standard_baseline_benchmark.py \
+          python research/run_standard_baseline_benchmark.py \
             --export-root "standard_baseline_exports/${{ steps.cohort.outputs.cohort }}" \
             --protocol validation/standard_baseline_protocol.json \
             --output "standard_baseline_results/${{ steps.cohort.outputs.cohort }}"

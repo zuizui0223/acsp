@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 MIXED = ROOT / "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory"
 PLANT_EXTENSION = ROOT / "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory"
 SEEDS = (7, 42, 20260702, 20260705, 20260715)

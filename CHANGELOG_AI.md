@@ -1,5 +1,37 @@
 # AI Change Log
 
+## 2026-08-14 - Claude (Anthropic) - Repository simplification and model-optional positioning
+
+Changed files:
+- research/ (new directory; 20 benchmark scripts, 12 research tests, 4 research reports moved from the root)
+- research/README.md (new)
+- .github/workflows/*.yml (11 workflows: research/ paths and PYTHONPATH)
+- gbif_fieldmap_builder_app.py
+- README.md, AGENTS.md, CHANGELOG_AI.md
+
+Summary:
+- Separated the survey-planning tool from the validation pipeline. The repository root is now the tool; benchmark runners, cohort samplers, comparator drivers, and their tests moved to `research/`. Root Python files went from 52 to 20 and root Markdown from 9 to 5.
+- Frozen data artifacts (`validation/`, `benchmark_results/`, `benchmark_methods/`, `paper/`, `field_validation/`) were deliberately left at the root so protocol fingerprints and provenance records keep resolving.
+- Updated every workflow that reaches into `research/` and split CI test discovery into a survey-tool suite and a research suite.
+- Demoted the automatic-mode SDM and SSDM buttons from primary to secondary and rewrote their captions to state that the survey-zone proposal is complete without a model.
+- Repositioned the README around survey-site selection, added an explicit "no fitted model required" section, and recorded that no superiority claim over established survey-design tools is supported until the frozen 192-pair confirmation runs.
+- Added an AGENTS.md layout rule and a rule that the decision pathway must reach a complete proposal with no fitted classifier in the loop.
+
+Features preserved:
+- GBIF pagination, CSV upload, map-click occurrence exclusion, red QC excluded points
+- Ensemble SDM, VIF stepwise filtering, spatial partition diagnostics, predict map
+- SDM-high exploration candidates, genus/SSDM workflow
+- Route planner, HTML/CSV/KML downloads
+- Every research script, protocol fingerprint, and frozen cohort remains runnable and unmodified
+
+Validation:
+- 103 survey-tool tests and 42 research tests pass, matching the 145 collected before the move.
+- No behavioral change to candidate generation, scoring, or zone aggregation; the SDM change is UI emphasis and copy only.
+
+Known risks / TODO:
+- The production ranking still applies a `macro_model` weight of 0.15 once SDM is enabled, and that component has no confirmatory support. Revisit after the 192-pair confirmation.
+- `legacy/` still contains its own copies of superseded benchmark scripts; they were not touched.
+
 ## 2026-07-03 - Codex (OpenAI) - Mobile map rendering performance
 
 Summary:

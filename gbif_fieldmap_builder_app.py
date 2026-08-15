@@ -7743,8 +7743,12 @@ def render_automatic_genus(bundle: dict[str, Any]) -> None:
 
     ssdm = bundle.get("ssdm_result")
     if ssdm is None:
-        st.caption("SSDM is optional evidence that updates these same survey zones.")
-        if st.button("Add broad-scale model support (optional)", key="automatic_run_ssdm", type="primary", use_container_width=True):
+        st.caption(
+            "The survey-zone proposal above is complete and does not require a model. "
+            "SSDM is optional extra evidence, most useful when per-species records are sparse. "
+            "Turning it on adds broad-scale model support to these same zones; it does not replace them."
+        )
+        if st.button("Add broad-scale model support (optional)", key="automatic_run_ssdm", use_container_width=True):
             status = st.empty(); progress = st.progress(0.0)
             try:
                 st.session_state.automatic_discover_bundle = add_automatic_ssdm_support(bundle, status=status, progress=progress)
@@ -8150,8 +8154,12 @@ def render_automatic_discover() -> None:
 
     sdm = bundle.get("sdm_result")
     if sdm is None:
-        st.caption("SDM is optional evidence that updates these same survey zones.")
-        if st.button("Add broad-scale model support (optional)", key="automatic_run_sdm", type="primary", use_container_width=True):
+        st.caption(
+            "The survey-zone proposal above is complete and does not require a model. "
+            "SDM is optional extra evidence, most useful when occurrence records are sparse or patchy. "
+            "Turning it on adds broad-scale model support to these same zones; it does not replace them."
+        )
+        if st.button("Add broad-scale model support (optional)", key="automatic_run_sdm", use_container_width=True):
             status = st.empty()
             progress = st.progress(0.0)
             try:

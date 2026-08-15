@@ -29,6 +29,20 @@ This app is a field-survey planning tool, not a general all-record SDM analysis 
 
 The app should convert occurrence records into practical survey-site decisions. Occurrence-supported candidates must work without SDM. Optional SDM is especially useful for sparse or incomplete records and may identify exploratory model-only sites. Genus / SSDM workflows should support multi-species, taxonomic, phylogeographic, and evolutionary sampling.
 
+## Repository layout rule
+
+The repository root is the **survey-planning tool**: `gbif_fieldmap_builder_app.py`, `acsp/`, `acsp_discover.py`, `r-acsp/`, and their tests.
+
+Validation, benchmark, comparator, and cohort-sampling code belongs in `research/`, not the root. When adding a script, decide which side it is on before choosing its path. Frozen data artifacts (`validation/`, `benchmark_results/`, `benchmark_methods/`, `paper/`, `field_validation/`) stay at the root because protocol fingerprints and provenance records were written against those paths.
+
+Research scripts resolve data paths relative to the repository root and are run from there. CI sets `PYTHONPATH` for workflows that reach into `research/`.
+
+## The tool must work without a model
+
+ACSP's decision pathway must reach a complete ranked survey-zone proposal with no SDM, SSDM, or any other fitted classifier in the loop. SDM/SSDM are optional extra evidence layers.
+
+Do not make a model a precondition for any survey decision, do not present model support as the primary next action in the UI, and do not let a model failure block or degrade the non-model proposal.
+
 ## Core rule
 
 Do not remove existing features unless the user explicitly asks for removal.
