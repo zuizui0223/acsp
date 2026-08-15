@@ -1,0 +1,82 @@
+{
+  "status": "development_baseline_only",
+  "date": "2026-08-15",
+  "scientific_name": "Campanula microdonta",
+  "training_data": {
+    "source": "field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv",
+    "gbif_occurrence_rows": 281,
+    "training_year_max": 2025
+  },
+  "field_data": {
+    "source": "field_validation/campanula_microdonta/locations_2026.csv",
+    "field_detection_rows": 28,
+    "duplicate_field_rows_retained_for_audit": 1,
+    "cluster_source": "field_validation/campanula_microdonta/development_data/detection_clusters.csv",
+    "cluster_radius_m": 500,
+    "detection_clusters": 19,
+    "islands": ["oshima", "toshima", "niijima", "shikinejima", "kozushima"]
+  },
+  "field_cluster_distance_to_nearest_pre2026_gbif_km": {
+    "1": 0.312848,
+    "2": 1.868773,
+    "3": 1.651985,
+    "4": 4.437848,
+    "5": 1.159721,
+    "6": 0.277350,
+    "7": 0.679412,
+    "8": 0.193232,
+    "9": 0.126383,
+    "10": 1.959344,
+    "11": 4.046183,
+    "12": 5.545551,
+    "13": 5.513865,
+    "14": 1.177216,
+    "15": 1.227172,
+    "16": 6.415197,
+    "17": 0.067056,
+    "18": 0.740395,
+    "19": 0.835552
+  },
+  "nearest_gbif_distance_classes": {
+    "le_0_5_km": 5,
+    "gt_0_5_le_1_km": 3,
+    "gt_1_le_2_km": 6,
+    "gt_2_le_5_km": 2,
+    "gt_5_km": 3
+  },
+  "cached_validation_pool": {
+    "candidate_count": 97,
+    "reachable_field_clusters_within_1km": 13,
+    "unreachable": [
+      {"cluster": 5, "island": "niijima", "nearest_candidate_km": 1.121},
+      {"cluster": 7, "island": "oshima", "nearest_candidate_km": 1.111},
+      {"cluster": 10, "island": "oshima", "nearest_candidate_km": 5.730},
+      {"cluster": 11, "island": "oshima", "nearest_candidate_km": 1.524},
+      {"cluster": 14, "island": "oshima", "nearest_candidate_km": 2.937},
+      {"cluster": 15, "island": "oshima", "nearest_candidate_km": 3.181}
+    ],
+    "local_top5_recall_1km": 0.15789473684210525,
+    "area_balanced_top5_recall_1km": 0.15789473684210525
+  },
+  "cached_survey_pool": {
+    "candidate_count": 102,
+    "reachable_field_clusters_within_1km": 13,
+    "unreachable": [
+      {"cluster": 5, "island": "niijima", "nearest_candidate_km": 1.121},
+      {"cluster": 7, "island": "oshima", "nearest_candidate_km": 1.111},
+      {"cluster": 10, "island": "oshima", "nearest_candidate_km": 4.109},
+      {"cluster": 11, "island": "oshima", "nearest_candidate_km": 1.524},
+      {"cluster": 14, "island": "oshima", "nearest_candidate_km": 2.937},
+      {"cluster": 15, "island": "oshima", "nearest_candidate_km": 3.181}
+    ]
+  },
+  "interpretation": {
+    "v1_local_task_status": "failed_as_a_1km_field-discovery_policy",
+    "candidate_generation_is_primary_bottleneck": true,
+    "ranking_only_can_reach_19_of_19": false,
+    "ten_km_endpoint_is_too_coarse_for_this_island_development_task": true,
+    "campanula_can_be_used_for_retuning": true,
+    "campanula_can_be_called_independent_confirmation": false
+  },
+  "next_experiment": "full-island occurrence-conditioned structural search using high-resolution terrain, before any Top-k ranking optimization"
+}
