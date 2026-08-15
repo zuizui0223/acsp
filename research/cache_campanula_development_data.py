@@ -12,6 +12,7 @@ reimplementing candidate generation, and writes small artifacts that let
         gbif_training_occurrences_through_2025.csv
         candidate_pool.csv          leakage-controlled, for validation
         candidate_pool_survey.csv   what a surveyor would be handed
+        candidate_pool_dense.csv    same, with the generator density caps raised
         detection_clusters.csv
         manifest.json
 
@@ -52,6 +53,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional directory to copy the GSI DEM mosaics into, for artifact upload.",
     )
+    parser.add_argument("--dense-per-type", type=int, default=40)
+    parser.add_argument("--dense-max-cells", type=int, default=8000)
     parser.add_argument(
         "--raster-cache",
         type=Path,
@@ -118,6 +121,81 @@ def build_survey_pool(pipeline, occurrences, metadata):
     return scored
 
 
+def build_dense_pool(pipeline, occurrences, metadata, per_type: int, max_cells: int):
+    """Build the same pool with the generator's density caps raised.
+
+    `build_automatic_discover_bundle` clamps the generator to
+    `min(10, per_type)` and `min(800, max_cells)` per survey area. On Oshima that
+    is 800 of roughly 10,500 cells at 100 m — 7.6% of the island — which is why
+    five of its nine detection clusters have no candidate within 1 km no matter
+    how the pool is ranked.
+
+    Rather than change those caps in the production app, patch the single
+    generator call for the duration of this build, so every other decision the
+    bundle makes (area specs, terrain layers, environmental variables, surface
+    domain) stays exactly as shipped.
+    """
+    import numpy as np
+    import pandas as pd
+
+    import gbif_fieldmap_builder_app as app
+    from acsp.planning import integrated_candidate_scores
+
+    original = app.make_potential_survey_site_candidates
+
+    def denser(occ, occurrence_candidates, cell_size_m, max_per_type, max_grid_cells, start_site_id, **kwargs):
+        return original(
+            occ,
+            occurrence_candidates,
+            cell_size_m,
+            max(int(max_per_type), int(per_type)),
+            max(int(max_grid_cells), int(max_cells)),
+            start_site_id,
+            **kwargs,
+        )
+
+    training = occurrences.copy().reset_index(drop=True)
+    training["_row_id"] = np.arange(len(training), dtype=int)
+    features = [
+        pipeline.rectangle_feature(name, bounds)
+        for name, bounds in pipeline.ISLAND_BOUNDS.items()
+    ]
+    app.make_potential_survey_site_candidates = denser
+    try:
+        bundle = app.build_automatic_discover_bundle(
+            pipeline.SCIENTIFIC_NAME,
+            training,
+            "GBIF records through 2025; dense development pool",
+            "Izu five-island field region",
+            override_row_ids=training["_row_id"].tolist(),
+            taxon_metadata=metadata,
+            survey_bounds=pipeline.SURVEY_BOUNDS,
+            survey_features=features,
+            candidate_generation_only=True,
+        )
+    finally:
+        app.make_potential_survey_site_candidates = original
+
+    parts = [
+        frame.copy()
+        for frame in (bundle.get("potential_candidates"), bundle.get("known_candidates"))
+        if frame is not None and not frame.empty
+    ]
+    if not parts:
+        raise RuntimeError("ACSP produced no candidates for the dense pool.")
+    pool = pd.concat(parts, ignore_index=True)
+    pool = pool.dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
+    scored = integrated_candidate_scores(pool, exclude_occurrence_derived=False)
+    scored["survey_area_id"] = [
+        pipeline.assign_island(lat, lon)
+        for lat, lon in zip(scored["latitude"], scored["longitude"])
+    ]
+    if "site_id" not in scored.columns:
+        scored["site_id"] = np.arange(1, len(scored) + 1)
+    scored["site_id"] = scored["site_id"].astype(str)
+    return scored
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -164,6 +242,18 @@ def main() -> None:
         for name, count in types.astype(str).value_counts().items():
             print(f"    {name}: {count}")
 
+    print(f"building the dense pool (per_type>={args.dense_per_type}, max_cells>={args.dense_max_cells}) ...")
+    dense_pool = build_dense_pool(
+        pipeline, occurrences, provenance, args.dense_per_type, args.dense_max_cells
+    )
+    dense_path = out / "candidate_pool_dense.csv"
+    dense_pool.to_csv(dense_path, index=False)
+    print(f"  {len(dense_pool)} candidates -> {dense_path.name}")
+    dtypes = dense_pool.get("candidate_type")
+    if dtypes is not None:
+        for name, count in dtypes.astype(str).value_counts().items():
+            print(f"    {name}: {count}")
+
     locations = pd.read_csv(FIELD_DIR / "locations_2026.csv")
     _assignments, clusters = cluster_field_detections(locations, cluster_radius_m=500.0)
     clusters_path = out / "detection_clusters.csv"
@@ -194,12 +284,13 @@ def main() -> None:
             "training_occurrences": int(len(occurrences)),
             "candidate_pool": int(len(pool)),
             "candidate_pool_survey": int(len(survey_pool)),
+            "candidate_pool_dense": int(len(dense_pool)),
             "baseline_selected": int(len(selected)),
             "detection_clusters": int(len(clusters)),
         },
         "files": {
             path.name: {"sha256": sha256(path), "bytes": path.stat().st_size}
-            for path in (occ_path, pool_path, survey_path, clusters_path)
+            for path in (occ_path, pool_path, survey_path, dense_path, clusters_path)
         },
         "dem_files_not_committed": dem_files,
     }

@@ -182,11 +182,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cache-dir", type=Path, default=CACHE_DIR)
     parser.add_argument(
         "--pool",
-        choices=("validation", "survey"),
+        choices=("validation", "survey", "dense"),
         default="validation",
         help="validation = leakage-controlled pool (known-location candidates stripped, "
         "occurrence-derived evidence excluded). survey = the pool a surveyor would "
-        "actually be handed. Only the validation pool can support a validation claim.",
+        "actually be handed. dense = survey pool with the generator density caps "
+        "raised. Only the validation pool can support a validation claim.",
     )
     parser.add_argument("--locations", type=Path, default=LOCATIONS)
     parser.add_argument("--json-out", type=Path, default=None)
@@ -197,7 +198,11 @@ def main() -> None:
     args = parse_args()
     pool = load_pool(
         args.cache_dir,
-        "candidate_pool.csv" if args.pool == "validation" else "candidate_pool_survey.csv",
+        {
+            "validation": "candidate_pool.csv",
+            "survey": "candidate_pool_survey.csv",
+            "dense": "candidate_pool_dense.csv",
+        }[args.pool],
     )
     clusters = load_detection_clusters(args.locations)
     selected = STRATEGIES[args.strategy](pool, args.top_k, args.evidence_weight)
