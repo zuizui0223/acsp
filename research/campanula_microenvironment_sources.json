@@ -1,0 +1,51 @@
+{
+  "status": "development_only",
+  "scientific_target": "Reduce candidate area and matched-random success while preserving complete recovery of the 19 Campanula microdonta development clusters.",
+  "generator_leakage_rule": "2026 field coordinates and outcomes are never generator inputs; they are read only after a candidate universe has been frozen for each experiment.",
+  "layers": [
+    {
+      "id": "gsi_dem",
+      "source": "Geospatial Information Authority of Japan (GSI) numerical elevation models",
+      "resolution": "1 m / 5 m / 10 m depending on coverage",
+      "role": ["elevation", "slope", "roughness", "TPI", "aspect", "coastal exposure proxy"],
+      "status": "active"
+    },
+    {
+      "id": "esa_worldcover_2021",
+      "source": "ESA WorldCover 2021 v200",
+      "resolution": "10 m",
+      "role": ["tree cover", "shrubland", "grassland", "built-up", "bare/sparse vegetation", "water", "local cover composition", "edge/transition structure"],
+      "status": "next_experiment"
+    },
+    {
+      "id": "esa_worldcover_ndvi_2021",
+      "source": "ESA WorldCover annual Sentinel-2 NDVI composite",
+      "resolution": "10 m",
+      "role": ["vegetation greenness", "within-patch heterogeneity", "vegetation-edge contrast"],
+      "status": "queued_after_landcover"
+    },
+    {
+      "id": "jaxa_hrlulc",
+      "source": "JAXA EORC High-Resolution Land Use and Land Cover Map of Japan",
+      "resolution": "10 m",
+      "role": ["independent Japanese land-cover representation", "land-cover sensitivity check"],
+      "status": "queued_sensitivity"
+    },
+    {
+      "id": "landsat_c2_surface_temperature",
+      "source": "USGS Landsat Collection 2 Level-2 Surface Temperature",
+      "resolution": "Landsat thermal product scale",
+      "role": ["surface thermal contrast", "microclimate proxy", "terrain-cover thermal interaction"],
+      "status": "queued_if_landcover_ndvi_leave_unresolved_clusters"
+    }
+  ],
+  "promotion_rule": {
+    "required": [
+      "complete 19/19 development recovery at the declared radius, or explicit proof that the data layer creates a lower ceiling",
+      "lower candidate-grid fraction or lower route/search budget than the current best",
+      "lower matched-random complete-recovery probability",
+      "no inference-time field-coordinate leakage"
+    ],
+    "negative_results": "Retain failed layers and harmful feature combinations as ablations; do not add variables merely because they are available."
+  }
+}
