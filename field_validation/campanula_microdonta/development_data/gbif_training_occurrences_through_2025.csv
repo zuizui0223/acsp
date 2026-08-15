@@ -1,0 +1,282 @@
+_latitude,_longitude,eventDate,year,species,scientificName,basisOfRecord,countryCode,locality,coordinateUncertaintyInMeters,gbifID,media_url,_event_date,_species,_media_url,_gbif_id,_locality,_year,_coordinate_uncertainty_m,_row_id
+33.089598,139.821964,2024-07-29T10:34:30,2024,Campanula microdonta,Campanula microdonta Koidz.,HUMAN_OBSERVATION,JP,,50.0,4925858961,https://inaturalist-open-data.s3.amazonaws.com/photos/413359016/original.jpeg,2024-07-29T10:34:30,Campanula microdonta,https://inaturalist-open-data.s3.amazonaws.com/photos/413359016/original.jpeg,4925858961,,2024,50.0,0
+34.785603,139.393587,2024-07-29T10:29:39,2024,Campanula microdonta,Campanula microdonta Koidz.,HUMAN_OBSERVATION,JP,,20.0,5036821553,https://inaturalist-open-data.s3.amazonaws.com/photos/413784530/original.jpeg,2024-07-29T10:29:39,Campanula microdonta,https://inaturalist-open-data.s3.amazonaws.com/photos/413784530/original.jpeg,5036821553,,2024,20.0,1
+34.784512,139.413575,2022-07-11T12:44:49,2022,Campanula microdonta,Campanula microdonta Koidz.,HUMAN_OBSERVATION,JP,,7.0,4413488595,https://inaturalist-open-data.s3.amazonaws.com/photos/232356741/original.jpg,2022-07-11T12:44:49,Campanula microdonta,https://inaturalist-open-data.s3.amazonaws.com/photos/232356741/original.jpg,4413488595,,2022,7.0,2
+34.783188,139.350692,2022-07-09T10:44:15,2022,Campanula microdonta,Campanula microdonta Koidz.,HUMAN_OBSERVATION,JP,,4.0,4413663480,https://inaturalist-open-data.s3.amazonaws.com/photos/232380133/original.jpg,2022-07-09T10:44:15,Campanula microdonta,https://inaturalist-open-data.s3.amazonaws.com/photos/232380133/original.jpg,4413663480,,2022,4.0,3
+34.76086,139.37244,2018-07-31,2018,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,"Moto-machi, Nagane-hama,",,3324105539,,2018-07-31,Campanula microdonta,,3324105539,"Moto-machi, Nagane-hama,",2018,,4
+35.224118,139.140585,2015-05-19,2015,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,Ishibashi,,1829928222,,2015-05-19,Campanula microdonta,,1829928222,Ishibashi,2015,,5
+35.140796,139.153087,2015-06-22,2015,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,"Manatsuru, Bannbaura-kaigan",,1829929026,,2015-06-22,Campanula microdonta,,1829929026,"Manatsuru, Bannbaura-kaigan",2015,,6
+35.199122,139.140587,2015-06-16,2015,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,"Nebukawa, Shiraito-gawa Kako",,1829929202,,2015-06-16,Campanula microdonta,,1829929202,"Nebukawa, Shiraito-gawa Kako",2015,,7
+35.040807,139.178088,2015-06-29,2015,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,Hatsushima,,1829931088,,2015-06-29,Campanula microdonta,,1829931088,Hatsushima,2015,,8
+34.1179,139.513,2014-06-14,2014,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934156925,,2014-06-14,Campanula microdonta,,1934156925,,2014,,9
+34.1179,139.513,2014-06-14,2014,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934156929,,2014-06-14,Campanula microdonta,,1934156929,,2014,,10
+33.8975,139.5915,2014-06-16,2014,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934156977,,2014-06-16,Campanula microdonta,,1934156977,,2014,,11
+34.5314,139.2802,2014-06-18,2014,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934156983,,2014-06-18,Campanula microdonta,,1934156983,,2014,,12
+33.8975,139.5915,2014-06-16,2014,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934157000,,2014-06-16,Campanula microdonta,,1934157000,,2014,,13
+34.5316,139.2796,2014-06-18,2014,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934157011,,2014-06-18,Campanula microdonta,,1934157011,,2014,,14
+34.969206,139.126814,2009-06-17,2009,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,"Arai,",,1829866361,,2009-06-17,Campanula microdonta,,1829866361,"Arai,",2009,,15
+32.461667,139.760806,2008-07-04,2008,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388801003,,2008-07-04,Campanula microdonta,,388801003,,2008,,16
+34.20841,139.14269,2007-06-30,2007,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,Isl Kouzu,,1830513769,,2007-06-30,Campanula microdonta,,1830513769,Isl Kouzu,2007,,17
+34.7175,139.375833,2005-07-18,2005,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,"near Ohsima Airport, Is. Ohsima, Tokyo.",,6196868166,,2005-07-18,Campanula microdonta,,6196868166,"near Ohsima Airport, Is. Ohsima, Tokyo.",2005,,18
+34.6596,138.9653,2003-05-28,2003,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933844135,,2003-05-28,Campanula microdonta,,1933844135,,2003,,19
+33.135568,139.742403,2002-05-28,2002,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800985,,2002-05-28,Campanula microdonta,,388800985,,2002,,20
+33.135568,139.742403,2002-05-27,2002,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800986,,2002-05-27,Campanula microdonta,,388800986,,2002,,21
+33.135543,139.742488,2002-08-04,2002,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,"Hachijo-fuji, Kako-nai",,5060621330,,2002-08-04,Campanula microdonta,,5060621330,"Hachijo-fuji, Kako-nai",2002,,22
+33.1333,139.7667,1988-07,1988,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933937272,,1988-07,Campanula microdonta,,1933937272,,1988,,23
+33.1333,139.7667,1988-07-25,1988,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933937306,,1988-07-25,Campanula microdonta,,1933937306,,1988,,24
+33.13333,139.76667,1988-07-25,1988,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,Hachijyo Is. (The dormant volcano Is.) Foot of Mt. Hachijofuji. Sunny road side.,,2516798791,https://medialib.naturalis.nl/file/id/L.3744153/format/large,1988-07-25,Campanula microdonta,https://medialib.naturalis.nl/file/id/L.3744153/format/large,2516798791,Hachijyo Is. (The dormant volcano Is.) Foot of Mt. Hachijofuji. Sunny road side.,1988,,25
+34.2065,139.13545,1985-06-09,1985,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,4054002714,,1985-06-09,Campanula microdonta,,4054002714,,1985,,26
+33.8772,139.6049,1984-06-24,1984,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902747,,1984-06-24,Campanula microdonta,,1933902747,,1984,,27
+33.8772,139.6049,1984-06-24,1984,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902781,,1984-06-24,Campanula microdonta,,1933902781,,1984,,28
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902626,,1980-07-10,Campanula microdonta,,1933902626,,1980,,29
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902651,,1980-07-10,Campanula microdonta,,1933902651,,1980,,30
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902669,,1980-07-10,Campanula microdonta,,1933902669,,1980,,31
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902674,,1980-07-09,Campanula microdonta,,1933902674,,1980,,32
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902683,,1980-07-10,Campanula microdonta,,1933902683,,1980,,33
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902685,,1980-07-09,Campanula microdonta,,1933902685,,1980,,34
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902686,,1980-07-09,Campanula microdonta,,1933902686,,1980,,35
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902690,,1980-07-10,Campanula microdonta,,1933902690,,1980,,36
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902695,,1980-07-10,Campanula microdonta,,1933902695,,1980,,37
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902699,,1980-07-09,Campanula microdonta,,1933902699,,1980,,38
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902703,,1980-07-09,Campanula microdonta,,1933902703,,1980,,39
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902704,,1980-07-09,Campanula microdonta,,1933902704,,1980,,40
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902709,,1980-07-10,Campanula microdonta,,1933902709,,1980,,41
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902713,,1980-07-10,Campanula microdonta,,1933902713,,1980,,42
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902731,,1980-07-10,Campanula microdonta,,1933902731,,1980,,43
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902744,,1980-07-10,Campanula microdonta,,1933902744,,1980,,44
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902757,,1980-07-10,Campanula microdonta,,1933902757,,1980,,45
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902758,,1980-07-09,Campanula microdonta,,1933902758,,1980,,46
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902770,,1980-07-10,Campanula microdonta,,1933902770,,1980,,47
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902786,,1980-07-09,Campanula microdonta,,1933902786,,1980,,48
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902790,,1980-07-10,Campanula microdonta,,1933902790,,1980,,49
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902797,,1980-07-09,Campanula microdonta,,1933902797,,1980,,50
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902815,,1980-07-10,Campanula microdonta,,1933902815,,1980,,51
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902822,,1980-07-10,Campanula microdonta,,1933902822,,1980,,52
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902823,,1980-07-10,Campanula microdonta,,1933902823,,1980,,53
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902827,,1980-07-10,Campanula microdonta,,1933902827,,1980,,54
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902829,,1980-07-10,Campanula microdonta,,1933902829,,1980,,55
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902832,,1980-07-09,Campanula microdonta,,1933902832,,1980,,56
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902833,,1980-07-10,Campanula microdonta,,1933902833,,1980,,57
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902836,,1980-07-10,Campanula microdonta,,1933902836,,1980,,58
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902838,,1980-07-09,Campanula microdonta,,1933902838,,1980,,59
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902840,,1980-07-10,Campanula microdonta,,1933902840,,1980,,60
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902842,,1980-07-09,Campanula microdonta,,1933902842,,1980,,61
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902843,,1980-07-09,Campanula microdonta,,1933902843,,1980,,62
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902846,,1980-07-10,Campanula microdonta,,1933902846,,1980,,63
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902848,,1980-07-09,Campanula microdonta,,1933902848,,1980,,64
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902850,,1980-07-09,Campanula microdonta,,1933902850,,1980,,65
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902851,,1980-07-10,Campanula microdonta,,1933902851,,1980,,66
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902852,,1980-07-10,Campanula microdonta,,1933902852,,1980,,67
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902853,,1980-07-09,Campanula microdonta,,1933902853,,1980,,68
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902855,,1980-07-10,Campanula microdonta,,1933902855,,1980,,69
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902858,,1980-07-09,Campanula microdonta,,1933902858,,1980,,70
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902859,,1980-07-10,Campanula microdonta,,1933902859,,1980,,71
+34.0852,139.5237,1980-07,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902860,,1980-07,Campanula microdonta,,1933902860,,1980,,72
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902862,,1980-07-09,Campanula microdonta,,1933902862,,1980,,73
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902863,,1980-07-10,Campanula microdonta,,1933902863,,1980,,74
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902864,,1980-07-09,Campanula microdonta,,1933902864,,1980,,75
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902865,,1980-07-10,Campanula microdonta,,1933902865,,1980,,76
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902868,,1980-07-09,Campanula microdonta,,1933902868,,1980,,77
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902869,,1980-07-09,Campanula microdonta,,1933902869,,1980,,78
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902872,,1980-07-10,Campanula microdonta,,1933902872,,1980,,79
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902874,,1980-07-10,Campanula microdonta,,1933902874,,1980,,80
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902877,,1980-07-10,Campanula microdonta,,1933902877,,1980,,81
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902879,,1980-07-09,Campanula microdonta,,1933902879,,1980,,82
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902880,,1980-07-10,Campanula microdonta,,1933902880,,1980,,83
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902881,,1980-07-10,Campanula microdonta,,1933902881,,1980,,84
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902885,,1980-07-10,Campanula microdonta,,1933902885,,1980,,85
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902893,,1980-07-10,Campanula microdonta,,1933902893,,1980,,86
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902894,,1980-07-10,Campanula microdonta,,1933902894,,1980,,87
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902898,,1980-07-10,Campanula microdonta,,1933902898,,1980,,88
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902899,,1980-07-10,Campanula microdonta,,1933902899,,1980,,89
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902905,,1980-07-09,Campanula microdonta,,1933902905,,1980,,90
+34.0852,139.5237,1980-07-10,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902906,,1980-07-10,Campanula microdonta,,1933902906,,1980,,91
+34.0841,139.5596,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902919,,1980-07-09,Campanula microdonta,,1933902919,,1980,,92
+34.0852,139.5237,1980-07-09,1980,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902922,,1980-07-09,Campanula microdonta,,1933902922,,1980,,93
+34.226667,139.164722,1978-06-12,1978,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,1829888472,,1978-06-12,Campanula microdonta,,1829888472,,1978,,94
+34.226667,139.164722,1978-06-12,1978,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,1829888774,,1978-06-12,Campanula microdonta,,1829888774,,1978,,95
+33.1334,139.7693,1978-06-16,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902716,,1978-06-16,Campanula microdonta,,1933902716,,1978,,96
+33.1334,139.7693,1978-06-16,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902721,,1978-06-16,Campanula microdonta,,1933902721,,1978,,97
+33.0681,139.7966,1978-06-17,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902727,,1978-06-17,Campanula microdonta,,1933902727,,1978,,98
+33.1334,139.7693,1978-06-16,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902741,,1978-06-16,Campanula microdonta,,1933902741,,1978,,99
+33.0922,139.8122,1978-06-17,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902835,,1978-06-17,Campanula microdonta,,1933902835,,1978,,100
+33.0922,139.8122,1978-06-17,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902871,,1978-06-17,Campanula microdonta,,1933902871,,1978,,101
+34.2159,139.1562,1978-07-07,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902715,,1978-07-07,Campanula microdonta,,1933902715,,1978,,102
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902718,,1978-07-08,Campanula microdonta,,1933902718,,1978,,103
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902719,,1978-07-08,Campanula microdonta,,1933902719,,1978,,104
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902728,,1978-07-08,Campanula microdonta,,1933902728,,1978,,105
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902739,,1978-07-08,Campanula microdonta,,1933902739,,1978,,106
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902745,,1978-07-08,Campanula microdonta,,1933902745,,1978,,107
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902749,,1978-07-08,Campanula microdonta,,1933902749,,1978,,108
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902755,,1978-07-08,Campanula microdonta,,1933902755,,1978,,109
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902762,,1978-07-08,Campanula microdonta,,1933902762,,1978,,110
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902765,,1978-07-08,Campanula microdonta,,1933902765,,1978,,111
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902767,,1978-07-08,Campanula microdonta,,1933902767,,1978,,112
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902768,,1978-07-08,Campanula microdonta,,1933902768,,1978,,113
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902769,,1978-07-08,Campanula microdonta,,1933902769,,1978,,114
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902775,,1978-07-08,Campanula microdonta,,1933902775,,1978,,115
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902776,,1978-07-08,Campanula microdonta,,1933902776,,1978,,116
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902783,,1978-07-08,Campanula microdonta,,1933902783,,1978,,117
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902793,,1978-07-08,Campanula microdonta,,1933902793,,1978,,118
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902800,,1978-07-08,Campanula microdonta,,1933902800,,1978,,119
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902811,,1978-07-08,Campanula microdonta,,1933902811,,1978,,120
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902813,,1978-07-08,Campanula microdonta,,1933902813,,1978,,121
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902820,,1978-07-08,Campanula microdonta,,1933902820,,1978,,122
+34.2159,139.1562,1978-07-08,1978,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902856,,1978-07-08,Campanula microdonta,,1933902856,,1978,,123
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902646,,1977-07-11,Campanula microdonta,,1933902646,,1977,,124
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902684,,1977-07-11,Campanula microdonta,,1933902684,,1977,,125
+34.0841,139.5596,1977-07-12,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902691,,1977-07-12,Campanula microdonta,,1933902691,,1977,,126
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902705,,1977-07-11,Campanula microdonta,,1933902705,,1977,,127
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902710,,1977-07-11,Campanula microdonta,,1933902710,,1977,,128
+33.0681,139.7966,1977-07-10,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902712,,1977-07-10,Campanula microdonta,,1933902712,,1977,,129
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902723,,1977-07-11,Campanula microdonta,,1933902723,,1977,,130
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902726,,1977-07-11,Campanula microdonta,,1933902726,,1977,,131
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902732,,1977-07-11,Campanula microdonta,,1933902732,,1977,,132
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902743,,1977-07-09,Campanula microdonta,,1933902743,,1977,,133
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902751,,1977-07-11,Campanula microdonta,,1933902751,,1977,,134
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902764,,1977-07-09,Campanula microdonta,,1933902764,,1977,,135
+34.0599,139.544,1977-07-11,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902772,,1977-07-11,Campanula microdonta,,1933902772,,1977,,136
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902787,,1977-07-09,Campanula microdonta,,1933902787,,1977,,137
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902794,,1977-07-09,Campanula microdonta,,1933902794,,1977,,138
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902798,,1977-07-09,Campanula microdonta,,1933902798,,1977,,139
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902808,,1977-07-09,Campanula microdonta,,1933902808,,1977,,140
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902812,,1977-07-09,Campanula microdonta,,1933902812,,1977,,141
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902814,,1977-07-09,Campanula microdonta,,1933902814,,1977,,142
+33.0681,139.7966,1977-07-10,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902816,,1977-07-10,Campanula microdonta,,1933902816,,1977,,143
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902817,,1977-07-09,Campanula microdonta,,1933902817,,1977,,144
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902818,,1977-07-09,Campanula microdonta,,1933902818,,1977,,145
+33.0681,139.7966,1977-07-10,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902824,,1977-07-10,Campanula microdonta,,1933902824,,1977,,146
+33.0681,139.7966,1977-07-10,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902825,,1977-07-10,Campanula microdonta,,1933902825,,1977,,147
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902826,,1977-07-09,Campanula microdonta,,1933902826,,1977,,148
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902830,,1977-07-09,Campanula microdonta,,1933902830,,1977,,149
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902831,,1977-07-09,Campanula microdonta,,1933902831,,1977,,150
+33.0681,139.7966,1977-07-10,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902837,,1977-07-10,Campanula microdonta,,1933902837,,1977,,151
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902839,,1977-07-09,Campanula microdonta,,1933902839,,1977,,152
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902841,,1977-07-09,Campanula microdonta,,1933902841,,1977,,153
+33.0681,139.7966,1977-07-10,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902845,,1977-07-10,Campanula microdonta,,1933902845,,1977,,154
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902847,,1977-07-09,Campanula microdonta,,1933902847,,1977,,155
+33.1565,139.7539,1977-07-09,1977,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902876,,1977-07-09,Campanula microdonta,,1933902876,,1977,,156
+34.7674,139.3965,1976-06-29,1976,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933854782,,1976-06-29,Campanula microdonta,,1933854782,,1976,,157
+33.635783,134.493324,1976-07-27,1976,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1830609340,,1976-07-27,Campanula microdonta,,1830609340,,1976,,158
+33.635783,134.493324,1976-07-27,1976,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1830609396,,1976-07-27,Campanula microdonta,,1830609396,,1976,,159
+34.0841,139.5596,1975-06-14,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902738,,1975-06-14,Campanula microdonta,,1933902738,,1975,,160
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902742,,1975-06-11,Campanula microdonta,,1933902742,,1975,,161
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902761,,1975-06-11,Campanula microdonta,,1933902761,,1975,,162
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902773,,1975-06-11,Campanula microdonta,,1933902773,,1975,,163
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902774,,1975-06-11,Campanula microdonta,,1933902774,,1975,,164
+34.0841,139.5596,1975-06-14,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902778,,1975-06-14,Campanula microdonta,,1933902778,,1975,,165
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902779,,1975-06-11,Campanula microdonta,,1933902779,,1975,,166
+34.0841,139.5596,1975-06-14,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902788,,1975-06-14,Campanula microdonta,,1933902788,,1975,,167
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902789,,1975-06-11,Campanula microdonta,,1933902789,,1975,,168
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902791,,1975-06-11,Campanula microdonta,,1933902791,,1975,,169
+34.0841,139.5596,1975-06-14,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902796,,1975-06-14,Campanula microdonta,,1933902796,,1975,,170
+34.0841,139.5596,1975-06-14,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902805,,1975-06-14,Campanula microdonta,,1933902805,,1975,,171
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902807,,1975-06-11,Campanula microdonta,,1933902807,,1975,,172
+34.0599,139.544,1975-06-11,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902819,,1975-06-11,Campanula microdonta,,1933902819,,1975,,173
+34.2136,139.1531,1975-08-04,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933824894,,1975-08-04,Campanula microdonta,,1933824894,,1975,,174
+34.2136,139.1531,1975-08-04,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933824908,,1975-08-04,Campanula microdonta,,1933824908,,1975,,175
+34.2136,139.1531,1975-08-04,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933824917,,1975-08-04,Campanula microdonta,,1933824917,,1975,,176
+34.2136,139.1531,1975-08-04,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933824922,,1975-08-04,Campanula microdonta,,1933824922,,1975,,177
+34.2136,139.1531,1975-08-04,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933824933,,1975-08-04,Campanula microdonta,,1933824933,,1975,,178
+33.1238,139.798,1975-09-17,1975,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902912,,1975-09-17,Campanula microdonta,,1933902912,,1975,,179
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902666,,1974-07-17,Campanula microdonta,,1933902666,,1974,,180
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902670,,1974-07-17,Campanula microdonta,,1933902670,,1974,,181
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902677,,1974-07-17,Campanula microdonta,,1933902677,,1974,,182
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902696,,1974-07-17,Campanula microdonta,,1933902696,,1974,,183
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902701,,1974-07-17,Campanula microdonta,,1933902701,,1974,,184
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902702,,1974-07-17,Campanula microdonta,,1933902702,,1974,,185
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902706,,1974-07-17,Campanula microdonta,,1933902706,,1974,,186
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902707,,1974-07-17,Campanula microdonta,,1933902707,,1974,,187
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902717,,1974-07-17,Campanula microdonta,,1933902717,,1974,,188
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902722,,1974-07-17,Campanula microdonta,,1933902722,,1974,,189
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902729,,1974-07-17,Campanula microdonta,,1933902729,,1974,,190
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902733,,1974-07-17,Campanula microdonta,,1933902733,,1974,,191
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902735,,1974-07-17,Campanula microdonta,,1933902735,,1974,,192
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902737,,1974-07-17,Campanula microdonta,,1933902737,,1974,,193
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902740,,1974-07-17,Campanula microdonta,,1933902740,,1974,,194
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902746,,1974-07-17,Campanula microdonta,,1933902746,,1974,,195
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902748,,1974-07-17,Campanula microdonta,,1933902748,,1974,,196
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902750,,1974-07-17,Campanula microdonta,,1933902750,,1974,,197
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902756,,1974-07-17,Campanula microdonta,,1933902756,,1974,,198
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902760,,1974-07-17,Campanula microdonta,,1933902760,,1974,,199
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902766,,1974-07-17,Campanula microdonta,,1933902766,,1974,,200
+33.1238,139.798,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902795,,1974-07-17,Campanula microdonta,,1933902795,,1974,,201
+33.1334,139.7693,1974-07-17,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902803,,1974-07-17,Campanula microdonta,,1933902803,,1974,,202
+33.0922,139.8122,1974-07-18,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902804,,1974-07-18,Campanula microdonta,,1933902804,,1974,,203
+33.1334,139.7693,1974-07-19,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902809,,1974-07-19,Campanula microdonta,,1933902809,,1974,,204
+33.1334,139.7693,1974-07-19,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902834,,1974-07-19,Campanula microdonta,,1933902834,,1974,,205
+33.0681,139.7966,1974-07-19,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902849,,1974-07-19,Campanula microdonta,,1933902849,,1974,,206
+33.1334,139.7693,1974-07-19,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902857,,1974-07-19,Campanula microdonta,,1933902857,,1974,,207
+33.1334,139.7693,1974-07-19,1974,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902861,,1974-07-19,Campanula microdonta,,1933902861,,1974,,208
+34.217023,139.149914,1972-06-28,1972,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800814,,1972-06-28,Campanula microdonta,,388800814,,1972,,209
+34.217023,139.149914,1972-06-28,1972,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800816,,1972-06-28,Campanula microdonta,,388800816,,1972,,210
+33.072,139.79602,1972-07-11,1972,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,Hachijo-jima Island,,393092900,,1972-07-11,Campanula microdonta,,393092900,Hachijo-jima Island,1972,,211
+33.08,139.83,1969-07-27,1969,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,"On bank. Izu Isls: Isl. Hachijo-jima, the E side of Mt. Nishiyama.",,1802592460,https://collections.nmnh.si.edu/media/?i=12294337&h=2000,1969-07-27,Campanula microdonta,https://collections.nmnh.si.edu/media/?i=12294337&h=2000,1802592460,"On bank. Izu Isls: Isl. Hachijo-jima, the E side of Mt. Nishiyama.",1969,,212
+33.083333,139.83333,1969-07-26,1969,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,Hachijo-Jima.,,1990427973,http://www.ngbif.org.ng/pp/FHI0023615.jpg,1969-07-26,Campanula microdonta,http://www.ngbif.org.ng/pp/FHI0023615.jpg,1990427973,Hachijo-Jima.,1969,,213
+33.083333,139.833334,1969-07-26T00:00,1969,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,Izu Isls: Isl. Hachijo-jima. Mitsune,,4929000435,https://d2jcv3kl45hlgi.cloudfront.net/c62717743e321738d5901f17927b5464.jpg,1969-07-26T00:00,Campanula microdonta,https://d2jcv3kl45hlgi.cloudfront.net/c62717743e321738d5901f17927b5464.jpg,4929000435,Izu Isls: Isl. Hachijo-jima. Mitsune,1969,,214
+33.878756,139.604878,1968-06-14,1968,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800755,,1968-06-14,Campanula microdonta,,388800755,,1968,,215
+34.5224,139.2788,1968-07-09,1968,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902692,,1968-07-09,Campanula microdonta,,1933902692,,1968,,216
+33.8772,139.6049,1967-07-29,1967,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902752,,1967-07-29,Campanula microdonta,,1933902752,,1967,,217
+33.8772,139.6049,1967-07-28,1967,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902771,,1967-07-28,Campanula microdonta,,1933902771,,1967,,218
+33.8772,139.6049,1967-07-31,1967,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902785,,1967-07-31,Campanula microdonta,,1933902785,,1967,,219
+33.8772,139.6049,1967-07-29,1967,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902802,,1967-07-29,Campanula microdonta,,1933902802,,1967,,220
+33.1334,139.7693,1967-08-25,1967,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933854332,,1967-08-25,Campanula microdonta,,1933854332,,1967,,221
+33.8772,139.6049,1967-08-02,1967,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902784,,1967-08-02,Campanula microdonta,,1933902784,,1967,,222
+34.7245,139.3995,1966-08-30,1966,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933937247,,1966-08-30,Campanula microdonta,,1933937247,,1966,,223
+34.999798,138.782013,1963-07-13,1963,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,Ita,,4521841708,,1963-07-13,Campanula microdonta,,4521841708,Ita,1963,,224
+34.059818,139.544067,1961-07-14,1961,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800752,,1961-07-14,Campanula microdonta,,388800752,,1961,,225
+34.7245,139.3995,1960-06-28,1960,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933937222,,1960-06-28,Campanula microdonta,,1933937222,,1960,,226
+34.2159,139.1562,1960-07-06,1960,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902782,,1960-07-06,Campanula microdonta,,1933902782,,1960,,227
+34.1213,139.5242,1960-09-29,1960,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902734,,1960-09-29,Campanula microdonta,,1933902734,,1960,,228
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902799,,1959-06-27,Campanula microdonta,,1933902799,,1959,,229
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902801,,1959-06-27,Campanula microdonta,,1933902801,,1959,,230
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902806,,1959-06-27,Campanula microdonta,,1933902806,,1959,,231
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902810,,1959-06-27,Campanula microdonta,,1933902810,,1959,,232
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902828,,1959-06-27,Campanula microdonta,,1933902828,,1959,,233
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902844,,1959-06-27,Campanula microdonta,,1933902844,,1959,,234
+33.0705,139.8112,1959-06-27,1959,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902873,,1959-06-27,Campanula microdonta,,1933902873,,1959,,235
+33.072,139.79602,1959-07-27,1959,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,381791571,,1959-07-27,Campanula microdonta,,381791571,,1959,,236
+33.0821,139.8478,1958-07-15,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902697,,1958-07-15,Campanula microdonta,,1933902697,,1958,,237
+33.0821,139.8478,1958-07-15,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902725,,1958-07-15,Campanula microdonta,,1933902725,,1958,,238
+33.0821,139.8478,1958-07-15,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902730,,1958-07-15,Campanula microdonta,,1933902730,,1958,,239
+33.0821,139.8478,1958-07-15,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902753,,1958-07-15,Campanula microdonta,,1933902753,,1958,,240
+33.1285,139.6877,1958-07-17,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902754,,1958-07-17,Campanula microdonta,,1933902754,,1958,,241
+32.4663,139.7632,1958-07-20,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902759,,1958-07-20,Campanula microdonta,,1933902759,,1958,,242
+33.1285,139.6877,1958-07-17,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902763,,1958-07-17,Campanula microdonta,,1933902763,,1958,,243
+34.2159,139.1562,1958-07-10,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902777,,1958-07-10,Campanula microdonta,,1933902777,,1958,,244
+33.1285,139.6877,1958-07-17,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902780,,1958-07-17,Campanula microdonta,,1933902780,,1958,,245
+32.4663,139.7632,1958-07-23,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902792,,1958-07-23,Campanula microdonta,,1933902792,,1958,,246
+34.2159,139.1562,1958-07-10,1958,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902821,,1958-07-10,Campanula microdonta,,1933902821,,1958,,247
+33.0922,139.8122,1955-08-05,1955,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933854316,,1955-08-05,Campanula microdonta,,1933854316,,1955,,248
+33.0922,139.8122,1955-08-05,1955,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933854340,,1955-08-05,Campanula microdonta,,1933854340,,1955,,249
+33.0922,139.8122,1955-08-04,1955,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933854354,,1955-08-04,Campanula microdonta,,1933854354,,1955,,250
+35.1165,140.2239,1955-08-09,1955,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934096602,,1955-08-09,Campanula microdonta,,1934096602,,1955,,251
+35.1416,139.1611,1954-07-24,1954,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933938536,,1954-07-24,Campanula microdonta,,1933938536,,1954,,252
+33.0922,139.8122,1954-07-25,1954,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,4521895078,,1954-07-25,Campanula microdonta,,4521895078,,1954,,253
+33.138623,139.744348,1954-08-07,1954,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800813,,1954-08-07,Campanula microdonta,,388800813,,1954,,254
+33.0922,139.8122,1954-08,1954,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,4521879268,,1954-08,Campanula microdonta,,4521879268,,1954,,255
+33.0922,139.8122,1954-08,1954,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,4521937533,,1954-08,Campanula microdonta,,4521937533,,1954,,256
+33.0922,139.8122,1954-08,1954,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,4521940623,,1954-08,Campanula microdonta,,4521940623,,1954,,257
+33.1546,139.754,1952-07-15,1952,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902698,,1952-07-15,Campanula microdonta,,1933902698,,1952,,258
+33.1238,139.798,1952-07-16,1952,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933990198,,1952-07-16,Campanula microdonta,,1933990198,,1952,,259
+33.1238,139.798,1952-07-16,1952,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933990248,,1952-07-16,Campanula microdonta,,1933990248,,1952,,260
+33.8663,139.6267,1952-08-11,1952,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933854353,,1952-08-11,Campanula microdonta,,1933854353,,1952,,261
+33.138623,139.744348,1951-08-15,1951,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800810,,1951-08-15,Campanula microdonta,,388800810,,1951,,262
+33.138623,139.744348,1951-08-15,1951,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800811,,1951-08-15,Campanula microdonta,,388800811,,1951,,263
+33.138623,139.744348,1951-08-15,1951,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,388800834,,1951-08-15,Campanula microdonta,,388800834,,1951,,264
+34.7693,139.3932,1950-10-20,1950,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934095503,,1950-10-20,Campanula microdonta,,1934095503,,1950,,265
+34.7693,139.3932,1950-10-20,1950,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1934095544,,1950-10-20,Campanula microdonta,,1934095544,,1950,,266
+34.77288,139.41158,1948-07-05,1948,Campanula microdonta,Campanula punctata var. microdonta (Koidz.) Ohwi,PRESERVED_SPECIMEN,JP,,,381791570,,1948-07-05,Campanula microdonta,,381791570,,1948,,267
+34.7771,139.4104,1948-11-18,1948,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933891607,,1948-11-18,Campanula microdonta,,1933891607,,1948,,268
+34.7771,139.4104,1948-11-18,1948,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933891689,,1948-11-18,Campanula microdonta,,1933891689,,1948,,269
+34.1213,139.5242,1940-06-29,1940,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933889531,,1940-06-29,Campanula microdonta,,1933889531,,1940,,270
+34.742227,139.397315,1940-08-12,1940,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,Izu Oshima I.,,3412677146,,1940-08-12,Campanula microdonta,,3412677146,Izu Oshima I.,1940,,271
+34.1213,139.5242,1938-07-06,1938,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933889503,,1938-07-06,Campanula microdonta,,1933889503,,1938,,272
+34.1174,139.5083,1936-07-05,1936,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933889493,,1936-07-05,Campanula microdonta,,1933889493,,1936,,273
+33.8952,139.5927,1934-08-05,1934,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902714,,1934-08-05,Campanula microdonta,,1933902714,,1934,,274
+34.3754,139.2617,1932-11-30,1932,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933938518,,1932-11-30,Campanula microdonta,,1933938518,,1932,,275
+33.1238,139.798,1931-08,1931,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902724,,1931-08,Campanula microdonta,,1933902724,,1931,,276
+33.1238,139.798,1931-08,1931,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933902736,,1931-08,Campanula microdonta,,1933902736,,1931,,277
+33.1238,139.798,1931-08-14,1931,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933914737,,1931-08-14,Campanula microdonta,,1933914737,,1931,,278
+34.7656,139.3633,1930-07-30,1930,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933908021,,1930-07-30,Campanula microdonta,,1933908021,,1930,,279
+34.7656,139.3633,1930-07-29,1930,Campanula microdonta,Campanula microdonta Koidz.,PRESERVED_SPECIMEN,JP,,,1933912999,,1930-07-29,Campanula microdonta,,1933912999,,1930,,280

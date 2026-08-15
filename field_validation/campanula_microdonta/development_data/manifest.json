@@ -1,0 +1,102 @@
+{
+  "dataset_role": "development_only",
+  "why": "The 2026 Campanula microdonta field outcomes were already inspected and motivated the select_area_balanced_candidates update, so this taxon can no longer serve as independent confirmation.",
+  "scientific_name": "Campanula microdonta",
+  "training_year_max": 2025,
+  "generated_at_utc": "2026-08-15T00:45:45Z",
+  "gbif_provenance": {
+    "query_timestamp_utc": "2026-08-15T00:44:08.835662+00:00",
+    "scientific_name_requested": "Campanula microdonta",
+    "gbif_match_scientific_name": "Campanula microdonta Koidz.",
+    "gbif_usage_key": 5410406,
+    "gbif_match_confidence": 99,
+    "country": "JP",
+    "maximum_training_year": 2025,
+    "gbif_eligible_record_count": 281,
+    "gbif_fetch_cap": 2000,
+    "retrieval_strategy": "sequential",
+    "raw_rows_received": 281,
+    "clean_training_rows": 281,
+    "taxon_metadata": {
+      "usageKey": 5410406,
+      "scientificName": "Campanula microdonta Koidz.",
+      "canonicalName": "Campanula microdonta",
+      "rank": "SPECIES",
+      "status": "ACCEPTED",
+      "confidence": 99,
+      "matchType": "EXACT",
+      "kingdom": "Plantae",
+      "phylum": "Tracheophyta",
+      "order": "Asterales",
+      "family": "Campanulaceae",
+      "genus": "Campanula",
+      "species": "Campanula microdonta",
+      "kingdomKey": 6,
+      "phylumKey": 7707728,
+      "classKey": 220,
+      "orderKey": 414,
+      "familyKey": 8801,
+      "genusKey": 3161935,
+      "speciesKey": 5410406,
+      "class": "Magnoliopsida"
+    }
+  },
+  "island_bounds": {
+    "oshima": [
+      139.3,
+      34.64,
+      139.47,
+      34.82
+    ],
+    "toshima": [
+      139.24,
+      34.49,
+      139.31,
+      34.55
+    ],
+    "niijima": [
+      139.2,
+      34.33,
+      139.31,
+      34.44
+    ],
+    "shikinejima": [
+      139.18,
+      34.3,
+      139.24,
+      34.35
+    ],
+    "kozushima": [
+      139.09,
+      34.17,
+      139.18,
+      34.26
+    ]
+  },
+  "counts": {
+    "training_occurrences": 281,
+    "candidate_pool": 97,
+    "baseline_selected": 5,
+    "detection_clusters": 19
+  },
+  "files": {
+    "gbif_training_occurrences_through_2025.csv": {
+      "sha256": "93728631b4acff7e6ce0dab673924c58fd145428df4c4f92557cf0612aefc9bf",
+      "bytes": 51321
+    },
+    "candidate_pool.csv": {
+      "sha256": "18539d000cb8391f4d6d04116e469a088b9f7539bc30c9aa882b2c72e5aced09",
+      "bytes": 302048
+    },
+    "detection_clusters.csv": {
+      "sha256": "bbc47e187e2682494594f20aff649427bc822c8818ec46d8483328b8b37c6fc0",
+      "bytes": 895
+    }
+  },
+  "dem_files_not_committed": [
+    "gsi_02d7024d473d0b2d.tif",
+    "gsi_4867a2c26d122c44.tif",
+    "gsi_4ea5609c14c17bd8.tif",
+    "gsi_8de1699745175287.tif"
+  ]
+}
