@@ -8,21 +8,23 @@
       "source": "Geospatial Information Authority of Japan (GSI) numerical elevation models",
       "resolution": "1 m / 5 m / 10 m depending on coverage",
       "role": ["elevation", "slope", "roughness", "TPI", "aspect", "coastal exposure proxy"],
-      "status": "active"
+      "status": "active_baseline",
+      "development_result": "Full-island microterrain search reaches 19/19 at 1 km. Terrain-only reproducible frontier retains about 7.5% of the ~100 m universe; a separate aspect+coast ablation reached about 4% and remains the compression target."
     },
     {
       "id": "esa_worldcover_2021",
       "source": "ESA WorldCover 2021 v200",
       "resolution": "10 m",
       "role": ["tree cover", "shrubland", "grassland", "built-up", "bare/sparse vegetation", "water", "local cover composition", "edge/transition structure"],
-      "status": "next_experiment"
+      "status": "negative_ablation_retained",
+      "development_result": "Simple 100/250 m land-cover composition, entropy, and edge-mix distances did not improve the terrain frontier. The best terrain/cover weight was terrain-only; cover-only required about 36% of the grid for 19/19."
     },
     {
       "id": "esa_worldcover_ndvi_2021",
-      "source": "ESA WorldCover annual Sentinel-2 NDVI composite",
+      "source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v2 (p90, p50, p10)",
       "resolution": "10 m",
-      "role": ["vegetation greenness", "within-patch heterogeneity", "vegetation-edge contrast"],
-      "status": "queued_after_landcover"
+      "role": ["vegetation greenness state", "seasonal NDVI amplitude", "within-patch heterogeneity", "NDVI gradient", "vegetation-edge contrast", "terrain-vegetation interaction"],
+      "status": "active_experiment"
     },
     {
       "id": "jaxa_hrlulc",
@@ -36,7 +38,7 @@
       "source": "USGS Landsat Collection 2 Level-2 Surface Temperature",
       "resolution": "Landsat thermal product scale",
       "role": ["surface thermal contrast", "microclimate proxy", "terrain-cover thermal interaction"],
-      "status": "queued_if_landcover_ndvi_leave_unresolved_clusters"
+      "status": "queued_if_ndvi_transition_leaves_residuals"
     }
   ],
   "promotion_rule": {
