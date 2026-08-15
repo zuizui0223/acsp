@@ -7,6 +7,8 @@ on:
       - agent/campanula-discovery-development
     paths:
       - research/campanula_ndvi_refinement.py
+      - research/campanula_ndvi_refinement_fast.py
+      - research/campanula_fast_random.py
       - .github/workflows/campanula-ndvi-refinement.yml
 
 permissions:
@@ -75,7 +77,7 @@ jobs:
 
       - name: Run NDVI ablation and robust-prototype refinement
         run: |
-          python research/campanula_ndvi_refinement.py \
+          python research/campanula_ndvi_refinement_fast.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif \
