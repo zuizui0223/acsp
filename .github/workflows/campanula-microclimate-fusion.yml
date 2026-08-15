@@ -7,6 +7,7 @@ on:
       - agent/campanula-discovery-development
     paths:
       - research/campanula_microclimate_fusion.py
+      - research/campanula_microclimate_fusion_runner.py
       - .github/workflows/campanula-microclimate-fusion.yml
 
 permissions:
@@ -69,7 +70,7 @@ jobs:
 
       - name: Run physical microclimate fusion
         run: |
-          python research/campanula_microclimate_fusion.py \
+          python research/campanula_microclimate_fusion_runner.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
