@@ -1,6 +1,6 @@
 {
-  "protocol_id": "acsp-robust-support-island-random-validation-v1",
-  "status": "frozen_after_campanula_development_before_random_cohort_sampling",
+  "protocol_id": "acsp-robust-support-island-random-validation-v1.1",
+  "status": "availability_amended_before_any_taxon_draw_or_occurrence_retrieval",
   "development_freeze": {
     "path": "research/campanula_development_freeze_v1.json",
     "fingerprint_sha256": "79276d8396f3254975dcd89b519e59d98f18c133097c562716f05a15b8a6ab90",
@@ -18,15 +18,15 @@
       {"island_id": "yakushima", "west": 130.38, "south": 30.2, "east": 130.7, "north": 30.43},
       {"island_id": "amami_oshima", "west": 129.2, "south": 28.05, "east": 129.75, "north": 28.55},
       {"island_id": "tsushima", "west": 129.1, "south": 34.0, "east": 129.55, "north": 34.75},
-      {"island_id": "fukue", "west": 128.55, "south": 32.55, "east": 128.9, "north": 32.8},
+      {"island_id": "sado", "west": 138.15, "south": 37.75, "east": 138.65, "north": 38.38},
       {"island_id": "oki_dogo", "west": 133.1, "south": 36.05, "east": 133.4, "north": 36.35},
       {"island_id": "shodoshima", "west": 134.1, "south": 34.4, "east": 134.42, "north": 34.58},
-      {"island_id": "iki", "west": 129.62, "south": 33.65, "east": 129.82, "north": 33.88},
+      {"island_id": "tanegashima", "west": 130.82, "south": 30.3, "east": 131.08, "north": 30.85},
       {"island_id": "kumejima", "west": 126.65, "south": 26.28, "east": 126.9, "north": 26.43},
       {"island_id": "ishigaki", "west": 124.05, "south": 24.3, "east": 124.35, "north": 24.6},
       {"island_id": "miyakojima", "west": 125.2, "south": 24.65, "east": 125.5, "north": 24.95},
       {"island_id": "rishiri", "west": 141.15, "south": 45.05, "east": 141.35, "north": 45.3},
-      {"island_id": "rebun", "west": 140.95, "south": 45.25, "east": 141.08, "north": 45.48}
+      {"island_id": "okinawa_main", "west": 127.6, "south": 26.05, "east": 128.35, "north": 26.88}
     ]
   },
   "cohort": {
@@ -36,7 +36,8 @@
     "seed": 20260815,
     "minimum_coordinate_records_in_cell": 15,
     "facet_limit": 300,
-    "sampling_rule": "within each island frame, after all historical-development and 192-pair exclusions, split eligible species into two rank-based record-count strata and sample exactly one unused taxon per stratum; taxa are globally unique and are never replaced after declaration"
+    "sampling_rule": "within each island frame, after all historical-development and 192-pair exclusions, split eligible species into two rank-based record-count strata and sample exactly one unused taxon per stratum; taxa are globally unique and are never replaced after declaration",
+    "availability_amendment": "v1 audit found no cohort was drawn because Fukue, Iki, and Rebun lacked two post-exclusion record strata; replaced those cells with Sado, Tanegashima, and Okinawa main using sampling-frame availability only"
   },
   "exclusions": {
     "files": [
@@ -102,5 +103,5 @@
       "robust finite Top-k or patch compression"
     ]
   },
-  "protocol_fingerprint": "6eb1e5e931ad50717b26e160911571af8dcebf92417c403035ba5bc492ccac2b"
+  "protocol_fingerprint": "e62e0e65e490ee6f04ce50dc3009407cb9ed1875fd610f153592104934b77acd"
 }
