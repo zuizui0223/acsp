@@ -3,9 +3,9 @@
   "why": "The 2026 Campanula microdonta field outcomes were already inspected and motivated the select_area_balanced_candidates update, so this taxon can no longer serve as independent confirmation.",
   "scientific_name": "Campanula microdonta",
   "training_year_max": 2025,
-  "generated_at_utc": "2026-08-15T00:45:45Z",
+  "generated_at_utc": "2026-08-15T01:33:26Z",
   "gbif_provenance": {
-    "query_timestamp_utc": "2026-08-15T00:44:08.835662+00:00",
+    "query_timestamp_utc": "2026-08-15T01:31:39.434608+00:00",
     "scientific_name_requested": "Campanula microdonta",
     "gbif_match_scientific_name": "Campanula microdonta Koidz.",
     "gbif_usage_key": 5410406,
@@ -76,6 +76,7 @@
   "counts": {
     "training_occurrences": 281,
     "candidate_pool": 97,
+    "candidate_pool_survey": 102,
     "baseline_selected": 5,
     "detection_clusters": 19
   },
@@ -87,6 +88,10 @@
     "candidate_pool.csv": {
       "sha256": "18539d000cb8391f4d6d04116e469a088b9f7539bc30c9aa882b2c72e5aced09",
       "bytes": 302048
+    },
+    "candidate_pool_survey.csv": {
+      "sha256": "dd3b8b0c1b019fb28fb5f76d0fbc802e3e4d351890ef029588b686ec79f1f792",
+      "bytes": 307532
     },
     "detection_clusters.csv": {
       "sha256": "bbc47e187e2682494594f20aff649427bc822c8818ec46d8483328b8b37c6fc0",
