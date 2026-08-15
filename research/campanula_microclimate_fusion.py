@@ -16,12 +16,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import rasterio
-from affine import Affine
 from pyproj import Transformer
 from scipy.ndimage import distance_transform_edt
 
 from campanula_fast_random import fast_matched_random_success
-from campanula_microterrain_discovery import block_nanmean, block_valid_fraction
+from campanula_microterrain_discovery import terrain_surface
 from campanula_ndvi_transition_discovery import (
     crop_stack,
     ndvi_surfaces,
@@ -73,19 +72,12 @@ def summer_solar_proxy(normal_east, normal_north, normal_up):
 
 
 def dem_physics(path):
-    with rasterio.open(path) as src:
-        arr = src.read(1).astype(float)
-        if src.nodata is not None:
-            arr[arr == src.nodata] = np.nan
-        arr[~np.isfinite(arr)] = np.nan
-        native_m = abs(float(src.transform.a)) * 111_320.0 * math.cos(math.radians(34.5))
-        factor = max(1, int(round(25.0 / max(native_m, 1e-6))))
-        elev = block_nanmean(arr, factor)
-        valid_fraction = block_valid_fraction(np.isfinite(arr), factor)
-        elev[valid_fraction < 0.2] = np.nan
-        transform25 = src.transform * Affine.scale(factor, factor)
-        resolution_m = native_m * factor
-        crs = src.crs
+    """Derive physical terrain proxies from the same 25 m surface as baseline."""
+    base = terrain_surface(path)
+    elev = base["arr"].astype(float, copy=False)
+    transform25 = base["transform"]
+    crs = base["crs"]
+    resolution_m = float(base["res"])
 
     row_grad_south, east_grad = np.gradient(elev, resolution_m, resolution_m)
     north_grad = -row_grad_south
@@ -109,10 +101,14 @@ def dem_physics(path):
 def sample_dem_physics(universe, prototypes, dem_paths):
     grid_rows = []
     proto_rows = []
+    cache = {}
     for island in sorted(set(universe["island"].astype(str))):
         if island not in dem_paths:
             raise RuntimeError(f"missing DEM for {island}")
-        tr, crs, surfaces = dem_physics(dem_paths[island])
+        path = str(dem_paths[island])
+        if path not in cache:
+            cache[path] = dem_physics(dem_paths[island])
+        tr, crs, surfaces = cache[path]
         ug = universe[universe["island"].astype(str).eq(island)]
         pg = prototypes[prototypes["island"].astype(str).eq(island)]
         g = sample_surfaces(tr, crs, surfaces, ug["lon"], ug["lat"])
@@ -157,11 +153,21 @@ def add_public_surfaces(universe, prototypes, ndvi_path, worldcover_path, dem_pa
         p_coast = sample_surfaces(tr, crs, surfaces, prototypes["lon"], prototypes["lat"])
     u_phys, p_phys = sample_dem_physics(universe, prototypes, dem_paths)
     universe = pd.concat(
-        [universe.reset_index(drop=True), u_ndvi.reset_index(drop=True), u_coast.reset_index(drop=True), u_phys.reset_index(drop=True)],
+        [
+            universe.reset_index(drop=True),
+            u_ndvi.reset_index(drop=True),
+            u_coast.reset_index(drop=True),
+            u_phys.reset_index(drop=True),
+        ],
         axis=1,
     )
     prototypes = pd.concat(
-        [prototypes.reset_index(drop=True), p_ndvi.reset_index(drop=True), p_coast.reset_index(drop=True), p_phys.reset_index(drop=True)],
+        [
+            prototypes.reset_index(drop=True),
+            p_ndvi.reset_index(drop=True),
+            p_coast.reset_index(drop=True),
+            p_phys.reset_index(drop=True),
+        ],
         axis=1,
     )
     return universe, prototypes
@@ -169,8 +175,12 @@ def add_public_surfaces(universe, prototypes, ndvi_path, worldcover_path, dem_pa
 
 def add_interactions(frame):
     frame = frame.copy()
-    frame["log_coast"] = np.log1p(pd.to_numeric(frame["coast_distance_m"], errors="coerce").clip(lower=0))
-    frame["solar_x_open"] = frame["phys_solar"] * (1.0 - frame["ndvi_mean100"].clip(-1, 1))
+    frame["log_coast"] = np.log1p(
+        pd.to_numeric(frame["coast_distance_m"], errors="coerce").clip(lower=0)
+    )
+    frame["solar_x_open"] = frame["phys_solar"] * (
+        1.0 - frame["ndvi_mean100"].clip(-1, 1)
+    )
     frame["solar_x_amp"] = frame["phys_solar"] * frame["ndvi_amp"]
     frame["coast_x_amp"] = frame["log_coast"] * frame["ndvi_amp"]
     frame["solar_x_tpi100"] = frame["phys_solar"] * frame["tpi100"]
@@ -203,18 +213,36 @@ def build_scores(universe, prototypes):
         "aspect_coast": ["phys_normal_north", "phys_normal_east", "log_coast"],
         "solar_coast": ["phys_solar", "phys_slope", "log_coast"],
         "terrain_physics": [
-            "phys_normal_north", "phys_normal_east", "phys_solar", "phys_slope",
-            "log_coast", "tpi100", "tpi300", "rough100", "rough300",
+            "phys_normal_north",
+            "phys_normal_east",
+            "phys_solar",
+            "phys_slope",
+            "log_coast",
+            "tpi100",
+            "tpi300",
+            "rough100",
+            "rough300",
         ],
-        "ndvi_plus_physics": FULL_NDVI + [
-            "phys_normal_north", "phys_normal_east", "phys_solar", "log_coast",
-        ],
+        "ndvi_plus_physics": FULL_NDVI
+        + ["phys_normal_north", "phys_normal_east", "phys_solar", "log_coast"],
         "microclimate_compact": [
-            "ndvi_p50", "ndvi_amp", "ndvi_mean100", "phys_solar", "log_coast", "tpi100",
+            "ndvi_p50",
+            "ndvi_amp",
+            "ndvi_mean100",
+            "phys_solar",
+            "log_coast",
+            "tpi100",
         ],
         "microclimate_interaction": [
-            "ndvi_p50", "ndvi_amp", "ndvi_mean100", "phys_solar", "log_coast",
-            "solar_x_open", "solar_x_amp", "coast_x_amp", "solar_x_tpi100",
+            "ndvi_p50",
+            "ndvi_amp",
+            "ndvi_mean100",
+            "phys_solar",
+            "log_coast",
+            "solar_x_open",
+            "solar_x_amp",
+            "coast_x_amp",
+            "solar_x_tpi100",
         ],
     }
     scores = {}
@@ -224,13 +252,14 @@ def build_scores(universe, prototypes):
         scores[f"nearest_{name}"] = distance
         ranks[name] = rank
 
-    _, ndvi_rank = distance_rank(universe, prototypes, FULL_NDVI)
-    scores["nearest_ndvi_state"] = distance_rank(universe, prototypes, FULL_NDVI)[0]
+    ndvi_distance, ndvi_rank = distance_rank(universe, prototypes, FULL_NDVI)
+    scores["nearest_ndvi_state"] = ndvi_distance
     for physics_name in ("aspect_coast", "solar_coast", "terrain_physics"):
         physics_rank = ranks[physics_name]
         for physics_weight in (0.10, 0.20, 0.30, 0.40, 0.50):
             scores[f"rankblend_ndvi_{physics_name}_{physics_weight:.2f}"] = (
-                (1.0 - physics_weight) * ndvi_rank + physics_weight * physics_rank
+                (1.0 - physics_weight) * ndvi_rank
+                + physics_weight * physics_rank
             )
         scores[f"rankand_ndvi_{physics_name}"] = np.maximum(ndvi_rank, physics_rank)
     return scores, feature_sets
@@ -241,18 +270,22 @@ def frontiers(universe, detections, score_families, radius):
     orders = {}
     for name, values in score_families.items():
         order = np.argsort(values, kind="mergesort")
-        count, witness = minimum_count_for_complete_recovery(universe, detections, order, radius)
+        count, witness = minimum_count_for_complete_recovery(
+            universe, detections, order, radius
+        )
         if count is None:
             continue
         result = evaluate(universe.iloc[order[:count]], detections, radius)
-        rows.append({
-            "method": name,
-            "radius_km": float(radius),
-            "candidate_count": int(count),
-            "grid_fraction": float(count / len(universe)),
-            "detection_witness_ranks": [int(x) for x in witness],
-            **result,
-        })
+        rows.append(
+            {
+                "method": name,
+                "radius_km": float(radius),
+                "candidate_count": int(count),
+                "grid_fraction": float(count / len(universe)),
+                "detection_witness_ranks": [int(x) for x in witness],
+                **result,
+            }
+        )
         orders[name] = order
     rows.sort(key=lambda row: (row["candidate_count"], row["max_nearest_km"]))
     return rows, orders
@@ -298,7 +331,12 @@ def main():
         chosen = universe.iloc[order[: row["candidate_count"]]]
         copy = dict(row)
         copy["matched_random"] = fast_matched_random_success(
-            universe, detections, chosen, 1.0, args.random_iterations, args.seed + 1009 * i
+            universe,
+            detections,
+            chosen,
+            1.0,
+            args.random_iterations,
+            args.seed + 1009 * i,
         )
         copy["joint_improvement_vs_ndvi_state"] = bool(
             copy["candidate_count"] < 867
@@ -306,25 +344,34 @@ def main():
         )
         audited.append(copy)
     promoted = [row for row in audited if row["joint_improvement_vs_ndvi_state"]]
-    best_promoted = min(
-        promoted,
-        key=lambda row: (row["candidate_count"], row["matched_random"]["complete_recovery_probability"]),
-    ) if promoted else None
+    best_promoted = (
+        min(
+            promoted,
+            key=lambda row: (
+                row["candidate_count"],
+                row["matched_random"]["complete_recovery_probability"],
+            ),
+        )
+        if promoted
+        else None
+    )
 
     best_1km = results["1.0"][0]
     best_500m = results["0.5"][0]
     export_row = best_promoted or best_1km
     export_order = orders["1.0"][export_row["method"]]
-    export_candidates = universe.iloc[export_order[: export_row["candidate_count"]]].copy()
+    export_candidates = universe.iloc[
+        export_order[: export_row["candidate_count"]]
+    ].copy()
 
     args.out.mkdir(parents=True, exist_ok=True)
     export_candidates.to_csv(args.out / "best_microclimate_candidates.csv", index=False)
-    pd.DataFrame(results["1.0"]).drop(columns=["nearest_km"], errors="ignore").to_csv(
-        args.out / "microclimate_frontier_1km.csv", index=False
-    )
-    pd.DataFrame(results["0.5"]).drop(columns=["nearest_km"], errors="ignore").to_csv(
-        args.out / "microclimate_frontier_500m.csv", index=False
-    )
+    pd.DataFrame(results["1.0"]).drop(
+        columns=["nearest_km"], errors="ignore"
+    ).to_csv(args.out / "microclimate_frontier_1km.csv", index=False)
+    pd.DataFrame(results["0.5"]).drop(
+        columns=["nearest_km"], errors="ignore"
+    ).to_csv(args.out / "microclimate_frontier_500m.csv", index=False)
     report = {
         "status": "development_only",
         "field_coordinates_used_by_generator": False,
@@ -335,7 +382,10 @@ def main():
             "grid_fraction": 867 / len(universe),
             "matched_random_complete_probability": 0.2975,
         },
-        "prior_count_frontier_500m": {"candidate_count": 7853, "grid_fraction": 7853 / len(universe)},
+        "prior_count_frontier_500m": {
+            "candidate_count": 7853,
+            "grid_fraction": 7853 / len(universe),
+        },
         "frontier_1km": results["1.0"],
         "frontier_500m": results["0.5"],
         "random_audited_below_prior_count": audited,
@@ -343,7 +393,9 @@ def main():
         "best_count_only_1km": best_1km,
         "best_count_only_500m": best_500m,
     }
-    (args.out / "microclimate_report.json").write_text(json.dumps(report, indent=2) + "\n")
+    (args.out / "microclimate_report.json").write_text(
+        json.dumps(report, indent=2) + "\n"
+    )
     print(json.dumps(report, indent=2))
 
 
