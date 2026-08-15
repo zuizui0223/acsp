@@ -8,6 +8,7 @@ on:
     paths:
       - research/campanula_persistent_patch.py
       - research/campanula_persistent_patch_fast.py
+      - research/campanula_persistent_patch_hash.py
       - .github/workflows/campanula-persistent-patch.yml
 
 permissions:
@@ -66,7 +67,7 @@ jobs:
 
       - name: Build and evaluate bounded persistent survey patches
         run: |
-          python research/campanula_persistent_patch_fast.py \
+          python research/campanula_persistent_patch_hash.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
