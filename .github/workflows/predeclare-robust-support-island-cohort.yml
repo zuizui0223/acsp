@@ -7,6 +7,7 @@ on:
       - agent/campanula-discovery-development
     paths:
       - research/predeclare_robust_support_island_cohort.py
+      - research/predeclare_robust_support_island_cohort_v11.py
       - validation/robust_support_island_random_validation_protocol.json
       - .github/workflows/predeclare-robust-support-island-cohort.yml
 
@@ -30,7 +31,7 @@ jobs:
 
       - name: Audit all island frames and draw only if every frame is sufficient
         run: |
-          python research/predeclare_robust_support_island_cohort.py \
+          python research/predeclare_robust_support_island_cohort_v11.py \
             --protocol validation/robust_support_island_random_validation_protocol.json \
             --output robust-support-island-cohort
 
@@ -43,7 +44,7 @@ jobs:
           root = Path('robust-support-island-cohort')
           manifest = json.loads((root / 'cohort_manifest.json').read_text())
           audit = pd.read_csv(root / 'sampling_frame_audit.csv')
-          assert manifest['protocol_fingerprint'] == '6eb1e5e931ad50717b26e160911571af8dcebf92417c403035ba5bc492ccac2b'
+          assert manifest['protocol_fingerprint'] == 'e62e0e65e490ee6f04ce50dc3009407cb9ed1875fd610f153592104934b77acd'
           assert manifest['occurrence_coordinates_fetched'] is False
           assert manifest['outcomes_inspected'] is False if 'outcomes_inspected' in manifest else manifest['heldout_recovery_inspected'] is False
           if manifest['status'] == 'ready_frozen_before_occurrence_retrieval':
@@ -60,7 +61,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: robust-support-island-cohort
+          name: robust-support-island-cohort-v11
           path: robust-support-island-cohort
           if-no-files-found: error
           retention-days: 90
