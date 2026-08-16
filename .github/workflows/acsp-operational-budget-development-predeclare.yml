@@ -1,0 +1,61 @@
+name: ACSP operational-budget development cohort predeclaration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - acsp/benchmarking.py
+      - research/predeclare_acsp_operational_budget_development_cohort.py
+      - validation/acsp_operational_budget_development_cohort_protocol.json
+      - validation/acsp_adaptive_cross_island_confirmation_20260816/predeclared_taxon_island_pairs.csv
+      - .github/workflows/acsp-operational-budget-development-predeclare.yml
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  predeclare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install sampling dependencies
+        run: |
+          python -m pip install -e .
+          python -m pip install pandas numpy requests
+      - name: Sample development taxon identities only
+        run: |
+          python research/predeclare_acsp_operational_budget_development_cohort.py \
+            --protocol validation/acsp_operational_budget_development_cohort_protocol.json \
+            --output operational-budget-development-cohort
+      - name: Audit separation boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('operational-budget-development-cohort/cohort_manifest.json').read_text())
+          assert m['protocol_fingerprint']=='00916d8eb5755c4bea19a415615c9b46fdb69804b22e97146f03565692d73b79'
+          assert m['selected_taxon_occurrence_coordinates_fetched'] is False
+          assert m['heldout_outcomes_inspected'] is False
+          if m['status']=='development_cohort_frozen_before_occurrence_retrieval':
+              assert m['declared_pairs']==24
+              assert m['unique_taxa']==24
+              assert m['islands']==8
+              assert m['failed_confirmation_24_reused'] is False
+              assert m['frozen_192_consumed'] is False
+          print(json.dumps(m,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-operational-budget-development-predeclared-cohort
+          path: operational-budget-development-cohort/
+          if-no-files-found: error
+          retention-days: 90
