@@ -1,0 +1,20 @@
+{
+  "protocol_id": "izu-strong-coverage-support-sweep-development-v1",
+  "status": "development_only",
+  "cohort": "16 inspected Izu vascular-plant taxa",
+  "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+  "budgets": [5, 10, 20, 40],
+  "survey_radius_km": 1.0,
+  "selector": "greedy maximum newly covered public land-grid cells; support quantile constrains eligible centers only",
+  "coverage_only_control": "q=1.00 at the identical budget/radius",
+  "decision": {
+    "retain_ndvi_support": "at least one q<1 / K cell has mean difference >0, taxon-bootstrap lower95>0, and sign-flip p<0.05 versus q=1 maximum coverage",
+    "drop_ndvi_support": "no q<1 cell passes the stable-positive gate; then geographic/logistical set coverage, not occurrence-conditioned NDVI, is the transferable signal in this cohort"
+  },
+  "hard_boundaries": [
+    "No new environmental variables or weight tuning in this sweep.",
+    "Do not call the inspected 16 taxa confirmation.",
+    "Do not consume frozen 192 Practical Core taxa.",
+    "Retain all q/K cells, including negative results."
+  ]
+}
