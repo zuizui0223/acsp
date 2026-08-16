@@ -1,7 +1,7 @@
 {
-  "schema_version": "acsp-algorithm-component-ledger-v1",
+  "schema_version": "acsp-algorithm-component-ledger-v2",
   "status": "development_evidence_ledger",
-  "purpose": "Prevent rejected ideas from being silently reintroduced and force new development to target an unresolved algorithm layer.",
+  "purpose": "Prevent rejected ideas from being silently reintroduced and force new development to target one unresolved algorithm layer.",
   "current_architecture": [
     "domain_and_information_gate",
     "occurrence_conditioned_ecological_support",
@@ -57,7 +57,7 @@
       "component": "fixed_q10_as_universal_threshold",
       "status": "not_promoted",
       "role": "support_policy",
-      "evidence": "q=0.10 is a development reference only; the same five-island frame is exhausted for a large untouched confirmation and fixed parameters are not assumed transferable."
+      "evidence": "q=0.10 remains the strongest low-budget development reference but is not assumed transferable."
     },
     {
       "component": "training_prototype_loo_environmental_recovery_selector",
@@ -67,11 +67,25 @@
       "sources": ["validation/izu_microenvironment_generalization_development/training_stability_adaptive_support_summary.json"]
     },
     {
-      "component": "fully_nested_inner_spatial_policy_selection",
-      "status": "active_experiment",
+      "component": "fully_nested_single_envelope_q_selection",
+      "status": "rejected",
       "role": "support_policy_selection",
-      "rule": "choose support breadth only from inner spatial held-out survey-set recovery within each outer training fold; outer held-out coordinates remain invisible",
-      "sources": ["validation/izu_microenvironment_generalization_development/nested_training_policy_selection_protocol.json"]
+      "evidence": "Strict paired inner spatial selection was leakage-safe but did not generalize: K5 lift over global coverage was only +0.00896 with CI crossing zero; K10 and K20 were negative, and the method did not recover fixed-q10 performance.",
+      "sources": ["validation/izu_microenvironment_generalization_development/nested_training_policy_selection_v2_summary.json"]
+    },
+    {
+      "component": "equal_opportunity_mst_multimodal_support",
+      "status": "rejected",
+      "role": "ecological_support_representation",
+      "evidence": "MST gaps detected multiple modes in 42/80 outer folds, but equal mode opportunity degraded fixed q10 by about 0.037, 0.056 and 0.056 recall at K5/K10/K20 respectively and did not improve nested selection over global coverage.",
+      "sources": ["validation/izu_microenvironment_generalization_development/multimodal_support_summary.json"]
+    },
+    {
+      "component": "nearest_prototype_support_scale",
+      "status": "active_experiment",
+      "role": "ecological_support_representation",
+      "rule": "keep the same NDVI-state variables, support-area controls, q candidates, K, radius, spatial folds and max-coverage selector; test whether support should be based on one versus multiple nearest training prototypes using fully nested inner spatial selection",
+      "rationale": "single global width adaptation failed and equal mode balancing over-corrected; the next unresolved question is how much local prototype agreement a candidate needs."
     },
     {
       "component": "campanula_microclimate_fixed_correction",
@@ -127,10 +141,10 @@
     },
     {
       "component": "domain_gate",
-      "status": "required_unresolved",
+      "status": "implemented_research_layer_pending_external_freeze",
       "role": "applicability",
-      "rule": "infer from training data whether the terrestrial support/coverage policy is applicable; do not silently apply a land-grid policy to marine or aquatic taxa",
-      "evidence": "Historical mixed-taxon failures and the predeclared outside-Izu cohort audit both expose domain mismatch as a separate problem."
+      "rule": "infer from training data whether the terrestrial support/coverage policy is applicable; training land support can override coarse taxonomy and inapplicable domains return no terrestrial policy",
+      "sources": ["research/acsp_training_domain_gate.py", "validation/robust_support_island_cohort_domain_audit_20260816.md"]
     },
     {
       "component": "survey_budget_as_external_input",
@@ -150,12 +164,18 @@
       "status": "retained",
       "role": "validation",
       "rule": "development choices use inner or development data only; new taxa/regions remain untouched until the full procedure is frozen; inspected cohorts are never recycled as confirmation."
+    },
+    {
+      "component": "exact_sparse_max_coverage",
+      "status": "retained_computational_optimization",
+      "role": "implementation",
+      "evidence": "The sparse selector passed exact equivalence tests and produced byte-identical strict nested v2 scientific artifacts to the reference selector while reducing computational cost."
     }
   ],
   "unresolved_layers_in_priority_order": [
-    "training_only_support_policy_selection",
-    "domain_gate",
-    "multi_modal_or_scale_adaptive_support_if_nested_policy_selection_fails",
+    "nearest_prototype_support_scale",
+    "support_spatial_scale_if_knn_scale_fails",
+    "domain_gate_external_integration",
     "route_or_equal_area_budget_output_after_ecological_support_is_stable",
     "cross_taxon_cross_island_untouched_confirmation"
   ],
