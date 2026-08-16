@@ -1,0 +1,42 @@
+{
+  "status": "development_only",
+  "run_id": 31947725711,
+  "workflow_head_sha": "d7961c0d9e16a53e3c06d42069efa8e3bfd57bbb",
+  "artifact_id": 9263874520,
+  "artifact_digest": "sha256:a6758ae6f12b532fcfef62af3b0308723de30b3151526dbcda6d08dba2a8d31f",
+  "protocol_id": "izu-multimodal-ecological-support-development-v1",
+  "taxa": 16,
+  "failures": [],
+  "outer_component_count_distribution": {"1": 38, "2": 24, "3": 17, "4": 1},
+  "selected_q_counts": {
+    "K5": {"0.05": 4, "0.10": 8, "0.25": 15, "0.50": 6, "0.75": 1, "1.00": 46},
+    "K10": {"1.00": 43, "other_q_total": 37},
+    "K20": {"1.00": 33, "other_q_total": 47}
+  },
+  "method_means": {
+    "K5": {"multimodal_nested_selected": 0.13416666666666666, "multimodal_fixed_q10": 0.12583333333333332, "single_fixed_q10": 0.1625, "global_max_coverage": 0.1325},
+    "K10": {"multimodal_nested_selected": 0.215, "multimodal_fixed_q10": 0.15270833333333333, "single_fixed_q10": 0.20854166666666665, "global_max_coverage": 0.216875},
+    "K20": {"multimodal_nested_selected": 0.35875, "multimodal_fixed_q10": 0.3572916666666667, "single_fixed_q10": 0.41333333333333333, "global_max_coverage": 0.3910416666666667}
+  },
+  "multimodal_nested_vs_global": {
+    "K5": {"difference": 0.001666666666666667, "bootstrap_95ci": [-0.009791666666666667, 0.013135416666666665], "sign_flip_p": 0.474, "passes": false},
+    "K10": {"difference": -0.001875, "passes": false},
+    "K20": {"difference": -0.03229166666666667, "passes": false}
+  },
+  "multimodal_nested_vs_single_fixed_q10": {
+    "K5": {"difference": -0.028333333333333335, "bootstrap_95ci": [-0.05791666666666667, -0.004166666666666667], "passes": false},
+    "K10": {"difference": 0.006458333333333333, "passes": false},
+    "K20": {"difference": -0.05458333333333334, "bootstrap_95ci": [-0.10979166666666666, 0.000625], "passes": false}
+  },
+  "multimodal_fixed_q10_vs_single_fixed_q10": {
+    "K5": {"difference": -0.036666666666666674, "bootstrap_95ci": [-0.065, -0.012916666666666667], "passes": false},
+    "K10": {"difference": -0.05583333333333333, "bootstrap_95ci": [-0.08479166666666667, -0.02875], "passes": false},
+    "K20": {"difference": -0.05604166666666667, "bootstrap_95ci": [-0.10104166666666667, -0.018958333333333334], "passes": false}
+  },
+  "decision": "reject equal-opportunity MST multimodal balancing in the current NDVI-state support representation. Multimodality was actually detected in 42/80 outer folds, but forcing equal search opportunity across inferred modes consistently degraded the fixed-q10 reference and did not improve the nested policy over global maximum coverage.",
+  "next_allowed_change": "support scale only: keep environmental variables, q candidates, K, radius, spatial folds and set-level optimizer fixed; test whether the support distance should require agreement with one versus multiple nearest training prototypes.",
+  "outer_heldout_coordinates_used_to_select_q_or_modes": false,
+  "campanula_field_coordinates_used": false,
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}
