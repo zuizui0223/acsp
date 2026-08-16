@@ -26,7 +26,7 @@ def get_json(
 
     Retry only conditions that can plausibly recover without changing the
     scientific request: rate limiting, 5xx responses, timeouts, connection
-    failures, and a transient malformed/empty JSON response. Permanent 4xx
+    failures, and a transient malformed/empty JSON response. Permanent HTTP
     errors are raised immediately so protocol mistakes are not hidden.
     """
     last_error: Exception | None = None
@@ -34,10 +34,10 @@ def get_json(
     for attempt in range(total_attempts):
         try:
             response = requests.get(url, params=params, timeout=timeout)
-            if response.status_code in _TRANSIENT_HTTP_STATUS:
-                response.raise_for_status()
-            elif response.status_code >= 400:
-                response.raise_for_status()
+            # Preserve the original helper contract (and simple response mocks):
+            # let requests decide whether the response is an HTTP error, then
+            # inspect the concrete HTTPError only to decide retry eligibility.
+            response.raise_for_status()
             return response.json()
         except requests.HTTPError as exc:
             status = getattr(exc.response, "status_code", None)
