@@ -1,0 +1,70 @@
+name: Izu cross-taxon jackknife support gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - research/consolidate_cross_taxon_support_gate.py
+      - research/test_cross_taxon_support_gate.py
+      - validation/izu_microenvironment_generalization_development/cross_taxon_support_gate_protocol.json
+      - .github/workflows/izu-cross-taxon-support-gate.yml
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -e .
+      - name: Test cross-taxon gate contracts
+        run: python -m unittest research/test_cross_taxon_support_gate.py
+      - name: Download frozen 16-taxon strong-sweep artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: izu-strong-coverage-support-sweep
+          path: strong-sweep
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31936621332
+      - name: Verify frozen source artifact file
+        run: |
+          test -s strong-sweep/strong_sweep_taxon_results.csv
+          echo 'b36b7d12dd79ab83fd85df8e13195bcb83fca1cd5e61749102503819c0b1af23  strong-sweep/strong_sweep_taxon_results.csv' | sha256sum -c -
+      - name: Run taxon-jackknife consolidation
+        run: |
+          python research/consolidate_cross_taxon_support_gate.py \
+            --protocol validation/izu_microenvironment_generalization_development/cross_taxon_support_gate_protocol.json \
+            --taxon-results strong-sweep/strong_sweep_taxon_results.csv \
+            --out cross-taxon-gate-results
+      - name: Audit development boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('cross-taxon-gate-results/cross_taxon_support_gate_summary.json').read_text())
+          assert s['status']=='development_only'
+          assert s['confirmation_claim'] is False
+          assert s['campanula_field_coordinates_used'] is False
+          assert s['frozen_192_consumed'] is False
+          assert s['taxa']==16
+          print(json.dumps(s, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: izu-cross-taxon-support-gate-development
+          path: cross-taxon-gate-results/
+          if-no-files-found: error
+          retention-days: 90
