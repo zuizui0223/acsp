@@ -57,6 +57,7 @@ LOCATIONS = DATA_DIR / "locations_2026.csv"
 SCORE_COL = "component_local_habitat_score"
 CLUSTER_RADIUS_M = 500.0
 PRIMARY_RADIUS_KM = 1.0
+NOVELTY_KM = 1.0
 REPORT_RADII_KM = (0.5, 1.0, 2.0, 5.0, 10.0)
 
 Strategy = Callable[[pd.DataFrame, int, float], pd.DataFrame]
@@ -111,6 +112,54 @@ def load_pool(cache_dir: Path, filename: str = "candidate_pool.csv") -> pd.DataF
         raise SystemExit(f"{path} has no {SCORE_COL} column.")
     pool["site_id"] = pool["site_id"].astype(str)
     return pool
+
+
+def load_training_occurrences(cache_dir: Path) -> pd.DataFrame:
+    path = cache_dir / "gbif_training_occurrences_through_2025.csv"
+    if not path.exists():
+        raise SystemExit(f"Missing {path}. Build the cache first.")
+    return pd.read_csv(path)
+
+
+def split_clusters_by_novelty(
+    clusters: pd.DataFrame,
+    occurrences: pd.DataFrame,
+    *,
+    novelty_km: float = NOVELTY_KM,
+) -> pd.DataFrame:
+    """Mark which detections were already represented in the training records.
+
+    Many 2026 field points sit almost on top of an existing GBIF record. The
+    candidate generator is built from those records, so recovering them says
+    little: the interesting question is whether the tool reaches the detections
+    that were *not* already known. This adds `distance_to_training_km` and a
+    `novel` flag so the two can be scored separately.
+    """
+    import numpy as np
+
+    from acsp.field_validation import haversine_distance_m
+
+    lat_col = "_latitude" if "_latitude" in occurrences.columns else "latitude"
+    lon_col = "_longitude" if "_longitude" in occurrences.columns else "longitude"
+    lats = pd.to_numeric(occurrences[lat_col], errors="coerce").to_numpy(dtype=float)
+    lons = pd.to_numeric(occurrences[lon_col], errors="coerce").to_numpy(dtype=float)
+    out = clusters.copy()
+    out["distance_to_training_km"] = [
+        haversine_distance_m(float(row.latitude), float(row.longitude), lats, lons).min() / 1000.0
+        for row in out.itertuples()
+    ]
+    out["novel"] = out["distance_to_training_km"] > float(novelty_km)
+    return out
+
+
+def select_targets(clusters: pd.DataFrame, targets: str) -> pd.DataFrame:
+    if targets == "all":
+        return clusters
+    wanted = targets == "novel"
+    chosen = clusters[clusters["novel"] == wanted].reset_index(drop=True)
+    if chosen.empty:
+        raise SystemExit(f"No {targets} detection clusters at this novelty threshold.")
+    return chosen
 
 
 def load_detection_clusters_from_frame(rows: pd.DataFrame) -> pd.DataFrame:
@@ -189,6 +238,16 @@ def parse_args() -> argparse.Namespace:
         "actually be handed. dense = survey pool with the generator density caps "
         "raised. Only the validation pool can support a validation claim.",
     )
+    parser.add_argument(
+        "--targets",
+        choices=("novel", "known", "all"),
+        default="novel",
+        help="Which detection clusters to score. novel = further than --novelty-km "
+        "from every training record, i.e. the ones the tool had to discover rather "
+        "than already hold. Defaults to novel because recovering an already-known "
+        "record measures the generator's input, not its reach.",
+    )
+    parser.add_argument("--novelty-km", type=float, default=NOVELTY_KM)
     parser.add_argument("--locations", type=Path, default=LOCATIONS)
     parser.add_argument("--json-out", type=Path, default=None)
     return parser.parse_args()
@@ -204,7 +263,13 @@ def main() -> None:
             "dense": "candidate_pool_dense.csv",
         }[args.pool],
     )
-    clusters = load_detection_clusters(args.locations)
+    clusters = split_clusters_by_novelty(
+        load_detection_clusters(args.locations),
+        load_training_occurrences(args.cache_dir),
+        novelty_km=args.novelty_km,
+    )
+    n_all = len(clusters)
+    clusters = select_targets(clusters, args.targets)
     selected = STRATEGIES[args.strategy](pool, args.top_k, args.evidence_weight)
 
     result = evaluate(pool, selected, clusters, iterations=args.iterations, seed=args.seed)
@@ -216,7 +281,7 @@ def main() -> None:
     print(f"budget              : {args.top_k}")
     print(f"evidence weight     : {args.evidence_weight}")
     print(f"candidate pool      : {len(pool)} rows")
-    print(f"detection clusters  : {len(clusters)} at {CLUSTER_RADIUS_M:.0f} m")
+    print(f"detection clusters  : {len(clusters)} of {n_all} ({args.targets}, novelty {args.novelty_km:g} km)")
     print(f"primary target      : {PRIMARY_RADIUS_KM:g} km recall\n")
 
     merged = summary.merge(benchmark, on="radius_km", how="left")
@@ -252,6 +317,7 @@ def main() -> None:
                     "evidence_weight": args.evidence_weight,
                     "pool_size": int(len(pool)),
                     "n_detection_clusters": int(len(clusters)),
+                    "targets": args.targets,
                     "primary_radius_km": PRIMARY_RADIUS_KM,
                     "summary": merged.to_dict(orient="records"),
                     "per_area": misses.to_dict(orient="records"),
