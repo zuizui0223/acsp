@@ -35,19 +35,18 @@ def projected_xy(frame: pd.DataFrame) -> np.ndarray:
     )
 
 
-def farthest_first(frame: pd.DataFrame, k: int) -> pd.DataFrame:
-    """Deterministic geographic maximin selection from an eligible mask."""
-    if frame.empty or k <= 0:
+def farthest_order(frame: pd.DataFrame, max_k: int) -> pd.DataFrame:
+    """Return one deterministic maximin order; smaller budgets use prefixes."""
+    if frame.empty or max_k <= 0:
         return frame.iloc[0:0].copy()
-    if len(frame) <= k:
-        return frame.copy().reset_index(drop=True)
+    max_k = min(int(max_k), len(frame))
     xy = projected_xy(frame)
     centroid = xy.mean(axis=0)
     first = int(np.argmin(np.square(xy - centroid).sum(axis=1)))
     selected = [first]
     min_d2 = np.square(xy - xy[first]).sum(axis=1)
     min_d2[first] = -1.0
-    while len(selected) < k:
+    while len(selected) < max_k:
         nxt = int(np.argmax(min_d2))
         selected.append(nxt)
         d2 = np.square(xy - xy[nxt]).sum(axis=1)
@@ -94,6 +93,7 @@ def main() -> None:
     quantiles = [float(value) for value in protocol["support_quantiles"]]
     budgets = [int(value) for value in protocol["budgets"]]
     radii = [float(value) for value in protocol["recovery_radii_km"]]
+    max_budget = max(budgets)
 
     dem_map: dict[str, Path] = {}
     for spec in args.dem:
@@ -159,10 +159,10 @@ def main() -> None:
                         eligible = ndvi_grid.loc[support_rank <= q + 1e-12].copy()
                         if eligible.empty:
                             continue
+                        ordered = farthest_order(eligible, max_budget)
                         for budget in budgets:
-                            if len(eligible) < budget:
-                                continue
-                            selections[(q, budget)] = farthest_first(eligible, budget)
+                            if len(ordered) >= budget:
+                                selections[(q, budget)] = ordered.iloc[:budget].copy()
 
                     # Held-out coordinates become visible only after every q/K set is frozen.
                     held = fold["held"].rename(columns={"lat": "latitude", "lon": "longitude"})
