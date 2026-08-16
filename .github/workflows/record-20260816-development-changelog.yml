@@ -1,0 +1,93 @@
+name: Record 2026-08-16 ACSP development changelog
+
+on:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - .github/workflows/record-20260816-development-changelog.yml
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/microenvironment-generalization-development
+          fetch-depth: 0
+      - name: Prepend consolidated development entry
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('CHANGELOG_AI.md')
+          text = path.read_text(encoding='utf-8')
+          marker = '## 2026-08-16 - ChatGPT (OpenAI) - Adaptive survey architecture convergence'
+          if marker in text:
+              print('entry already present')
+              raise SystemExit(0)
+          entry = '''## 2026-08-16 - ChatGPT (OpenAI) - Adaptive survey architecture convergence
+
+Changed files:
+- research/CAMPANULA_DISCOVERY_DEVELOPMENT.md and Campanula microenvironment development scripts/workflows
+- validation/izu_island_microenvironment_random_taxa_20260816/*
+- validation/izu_microenvironment_generalization_development/*
+- research/develop_izu_* microenvironment/generalization scripts
+- research/acsp_algorithm_component_ledger.json
+- research/ACSP_ADAPTIVE_SURVEY_ARCHITECTURE.md
+- research/acsp_training_domain_gate.py and tests
+- research/develop_izu_nested_training_policy_selection_v2.py and tests
+- .github/workflows/izu-* development workflows
+- CHANGELOG_AI.md
+
+Summary:
+- Treated Campanula microdonta explicitly as a development instrument rather than independent validation and removed the old candidate-universe ceiling by full-island search.
+- Retained negative ablations instead of hiding them: static WorldCover composition, current NDVI transition/gradient representation, mandatory persistent-patch filtering, fixed Campanula microclimate correction, occurrence-count island allocation, and independent environmental Top-cell ranking did not generalize sufficiently.
+- The frozen Campanula-derived 0.90 NDVI + 0.10 microclimate ranking failed a predeclared unseen 16-taxon Izu plant transfer (0.7192 recall versus 0.8608 same-allocation random), so those 16 taxa were permanently moved to generalization-development status.
+- Diagnosed survey-budget saturation: 793 points with a 1 km recovery buffer covered most of the island grid and made random recall about 0.86, showing that candidate count alone is not a field-survey budget.
+- Reframed the main algorithm as occurrence-conditioned ecological support followed by set-level maximum geographic coverage under an external survey budget, rather than independent cell ranking.
+- Under a strong geometry-only comparator, only q=0.10 / K=5 / 1 km retained a provisional within-island NDVI-support signal (+0.030 recall; bootstrap lower bound >0; sign-flip p<0.05). NDVI between-island allocation and training-occurrence-count allocation were rejected.
+- Tested and rejected prototype-LOO environmental reconstruction as an adaptive support-width selector; it reverted to q=1 in 60/80 folds and lost the K=5 q10 advantage. This established that the inner objective must match downstream survey-set recovery.
+- Added fully nested training-only support-policy selection, then tightened it before inspecting v1 output so every q/K comparison uses identical complete inner spatial folds. Outer-held-out coordinates remain invisible during q selection.
+- Added an evidence ledger and architecture document that classify components as retained, conditional, active, or rejected and require every future experiment to target one unresolved layer instead of reintroducing old complexity.
+- Added a training-only domain gate because the prior kingdom-first surface inference can misclassify aquatic plants as terrestrial. Training land support can now override broad taxonomy in the research method, and inapplicable domains are rejected rather than forced onto a terrestrial grid.
+- Audited the predeclared outside-Izu 24-pair cohort: occurrence outcomes remain untouched, but its taxon identities exposed aquatic taxa and directly motivated the domain gate, so it is no longer eligible as independent confirmation of that gate.
+
+Features preserved:
+- Production ACSP behavior, optional SDM/SSDM workflows, maps, exports, and frozen Practical Core are unchanged by this development line.
+- The frozen 192-pair Practical Core confirmation cohort remains untouched and unconsumed.
+- Campanula field coordinates never enter the inference-time candidate generator or the new cross-taxon support-policy selectors.
+
+Validation / current gates:
+- Campanula development reaches all 19/19 field clusters at 1 km with outcome-blind candidate generation, but Campanula is not confirmation evidence.
+- The 16-taxon frozen transfer failure and all subsequent negative development cells are retained in repository artifacts.
+- Training-stability adaptive-support workflow 31944106155 completed green and was scientifically rejected as the support-width selector.
+- Strict fully nested paired support-policy selection is the active experiment; no external confirmation cohort will be consumed until the complete method is frozen.
+
+Known risks / TODO:
+- Support-policy selection is still unresolved until strict nested development completes.
+- If nested q selection fails, the next permitted change is ecological-support representation (multi-modal or scale-adaptive support), not retuning K/r/q on outer outcomes.
+- The domain gate is research-layer infrastructure and still needs prospective integration with a newly frozen external protocol.
+- Route/equal-area budget output should be developed only after ecological support and set selection are stable.
+- A new cross-taxon/cross-island confirmation cohort must be sampled after the full procedure is frozen; inspected development cohorts must not be recycled as confirmation.
+
+'''
+          prefix = '# AI Change Log\n\n'
+          if text.startswith(prefix):
+              text = prefix + entry + text[len(prefix):]
+          else:
+              text = entry + text
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit changelog entry
+        run: |
+          if git diff --quiet -- CHANGELOG_AI.md; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add CHANGELOG_AI.md
+          git commit -m 'Document adaptive survey development line'
+          git push origin HEAD:agent/microenvironment-generalization-development
