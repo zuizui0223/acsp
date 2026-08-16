@@ -18,7 +18,7 @@ import rasterio
 from campanula_ndvi_transition_discovery import ndvi_surfaces, sample_surfaces
 from campanula_worldcover_discovery import (
     evaluate,
-    matched_random_success,
+    haversine_km,
     minimum_count_for_complete_recovery,
     nearest_environment,
     robust_fit,
@@ -54,6 +54,53 @@ def within_group_percentile(values: np.ndarray) -> np.ndarray:
     if finite.any():
         out[finite.to_numpy()] = s[finite].rank(method="average", pct=True).to_numpy(float)
     return out
+
+
+def fast_matched_random_success(
+    universe: pd.DataFrame,
+    detections: pd.DataFrame,
+    selected: pd.DataFrame,
+    radius_km: float,
+    iterations: int,
+    seed: int,
+) -> dict:
+    """Same-island matched random audit with a precomputed detection-coverage matrix."""
+    rng = np.random.default_rng(seed)
+    per_island = selected.groupby("island").size().to_dict()
+    n_detection = len(detections)
+    matrices: dict[str, np.ndarray] = {}
+    for island, frame in universe.groupby("island"):
+        frame = frame.reset_index(drop=True)
+        matrix = np.zeros((len(frame), n_detection), dtype=bool)
+        for j, point in detections.reset_index(drop=True).iterrows():
+            if str(point["island"]) != str(island):
+                continue
+            d = haversine_km(
+                float(point["latitude"]),
+                float(point["longitude"]),
+                frame["lat"].to_numpy(),
+                frame["lon"].to_numpy(),
+            )
+            matrix[:, j] = d <= radius_km
+        matrices[str(island)] = matrix
+
+    recovered = np.empty(iterations, dtype=int)
+    for iteration in range(iterations):
+        covered = np.zeros(n_detection, dtype=bool)
+        for island, count in per_island.items():
+            matrix = matrices[str(island)]
+            n = min(int(count), len(matrix))
+            if n:
+                draw = rng.choice(len(matrix), size=n, replace=False)
+                covered |= matrix[draw].any(axis=0)
+        recovered[iteration] = int(covered.sum())
+    return {
+        "iterations": int(iterations),
+        "complete_recovery_probability": float(np.mean(recovered == n_detection)),
+        "mean_recovered": float(recovered.mean()),
+        "q05_recovered": float(np.quantile(recovered, 0.05)),
+        "q95_recovered": float(np.quantile(recovered, 0.95)),
+    }
 
 
 def main() -> None:
@@ -143,7 +190,7 @@ def main() -> None:
     experiments.sort(key=lambda x: (x["candidate_count"], x["max_nearest_km"]))
     best = dict(experiments[0])
     chosen = candidates[best["score"]]
-    best["matched_random"] = matched_random_success(
+    best["matched_random"] = fast_matched_random_success(
         universe,
         detections,
         chosen,
