@@ -38,11 +38,7 @@ def build_geometry(grid: pd.DataFrame) -> dict[str, dict]:
                 frame["lat"].to_numpy(float) * 111.320,
             ]
         )
-        geometry[str(island)] = {
-            "idx": idx,
-            "xy": xy,
-            "tree": cKDTree(xy),
-        }
+        geometry[str(island)] = {"idx": idx, "xy": xy, "tree": cKDTree(xy)}
     return geometry
 
 
@@ -140,6 +136,14 @@ def main() -> None:
 
     grid = bench.build_public_grid(dem_map)
     geometry = build_geometry(grid)
+    # q=1 coverage-only is geometry-only and is identical for every taxon/fold.
+    coverage_selected = greedy_max_coverage(
+        grid,
+        geometry,
+        np.ones(len(grid), dtype=bool),
+        budget=budget,
+        radius_km=radius,
+    )
     fold_rows = []
     failures = []
 
@@ -192,13 +196,6 @@ def main() -> None:
                         budget=budget,
                         radius_km=radius,
                     )
-                    coverage_selected = greedy_max_coverage(
-                        grid,
-                        geometry,
-                        np.ones(len(grid), dtype=bool),
-                        budget=budget,
-                        radius_km=radius,
-                    )
 
                     # Held-out coordinates are inspected only after both deterministic sets are frozen.
                     held = fold["held"].rename(columns={"lat": "latitude", "lon": "longitude"})
@@ -240,12 +237,8 @@ def main() -> None:
             folds=("repeat", "count"),
         )
     )
-    support_vs_coverage = infer(
-        taxon, "support_max_coverage_recall", "coverage_only_recall", 20260816
-    )
-    support_vs_random = infer(
-        taxon, "support_max_coverage_recall", "matched_random_recall", 20260818
-    )
+    support_vs_coverage = infer(taxon, "support_max_coverage_recall", "coverage_only_recall", 20260816)
+    support_vs_random = infer(taxon, "support_max_coverage_recall", "matched_random_recall", 20260818)
     summary = {
         "status": "development_only",
         "taxa": int(len(taxon)),
