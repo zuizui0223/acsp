@@ -1,0 +1,33 @@
+{
+  "protocol_id": "izu-low-budget-allocation-decomposition-v1",
+  "status": "development_only",
+  "cohort": "16 inspected Izu vascular-plant taxa",
+  "target": {
+    "support_quantile": 0.10,
+    "budget": 5,
+    "radius_km": 1.0
+  },
+  "methods": [
+    "q10_support_max_coverage",
+    "same_island_allocation_max_coverage_without_environment",
+    "equal_one_per_island",
+    "global_max_coverage",
+    "training_occurrence_allocation_alpha_0",
+    "training_occurrence_allocation_alpha_0.5",
+    "training_occurrence_allocation_alpha_1",
+    "training_occurrence_allocation_alpha_2",
+    "training_occurrence_allocation_alpha_4"
+  ],
+  "question": "Does the only stable q<1 signal from the strong sweep reflect within-island NDVI targeting, an island-allocation effect, or a simpler occurrence-conditioned allocation rule?",
+  "decision": {
+    "within_island_ndvi": "q10 support must beat same-allocation environment-free coverage with bootstrap lower95>0 and sign-flip p<0.05",
+    "ndvi_allocation": "q10 support may retain between-island environmental value only if it beats equal-one-per-island and the best training-occurrence allocation with the same stability gate",
+    "occurrence_policy": "a training-occurrence allocation survives only if it beats global max coverage with bootstrap lower95>0 and sign-flip p<0.05"
+  },
+  "hard_boundaries": [
+    "No search over q/K/r in this decomposition.",
+    "No within-island environmental ranking beyond the already frozen q10 eligibility mask.",
+    "16 taxa remain development-only.",
+    "Frozen 192 Practical Core cohort remains untouched."
+  ]
+}
