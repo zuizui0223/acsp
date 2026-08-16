@@ -1,0 +1,20 @@
+Izu microenvironment unseen-taxon predeclaration provenance
+
+Final sampling-only workflow run: 31935408280
+Workflow head SHA: dde08060c3e59017f304ff8298333d74c895dd04
+Artifact ID: 9260485691
+Artifact digest: sha256:4aee186a7089b93ec3c8db9128db56b5d03108081ca3f5f0ba490358889600f5
+Protocol fingerprint: 3a5baa065b83e95ecc1da6252a79e482ba0c92665e371da7a8723f8aa4382850
+Development fingerprint: 575d42a829ac7910433ed562491fe75a7c702ab2305cfff8314275524be6edc4
+
+File SHA256:
+- predeclared_taxa.csv: e61cc338ed163349d31940b3f41b0d2c5f50a07808846d128c1423f7b791081b
+- cohort_manifest.json: 177e26ab459e10a8d03ccc3451badef46cdcbc55a2bb7810a365c28a5078d921
+- taxon_sampling_frame.csv (artifact only): 87f1bdb19734c0e352cc76e361c98b2b6e714106dd594e08a036057d74e39dad
+
+No focal occurrence rows, candidate generation, held-out recovery, or model outcomes were inspected during this final predeclaration run. The taxon identities in predeclared_taxa.csv are fixed and must not be replaced after validation begins.
+
+Pre-outcome corrections retained for audit:
+1. run 31935102504 failed before sampling because the GBIF facet endpoint rejected a five-island MULTIPOLYGON with HTTP 400;
+2. a subsequent sampling-only artifact exposed a marine red alga under the too-broad Plantae domain;
+3. before any focal occurrence rows or outcomes were fetched, the protocol was frozen to GBIF phylum Tracheophyta and prior project focal taxa were explicitly excluded.
