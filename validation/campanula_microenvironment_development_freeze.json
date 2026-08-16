@@ -1,0 +1,70 @@
+{
+  "protocol_id": "campanula-microenvironment-development-freeze-v1",
+  "status": "development_frozen_for_external_taxon_transfer",
+  "development_taxon": "Campanula microdonta",
+  "development_only": true,
+  "islands": [
+    "oshima",
+    "toshima",
+    "niijima",
+    "shikinejima",
+    "kozushima"
+  ],
+  "grid": {
+    "spacing_m": 100,
+    "dem_working_resolution_m": 25,
+    "cells": 22784
+  },
+  "prototypes": {
+    "source": "pre-2026 GBIF",
+    "thinning_m": 500,
+    "n": 18
+  },
+  "ndvi": {
+    "source": "ESA WorldCover 2021 v200 N34E139 annual NDVI",
+    "sha256": "641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638"
+  },
+  "features": {
+    "ndvi_state": [
+      "ndvi_p50",
+      "ndvi_amp",
+      "ndvi_mean100",
+      "ndvi_mean250",
+      "ndvi_amp_mean100"
+    ],
+    "microclimate": [
+      "northness",
+      "eastness",
+      "log_coast_distance"
+    ]
+  },
+  "score": {
+    "formula": "0.90*ndvi_state_rank + 0.10*joint_ndvi_microclimate_rank",
+    "lower_is_better": true
+  },
+  "validation_budget": {
+    "candidate_count_same_five_island_grid": 793,
+    "grid_fraction": 0.03480512640449438
+  },
+  "development_result": {
+    "recovery_radius_km": 1.0,
+    "recovered": 19,
+    "total": 19,
+    "matched_random_complete": 0.1843,
+    "random_draws": 10000
+  },
+  "prototype_loo_limit": {
+    "complete_rate_at_fixed_budget": 0.3333333333333333,
+    "min_recovered": 14,
+    "median_recovered": 18.0,
+    "max_required_count_for_19": 2286
+  },
+  "artifact": {
+    "run_id": 31921195652,
+    "artifact_id": 9256421563,
+    "digest": "sha256:4f81439906d29c420950d5daed1258b49c2b939725bc0743e5b5aaa6f643f795"
+  },
+  "freeze_rule": "Do not retune score weights, 500-m thinning, 1-km endpoint, or 3.480512640449438% budget after random-taxon outcomes. Preserve negative transfer results.",
+  "fingerprint": "575d42a829ac7910433ed562491fe75a7c702ab2305cfff8314275524be6edc4",
+  "fingerprint_method": "sha256 canonical JSON excluding fingerprint fields"
+}
