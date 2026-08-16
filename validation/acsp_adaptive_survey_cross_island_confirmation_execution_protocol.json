@@ -1,6 +1,6 @@
 {
   "protocol_id": "acsp-adaptive-survey-cross-island-confirmation-execution-v1",
-  "status": "frozen_before_selected_taxon_occurrence_retrieval",
+  "status": "frozen_before_selected_taxon_occurrence_retrieval_v1.1",
   "method_freeze": {
     "path": "validation/acsp_adaptive_survey_method_freeze_v1.json",
     "fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0"
@@ -20,6 +20,7 @@
     "ndvi_source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v200",
     "ndvi_bands": "p90,p50,p10",
     "ndvi_features": ["ndvi_p50","ndvi_amp","ndvi_mean100","ndvi_mean250","ndvi_amp_mean100"],
+    "ndvi_feature_implementation": "reuse research/campanula_ndvi_transition_discovery.py::ndvi_surfaces unchanged from development",
     "layer_keys_and_sha256_recorded_at_run": true
   },
   "occurrences": {
@@ -68,6 +69,8 @@
     "minimum_eligibility_rate": 0.75,
     "minimum_mean_lift": 0.015,
     "pair_bootstrap_95ci_lower_gt": 0.0,
+    "pair_bootstrap_draws": 30000,
+    "inference_seed": 20260819,
     "exact_one_sided_sign_flip_p_lt": 0.05,
     "promotion_rule": "all minimum-eligible/eligibility/effect conditions must pass; otherwise confirmation fails and no retuning is allowed"
   },
@@ -104,5 +107,5 @@
     "previous_outside_izu_24_reused_as_confirmation": false,
     "campanula_field_coordinates_used": false
   },
-  "protocol_fingerprint": "c8e3d8aa67a513145e4c8aa7cf1db79527235cc85d2f7099f74c71e7b67fbfe2"
+  "protocol_fingerprint": "24a5cc0d21bcfd4fdfce5dc9b8ccbb2cd8dc1fc717928d8ed6775c79ef8591e1"
 }
