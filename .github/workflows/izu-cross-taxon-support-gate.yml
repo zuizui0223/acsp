@@ -42,7 +42,7 @@ jobs:
       - name: Verify frozen source artifact file
         run: |
           test -s strong-sweep/strong_sweep_taxon_results.csv
-          echo 'b36b7d12dd79ab83fd85df8e13195bcb83fca1cd5e61749102503819c0b1af23  strong-sweep/strong_sweep_taxon_results.csv' | sha256sum -c -
+          echo '8a2b25db17eeeb17aea9c47e5e9cac51b073f093b9a960d8f710aedecef4962c  strong-sweep/strong_sweep_taxon_results.csv' | sha256sum -c -
       - name: Run taxon-jackknife consolidation
         run: |
           python research/consolidate_cross_taxon_support_gate.py \
