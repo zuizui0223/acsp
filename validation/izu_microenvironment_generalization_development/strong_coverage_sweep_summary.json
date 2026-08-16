@@ -1,0 +1,26 @@
+{
+  "status": "development_only",
+  "run_id": 31936621332,
+  "artifact_id": 9260929733,
+  "artifact_digest": "sha256:b69716d9a578aacdd492e27c6211b4258da5cba4b9ff7bb4f6b66e2212abf8c3",
+  "taxa": 16,
+  "failures": [],
+  "survey_radius_km": 1.0,
+  "stable_support_cells": 1,
+  "best_support_vs_global_max_coverage": {
+    "support_quantile": 0.10,
+    "budget": 5,
+    "support_recall": 0.1625,
+    "coverage_only_recall": 0.1325,
+    "difference": 0.03,
+    "bootstrap_95ci": [0.0077083333333333335, 0.055208333333333325],
+    "sign_flip_p": 0.019539609207815844,
+    "positive_taxa": 7,
+    "negative_taxa": 1,
+    "stable_positive": true
+  },
+  "other_cells": "All other q<1/K cells failed the stable-positive gate; at K>=10 there was no stable NDVI-support advantage over global maximum coverage.",
+  "decision": "retain only q=0.10/K=5 as a provisional low-budget support signal pending allocation-matched control; do not retain the broader NDVI support family yet",
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}
