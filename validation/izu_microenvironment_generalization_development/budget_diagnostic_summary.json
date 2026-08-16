@@ -1,0 +1,43 @@
+{
+  "status": "development_only",
+  "run_id": 31935811420,
+  "artifact_id": 9260629161,
+  "artifact_digest": "sha256:0f47365ef8b1bf952441fb0f6c1fdac310314b66422285a7595271e3b936d442",
+  "taxa": 16,
+  "failures": 0,
+  "budgets": [5, 10, 20, 40, 80, 160, 320, 793],
+  "radii_km": [0.25, 0.5, 1.0],
+  "best_hybrid_cell": {
+    "budget": 5,
+    "radius_km": 0.5,
+    "hybrid_recall": 0.02291666666666667,
+    "random_recall": 0.01929895833333333,
+    "difference": 0.0036177083333333335,
+    "taxon_bootstrap_95ci": [-0.0179, 0.0342],
+    "sign_flip_p": 0.4443,
+    "positive_taxa": 3,
+    "negative_taxa": 13
+  },
+  "best_ndvi_cell": {
+    "budget": 10,
+    "radius_km": 1.0,
+    "ndvi_recall": 0.1575,
+    "random_recall": 0.14002604166666666,
+    "difference": 0.017473958333333334,
+    "taxon_bootstrap_95ci": [-0.0285, 0.0717],
+    "sign_flip_p": 0.2719,
+    "positive_taxa": 7,
+    "negative_taxa": 9,
+    "ndvi_buffered_grid_coverage": 0.16577806794241573
+  },
+  "random_saturation": {
+    "budget": 793,
+    "radius_km": 1.0,
+    "random_recall": 0.8618833333333333,
+    "hybrid_buffered_grid_coverage": 0.8610291213132023,
+    "ndvi_buffered_grid_coverage": 0.8796419636587078
+  },
+  "decision": "No low-budget cell-ranking lift is stable across taxa. Abandon independent environmental top-cell ranking as the generalization family. Develop set-level survey selection where occurrence-conditioned environment constrains the eligible region and geographic coverage/logistics optimizes the selected set.",
+  "confirmation_claim": false,
+  "frozen_192_consumed": false
+}
