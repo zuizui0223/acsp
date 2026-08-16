@@ -10,6 +10,9 @@ questions of the score itself, per island:
    means the score points away from the plant.
 3. If it is inverted, which terrain variable carries the error?
 4. How much of the pool is unrankable, i.e. has no score at all?
+5. How many training records fitted each island's profile? Where that count is
+   tiny the profile has no spread, every candidate matches, and the scores
+   saturate — so a global Top-k follows the islands with the least evidence.
 
     python research/campanula_score_audit.py --pool dense
 
@@ -104,6 +107,49 @@ def report(pool: pd.DataFrame, radius_km: float) -> None:
     )
 
 
+def profile_support(pool: pd.DataFrame, occurrences: pd.DataFrame, island_bounds: dict) -> None:
+    """Relate each island's score scale to how many records built its profile.
+
+    The local analogue is fitted per survey area from the training records that
+    fall inside it. Where that count is tiny the fitted profile has almost no
+    spread, so every candidate matches it and the scores saturate near 1. Where
+    it is large the profile has real variance and scores spread down. A global
+    Top-k then follows the islands with the *least* evidence.
+    """
+    score = loop.SCORE_COL
+    lat = pd.to_numeric(occurrences.get("_latitude", occurrences.get("latitude")), errors="coerce")
+    lon = pd.to_numeric(occurrences.get("_longitude", occurrences.get("longitude")), errors="coerce")
+    rows = []
+    inside_any = pd.Series(False, index=occurrences.index)
+    for name, (west, south, east, north) in island_bounds.items():
+        within = lat.between(south, north) & lon.between(west, east)
+        inside_any |= within
+        sub = pool[pool["survey_area_id"] == name]
+        if sub.empty:
+            continue
+        rows.append(
+            {
+                "island": name,
+                "training_records": int(within.sum()),
+                "candidates": int(len(sub)),
+                "median_score": round(float(sub[score].median()), 4),
+                "score_iqr": round(float(sub[score].quantile(0.75) - sub[score].quantile(0.25)), 4),
+            }
+        )
+    table = pd.DataFrame(rows).sort_values("training_records")
+    print("\n5. profile support — how many records fitted each island's analogue")
+    print(table.to_string(index=False))
+    outside = int((~inside_any).sum())
+    print(
+        f"   {outside}/{len(occurrences)} training records fall outside every survey area "
+        f"and fit no profile at all"
+    )
+    if len(table) > 2:
+        rho = table["training_records"].corr(table["median_score"], method="spearman")
+        print(f"   spearman(training_records, median_score) = {rho:+.3f}; -1.0 would mean")
+        print("   the score ranks profile tightness rather than habitat")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -121,6 +167,18 @@ def main() -> None:
     clusters = loop.load_detection_clusters(args.locations)
     print(f"pool: {args.pool} ({len(pool)} candidates, {len(clusters)} detection clusters)\n")
     report(annotate(pool, clusters, args.radius_km), args.radius_km)
+
+    import os
+    import sys as _sys
+
+    os.environ.setdefault("GBIF_FIELDMAP_CACHE", "/tmp/campanula_audit_cache")
+    _sys.path.insert(0, str(loop.DATA_DIR))
+    try:
+        import run_temporal_external_validation as pipeline
+    except Exception as exc:  # pragma: no cover - depends on the app import
+        print(f"\n5. profile support unavailable: {exc}")
+        return
+    profile_support(pool, loop.load_training_occurrences(args.cache_dir), pipeline.ISLAND_BOUNDS)
 
 
 if __name__ == "__main__":
