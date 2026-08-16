@@ -28,6 +28,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip build
           python -m pip install -e .
+          # Research-only Campanula/generalization tests import raster reprojection
+          # helpers that use pyproj. Keep this out of the production package
+          # dependency surface; scientific workflows already install it explicitly.
+          python -m pip install pyproj
       - name: Compile Python sources
         run: >-
           python -m py_compile
