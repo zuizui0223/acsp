@@ -25,7 +25,7 @@
     "max_sites": 200,
     "stopping_rule": "for each method and target, take the shortest greedy prefix whose union of design-radius land-grid neighborhoods reaches the target fraction; if target is unreachable within max_sites the cell is infeasible",
     "no_single_target_is_primary": true,
-    "primary_curve_summary": "paired trapezoidal area under recall-versus-target-coverage curve over the four predeclared targets",
+    "primary_curve_summary": "paired normalized trapezoidal AUC of recall-versus-target-coverage across the four targets; divide trapezoid area by (max target - min target)",
     "site_count_is_output_not_fixed_budget": true
   },
   "adequacy": {
@@ -45,7 +45,12 @@
     }
   },
   "development_estimands": {
-    "primary": "taxon-island paired AUC lift of q10 over q1 across equal coverage-equivalent budgets",
+    "primary": "taxon-island paired normalized AUC lift of q10 over q1 across equal coverage-equivalent budgets",
+    "primary_gate": {
+      "mean_auc_lift_gt": 0.0,
+      "bootstrap_95ci_lower_gt": 0.0,
+      "exact_one_sided_sign_flip_p_lt": 0.05
+    },
     "secondary": ["recall lift at every target coverage fraction","site count needed by each method at each target","recall per selected site","deployment information-adequacy rate","benchmark-evaluable rate","island and record-stratum heterogeneity"],
     "inference_unit": "taxon-island pair",
     "bootstrap_draws": 30000,
@@ -63,5 +68,5 @@
     "Do not interpret design-radius coverage as literal field searched area or detection probability.",
     "Negative results remain in the component ledger."
   ],
-  "protocol_fingerprint": "d699b23e1dd9f94d423c0b2429bd913d9a78590765aca47b09cddb6fc262072e"
+  "protocol_fingerprint": "c5c63afc1e5f9d3857938dd4801e33ef2cc78b26d45bd483a36a60e32f3dcdf4"
 }
