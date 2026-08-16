@@ -9,6 +9,7 @@ on:
       - research/campanula_microterrain_discovery.py
       - research/campanula_worldcover_discovery.py
       - research/campanula_ndvi_transition_discovery.py
+      - research/campanula_island_conditioned_ndvi.py
       - research/campanula_microenvironment_sources.json
       - .github/workflows/campanula-worldcover-development.yml
 
@@ -120,6 +121,18 @@ jobs:
             --seed 20260815 \
             --out ndvi-transition-results
 
+      - name: Run island-conditioned NDVI prototype experiment
+        run: |
+          python research/campanula_island_conditioned_ndvi.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --radius-km 1.0 \
+            --random-iterations 5000 \
+            --seed 20260816 \
+            --out island-conditioned-results
+
       - name: Audit development boundary
         run: |
           python - <<'PY'
@@ -128,17 +141,19 @@ jobs:
           micro = json.loads(Path('microterrain-results/microterrain_report.json').read_text())
           world = json.loads(Path('worldcover-results/worldcover_report.json').read_text())
           ndvi = json.loads(Path('ndvi-transition-results/ndvi_transition_report.json').read_text())
-          assert micro['field_coordinates_used_by_generator'] is False
-          assert world['field_coordinates_used_by_generator'] is False
-          assert ndvi['field_coordinates_used_by_generator'] is False
+          island = json.loads(Path('island-conditioned-results/island_conditioned_report.json').read_text())
+          for report in (micro, world, ndvi, island):
+              assert report['field_coordinates_used_by_generator'] is False
           assert world['status'] == 'development_only'
           assert ndvi['status'] == 'development_only'
+          assert island['status'] == 'development_only'
           assert ndvi['best']['recovered'] == 19
-          assert ndvi['best']['total'] == 19
+          assert island['best']['recovered'] == 19
           print(json.dumps({
               'microterrain': micro,
               'worldcover_best': world.get('best'),
               'ndvi_transition_best': ndvi.get('best'),
+              'island_conditioned_best': island.get('best'),
           }, indent=2))
           PY
 
@@ -158,5 +173,8 @@ jobs:
             ndvi-transition-results/ndvi_transition_gbif_prototypes.csv
             ndvi-transition-results/best_ndvi_transition_candidates.csv
             ndvi-transition-results/field_transition_percentiles.csv
+            island-conditioned-results/island_conditioned_report.json
+            island-conditioned-results/best_island_conditioned_candidates.csv
+            island-conditioned-results/island_conditioned_scored_universe.csv
           if-no-files-found: error
           retention-days: 90
