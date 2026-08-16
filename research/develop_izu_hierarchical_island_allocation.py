@@ -210,7 +210,7 @@ def main() -> None:
     for i, method in enumerate(sorted(set(taxon["method"]) - {"global_max_coverage"})):
         comparisons.append(infer_pair(taxon, method, "global_max_coverage", 20260830 + i * 10))
     comp = pd.DataFrame(comparisons)
-    best = comp.sort_values(["difference", "bootstrap_95ci"], ascending=[False, False]).head(1).to_dict("records")[0]
+    best = comp.sort_values("difference", ascending=False).head(1).to_dict("records")[0]
 
     occurrence_methods = [name for name in taxon["method"].unique() if name.startswith("training_occurrence_")]
     best_occurrence = means[means["method"].isin(occurrence_methods)].sort_values("mean_recall", ascending=False).head(1)
