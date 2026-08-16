@@ -1,0 +1,11 @@
+{
+  "status": "development_cohort_frozen_before_occurrence_retrieval",
+  "protocol_fingerprint": "00916d8eb5755c4bea19a415615c9b46fdb69804b22e97146f03565692d73b79",
+  "declared_pairs": 24,
+  "unique_taxa": 24,
+  "islands": 8,
+  "selected_taxon_occurrence_coordinates_fetched": false,
+  "heldout_outcomes_inspected": false,
+  "failed_confirmation_24_reused": false,
+  "frozen_192_consumed": false
+}
