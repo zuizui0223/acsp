@@ -3,9 +3,9 @@
 
 The implementation reuses the historical ACSP occupancy-geometry idea only for
 mode inference: a minimum spanning tree is built in robust-scaled occurrence
-feature space and unusually long edges are cut.  Candidate support then gives
+feature space and unusually long edges are cut. Candidate support then gives
 each inferred mode equal opportunity while holding total eligible-grid size
-exactly equal to the current single-envelope q support.  This is not a
+exactly equal to the current single-envelope q support. This is not a
 suitability probability and does not alter the downstream set-level selector.
 """
 from __future__ import annotations
@@ -138,6 +138,106 @@ def infer_modes(
     return geometry, positions
 
 
+@dataclass
+class ModeSupportFamily:
+    """Cache all training-only quantities shared by the declared q family."""
+
+    global_rank: np.ndarray
+    geometry: ModeGeometry
+    good_grid: np.ndarray
+    mode_orders: tuple[np.ndarray, ...]
+    n_grid: int
+
+    @classmethod
+    def build(
+        cls,
+        grid_features: pd.DataFrame,
+        train_features: pd.DataFrame,
+        columns: list[str],
+        *,
+        gap_multiplier: float = 3.0,
+    ) -> "ModeSupportFamily":
+        _, global_rank = fit_distance_rank(grid_features, train_features, columns)
+        geometry, positions = infer_modes(
+            train_features, columns, gap_multiplier=gap_multiplier
+        )
+        good_grid = grid_features[columns].notna().all(axis=1).to_numpy()
+        orders: list[np.ndarray] = []
+        if geometry.component_count > 1:
+            values = train_features.iloc[positions][columns].to_numpy(float)
+            pz = transform(values, geometry.median, geometry.scale)
+            gz = np.full((len(grid_features), len(columns)), np.nan, dtype=float)
+            gz[good_grid] = transform(
+                grid_features.loc[good_grid, columns].to_numpy(float),
+                geometry.median,
+                geometry.scale,
+            )
+            global_indices = np.arange(len(grid_features), dtype=int)
+            for label in range(geometry.component_count):
+                distance = np.full(len(grid_features), np.inf, dtype=float)
+                if good_grid.any():
+                    distance[good_grid] = nearest_environment(
+                        gz[good_grid], pz[geometry.labels == label]
+                    )
+                orders.append(np.lexsort((global_indices, distance)))
+        return cls(
+            global_rank=np.asarray(global_rank, dtype=float),
+            geometry=geometry,
+            good_grid=good_grid,
+            mode_orders=tuple(orders),
+            n_grid=len(grid_features),
+        )
+
+    def mask(self, q: float) -> tuple[np.ndarray, dict]:
+        q = float(q)
+        if not 0.0 < q <= 1.0:
+            raise ValueError("q must lie in (0, 1]")
+        if q >= 1.0:
+            mask = np.ones(self.n_grid, dtype=bool)
+            return mask, self._detail(len(mask), self.geometry.component_count == 1)
+
+        global_mask = self.global_rank <= q + 1e-12
+        target_count = int(global_mask.sum())
+        if self.geometry.component_count == 1 or target_count <= 0:
+            return global_mask.copy(), self._detail(target_count, True)
+
+        selected = np.zeros(self.n_grid, dtype=bool)
+        pointers = np.zeros(self.geometry.component_count, dtype=int)
+        selected_count = 0
+        while selected_count < target_count:
+            progressed = False
+            for mode in range(self.geometry.component_count):
+                order = self.mode_orders[mode]
+                pointer = int(pointers[mode])
+                while pointer < len(order) and (
+                    selected[int(order[pointer])] or not self.good_grid[int(order[pointer])]
+                ):
+                    pointer += 1
+                pointers[mode] = pointer
+                if pointer >= len(order):
+                    continue
+                index = int(order[pointer])
+                pointers[mode] += 1
+                if not selected[index]:
+                    selected[index] = True
+                    selected_count += 1
+                    progressed = True
+                if selected_count >= target_count:
+                    break
+            if not progressed:
+                raise RuntimeError("mode-balanced support could not reach target size")
+        return selected, self._detail(target_count, False)
+
+    def _detail(self, target_count: int, single_mode: bool) -> dict:
+        return {
+            "component_count": self.geometry.component_count,
+            "component_sizes": list(self.geometry.component_sizes),
+            "gap_strength": self.geometry.gap_strength,
+            "target_cells": int(target_count),
+            "single_mode_identity": bool(single_mode),
+        }
+
+
 def multimodal_support_mask(
     grid_features: pd.DataFrame,
     train_features: pd.DataFrame,
@@ -146,91 +246,11 @@ def multimodal_support_mask(
     *,
     gap_multiplier: float = 3.0,
 ) -> tuple[np.ndarray, dict]:
-    """Return a mode-balanced mask with the current single-envelope q size.
-
-    For q<1 the target number of eligible cells is copied exactly from the
-    existing single-envelope percentile mask.  If only one mode is inferred,
-    the returned mask is exactly that existing mask.
-    """
-    q = float(q)
-    if not 0.0 < q <= 1.0:
-        raise ValueError("q must lie in (0, 1]")
-    if q >= 1.0:
-        mask = np.ones(len(grid_features), dtype=bool)
-        geometry, positions = infer_modes(
-            train_features, columns, gap_multiplier=gap_multiplier
-        )
-        return mask, {
-            "component_count": geometry.component_count,
-            "component_sizes": list(geometry.component_sizes),
-            "gap_strength": geometry.gap_strength,
-            "target_cells": int(len(mask)),
-            "single_mode_identity": geometry.component_count == 1,
-        }
-
-    _, global_rank = fit_distance_rank(grid_features, train_features, columns)
-    global_mask = global_rank <= q + 1e-12
-    target_count = int(global_mask.sum())
-    geometry, positions = infer_modes(
-        train_features, columns, gap_multiplier=gap_multiplier
+    """Compatibility helper for one q; multi-q callers should reuse a family."""
+    family = ModeSupportFamily.build(
+        grid_features,
+        train_features,
+        columns,
+        gap_multiplier=gap_multiplier,
     )
-    if geometry.component_count == 1 or target_count <= 0:
-        return global_mask.copy(), {
-            "component_count": geometry.component_count,
-            "component_sizes": list(geometry.component_sizes),
-            "gap_strength": geometry.gap_strength,
-            "target_cells": target_count,
-            "single_mode_identity": True,
-        }
-
-    good_grid = grid_features[columns].notna().all(axis=1).to_numpy()
-    global_indices = np.arange(len(grid_features), dtype=int)
-    values = train_features.iloc[positions][columns].to_numpy(float)
-    pz = transform(values, geometry.median, geometry.scale)
-    gz = np.full((len(grid_features), len(columns)), np.nan, dtype=float)
-    gz[good_grid] = transform(
-        grid_features.loc[good_grid, columns].to_numpy(float),
-        geometry.median,
-        geometry.scale,
-    )
-
-    orders: list[np.ndarray] = []
-    for label in range(geometry.component_count):
-        distance = np.full(len(grid_features), np.inf, dtype=float)
-        if good_grid.any():
-            distance[good_grid] = nearest_environment(gz[good_grid], pz[geometry.labels == label])
-        orders.append(np.lexsort((global_indices, distance)))
-
-    selected = np.zeros(len(grid_features), dtype=bool)
-    pointers = np.zeros(geometry.component_count, dtype=int)
-    selected_count = 0
-    while selected_count < target_count:
-        progressed = False
-        for mode in range(geometry.component_count):
-            order = orders[mode]
-            pointer = int(pointers[mode])
-            while pointer < len(order) and (
-                selected[int(order[pointer])] or not good_grid[int(order[pointer])]
-            ):
-                pointer += 1
-            pointers[mode] = pointer
-            if pointer >= len(order):
-                continue
-            index = int(order[pointer])
-            pointers[mode] += 1
-            if not selected[index]:
-                selected[index] = True
-                selected_count += 1
-                progressed = True
-            if selected_count >= target_count:
-                break
-        if not progressed:
-            raise RuntimeError("mode-balanced support could not reach target size")
-
-    return selected, {
-        "component_count": geometry.component_count,
-        "component_sizes": list(geometry.component_sizes),
-        "gap_strength": geometry.gap_strength,
-        "target_cells": target_count,
-        "single_mode_identity": False,
-    }
+    return family.mask(q)
