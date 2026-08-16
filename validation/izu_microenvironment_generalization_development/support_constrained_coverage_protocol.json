@@ -1,0 +1,28 @@
+{
+  "protocol_id": "izu-support-constrained-coverage-development-v1",
+  "status": "development_only",
+  "cohort": "the 16 inspected taxa from failed Izu transfer; not confirmation",
+  "environment_role": "constraint only, not independent candidate ranking",
+  "environment_support": "training-only NDVI-state distance rank",
+  "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+  "set_selector": "deterministic geographic farthest-first within the support mask",
+  "coverage_only_control": "support_quantile=1.00",
+  "budgets": [5, 10, 20, 40, 80],
+  "recovery_radii_km": [0.5, 1.0],
+  "spatial_blocks_degrees": 0.03,
+  "repeats": 5,
+  "holdout_fraction": 0.2,
+  "minimum_training_prototypes": 8,
+  "decision": {
+    "ecological_support_required": "some q<1 cell must beat q=1 at identical K/r with taxon-bootstrap lower95>0 and sign-flip p<0.05",
+    "if_no_q_beats_q1": "Drop the current occurrence-conditioned NDVI support constraint as a transferable ecological signal and treat geographic/logistical coverage as the dominant general method for these data.",
+    "if_q_beats_q1": "Freeze the simplest stable q/K/r regime and proceed to compact/equal-area patch or route-budget development before new unseen confirmation."
+  },
+  "hard_boundaries": [
+    "Do not change the Campanula freeze.",
+    "Do not call these 16 taxa confirmation.",
+    "Do not consume frozen 192 Practical Core taxa.",
+    "Do not use held-out coordinates in support scoring or set selection.",
+    "Retain q=1 and all negative q<1 cells."
+  ]
+}
