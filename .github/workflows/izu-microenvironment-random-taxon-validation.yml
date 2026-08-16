@@ -1,0 +1,140 @@
+name: Izu microenvironment unseen-taxon validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/campanula-discovery-development
+    paths:
+      - research/benchmark_izu_microenvironment_random_taxa.py
+      - research/run_izu_microenvironment_random_taxa.py
+      - validation/campanula_microenvironment_development_freeze.json
+      - validation/izu_island_microenvironment_random_taxon_transfer_protocol.json
+      - validation/izu_island_microenvironment_random_taxa_20260816/**
+      - .github/workflows/izu-microenvironment-random-taxon-validation.yml
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install benchmark dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install rasterio pyproj scipy awscli requests
+
+      - name: Audit frozen cohort before any occurrence fetch
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          import pandas as pd
+
+          sample_path = Path('validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv')
+          manifest_path = Path('validation/izu_island_microenvironment_random_taxa_20260816/cohort_manifest.json')
+          protocol_path = Path('validation/izu_island_microenvironment_random_taxon_transfer_protocol.json')
+          freeze_path = Path('validation/campanula_microenvironment_development_freeze.json')
+
+          sample = pd.read_csv(sample_path)
+          manifest = json.loads(manifest_path.read_text())
+          protocol = json.loads(protocol_path.read_text())
+          freeze = json.loads(freeze_path.read_text())
+
+          def fp(obj):
+              work = dict(obj)
+              work.pop('fingerprint', None)
+              work.pop('fingerprint_method', None)
+              return hashlib.sha256(json.dumps(work, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
+
+          assert fp(protocol) == protocol['fingerprint'] == '3a5baa065b83e95ecc1da6252a79e482ba0c92665e371da7a8723f8aa4382850'
+          assert fp(freeze) == freeze['fingerprint'] == protocol['development_fingerprint']
+          assert hashlib.sha256(sample_path.read_bytes()).hexdigest() == 'e61cc338ed163349d31940b3f41b0d2c5f50a07808846d128c1423f7b791081b'
+          assert len(sample) == 16 and sample['sample_id'].is_unique
+          assert set(sample['phylum']) == {'Tracheophyta'}
+          assert sample.groupby('record_stratum').size().to_dict() == {0:4, 1:4, 2:4, 3:4}
+          assert manifest['outcomes_inspected'] is False
+          assert manifest['focal_occurrence_rows_fetched'] is False
+          assert manifest['candidate_generation_run'] is False
+          assert manifest['heldout_recovery_run'] is False
+
+          excluded = pd.read_csv('validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv')['scientific_name'].dropna().astype(str)
+          untouched = pd.read_csv('validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv')['scientific_name'].dropna().astype(str)
+          names = set(sample['scientific_name'].astype(str))
+          assert not names.intersection(set(excluded))
+          assert not names.intersection(set(untouched))
+          for prefix in protocol['sampling']['exclude_prefix']:
+              assert not sample['scientific_name'].str.casefold().str.startswith(prefix.casefold()).any()
+          print(json.dumps({'taxa': len(sample), 'protocol': protocol['fingerprint'], 'development': freeze['fingerprint']}, indent=2))
+          PY
+
+      - name: Download frozen GSI DEM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-development-data
+          path: campanula-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31856717236
+
+      - name: Download frozen-source ESA NDVI tile
+        run: |
+          set -euo pipefail
+          mkdir -p public-layers
+          aws s3 cp \
+            s3://esa-worldcover-s2/ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif \
+            public-layers/ndvi.tif --no-sign-request
+          echo '641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638  public-layers/ndvi.tif' | sha256sum -c -
+
+      - name: Run frozen unseen-taxon transfer benchmark
+        run: |
+          python research/run_izu_microenvironment_random_taxa.py \
+            --protocol validation/izu_island_microenvironment_random_taxon_transfer_protocol.json \
+            --sample validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv \
+            --ndvi public-layers/ndvi.tif \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --out izu-transfer-results
+
+      - name: Audit result boundary without enforcing a positive claim
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          summary = json.loads(Path('izu-transfer-results/validation_summary.json').read_text())
+          taxa = pd.read_csv('izu-transfer-results/taxon_results.csv')
+          assert summary['protocol_fingerprint'] == '3a5baa065b83e95ecc1da6252a79e482ba0c92665e371da7a8723f8aa4382850'
+          assert summary['development_fingerprint'] == '575d42a829ac7910433ed562491fe75a7c702ab2305cfff8314275524be6edc4'
+          assert summary['frozen_formula'] == '0.90*ndvi_state_rank + 0.10*joint_ndvi_microclimate_rank'
+          assert summary['frozen_candidate_count'] == 793
+          assert summary['taxa_replaced_after_declaration'] is False
+          assert summary['campanula_used_in_validation'] is False
+          assert summary['practical_core_untouched_192_consumed'] is False
+          assert len(taxa) == 16
+          print(json.dumps(summary, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: izu-microenvironment-random-taxon-validation
+          path: |
+            izu-transfer-results/
+          if-no-files-found: error
+          retention-days: 90
