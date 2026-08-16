@@ -39,6 +39,7 @@
       "minimum_unique_spatial_blocks": 3,
       "holdout_scheme": "deterministic leave-one-spatial-block-out",
       "minimum_training_prototypes_per_fold": 8,
+      "minimum_valid_folds": 3,
       "maximum_holdout_blocks_evaluated": "all",
       "reported_separately_from_deployment_adequacy": true
     }
@@ -62,5 +63,5 @@
     "Do not interpret design-radius coverage as literal field searched area or detection probability.",
     "Negative results remain in the component ledger."
   ],
-  "protocol_fingerprint": "e4d5122e88448427fe4c5f010e692e1e2644a61c5c3f2fdbb65be0bfe2b0e8e1"
+  "protocol_fingerprint": "d699b23e1dd9f94d423c0b2429bd913d9a78590765aca47b09cddb6fc262072e"
 }
