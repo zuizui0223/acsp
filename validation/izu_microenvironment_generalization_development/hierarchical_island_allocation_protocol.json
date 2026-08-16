@@ -1,0 +1,37 @@
+{
+  "protocol_id": "izu-hierarchical-island-allocation-development-v1",
+  "status": "development_only",
+  "cohort": "16 inspected Izu vascular-plant taxa",
+  "budget": 20,
+  "survey_radius_km": 1.0,
+  "within_island_selector": "environment-free greedy maximum covered land-grid cells",
+  "allocation_rules": {
+    "global_max_coverage": "no island quota; strong geometry-only control",
+    "equal_islands": "4 slots per island",
+    "land_area": "slots proportional to public land-grid cell counts",
+    "training_occurrence": "slots proportional to thinned training occurrence counts with Dirichlet pseudocount alpha",
+    "ndvi_support_area": "slots proportional to number of public grid cells inside the training-only top-5%-NDVI support mask"
+  },
+  "occurrence_pseudocounts": [0.0, 0.5, 1.0, 2.0, 4.0],
+  "ndvi_support_quantile": 0.05,
+  "integer_allocation": "largest remainder with deterministic island-name tie break",
+  "evaluation": {
+    "spatial_blocks_degrees": 0.03,
+    "repeats": 5,
+    "holdout_fraction": 0.2,
+    "taxon_bootstrap_draws": 10000,
+    "sign_flip_draws": 50000
+  },
+  "decision": {
+    "question": "After removing within-island environmental ranking, which training-only island-allocation signal adds stable recall over global maximum coverage?",
+    "environment_survives_only_if": "ndvi_support_area beats global max coverage and the best non-environment allocation with bootstrap lower95>0 and sign-flip p<0.05",
+    "occurrence_allocation_survives_if": "a training-occurrence allocation beats global max coverage with bootstrap lower95>0 and sign-flip p<0.05",
+    "if_neither": "Treat pure geographic/logistical coverage as the dominant transferable policy in this cohort."
+  },
+  "hard_boundaries": [
+    "No within-island NDVI ranking.",
+    "Do not call these 16 taxa confirmation.",
+    "Do not consume the frozen 192 Practical Core cohort.",
+    "All allocation rules are frozen before held-out coordinates are inspected in each fold."
+  ]
+}
