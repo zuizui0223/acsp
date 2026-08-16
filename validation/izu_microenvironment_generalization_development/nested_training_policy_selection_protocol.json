@@ -1,0 +1,37 @@
+{
+  "protocol_id": "izu-nested-training-policy-selection-v1",
+  "status": "development_only",
+  "cohort": "16 inspected Izu vascular-plant taxa",
+  "objective": "select ecological support breadth from training data by the same downstream set-level survey-recovery objective used at evaluation, while keeping outer held-out coordinates completely invisible",
+  "method": {
+    "environment_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+    "candidate_grid_m": 100,
+    "selector": "greedy maximum newly covered public land-grid cells within the support mask",
+    "budgets": [5, 10, 20],
+    "survey_radius_km": 1.0,
+    "outer_folds": {"block_degrees": 0.03, "repeats": 5, "holdout_fraction": 0.20, "minimum_training_prototypes": 8},
+    "inner_folds": {"block_degrees": 0.03, "repeats": 3, "holdout_fraction": 0.25, "minimum_training_prototypes": 6},
+    "selection_rule": "for each outer-training fold and survey budget, evaluate every q only on inner spatial holdouts; compute mean paired recall lift versus q=1; if no q<1 has positive mean inner lift, choose q=1; otherwise choose the q<1 with the largest mean inner lift, breaking exact ties toward the broader support (larger q)",
+    "fallback": "q=1 pure geographic maximum coverage"
+  },
+  "controls": {
+    "fixed_q10": "q=0.10 maximum coverage, retained only as the development reference that survived the preceding decomposition",
+    "global_max_coverage": "q=1.00 maximum coverage"
+  },
+  "evaluation": {
+    "unit": "taxon",
+    "bootstrap_draws": 10000,
+    "sign_flip_draws": 50000,
+    "primary_question": "does the fully nested training-selected policy outperform global maximum coverage without reading outer-held-out coordinates during q selection?",
+    "secondary_question": "does adaptation retain the useful q10 signal without hard-coding q=0.10?"
+  },
+  "hard_boundaries": [
+    "Outer-held-out coordinates are invisible to inner q selection.",
+    "No Campanula field coordinates are used.",
+    "The 16 taxa remain development-only.",
+    "Frozen 192 Practical Core taxa remain untouched.",
+    "No new environmental variables, q values, K values, or radius are searched in this experiment.",
+    "If this procedure fails, retain the failure and diagnose representation or domain structure rather than tuning on outer outcomes."
+  ]
+}
