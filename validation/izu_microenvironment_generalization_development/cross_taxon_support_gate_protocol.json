@@ -1,0 +1,26 @@
+{
+  "protocol_id": "izu-cross-taxon-jackknife-support-gate-development-v1",
+  "status": "development_only",
+  "development_cohort": "16 inspected Izu vascular-plant taxa",
+  "input_run": 31936621332,
+  "primary_budget": 5,
+  "diagnostic_budgets": [10, 20, 40],
+  "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+  "selection_rule": "For each held-out development taxon, use only the other taxa. A q<1 is allowed only when its paired taxon-level recall lift over q=1 has positive mean, bootstrap 95% lower bound above zero, and exact one-sided sign-flip p below 0.05. Choose the allowed q with largest mean lift, ties to broader q; otherwise use q=1.",
+  "primary_gate": {
+    "same_non1_q_in_every_taxon_jackknife": true,
+    "minimum_mean_lift": 0.015,
+    "bootstrap_lower95_gt": 0.0,
+    "exact_sign_flip_p_lt": 0.05,
+    "final_all_taxa_fit_matches_jackknife_q": true
+  },
+  "hard_boundaries": [
+    "This is development consolidation, not confirmation.",
+    "The held-out taxon never contributes outcomes to its selected q.",
+    "No new variable, q, K, radius, thinning distance, or selector is introduced.",
+    "No external cohort is consumed.",
+    "Campanula field coordinates are not used.",
+    "Frozen 192 Practical Core taxa remain untouched.",
+    "If K5 passes, freeze before drawing a new external cohort."
+  ]
+}
