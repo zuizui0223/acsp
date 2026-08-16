@@ -11,6 +11,13 @@
     "support_scaling": "training-prototype median/IQR",
     "selector": "exact sparse greedy maximum newly covered land-grid cells"
   },
+  "public_layers": {
+    "land_candidate_surface": "GSI DEM-supported land surface using production build_gsi_dem_for_bounds",
+    "gsi_max_tiles_per_island": 2500,
+    "ndvi_source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v200",
+    "ndvi_bands": "p90,p50,p10",
+    "ndvi_feature_implementation": "reuse research/campanula_ndvi_transition_discovery.py::ndvi_surfaces unchanged"
+  },
   "budget": {
     "object": "coverage-equivalent design footprint, not biological suitability and not literal searched area",
     "design_radius_km": 1.0,
@@ -55,5 +62,5 @@
     "Do not interpret design-radius coverage as literal field searched area or detection probability.",
     "Negative results remain in the component ledger."
   ],
-  "protocol_fingerprint": "e21a388854ce64afe660005ff502ec534b5636a53401e0b51b568cadc48dde08"
+  "protocol_fingerprint": "e4d5122e88448427fe4c5f010e692e1e2644a61c5c3f2fdbb65be0bfe2b0e8e1"
 }
