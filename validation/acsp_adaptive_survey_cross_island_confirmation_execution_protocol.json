@@ -1,0 +1,108 @@
+{
+  "protocol_id": "acsp-adaptive-survey-cross-island-confirmation-execution-v1",
+  "status": "frozen_before_selected_taxon_occurrence_retrieval",
+  "method_freeze": {
+    "path": "validation/acsp_adaptive_survey_method_freeze_v1.json",
+    "fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0"
+  },
+  "cohort_contract": {
+    "protocol_path": "validation/acsp_adaptive_survey_cross_island_confirmation_cohort_protocol.json",
+    "protocol_fingerprint": "7bc745ffbcaa23146c56f61e9cf3a1c2ba22bd28cc4ad37468b9b6b726520a65",
+    "declared_pairs": 24,
+    "cohort_file": "validation/acsp_adaptive_cross_island_confirmation_20260816/predeclared_taxon_island_pairs.csv",
+    "cohort_must_be_committed_before_occurrence_retrieval": true,
+    "no_taxon_replacement": true
+  },
+  "public_layers": {
+    "land_candidate_surface": "GSI DEM-supported land surface, acquired with the production build_gsi_dem_for_bounds path",
+    "candidate_grid_m": 100,
+    "gsi_max_tiles_per_island": 2500,
+    "ndvi_source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v200",
+    "ndvi_bands": "p90,p50,p10",
+    "ndvi_features": ["ndvi_p50","ndvi_amp","ndvi_mean100","ndvi_mean250","ndvi_amp_mean100"],
+    "layer_keys_and_sha256_recorded_at_run": true
+  },
+  "occurrences": {
+    "source": "GBIF occurrence search",
+    "taxon_scope": "predeclared speciesKey within its predeclared island cell",
+    "max_records_per_pair": 300,
+    "hasCoordinate": true,
+    "hasGeospatialIssue": false,
+    "occurrenceStatus": "PRESENT",
+    "exact_coordinate_deduplication": true,
+    "spatial_thinning_m": 500
+  },
+  "spatial_validation": {
+    "block_degrees": 0.03,
+    "repeats": 5,
+    "holdout_fraction": 0.20,
+    "minimum_training_prototypes": 8,
+    "minimum_unique_spatial_blocks": 3,
+    "seed_base": 20260818,
+    "pair_seed_rule": "seed_base + pair_id*100",
+    "require_five_unique_valid_folds_for_conditional_pair_estimand": true
+  },
+  "applicability_gate": {
+    "implementation": "research/acsp_training_domain_gate.py",
+    "applied_per_training_fold_only": true,
+    "training_land_fraction": "fraction of thinned training occurrences supported by finite GSI DEM land surface",
+    "domain_inapplicable_fold": "no terrestrial-policy evaluation; report separately",
+    "pair_conditional_eligibility": "all five predeclared training folds must be data-adequate and terrestrial-policy applicable",
+    "declared_cohort_practicality": "report eligible pairs / 24 separately"
+  },
+  "selection": {
+    "budget": 5,
+    "survey_radius_km": 1.0,
+    "method": "q=0.10 NDVI-state nearest-prototype eligibility then exact sparse greedy maximum newly covered land-grid cells",
+    "control": "q=1.00 exact sparse greedy maximum newly covered land-grid cells",
+    "support_scaling": "training-prototype median/IQR only",
+    "heldout_coordinates_visible_during_selection": false,
+    "all_candidate_sets_frozen_before_heldout_scoring": true
+  },
+  "primary_estimand": {
+    "unit": "taxon-island pair",
+    "fold_aggregation": "mean recall across the five valid folds",
+    "comparison": "frozen q10 K5 method minus q1 K5 strong geographic coverage",
+    "recovery_radius_km": 1.0,
+    "minimum_eligible_pairs": 18,
+    "minimum_eligibility_rate": 0.75,
+    "minimum_mean_lift": 0.015,
+    "pair_bootstrap_95ci_lower_gt": 0.0,
+    "exact_one_sided_sign_flip_p_lt": 0.05,
+    "promotion_rule": "all minimum-eligible/eligibility/effect conditions must pass; otherwise confirmation fails and no retuning is allowed"
+  },
+  "failure_handling": {
+    "declared_pairs_never_replaced": true,
+    "data_or_domain_inapplicable_pairs": "excluded only from conditional terrestrial-policy effect; remain in declared-cohort applicability denominator",
+    "method_failure_on_an_eligible_fold": "assign zero recall to the failed method for that fold and retain the comparator result if available",
+    "unresolved_infrastructure_failure": "reported separately and prevents a promotion claim until rerun/recovery resolves it without changing scientific settings"
+  },
+  "practicality_and_robustness": {
+    "non_gating_recovery_radius_sensitivity_km": [0.5,2.0],
+    "same_five_sites_for_radius_sensitivity": true,
+    "report_domain_eligibility_rate": true,
+    "report_fold_completion_rate": true,
+    "report_support_eligible_grid_fraction": true,
+    "report_selected_set_jaccard_method_vs_control": true,
+    "report_candidate_grid_size": true,
+    "report_selection_runtime_seconds": true,
+    "report_record_stratum_effects": true,
+    "report_island_effects": true,
+    "leave_one_pair_out_mean_lift_range": true,
+    "leave_one_island_out_mean_lift_range": true,
+    "exact_half_cohort_subset_stability_when_computationally_feasible": true,
+    "robustness_interpretation": "diagnostic only; cannot rescue a failed primary confirmation gate"
+  },
+  "claim_boundary": {
+    "if_primary_passes": "supports transfer of the frozen low-budget K5 ecological-eligibility-plus-set-coverage survey policy to new vascular-plant taxa and new Japanese island domains that pass the frozen training-only terrestrial applicability gate",
+    "if_primary_fails": "do not retune on this cohort; retain the result as a limit on transferability and reopen development only on a new development cohort",
+    "not_claimed": ["occupancy probability","suitability probability","detection probability","arbitrary survey budgets","all taxa","all regions","superiority over GRTS or biosurvey"]
+  },
+  "separation": {
+    "frozen_192_practical_core_consumed": false,
+    "izu_16_development_reused_as_confirmation": false,
+    "previous_outside_izu_24_reused_as_confirmation": false,
+    "campanula_field_coordinates_used": false
+  },
+  "protocol_fingerprint": "c8e3d8aa67a513145e4c8aa7cf1db79527235cc85d2f7099f74c71e7b67fbfe2"
+}
