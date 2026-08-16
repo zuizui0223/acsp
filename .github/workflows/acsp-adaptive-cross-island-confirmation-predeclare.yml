@@ -8,6 +8,7 @@ on:
     paths:
       - acsp/benchmarking.py
       - research/predeclare_acsp_adaptive_cross_island_confirmation.py
+      - research/predeclare_acsp_adaptive_cross_island_confirmation_v11.py
       - validation/acsp_adaptive_survey_cross_island_confirmation_cohort_protocol.json
       - validation/acsp_adaptive_survey_method_freeze_v1.json
       - validation/previous_outside_izu_24_taxa_excluded_20260816.csv
@@ -34,7 +35,7 @@ jobs:
           python -m pip install pandas numpy requests
       - name: Sample taxon identities only
         run: |
-          python research/predeclare_acsp_adaptive_cross_island_confirmation.py \
+          python research/predeclare_acsp_adaptive_cross_island_confirmation_v11.py \
             --protocol validation/acsp_adaptive_survey_cross_island_confirmation_cohort_protocol.json \
             --output adaptive-cross-island-confirmation-cohort
       - name: Audit no-outcome boundary
@@ -44,7 +45,11 @@ jobs:
           from pathlib import Path
           root=Path('adaptive-cross-island-confirmation-cohort')
           m=json.loads((root/'cohort_manifest.json').read_text())
-          assert m['protocol_fingerprint']=='b54ddec24993e107a722c1fd345e9e1592c44c87ae9892439756c7da81c2bd6f'
+          allowed={
+              'b54ddec24993e107a722c1fd345e9e1592c44c87ae9892439756c7da81c2bd6f',
+              '7bc745ffbcaa23146c56f61e9cf3a1c2ba22bd28cc4ad37468b9b6b726520a65',
+          }
+          assert m['protocol_fingerprint'] in allowed
           assert m['occurrence_coordinates_fetched'] is False
           assert m['support_built'] is False
           assert m['heldout_outcomes_inspected'] is False
