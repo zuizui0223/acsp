@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Predeclare unseen Izu plant taxa before microenvironment outcome recovery."""
+"""Predeclare unseen Izu vascular-plant taxa before microenvironment outcome recovery."""
 from __future__ import annotations
 
 import argparse
@@ -58,13 +58,8 @@ def load_excluded(paths: list[Path], prefixes: list[str]) -> tuple[set[str], lis
     return excluded, [value.casefold() for value in prefixes]
 
 
-def taxon_sampling_frame(facet_limit: int, minimum_records: int) -> pd.DataFrame:
-    """Build the five-island facet frame without fetching focal occurrence rows.
-
-    GBIF's occurrence facet endpoint rejects the five-island MULTIPOLYGON used by
-    the former one-shot query. Query each island as a simple POLYGON, sum counts
-    by speciesKey, then apply the same five-island minimum-record threshold.
-    """
+def taxon_sampling_frame(facet_limit: int, minimum_records: int, required_phylum: str) -> pd.DataFrame:
+    """Build the five-island vascular-plant facet frame without focal rows."""
     totals: dict[int, int] = {}
     island_counts: dict[int, dict[str, int]] = {}
     for island, bounds in ISLAND_BOUNDS.items():
@@ -103,9 +98,13 @@ def taxon_sampling_frame(facet_limit: int, minimum_records: int) -> pd.DataFrame
             return None
         if metadata.get("rank") != "SPECIES" or not metadata.get("scientificName"):
             return None
+        if str(metadata.get("phylum") or "") != str(required_phylum):
+            return None
         row = {
             "speciesKey": key,
             "scientific_name": str(metadata["scientificName"]),
+            "phylum": str(metadata.get("phylum") or ""),
+            "class": str(metadata.get("class") or ""),
             "coordinate_records": int(item["coordinate_records"]),
         }
         for island in ISLAND_BOUNDS:
@@ -152,7 +151,11 @@ def main() -> None:
     protocol = json.loads(args.protocol.read_text())
     sampling = protocol["sampling"]
     excluded, prefixes = load_excluded(args.excluded, sampling["exclude_prefix"])
-    frame = taxon_sampling_frame(sampling["facet_limit"], sampling["minimum_coordinate_records"])
+    frame = taxon_sampling_frame(
+        sampling["facet_limit"],
+        sampling["minimum_coordinate_records"],
+        sampling["required_phylum"],
+    )
     sample = choose_taxa(
         frame,
         n_taxa=sampling["taxa"],
@@ -168,6 +171,7 @@ def main() -> None:
         "protocol_id": protocol["protocol_id"],
         "protocol_fingerprint": protocol["fingerprint"],
         "declared_taxa": int(len(sample)),
+        "required_phylum": sampling["required_phylum"],
         "sampling_geometry": "five independent GBIF POLYGON facets; speciesKey counts summed before thresholding",
         "record_strata": {str(int(k)): int(v) for k, v in sample.groupby("record_stratum").size().items()},
         "outcomes_inspected": False,
