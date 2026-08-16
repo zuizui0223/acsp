@@ -7,11 +7,7 @@
     "source_run_id": 31942973391,
     "artifact_id": 9262526432,
     "artifact_digest": "sha256:5a6c75cc0e928fdb7f007797603af5abcf1620d6a3afd7af80d4aaf6c88257e1",
-    "target": {
-      "support_quantile": 0.1,
-      "budget": 5,
-      "recovery_radius_km": 1.0
-    },
+    "target": {"support_quantile": 0.1, "budget": 5, "recovery_radius_km": 1.0},
     "within_island_ndvi_vs_same_allocation_no_environment": {
       "difference": 0.03,
       "bootstrap_95ci": [0.007083333333333332, 0.05458333333333333],
@@ -44,6 +40,22 @@
     "survey_radius_km": 1.0,
     "heldout_coordinates_visible_during_selection": false
   },
+  "sampling": {
+    "taxa": 32,
+    "record_strata": 4,
+    "taxa_per_stratum": 8,
+    "minimum_coordinate_records": 25,
+    "facet_limit": 1000,
+    "seed": 20260817,
+    "required_phylum": "Tracheophyta",
+    "no_replacement": true,
+    "exclude_prefix": ["Campanula microdonta", "Castanopsis sieboldii", "Styrax japonica", "Weigela coraeensis", "Cornus controversa"],
+    "excluded_sources": [
+      "validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+      "validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv"
+    ]
+  },
   "new_confirmation": {
     "taxa": 32,
     "taxon_group": "Tracheophyta",
@@ -56,13 +68,7 @@
     "exclude_16_generalization_development_taxa": true,
     "exclude_frozen_192_practical_core_taxa": true,
     "exclude_all_prior_acsp_development_taxa": true,
-    "validation": {
-      "block_degrees": 0.03,
-      "repeats": 5,
-      "holdout_fraction": 0.2,
-      "minimum_training_prototypes": 8,
-      "recovery_radius_km": 1.0
-    },
+    "validation": {"block_degrees": 0.03, "repeats": 5, "holdout_fraction": 0.2, "minimum_training_prototypes": 8, "recovery_radius_km": 1.0},
     "primary_comparator": "global maximum geographic coverage on the identical public grid, K=5, r=1 km",
     "mechanism_control": "same-island allocation maximum coverage without NDVI",
     "primary_gate": {
@@ -83,6 +89,6 @@
     "campanula_reused_as_confirmation": false,
     "development_16_reused_as_confirmation": false
   },
-  "fingerprint": "2122a6876f9dfad0eba6f49875785673c6092c2143916440a4c59bc346988e3f",
+  "fingerprint": "75d78ef654a5a07beb54ca80516aed05d9a5322db678dddc4b3059a5151208ab",
   "fingerprint_method": "sha256 canonical JSON excluding fingerprint fields"
 }
