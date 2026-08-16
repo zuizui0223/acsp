@@ -1,0 +1,22 @@
+{
+  "protocol_id": "izu-strong-coverage-comparator-development-v1",
+  "status": "development_only",
+  "cohort": "16 inspected Izu vascular-plant taxa",
+  "target_cell": {
+    "support_quantile": 0.05,
+    "budget": 20,
+    "survey_radius_km": 1.0
+  },
+  "methods": {
+    "support_constrained_max_coverage": "candidate centers restricted to the top 5% training-only NDVI support mask; greedily maximize newly covered public land-grid cells within 1 km",
+    "coverage_only_max_coverage": "all public grid cells eligible; same greedy maximum newly covered land-grid objective",
+    "matched_random": "same island counts as support-constrained max-coverage; 500 draws per fold"
+  },
+  "promotion_gate": "support-constrained method must exceed both coverage-only and matched-random at taxon level with bootstrap lower95>0 and sign-flip p<0.05",
+  "hard_boundaries": [
+    "No Campanula retuning.",
+    "No new support quantile search in this strong-comparator audit.",
+    "16 taxa remain development-only.",
+    "Frozen 192 cohort remains untouched."
+  ]
+}
