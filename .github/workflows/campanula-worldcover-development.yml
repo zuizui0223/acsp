@@ -8,6 +8,7 @@ on:
     paths:
       - research/campanula_microterrain_discovery.py
       - research/campanula_ndvi_microclimate_hybrid.py
+      - research/campanula_hybrid_prototype_robustness.py
       - research/campanula_microenvironment_sources.json
       - .github/workflows/campanula-worldcover-development.yml
 
@@ -81,6 +82,21 @@ jobs:
             --random-iterations 10000 \
             --seed 20260816 \
             --out hybrid-results
+      - name: Leave-one-prototype-out robustness audit
+        run: |
+          python research/campanula_hybrid_prototype_robustness.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --hybrid-report hybrid-results/hybrid_report.json \
+            --radius-km 1.0 \
+            --out robustness-results
       - name: Audit development boundary and promotion gate
         run: |
           python - <<'PY'
@@ -88,16 +104,21 @@ jobs:
           from pathlib import Path
           micro=json.loads(Path('microterrain-results/microterrain_report.json').read_text())
           hybrid=json.loads(Path('hybrid-results/hybrid_report.json').read_text())
+          robust=json.loads(Path('robustness-results/prototype_loo_report.json').read_text())
           assert micro['field_coordinates_used_by_generator'] is False
           assert hybrid['field_coordinates_used_by_generator'] is False
+          assert robust['field_coordinates_used_by_generator'] is False
           assert hybrid['status']=='development_only'
+          assert robust['status']=='development_only'
           assert hybrid['candidate_count_best']['recovered']==19
           assert hybrid['candidate_count_best']['total']==19
           assert hybrid['promotion_candidates'], 'hybrid did not beat the previous NDVI frontier on both gates'
+          assert robust['weights_retuned_inside_loo'] is False
           print(json.dumps({
               'candidate_count_best': hybrid['candidate_count_best'],
               'matched_random_best': hybrid['matched_random_best'],
               'pareto_frontier': hybrid['pareto_frontier'],
+              'prototype_loo': robust['endpoints'],
           }, indent=2))
           PY
       - uses: actions/upload-artifact@v4
@@ -111,5 +132,7 @@ jobs:
             hybrid-results/hybrid_report.json
             hybrid-results/best_hybrid_candidates.csv
             hybrid-results/hybrid_scored_universe.csv
+            robustness-results/prototype_loo_report.json
+            robustness-results/prototype_loo_rows.csv
           if-no-files-found: error
           retention-days: 90
