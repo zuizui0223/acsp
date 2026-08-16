@@ -1,0 +1,41 @@
+{
+  "protocol_id": "izu-training-stability-adaptive-support-development-v1",
+  "status": "development_only",
+  "cohort": "16 inspected Izu vascular-plant taxa from the failed frozen transfer; outcomes may evaluate the procedure but may not enter support selection",
+  "method": {
+    "environment_role": "training-only eligibility constraint",
+    "features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "spatial_thinning_m": 500,
+    "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+    "loo_environmental_recovery_target": 0.80,
+    "support_rule": "within each training fold, leave out each thinned training prototype in turn; choose the smallest support quantile whose remaining prototypes recover at least 80% of omitted training prototypes in NDVI-state space; if no q<1 meets the target, use q=1 and fall back to pure geographic coverage",
+    "selector": "greedy maximum newly covered public land-grid cells among support-eligible centers",
+    "candidate_grid_m": 100,
+    "budgets": [5, 10, 20],
+    "survey_radius_km": 1.0
+  },
+  "controls": {
+    "global_max_coverage": "q=1.0 with identical K and radius",
+    "fixed_q10_max_coverage": "the only fixed-q development signal surviving the preceding decomposition"
+  },
+  "evaluation": {
+    "spatial_blocks_degrees": 0.03,
+    "repeats": 5,
+    "holdout_fraction": 0.20,
+    "minimum_training_prototypes": 8,
+    "taxon_bootstrap_draws": 10000,
+    "sign_flip_draws": 50000
+  },
+  "decision": {
+    "goal": "replace a universal fixed support threshold with one universal training-only decision procedure",
+    "success_pattern": "adaptive support should retain or improve the low-budget ecological lift without using held-out coordinates and should automatically revert toward q=1 when the training occurrences do not support a narrow environmental envelope",
+    "if_failure": "do not stop development; diagnose whether the missing transferable state is multi-modal support, scale choice, or route/patch geometry before creating a new confirmation cohort"
+  },
+  "hard_boundaries": [
+    "Held-out coordinates are invisible until q and every selected set are frozen.",
+    "No Campanula field coordinate enters the procedure.",
+    "The 16 taxa remain development-only.",
+    "Frozen 192 Practical Core taxa remain untouched.",
+    "No confirmation or superiority claim is allowed from this run."
+  ]
+}
