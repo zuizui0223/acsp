@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exact sparse implementation of the current greedy max-coverage selector.
 
-This is a computational optimization only.  For a fixed grid, eligibility mask,
+This is a computational optimization only. For a fixed grid, eligibility mask,
 radius and budget it implements the same objective and tie break as
 `develop_izu_strong_coverage_sweep.greedy_coverage_order`: maximize the number
 of newly covered public-grid cells at every step; break exact ties by the
@@ -53,26 +53,45 @@ class SparseCoverageIndex:
         eligible = np.asarray(eligible, dtype=bool)
         if eligible.shape != (len(grid),):
             raise ValueError("eligible mask length does not match grid")
+
         selected_mask = np.zeros(len(grid), dtype=bool)
         covered = np.zeros(len(grid), dtype=bool)
         selected: list[int] = []
         limit = min(int(max_budget), int(eligible.sum()))
+
+        # At step zero every candidate's gain is simply its neighbourhood size.
+        # Later steps update only for cells that have just become covered. This
+        # is algebraically identical to recomputing A @ (~covered) every step,
+        # but avoids scanning the whole sparse graph repeatedly.
+        gains = np.diff(self.adjacency.indptr).astype(np.int32, copy=True)
+
         for _ in range(limit):
-            uncovered = (~covered).astype(np.int16, copy=False)
-            gains = np.asarray(self.adjacency.dot(uncovered)).ravel().astype(np.int32, copy=False)
             valid = eligible & ~selected_mask
             if not valid.any():
                 break
-            gains[~valid] = -1
-            best_gain = int(gains.max())
-            # np.flatnonzero is index-ordered, so [0] is the same global-index
-            # tie break as the reference implementation.
-            best = int(np.flatnonzero(gains == best_gain)[0])
+            scores = gains.copy()
+            scores[~valid] = -1
+            best_gain = int(scores.max())
+            # np.flatnonzero is index ordered, preserving the reference global
+            # dataframe-index tie break exactly.
+            best = int(np.flatnonzero(scores == best_gain)[0])
             selected.append(best)
             selected_mask[best] = True
+
             start = self.adjacency.indptr[best]
             stop = self.adjacency.indptr[best + 1]
-            covered[self.adjacency.indices[start:stop]] = True
+            neighbours = self.adjacency.indices[start:stop]
+            newly_covered = neighbours[~covered[neighbours]]
+            if len(newly_covered):
+                covered[newly_covered] = True
+                # The neighbourhood graph is symmetric. For each newly covered
+                # cell, subtract one from every candidate whose footprint
+                # contains that cell. Sparse row summation counts those losses.
+                decrement = np.asarray(
+                    self.adjacency[newly_covered].sum(axis=0)
+                ).ravel().astype(np.int32, copy=False)
+                gains -= decrement
+
         return grid.iloc[selected].copy().reset_index(drop=True)
 
 
