@@ -1,0 +1,59 @@
+{
+  "protocol_id": "acsp-coverage-equivalent-budget-development-v1",
+  "status": "development_only_predeclared_before_new_cohort_occurrence_retrieval",
+  "motivation": "The frozen K5/r=1 km external confirmation failed portability and applicability; fixed site count does not represent a comparable design footprint across island domains. This experiment changes only the operational budget representation on a new development cohort.",
+  "retained_components": {
+    "ecological_support": "q=0.10 NDVI-state nearest-prototype eligibility from the frozen method; no q retuning",
+    "control": "q=1.00 strong geometry-only maximum coverage",
+    "ndvi_features": ["ndvi_p50","ndvi_amp","ndvi_mean100","ndvi_mean250","ndvi_amp_mean100"],
+    "spatial_thinning_m": 500,
+    "candidate_grid_m": 100,
+    "support_scaling": "training-prototype median/IQR",
+    "selector": "exact sparse greedy maximum newly covered land-grid cells"
+  },
+  "budget": {
+    "object": "coverage-equivalent design footprint, not biological suitability and not literal searched area",
+    "design_radius_km": 1.0,
+    "target_land_grid_coverage_fractions": [0.01,0.025,0.05,0.10],
+    "max_sites": 200,
+    "stopping_rule": "for each method and target, take the shortest greedy prefix whose union of design-radius land-grid neighborhoods reaches the target fraction; if target is unreachable within max_sites the cell is infeasible",
+    "no_single_target_is_primary": true,
+    "primary_curve_summary": "paired trapezoidal area under recall-versus-target-coverage curve over the four predeclared targets",
+    "site_count_is_output_not_fixed_budget": true
+  },
+  "adequacy": {
+    "deployment_information_adequacy": {
+      "minimum_thinned_training_occurrences": 8,
+      "domain_gate": "research/acsp_training_domain_gate.py on all available training records",
+      "does_not_require_retrospective_folds": true
+    },
+    "benchmark_evaluability": {
+      "block_degrees": 0.03,
+      "minimum_unique_spatial_blocks": 3,
+      "holdout_scheme": "deterministic leave-one-spatial-block-out",
+      "minimum_training_prototypes_per_fold": 8,
+      "maximum_holdout_blocks_evaluated": "all",
+      "reported_separately_from_deployment_adequacy": true
+    }
+  },
+  "development_estimands": {
+    "primary": "taxon-island paired AUC lift of q10 over q1 across equal coverage-equivalent budgets",
+    "secondary": ["recall lift at every target coverage fraction","site count needed by each method at each target","recall per selected site","deployment information-adequacy rate","benchmark-evaluable rate","island and record-stratum heterogeneity"],
+    "inference_unit": "taxon-island pair",
+    "bootstrap_draws": 30000,
+    "sign_flip": "exact when feasible"
+  },
+  "decision": {
+    "if_q10_auc_stably_positive": "retain ecological eligibility as a low-footprint modifier and proceed to route/time-cost development on a separate new development cohort or strict split",
+    "if_q10_auc_not_stably_positive": "drop q10 ecological eligibility from the transferable operational method and retain geometry-only coverage as the portable core",
+    "external_confirmation_required_after_any_new_method_freeze": true
+  },
+  "hard_boundaries": [
+    "Do not use the inspected 24-pair cross-island confirmation cohort for tuning or evaluation.",
+    "Do not consume the frozen 192-pair Practical Core cohort.",
+    "Do not change q, NDVI features, thinning, or domain-gate thresholds in this experiment.",
+    "Do not interpret design-radius coverage as literal field searched area or detection probability.",
+    "Negative results remain in the component ledger."
+  ],
+  "protocol_fingerprint": "e21a388854ce64afe660005ff502ec534b5636a53401e0b51b568cadc48dde08"
+}
