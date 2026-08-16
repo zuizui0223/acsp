@@ -1,4 +1,4 @@
-name: Campanula WorldCover development
+name: Campanula microenvironment frontier
 
 on:
   workflow_dispatch:
@@ -7,8 +7,6 @@ on:
       - agent/campanula-discovery-development
     paths:
       - research/campanula_microterrain_discovery.py
-      - research/campanula_worldcover_discovery.py
-      - research/campanula_ndvi_transition_discovery.py
       - research/campanula_island_conditioned_ndvi.py
       - research/campanula_microenvironment_sources.json
       - .github/workflows/campanula-worldcover-development.yml
@@ -21,23 +19,20 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  worldcover-development:
+  current-frontier:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install ACSP and geospatial development dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install rasterio pyproj scipy awscli
-
-      - name: Download frozen Campanula development cache and GSI DEM artifacts
+      - name: Download frozen Campanula cache and GSI DEMs
         uses: actions/download-artifact@v4
         with:
           name: campanula-development-data
@@ -45,46 +40,21 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: 31856717236
-
-      - name: Download official ESA WorldCover 2021 v200 tile
+      - name: Download official ESA NDVI composite
         run: |
           set -euo pipefail
           mkdir -p public-layers
-          curl --fail --location --retry 4 --retry-delay 3 \
-            --output public-layers/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif \
-            https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif
-          test -s public-layers/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif
-          sha256sum public-layers/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif | tee public-layers/worldcover_sha256.txt
-
-      - name: Download official ESA WorldCover 2021 NDVI composite tile
-        run: |
-          set -euo pipefail
           NDVI_KEY=""
           for PREFIX in "ndvi/2021/N34E139/" "ndvi/2021/N34/" "ndvi/2021/"; do
-            KEYS=$(aws s3api list-objects-v2 \
-              --bucket esa-worldcover-s2 \
-              --prefix "$PREFIX" \
-              --max-items 1000 \
-              --no-sign-request \
-              --query 'Contents[].Key' \
-              --output text 2>/dev/null || true)
+            KEYS=$(aws s3api list-objects-v2 --bucket esa-worldcover-s2 --prefix "$PREFIX" --max-items 1000 --no-sign-request --query 'Contents[].Key' --output text 2>/dev/null || true)
             NDVI_KEY=$(printf '%s\n' "$KEYS" | tr '\t' '\n' | grep -Ei 'N34E139.*NDVI.*\.tif$' | head -n 1 || true)
-            if [ -n "$NDVI_KEY" ]; then
-              break
-            fi
+            [ -n "$NDVI_KEY" ] && break
           done
-          if [ -z "$NDVI_KEY" ]; then
-            echo "Could not resolve the N34E139 2021 NDVI COG in esa-worldcover-s2" >&2
-            exit 1
-          fi
+          test -n "$NDVI_KEY"
           printf '%s\n' "$NDVI_KEY" | tee public-layers/ndvi_s3_key.txt
-          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" \
-            public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif \
-            --no-sign-request
-          test -s public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif
-          sha256sum public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif | tee public-layers/ndvi_sha256.txt
-
-      - name: Rebuild full-island microterrain universe without 2026 outcomes
+          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" public-layers/ndvi.tif --no-sign-request
+          sha256sum public-layers/ndvi.tif | tee public-layers/ndvi_sha256.txt
+      - name: Rebuild outcome-blind microterrain universe
         run: |
           python research/campanula_microterrain_discovery.py \
             --gbif campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
@@ -95,84 +65,38 @@ jobs:
             --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
-
-      - name: Run WorldCover microenvironment development screening
-        run: |
-          python research/campanula_worldcover_discovery.py \
-            --microterrain-universe microterrain-results/microterrain_universe.csv \
-            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
-            --worldcover public-layers/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif \
-            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --radius-km 1.0 \
-            --random-iterations 100 \
-            --seed 20260815 \
-            --out worldcover-results
-
-      - name: Run NDVI and vegetation-transition development experiment
-        run: |
-          python research/campanula_ndvi_transition_discovery.py \
-            --microterrain-universe microterrain-results/microterrain_universe.csv \
-            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
-            --ndvi public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif \
-            --worldcover public-layers/ESA_WorldCover_10m_2021_v200_N33E138_Map.tif \
-            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --radius-km 1.0 \
-            --random-iterations 2000 \
-            --seed 20260815 \
-            --out ndvi-transition-results
-
-      - name: Run island-conditioned NDVI prototype experiment
+      - name: Run current island-conditioned NDVI frontier
         run: |
           python research/campanula_island_conditioned_ndvi.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
-            --ndvi public-layers/ESA_WorldCover_10m_2021_v2_N34E139_NDVI.tif \
+            --ndvi public-layers/ndvi.tif \
             --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
             --radius-km 1.0 \
             --random-iterations 5000 \
             --seed 20260816 \
             --out island-conditioned-results
-
       - name: Audit development boundary
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          micro = json.loads(Path('microterrain-results/microterrain_report.json').read_text())
-          world = json.loads(Path('worldcover-results/worldcover_report.json').read_text())
-          ndvi = json.loads(Path('ndvi-transition-results/ndvi_transition_report.json').read_text())
-          island = json.loads(Path('island-conditioned-results/island_conditioned_report.json').read_text())
-          for report in (micro, world, ndvi, island):
-              assert report['field_coordinates_used_by_generator'] is False
-          assert world['status'] == 'development_only'
-          assert ndvi['status'] == 'development_only'
-          assert island['status'] == 'development_only'
-          assert ndvi['best']['recovered'] == 19
-          assert island['best']['recovered'] == 19
-          print(json.dumps({
-              'microterrain': micro,
-              'worldcover_best': world.get('best'),
-              'ndvi_transition_best': ndvi.get('best'),
-              'island_conditioned_best': island.get('best'),
-          }, indent=2))
+          micro=json.loads(Path('microterrain-results/microterrain_report.json').read_text())
+          island=json.loads(Path('island-conditioned-results/island_conditioned_report.json').read_text())
+          assert micro['field_coordinates_used_by_generator'] is False
+          assert island['field_coordinates_used_by_generator'] is False
+          assert island['status']=='development_only'
+          assert island['best']['recovered']==19 and island['best']['total']==19
+          print(json.dumps({'microterrain':micro,'island_conditioned_best':island['best']}, indent=2))
           PY
-
       - uses: actions/upload-artifact@v4
         with:
-          name: campanula-microenvironment-development
+          name: campanula-current-frontier
           path: |
-            public-layers/worldcover_sha256.txt
             public-layers/ndvi_s3_key.txt
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
             microterrain-results/gbif_microterrain_prototypes.csv
-            worldcover-results/worldcover_report.json
-            worldcover-results/worldcover_gbif_prototypes.csv
-            worldcover-results/best_worldcover_candidates.csv
-            ndvi-transition-results/ndvi_transition_report.json
-            ndvi-transition-results/ndvi_transition_gbif_prototypes.csv
-            ndvi-transition-results/best_ndvi_transition_candidates.csv
-            ndvi-transition-results/field_transition_percentiles.csv
             island-conditioned-results/island_conditioned_report.json
             island-conditioned-results/best_island_conditioned_candidates.csv
             island-conditioned-results/island_conditioned_scored_universe.csv
