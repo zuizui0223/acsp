@@ -35,10 +35,11 @@ jobs:
           repository: zuizui0223/acsp
           run-id: 31953344610
           github-token: ${{ github.token }}
-      - name: Normalize zero-row fold files only
+      - name: Normalize effectively empty fold files only
         run: |
           python - <<'PY'
           from pathlib import Path
+          import pandas as pd
           header = (
               'pair_id,island_id,scientific_name,record_count_stratum,repeat,status,'
               'training_land_fraction,training_points,heldout_points,candidate_grid_cells,'
@@ -49,10 +50,12 @@ jobs:
           )
           changed=[]
           for path in Path('all-results').glob('**/fold_results.csv'):
-              if path.stat().st_size == 0:
+              try:
+                  pd.read_csv(path, nrows=1)
+              except pd.errors.EmptyDataError:
                   path.write_text(header)
                   changed.append(str(path))
-          print({'normalized_empty_fold_files': changed})
+          print({'normalized_effectively_empty_fold_files': changed})
           PY
       - name: Aggregate frozen confirmation and robustness
         run: |
@@ -79,7 +82,7 @@ jobs:
           cat > confirmation-result/RECOVERY_PROVENANCE.txt <<'EOF'
           source_scientific_run_id=31953344610
           source_scientific_head=b1c58c21758b8b0d73fdd9bc61d3713d008f04a6
-          recovery_operation=aggregate_only_normalize_empty_fold_csv_headers
+          recovery_operation=aggregate_only_normalize_effectively_empty_fold_csv_headers
           scientific_settings_changed=false
           island_scientific_jobs_rerun=false
           EOF
