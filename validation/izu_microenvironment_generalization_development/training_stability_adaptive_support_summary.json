@@ -1,0 +1,30 @@
+{
+  "status": "development_only",
+  "run_id": 31944106155,
+  "artifact_id": 9262903095,
+  "artifact_digest": "sha256:93c122e63f087920c28179ca5111c5fde55f7bd3b09e00dfbad64b9906b46440",
+  "taxa": 16,
+  "failures": [],
+  "loo_environmental_recovery_target": 0.8,
+  "selected_q_fold_counts": {"0.5": 1, "0.75": 19, "1.0": 60},
+  "method_means": {
+    "K5": {"adaptive": 0.1325, "fixed_q10": 0.1625, "global_max_coverage": 0.1325},
+    "K10": {"adaptive": 0.216875, "fixed_q10": 0.2085416667, "global_max_coverage": 0.216875},
+    "K20": {"adaptive": 0.3979166667, "fixed_q10": 0.4133333333, "global_max_coverage": 0.3910416667}
+  },
+  "adaptive_vs_global": {
+    "K5": {"difference": 0.0, "bootstrap_95ci": [0.0, 0.0], "sign_flip_p": 1.0},
+    "K10": {"difference": 0.0, "bootstrap_95ci": [0.0, 0.0], "sign_flip_p": 1.0},
+    "K20": {"difference": 0.006875, "bootstrap_95ci": [-0.0175, 0.0375], "sign_flip_p": 0.3740525189}
+  },
+  "adaptive_vs_fixed_q10": {
+    "K5": {"difference": -0.03, "bootstrap_95ci": [-0.0545833333, -0.0077083333], "sign_flip_p": 1.0},
+    "K10": {"difference": 0.0083333333, "bootstrap_95ci": [-0.03125, 0.0472916667], "sign_flip_p": 0.3516529669},
+    "K20": {"difference": -0.0154166667, "bootstrap_95ci": [-0.0802135417, 0.0591666667], "sign_flip_p": 1.0}
+  },
+  "decision": "reject environmental-prototype LOO recovery as the support-width selector. It is too conservative and optimizes an internal environmental reconstruction target rather than downstream survey-set recovery. Move to fully nested training-only policy selection: choose q on inner spatial held-out survey recovery, then evaluate once on outer held-out occurrences.",
+  "heldout_coordinates_used_to_choose_q": false,
+  "campanula_field_coordinates_used": false,
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}
