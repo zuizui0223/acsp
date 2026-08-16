@@ -1,6 +1,6 @@
 {
-  "protocol_id": "acsp-adaptive-survey-cross-island-confirmation-cohort-v1",
-  "status": "predeclared_sampling_only_after_method_freeze",
+  "protocol_id": "acsp-adaptive-survey-cross-island-confirmation-cohort-v1.1",
+  "status": "availability_amended_before_any_taxon_draw_or_occurrence_retrieval",
   "method_freeze": {
     "path": "validation/acsp_adaptive_survey_method_freeze_v1.json",
     "fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0"
@@ -15,7 +15,7 @@
       {"island_id":"oki_dogo","west":133.1,"south":36.05,"east":133.4,"north":36.35},
       {"island_id":"shodoshima","west":134.1,"south":34.4,"east":134.42,"north":34.58},
       {"island_id":"tanegashima","west":130.82,"south":30.3,"east":131.08,"north":30.85},
-      {"island_id":"kumejima","west":126.65,"south":26.28,"east":126.9,"north":26.43},
+      {"island_id":"iriomote","west":123.65,"south":24.22,"east":124.0,"north":24.5},
       {"island_id":"ishigaki","west":124.05,"south":24.3,"east":124.35,"north":24.6},
       {"island_id":"miyakojima","west":125.2,"south":24.65,"east":125.5,"north":24.95},
       {"island_id":"rishiri","west":141.15,"south":45.05,"east":141.35,"north":45.3},
@@ -32,7 +32,8 @@
     "required_phylum": "Tracheophyta",
     "required_rank": "SPECIES",
     "global_taxon_uniqueness": true,
-    "no_replacement_after_declaration": true
+    "no_replacement_after_declaration": true,
+    "availability_amendment": "v1 sampling-frame audit drew zero taxa because Kumejima had only 2 vascular species before exclusions and 0 after exclusions. No selected-taxon occurrence coordinates, support surfaces, or held-out outcomes were retrieved. Kumejima was replaced by Iriomote before any cohort draw; all other scientific settings are unchanged."
   },
   "exclusions": {
     "files": [
@@ -58,5 +59,5 @@
     "domain_inapplicable_pairs": "retained as declared but excluded from terrestrial-policy estimand only under the frozen training-only domain gate; report eligibility rate separately",
     "no_retuning": true
   },
-  "protocol_fingerprint": "b54ddec24993e107a722c1fd345e9e1592c44c87ae9892439756c7da81c2bd6f"
+  "protocol_fingerprint": "7bc745ffbcaa23146c56f61e9cf3a1c2ba22bd28cc4ad37468b9b6b726520a65"
 }
