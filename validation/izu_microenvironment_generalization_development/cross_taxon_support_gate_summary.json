@@ -1,0 +1,28 @@
+{
+  "status": "development_only",
+  "protocol_id": "izu-cross-taxon-jackknife-support-gate-development-v1",
+  "run_id": 31950073703,
+  "artifact_id": 9264393536,
+  "artifact_digest": "sha256:5d4f036e8b3bcdc74a9ebc04de653dfd4e5c5ce3b98f29a7879a389723198f84",
+  "taxa": 16,
+  "K5": {
+    "jackknife_selected_qs": [0.1],
+    "jackknife_same_non1_q": true,
+    "final_all_taxa_selected_q": 0.1,
+    "mean_lift_vs_global": 0.03,
+    "bootstrap_95ci": [0.007703124999999991, 0.05499999999999999],
+    "exact_sign_flip_p": 0.01953125,
+    "positive_taxa": 7,
+    "negative_taxa": 1,
+    "ties": 8,
+    "primary_gate": true
+  },
+  "K10_K20_K40": {
+    "selected_q": 1.0,
+    "interpretation": "No ecological support restriction survived the cross-taxon jackknife gate at these larger budgets; use strong geometry-only maximum coverage in the current development evidence."
+  },
+  "decision": "Promote q=0.10 only as the cross-taxon development-frozen low-budget K=5 support policy. Stop within-taxon q/representation tuning. Freeze the complete domain-gate + support-mask + set-coverage procedure before a newly sampled cross-taxon, cross-island confirmation cohort.",
+  "confirmation_claim": false,
+  "campanula_field_coordinates_used": false,
+  "frozen_192_consumed": false
+}
