@@ -6,6 +6,7 @@ on:
     branches:
       - agent/microenvironment-generalization-development
     paths:
+      - acsp/benchmarking.py
       - research/predeclare_acsp_adaptive_cross_island_confirmation.py
       - validation/acsp_adaptive_survey_cross_island_confirmation_cohort_protocol.json
       - validation/acsp_adaptive_survey_method_freeze_v1.json
