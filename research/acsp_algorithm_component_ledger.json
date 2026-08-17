@@ -1,183 +1,194 @@
 {
-  "schema_version": "acsp-algorithm-component-ledger-v2",
+  "schema_version": "acsp-algorithm-component-ledger-v3",
   "status": "development_evidence_ledger",
-  "purpose": "Prevent rejected ideas from being silently reintroduced and force new development to target one unresolved algorithm layer.",
+  "purpose": "Prevent rejected ideas from being silently reintroduced and keep the scale-separated ACSP main line explicit.",
   "current_architecture": [
-    "domain_and_information_gate",
-    "occurrence_conditioned_ecological_support",
-    "training_only_support_policy_selection",
-    "set_level_survey_coverage_optimization",
-    "operational_budget_and_route_or_patch_output",
-    "untouched_external_validation"
+    "domain_and_information_adequacy",
+    "regional_practical_core_ecological_screen",
+    "full_local_candidate_universe",
+    "geometry_only_set_level_maximum_coverage",
+    "operational_day_route_budget_translation",
+    "prospective_field_validation_when_effort_data_exist"
   ],
   "components": [
     {
       "component": "full_domain_candidate_universe",
       "status": "retained",
       "role": "generation",
-      "evidence": "Campanula cached candidate pools could reach only 13/19 field clusters at 1 km; full-island search removed this upstream ceiling.",
-      "sources": ["research/CAMPANULA_DISCOVERY_DEVELOPMENT.md", "research/CAMPANULA_MICROENVIRONMENT_DEVELOPMENT.md"]
+      "evidence": "Campanula cached candidate pools could recover only 13/19 field clusters at 1 km; full-island generation removed the upstream ceiling."
     },
     {
       "component": "spatial_occurrence_thinning",
       "status": "retained_with_scope",
       "role": "training_representation",
-      "rule": "use spatial thinning to reduce duplicate-record dominance; do not interpret the thinning distance as a biological universal constant",
-      "evidence": "Campanula 500 m thinning stabilized prototype representation; naive use of dense nearby records distorted scaling and support density."
+      "rule": "use thinning to reduce duplicate-record dominance; do not interpret the thinning distance as a universal biological scale"
     },
     {
-      "component": "occurrence_conditioned_local_environment",
-      "status": "retained",
-      "role": "ecological_support_not_probability",
-      "evidence": "Local environmental evidence repeatedly survived simplification in the Practical Core and NDVI-state support retained a low-budget within-island signal after strong coverage controls.",
-      "sources": ["validation/izu_microenvironment_generalization_development/low_budget_allocation_decomposition_summary.json"]
-    },
-    {
-      "component": "independent_environmental_top_cell_ranking",
-      "status": "rejected",
-      "role": "final_selection",
-      "evidence": "The frozen Campanula hybrid and NDVI-only rankings both lost to same-allocation random on the 16-taxon unseen transfer; budget sweeps showed no stable low-budget ranking lift.",
-      "sources": ["validation/izu_island_microenvironment_random_taxa_20260816/validation_summary.json", "validation/izu_microenvironment_generalization_development/budget_diagnostic_summary.json"]
+      "component": "regional_occurrence_conditioned_local_environment",
+      "status": "retained_frozen_role",
+      "role": "regional_ecological_screen",
+      "rule": "retain the frozen Practical Core interpretation and fingerprint; do not infer occupancy or suitability probability",
+      "fingerprint": "3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905"
     },
     {
       "component": "set_level_geographic_max_coverage",
       "status": "retained",
-      "role": "final_selection",
-      "evidence": "Strong maximum-covered-land selection dominated simple farthest-first and exposed when environmental support added value beyond geometry.",
-      "sources": ["validation/izu_microenvironment_generalization_development/strong_coverage_comparator_summary.json"]
-    },
-    {
-      "component": "ndvi_state_as_support_constraint",
-      "status": "conditional_active",
-      "role": "eligibility_mask",
-      "evidence": "At q=0.10, K=5, r=1 km, support-constrained max coverage beat both global max coverage and a same-island-allocation environment-free control by +0.030 with positive bootstrap lower bounds and sign-flip p<0.05. No broad fixed-q claim is allowed.",
-      "sources": ["validation/izu_microenvironment_generalization_development/strong_coverage_sweep_summary.json", "validation/izu_microenvironment_generalization_development/low_budget_allocation_decomposition_summary.json"]
-    },
-    {
-      "component": "fixed_q10_as_universal_threshold",
-      "status": "not_promoted",
-      "role": "support_policy",
-      "evidence": "q=0.10 remains the strongest low-budget development reference but is not assumed transferable."
-    },
-    {
-      "component": "training_prototype_loo_environmental_recovery_selector",
-      "status": "rejected",
-      "role": "support_policy_selection",
-      "evidence": "The training-only LOO environmental-reconstruction selector chose q=1 in 60/80 folds; at K=5 it tied global coverage and was 0.030 below fixed q10. Internal environmental reconstruction was misaligned with downstream survey recovery.",
-      "sources": ["validation/izu_microenvironment_generalization_development/training_stability_adaptive_support_summary.json"]
-    },
-    {
-      "component": "fully_nested_single_envelope_q_selection",
-      "status": "rejected",
-      "role": "support_policy_selection",
-      "evidence": "Strict paired inner spatial selection was leakage-safe but did not generalize: K5 lift over global coverage was only +0.00896 with CI crossing zero; K10 and K20 were negative, and the method did not recover fixed-q10 performance.",
-      "sources": ["validation/izu_microenvironment_generalization_development/nested_training_policy_selection_v2_summary.json"]
-    },
-    {
-      "component": "equal_opportunity_mst_multimodal_support",
-      "status": "rejected",
-      "role": "ecological_support_representation",
-      "evidence": "MST gaps detected multiple modes in 42/80 outer folds, but equal mode opportunity degraded fixed q10 by about 0.037, 0.056 and 0.056 recall at K5/K10/K20 respectively and did not improve nested selection over global coverage.",
-      "sources": ["validation/izu_microenvironment_generalization_development/multimodal_support_summary.json"]
-    },
-    {
-      "component": "nearest_prototype_support_scale",
-      "status": "active_experiment",
-      "role": "ecological_support_representation",
-      "rule": "keep the same NDVI-state variables, support-area controls, q candidates, K, radius, spatial folds and max-coverage selector; test whether support should be based on one versus multiple nearest training prototypes using fully nested inner spatial selection",
-      "rationale": "single global width adaptation failed and equal mode balancing over-corrected; the next unresolved question is how much local prototype agreement a candidate needs."
-    },
-    {
-      "component": "campanula_microclimate_fixed_correction",
-      "status": "rejected_for_transfer",
-      "role": "ecological_support",
-      "evidence": "The 0.90 NDVI + 0.10 joint microclimate Campanula rule failed the predeclared 16-taxon transfer and underperformed NDVI-only with CI entirely below zero.",
-      "sources": ["validation/izu_island_microenvironment_random_taxa_20260816/validation_summary.json"]
-    },
-    {
-      "component": "worldcover_static_composition",
-      "status": "rejected",
-      "role": "ecological_support",
-      "evidence": "Static categorical land-cover composition did not improve the Campanula terrain/NDVI frontier."
-    },
-    {
-      "component": "ndvi_transition_gradient_features",
-      "status": "rejected_in_current_representation",
-      "role": "ecological_support",
-      "evidence": "Transition, gradient, and heterogeneity variants did not beat simpler NDVI state in Campanula development. The conceptual transition idea is not promoted without a new representation and new evidence."
-    },
-    {
-      "component": "mandatory_persistent_patch_filter",
-      "status": "rejected_as_biological_gate",
-      "role": "generation_or_filter",
-      "evidence": "Requiring connected persistent support eliminated genuine Campanula detections or required excessive expansion. Patch structure may remain an operational output, not a required truth criterion."
-    },
-    {
-      "component": "finite_patch_compression",
-      "status": "operational_only_pending_robustness",
-      "role": "field_output",
-      "evidence": "Canonical Campanula patch sets could be sharp, but outer prototype deletion showed strong sensitivity; the robust support envelope was more defensible than a fixed finite patch set.",
-      "sources": ["research/campanula_development_freeze_v1.json"]
-    },
-    {
-      "component": "between_island_ndvi_allocation",
-      "status": "rejected",
-      "role": "allocation",
-      "evidence": "NDVI support area did not beat global max coverage and did not beat simpler allocation controls.",
-      "sources": ["validation/izu_microenvironment_generalization_development/hierarchical_island_allocation_summary.json"]
-    },
-    {
-      "component": "training_occurrence_count_allocation",
-      "status": "rejected",
-      "role": "allocation",
-      "evidence": "Smoothed occurrence-count allocation did not pass the predeclared bootstrap gate at K=20 and was clearly worse than global coverage in the q10/K5 decomposition.",
-      "sources": ["validation/izu_microenvironment_generalization_development/hierarchical_island_allocation_summary.json", "validation/izu_microenvironment_generalization_development/low_budget_allocation_decomposition_summary.json"]
-    },
-    {
-      "component": "fixed_geographic_complementarity_weight",
-      "status": "rejected_as_universal_rule",
-      "role": "ranking",
-      "evidence": "Earlier plant/animal and v2.1 development repeatedly collapsed toward local-only under stronger nested validation; geometry remains useful as a set objective rather than a universal additive score weight."
-    },
-    {
-      "component": "domain_gate",
-      "status": "implemented_research_layer_pending_external_freeze",
-      "role": "applicability",
-      "rule": "infer from training data whether the terrestrial support/coverage policy is applicable; training land support can override coarse taxonomy and inapplicable domains return no terrestrial policy",
-      "sources": ["research/acsp_training_domain_gate.py", "validation/robust_support_island_cohort_domain_audit_20260816.md"]
-    },
-    {
-      "component": "survey_budget_as_external_input",
-      "status": "retained",
-      "role": "decision_constraint",
-      "rule": "K, time, distance, or surveyed area are operational budgets, not biological parameters tuned on held-out outcomes",
-      "evidence": "The 793-point/1-km design produced random saturation (~0.86 recall), demonstrating that point count without footprint accounting is not a meaningful field budget."
-    },
-    {
-      "component": "same_pool_random_and_strong_geometry_controls",
-      "status": "retained",
-      "role": "validation",
-      "rule": "environmental value must beat controls matched on candidate universe/budget and, where relevant, island allocation; random alone is insufficient when a strong geometry-only selector exists."
-    },
-    {
-      "component": "nested_and_untouched_validation",
-      "status": "retained",
-      "role": "validation",
-      "rule": "development choices use inner or development data only; new taxa/regions remain untouched until the full procedure is frozen; inspected cohorts are never recycled as confirmation."
+      "role": "fine_scale_local_selection",
+      "evidence": "Strong maximum-new-coverage selection repeatedly dominated weaker geometry controls and remained the strongest transferable fine-scale structure after ecological modifiers failed.",
+      "package_api": "acsp.select_maximum_coverage_sites"
     },
     {
       "component": "exact_sparse_max_coverage",
       "status": "retained_computational_optimization",
       "role": "implementation",
-      "evidence": "The sparse selector passed exact equivalence tests and produced byte-identical strict nested v2 scientific artifacts to the reference selector while reducing computational cost."
+      "evidence": "The sparse selector passed exact-equivalence tests in research workflows and is now promoted to a reusable package set selector with deterministic input-order tie breaking."
+    },
+    {
+      "component": "survey_budget_as_external_input",
+      "status": "retained",
+      "role": "decision_constraint",
+      "evidence": "The 793-point/1-km design produced random saturation and the 12-island operational audit showed fixed K=5 represents 2-5 field days rather than a common budget."
+    },
+    {
+      "component": "geometry_to_field_day_translation",
+      "status": "retained_operational_proxy",
+      "role": "operational_output",
+      "protocol_fingerprint": "6bd7c35e2e3de369088691ebe8861d0578f5933374895fe06cb390bfe9a4383f",
+      "evidence": "All 12 island jobs passed the outcome-free operational contract. Under the production vascular-plant reconnaissance proxy, fixed K=5 required 2-5 days (median 2); day budgets produced island-specific K rather than assuming one universal stop count.",
+      "limits": "Hub choice affects the exact K increasingly at longer budgets; the five-day within-island K range across deterministic hub proxies had median 4.5 and maximum 10. Actual road/trail/ferry access remains unvalidated."
+    },
+    {
+      "component": "domain_gate",
+      "status": "retained_research_layer",
+      "role": "applicability",
+      "rule": "use training information only to decide whether a terrestrial policy is applicable; keep deployment information adequacy separate from retrospective benchmark evaluability"
+    },
+    {
+      "component": "same_budget_strong_controls",
+      "status": "retained",
+      "role": "validation",
+      "rule": "random alone is insufficient when geometry can dominate; environmental value must beat a matched strong geometry-only control"
+    },
+    {
+      "component": "nested_and_untouched_validation",
+      "status": "retained",
+      "role": "validation",
+      "rule": "development choices may not use outer or confirmation outcomes; inspected cohorts are never recycled as confirmation"
+    },
+    {
+      "component": "independent_environmental_top_cell_ranking",
+      "status": "rejected",
+      "role": "fine_scale_selection",
+      "evidence": "Campanula-derived rankings lost to matched random on unseen Izu taxa and low-budget sweeps did not show stable transfer."
+    },
+    {
+      "component": "campanula_microclimate_fixed_correction",
+      "status": "rejected_for_transfer",
+      "role": "fine_scale_ecological_support",
+      "evidence": "The 0.90 NDVI + 0.10 microclimate rule failed the predeclared 16-taxon Izu transfer."
+    },
+    {
+      "component": "ndvi_q10_fine_scale_eligibility",
+      "status": "rejected_for_transferable_core",
+      "role": "fine_scale_ecological_support",
+      "development_evidence": "q=0.10/K=5 showed +0.030 lift over q=1 geometry-only on 16 Izu development taxa and survived cross-taxon jackknife consolidation.",
+      "external_failure": "On 24 new taxa / 12 islands the frozen method had mean lift +0.020873 but bootstrap CI crossed zero, exact p=0.15625, and eligible-pair rate was 0.625; the predeclared confirmation failed.",
+      "budget_representation_failure": "On a separate 24-pair operational development cohort, replacing fixed K with equal land-grid design-footprint curves yielded normalized-AUC lift +0.002752, bootstrap CI [-0.011697,+0.015926], p=0.35645.",
+      "rule": "do not retune q, NDVI features, prototype representation, or thresholds on any inspected cohort"
+    },
+    {
+      "component": "fixed_q10_as_universal_threshold",
+      "status": "rejected",
+      "role": "support_policy",
+      "evidence": "The low-budget Izu signal did not transfer externally and did not survive coverage-equivalent redevelopment."
+    },
+    {
+      "component": "training_prototype_loo_environmental_recovery_selector",
+      "status": "rejected",
+      "role": "support_policy_selection",
+      "evidence": "It selected q=1 in 60/80 folds and optimized an internal reconstruction target misaligned with survey recovery."
+    },
+    {
+      "component": "fully_nested_within_taxon_q_selection",
+      "status": "rejected",
+      "role": "support_policy_selection",
+      "evidence": "K5 lift over global coverage was only about +0.009 with CI crossing zero; K10/K20 were not improved."
+    },
+    {
+      "component": "equal_opportunity_mst_multimodal_support",
+      "status": "rejected",
+      "role": "fine_scale_ecological_support",
+      "evidence": "Multimodality was detected but equal search opportunity degraded fixed-q10 recovery."
+    },
+    {
+      "component": "nearest_prototype_agreement_k2_k3",
+      "status": "rejected",
+      "role": "fine_scale_ecological_support",
+      "evidence": "k=2/3 did not improve k=1 and fully nested (k,q) selection did not beat geometry-only."
+    },
+    {
+      "component": "ndvi_spatial_scale_adaptation",
+      "status": "rejected",
+      "role": "fine_scale_ecological_support",
+      "evidence": "Point-only, 100 m-only and 250 m-only variants did not improve the current multiscale reference; nested selection failed."
+    },
+    {
+      "component": "worldcover_static_composition",
+      "status": "rejected",
+      "role": "fine_scale_ecological_support"
+    },
+    {
+      "component": "ndvi_transition_gradient_features",
+      "status": "rejected_in_current_representation",
+      "role": "fine_scale_ecological_support",
+      "rule": "the conceptual transition idea may only return with a genuinely new representation and new development data"
+    },
+    {
+      "component": "mandatory_persistent_patch_filter",
+      "status": "rejected_as_biological_gate",
+      "role": "generation_or_filter",
+      "evidence": "It removed genuine Campanula detections or required excessive expansion; patches belong downstream as field representation."
+    },
+    {
+      "component": "between_island_ndvi_allocation",
+      "status": "rejected",
+      "role": "allocation"
+    },
+    {
+      "component": "training_occurrence_count_allocation",
+      "status": "rejected",
+      "role": "allocation"
+    },
+    {
+      "component": "fixed_geographic_complementarity_weight",
+      "status": "rejected_as_universal_rule",
+      "role": "ranking",
+      "rule": "geometry survives as a set objective rather than an additive score bonus"
+    },
+    {
+      "component": "route_or_patch_as_biological_truth",
+      "status": "rejected",
+      "role": "interpretation",
+      "rule": "route and patch structure are operational outputs only"
+    },
+    {
+      "component": "real_access_network_constraints",
+      "status": "next_operational_gap",
+      "role": "operational_feasibility",
+      "rule": "accept explicit user hub/road/trail/ferry constraints; do not infer them as biological suitability"
+    },
+    {
+      "component": "prospective_attempted_site_learning",
+      "status": "future_data_dependent",
+      "role": "adaptive_field_learning",
+      "requirement": "attempted sites, standardized non-detections, effort, season/detectability and access outcomes are required before claiming discovery-per-day or detection-yield learning"
     }
   ],
   "unresolved_layers_in_priority_order": [
-    "nearest_prototype_support_scale",
-    "support_spatial_scale_if_knn_scale_fails",
-    "domain_gate_external_integration",
-    "route_or_equal_area_budget_output_after_ecological_support_is_stable",
-    "cross_taxon_cross_island_untouched_confirmation"
+    "integrate_package_geometry_selector_with_user_supplied_hub_and_day_budget",
+    "real_access_road_trail_ferry_constraints",
+    "prospective_attempted_site_and_effort_validation",
+    "new_biological_fine_scale_representation_only_if_new_evidence_justifies_reopening"
   ],
-  "anti_churn_rule": "A new experiment must name one unresolved layer, preserve retained components unless directly testing them, and compare against the strongest surviving control."
+  "anti_churn_rule": "Do not reopen rejected fine-scale NDVI/support families by threshold or feature retuning. New experiments must name one unresolved layer, preserve retained components, and use the strongest relevant control."
 }
