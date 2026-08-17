@@ -7,6 +7,7 @@ on:
       - main
       - agent/microenvironment-generalization-development
       - "agent/operational-budget-*"
+      - "agent/explicit-hub-day-*"
     paths:
       - validation/acsp_geometry_trip_budget_operational_protocol.json
       - research/prepare_acsp_geometry_trip_budget_layer.py
@@ -16,6 +17,8 @@ on:
       - research/run_acsp_cross_island_confirmation_island.py
       - acsp/coverage.py
       - acsp/operational_budget.py
+      - acsp/trip_proxy.py
+      - acsp/cli.py
       - acsp_discover.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/acsp-geometry-trip-budget-operational.yml
