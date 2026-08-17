@@ -17,6 +17,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from acsp.operational_budget import select_largest_feasible_prefix
 from acsp_discover import infer_survey_protocol
 from develop_izu_strong_coverage_comparator import build_geometry
 from fast_max_coverage import SparseCoverageIndex
@@ -122,6 +123,38 @@ def trip_row(
     }
 
 
+def normalize_prefix_audit_row(
+    raw: pd.Series,
+    coverage: np.ndarray,
+    *,
+    island_id: str,
+    hub_name: str,
+    hub_lat: float,
+    hub_lon: float,
+    target_days: int,
+) -> dict:
+    """Preserve the historical operational-validation CSV schema."""
+    k = int(raw["k"])
+    return {
+        "hub_proxy": hub_name,
+        "target_days": int(target_days),
+        "k": k,
+        "coverage_fraction": float(coverage[k - 1]),
+        "fits_target_days": bool(raw.get("fits_target_days", False)),
+        "estimated_days": int(raw.get("estimated_days", 0)),
+        "overtime_days": int(raw.get("overtime_days", 0)),
+        "estimated_road_km": float(raw.get("estimated_road_km", np.nan)),
+        "estimated_transit_km": float(raw.get("estimated_transit_km", np.nan)),
+        "travel_hours": float(raw.get("travel_hours", np.nan)),
+        "site_hours": float(raw.get("site_hours", np.nan)),
+        "total_hours": float(raw.get("total_hours", np.nan)),
+        "inter_area_transfers": int(raw.get("inter_area_transfers", 0)),
+        "island_id": island_id,
+        "hub_latitude": float(hub_lat),
+        "hub_longitude": float(hub_lon),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
@@ -165,6 +198,7 @@ def main() -> None:
     if len(selected) != max_sites:
         raise RuntimeError(f"geometry selector returned {len(selected)} sites, expected {max_sites}")
     coverage = coverage_curve(sparse, selected, len(grid))
+    ordered_plan = make_plan(selected, max_sites)
 
     survey = infer_survey_protocol({"kingdom": "Plantae"}).as_dict()
     expected_field = protocol["field_protocol"]
@@ -194,24 +228,30 @@ def main() -> None:
     for hub_name in declared_hubs:
         hub = hubs[hub_name]
         for day in map(int, protocol["budget_translation"]["target_days"]):
-            candidates = []
-            for k in range(1, max_sites + 1):
-                row = trip_row(
-                    selected,
+            _chosen_plan, budget_audit, prefix_audit = select_largest_feasible_prefix(
+                ordered_plan,
+                hub_latitude=float(hub["latitude"]),
+                hub_longitude=float(hub["longitude"]),
+                target_days=day,
+                trip_estimator=estimate_default_short_trip,
+                survey_protocol=survey,
+                max_sites=max_sites,
+            )
+            normalized = [
+                normalize_prefix_audit_row(
+                    row,
                     coverage,
-                    k=k,
+                    island_id=args.island,
                     hub_name=hub_name,
-                    hub_lat=hub["latitude"],
-                    hub_lon=hub["longitude"],
+                    hub_lat=float(hub["latitude"]),
+                    hub_lon=float(hub["longitude"]),
                     target_days=day,
-                    survey_protocol=survey,
                 )
-                row.update({"island_id": args.island, "hub_latitude": hub["latitude"], "hub_longitude": hub["longitude"]})
-                prefix_rows.append(row)
-                if row["fits_target_days"]:
-                    candidates.append(row)
-            if candidates:
-                chosen = dict(max(candidates, key=lambda item: item["k"]))
+                for _, row in prefix_audit.iterrows()
+            ]
+            prefix_rows.extend(normalized)
+            if budget_audit.selected_count > 0:
+                chosen = dict(normalized[budget_audit.selected_count - 1])
                 chosen["status"] = "ok"
             else:
                 chosen = {
