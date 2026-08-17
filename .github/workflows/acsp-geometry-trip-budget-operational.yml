@@ -4,7 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - agent/microenvironment-generalization-development
+      - "agent/operational-budget-*"
     paths:
       - validation/acsp_geometry_trip_budget_operational_protocol.json
       - research/prepare_acsp_geometry_trip_budget_layer.py
@@ -12,6 +14,8 @@ on:
       - research/aggregate_acsp_geometry_trip_budget.py
       - research/fast_max_coverage.py
       - research/run_acsp_cross_island_confirmation_island.py
+      - acsp/coverage.py
+      - acsp/operational_budget.py
       - acsp_discover.py
       - gbif_fieldmap_builder_app.py
       - .github/workflows/acsp-geometry-trip-budget-operational.yml
