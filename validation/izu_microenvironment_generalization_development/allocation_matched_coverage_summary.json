@@ -1,0 +1,25 @@
+{
+  "status": "development_only",
+  "run_id": 31936765894,
+  "artifact_id": 9260888274,
+  "artifact_digest": "sha256:f6502fabf4f7cc4f4c71423b0d4766f09c7a219eff5b8075f5fc4e4993ded6e4",
+  "support_quantile": 0.05,
+  "budget": 20,
+  "radius_km": 1.0,
+  "taxa": 16,
+  "failures": [],
+  "mean_support_recall": 0.37916666666666665,
+  "mean_allocation_matched_coverage_recall": 0.3754166666666666,
+  "support_vs_allocation_matched_coverage": {
+    "mean_difference": 0.003749999999999993,
+    "bootstrap_95ci": [-0.09458333333333334, 0.09958333333333333],
+    "sign_flip_p": 0.47333053338933223,
+    "positive_taxa": 8,
+    "negative_taxa": 6,
+    "passes": false
+  },
+  "within_island_environment_value": false,
+  "interpretation": "At q=0.05/K=20/r=1 km, the support-constrained method has no stable advantage once the same per-island slot allocation is held fixed and each island is optimized by environment-free geographic maximum coverage. The earlier advantage over matched random therefore does not support within-island NDVI microenvironment targeting; it is consistent with a between-island allocation effect plus set-level geographic coverage.",
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

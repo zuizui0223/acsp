@@ -1,0 +1,103 @@
+name: Recover ACSP adaptive cross-island confirmation aggregate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - .github/workflows/acsp-adaptive-cross-island-confirmation-aggregate-recovery.yml
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install aggregation dependencies
+        run: python -m pip install pandas numpy
+      - name: Download immutable island artifacts from source run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: acsp-adaptive-confirmation-*
+          path: all-results
+          merge-multiple: false
+          repository: zuizui0223/acsp
+          run-id: 31953344610
+          github-token: ${{ github.token }}
+      - name: Build sanitized aggregation-only view
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, shutil
+          import pandas as pd
+
+          src = Path('all-results')
+          dst = Path('sanitized-results')
+          skipped=[]
+          copied=[]
+          for artifact_dir in sorted(p for p in src.iterdir() if p.is_dir()):
+              out = dst / artifact_dir.name / 'island-result'
+              out.mkdir(parents=True, exist_ok=True)
+              pair = next(artifact_dir.glob('**/pair_results.csv'))
+              summary = next(artifact_dir.glob('**/island_summary.json'))
+              # Re-serialize pair rows so every aggregate input is a canonical CSV.
+              pd.read_csv(pair).to_csv(out / 'pair_results.csv', index=False)
+              shutil.copy2(summary, out / 'island_summary.json')
+              fold_candidates = list(artifact_dir.glob('**/fold_results.csv'))
+              if fold_candidates:
+                  fold = fold_candidates[0]
+                  try:
+                      frame = pd.read_csv(fold)
+                  except pd.errors.EmptyDataError:
+                      skipped.append(str(fold))
+                  else:
+                      frame.to_csv(out / 'fold_results.csv', index=False)
+                      copied.append(str(fold))
+          print(json.dumps({'fold_files_copied': copied, 'effectively_empty_fold_files_skipped': skipped}, indent=2))
+          PY
+      - name: Aggregate frozen confirmation and robustness
+        run: |
+          python research/aggregate_acsp_cross_island_confirmation.py \
+            --execution-protocol validation/acsp_adaptive_survey_cross_island_confirmation_execution_protocol.json \
+            --cohort validation/acsp_adaptive_cross_island_confirmation_20260816/predeclared_taxon_island_pairs.csv \
+            --results-root sanitized-results \
+            --out confirmation-result
+      - name: Audit no-retuning recovery contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('confirmation-result/confirmation_summary.json').read_text())
+          assert s['execution_protocol_fingerprint']=='24a5cc0d21bcfd4fdfce5dc9b8ccbb2cd8dc1fc717928d8ed6775c79ef8591e1'
+          assert s['method_freeze_fingerprint']=='1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0'
+          assert s['retuning_performed'] is False
+          assert s['frozen_192_consumed'] is False
+          assert s['status']=='confirmation_complete'
+          print(json.dumps(s,indent=2))
+          PY
+      - name: Record source-run provenance
+        run: |
+          cat > confirmation-result/RECOVERY_PROVENANCE.txt <<'EOF'
+          source_scientific_run_id=31953344610
+          source_scientific_head=b1c58c21758b8b0d73fdd9bc61d3713d008f04a6
+          recovery_operation=aggregate_only_reserialize_pair_and_readable_fold_csvs_skip_effectively_empty_fold_csvs
+          scientific_settings_changed=false
+          island_scientific_jobs_rerun=false
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-adaptive-cross-island-confirmation-result-recovered
+          path: confirmation-result/
+          if-no-files-found: error
+          retention-days: 90

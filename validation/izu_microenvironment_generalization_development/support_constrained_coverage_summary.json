@@ -1,0 +1,26 @@
+{
+  "status": "development_only",
+  "run_id": 31936177244,
+  "artifact_id": 9260739005,
+  "artifact_digest": "sha256:1df7dcb007061725da704aa3b50990cb11b589086b38739d8e3e5e0b1d59f526",
+  "taxa_in_sample": 16,
+  "taxa_with_results": 16,
+  "failures": [],
+  "stable_environment_support_cells": 10,
+  "best_support_constraint_vs_simple_farthest_coverage_only": {
+    "support_quantile": 0.05,
+    "budget": 20,
+    "radius_km": 1.0,
+    "support_constrained_recall": 0.434375,
+    "coverage_only_recall": 0.16666666666666666,
+    "difference": 0.2677083333333333,
+    "bootstrap_95ci": [0.188125, 0.345],
+    "sign_flip_p": 0.0000799984,
+    "positive_taxa": 15,
+    "negative_taxa": 1
+  },
+  "interpretation": "Strong evidence that treating occurrence-conditioned NDVI as an eligibility mask can outperform a simple geographic farthest-first set. This is not yet sufficient for promotion because the q=1 farthest-first comparator underperformed prior matched-random coverage. A stronger greedy maximum-covered-land comparator is required.",
+  "promotion_status": "pending_strong_coverage_comparator",
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

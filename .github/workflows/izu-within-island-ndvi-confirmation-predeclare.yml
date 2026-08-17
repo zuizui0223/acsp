@@ -1,0 +1,56 @@
+name: Izu within-island NDVI confirmation predeclaration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - research/predeclare_izu_microenvironment_taxa.py
+      - validation/izu_within_island_ndvi_support_confirmation_protocol.json
+      - .github/workflows/izu-within-island-ndvi-confirmation-predeclare.yml
+
+permissions:
+  contents: read
+
+jobs:
+  predeclare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install sampling dependencies
+        run: python -m pip install pandas numpy requests
+      - name: Sample taxon identities only
+        run: |
+          python research/predeclare_izu_microenvironment_taxa.py \
+            --protocol validation/izu_within_island_ndvi_support_confirmation_protocol.json \
+            --excluded validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv \
+            --excluded validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv \
+            --excluded validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv \
+            --out izu-ndvi-confirmation-cohort
+      - name: Audit no-outcome boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('izu-ndvi-confirmation-cohort/cohort_manifest.json').read_text())
+          assert p['declared_taxa']==32
+          assert p['required_phylum']=='Tracheophyta'
+          assert p['outcomes_inspected'] is False
+          assert p['focal_occurrence_rows_fetched'] is False
+          assert p['candidate_generation_run'] is False
+          assert p['heldout_recovery_run'] is False
+          assert p['taxon_replacement_after_declaration'] is False
+          assert p['protocol_fingerprint']=='75d78ef654a5a07beb54ca80516aed05d9a5322db678dddc4b3059a5151208ab'
+          print(json.dumps(p, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: izu-within-island-ndvi-confirmation-cohort
+          path: izu-ndvi-confirmation-cohort/
+          if-no-files-found: error
+          retention-days: 90

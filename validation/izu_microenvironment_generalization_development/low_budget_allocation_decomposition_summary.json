@@ -1,0 +1,69 @@
+{
+  "status": "development_only",
+  "run_id": 31942973391,
+  "artifact_id": 9262526432,
+  "artifact_digest": "sha256:5a6c75cc0e928fdb7f007797603af5abcf1620d6a3afd7af80d4aaf6c88257e1",
+  "protocol_id": "izu-low-budget-allocation-decomposition-v1",
+  "support_quantile": 0.1,
+  "budget": 5,
+  "radius_km": 1.0,
+  "taxa": 16,
+  "failures": [],
+  "method_means": {
+    "q10_support_max_coverage": 0.1625,
+    "equal_one_per_island": 0.15416666666666667,
+    "global_max_coverage": 0.1325,
+    "same_island_allocation_max_coverage_without_environment": 0.1325,
+    "training_occurrence_allocation_alpha_4": 0.0525,
+    "training_occurrence_allocation_alpha_0": 0.043958333333333335,
+    "training_occurrence_allocation_alpha_0.5": 0.041875,
+    "training_occurrence_allocation_alpha_2": 0.034583333333333334,
+    "training_occurrence_allocation_alpha_1": 0.0325
+  },
+  "within_island_ndvi_test": {
+    "method": "q10_support_max_coverage",
+    "control": "same_island_allocation_max_coverage_without_environment",
+    "difference": 0.03,
+    "bootstrap_95ci": [0.007083333333333332, 0.05458333333333333],
+    "sign_flip_p": 0.019839603207935843,
+    "positive_taxa": 7,
+    "negative_taxa": 1,
+    "ties": 8,
+    "passes": true
+  },
+  "q10_vs_equal_one_per_island": {
+    "difference": 0.008333333333333345,
+    "bootstrap_95ci": [-0.0843802083333333, 0.10333333333333333],
+    "sign_flip_p": 0.4377312453750925,
+    "passes": false
+  },
+  "q10_vs_global_max_coverage": {
+    "difference": 0.03,
+    "bootstrap_95ci": [0.007291666666666667, 0.05437499999999999],
+    "sign_flip_p": 0.020639587208255834,
+    "passes": true
+  },
+  "best_occurrence_allocation_vs_global": {
+    "method": "training_occurrence_allocation_alpha_4",
+    "difference": -0.08,
+    "bootstrap_95ci": [-0.1475, -0.015625],
+    "sign_flip_p": 1.0,
+    "passes": false
+  },
+  "q10_vs_best_occurrence": {
+    "difference": 0.11,
+    "bootstrap_95ci": [0.04770833333333333, 0.1770885416666666],
+    "sign_flip_p": 0.0019199616007679846,
+    "passes": true
+  },
+  "decision": {
+    "within_island_ndvi_support": "retain for new unseen confirmation",
+    "between_island_ndvi_allocation": "do not claim",
+    "training_occurrence_count_allocation": "drop",
+    "cell_ranking_family": "remain dropped",
+    "next": "freeze q10 eligibility plus K5 maximum geographic coverage and test once on a newly predeclared unseen Izu vascular-plant cohort"
+  },
+  "weights_or_qkr_retuned": false,
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

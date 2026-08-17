@@ -1,0 +1,36 @@
+{
+  "status": "development_only",
+  "run_id": 31946240154,
+  "workflow_head_sha": "56588073cab49c1e5b45045333c9ec2bdc3f3619",
+  "artifact_id": 9263684130,
+  "artifact_digest": "sha256:d25bfaae8ff09ef59c918826f94cc00c1595bd1edc1382ff9b43201cf122c3dd",
+  "protocol_id": "izu-nested-training-policy-selection-v2",
+  "taxa": 16,
+  "failures": [],
+  "selected_q_counts": {
+    "K5": {"0.05": 3, "0.10": 16, "0.25": 5, "0.50": 5, "1.00": 51},
+    "K10": {"0.05": 3, "0.10": 4, "0.25": 4, "0.50": 19, "0.75": 2, "1.00": 48},
+    "K20": {"0.05": 15, "0.10": 6, "0.25": 10, "0.50": 11, "0.75": 4, "1.00": 34}
+  },
+  "method_means": {
+    "K5": {"nested_training_selected": 0.14145833333333332, "fixed_q10": 0.1625, "global_max_coverage": 0.1325},
+    "K10": {"nested_training_selected": 0.20875, "fixed_q10": 0.20854166666666665, "global_max_coverage": 0.216875},
+    "K20": {"nested_training_selected": 0.355625, "fixed_q10": 0.41333333333333333, "global_max_coverage": 0.3910416666666667}
+  },
+  "nested_vs_global": {
+    "K5": {"difference": 0.008958333333333332, "bootstrap_95ci": [-0.0037500000000000085, 0.025], "sign_flip_p": 0.1866962660746785, "passes": false},
+    "K10": {"difference": -0.008124999999999997, "bootstrap_95ci": [-0.02958333333333333, 0.014583333333333337], "sign_flip_p": 1.0, "passes": false},
+    "K20": {"difference": -0.035416666666666666, "bootstrap_95ci": [-0.08438020833333333, 0.012500000000000008], "sign_flip_p": 1.0, "passes": false}
+  },
+  "nested_vs_fixed_q10": {
+    "K5": {"difference": -0.021041666666666667, "bootstrap_95ci": [-0.049375, 0.0010416666666666673], "sign_flip_p": 1.0, "passes": false},
+    "K10": {"difference": 0.00020833333333333814, "bootstrap_95ci": [-0.037291666666666654, 0.03520833333333333], "sign_flip_p": 0.494910101797964, "passes": false},
+    "K20": {"difference": -0.057708333333333334, "bootstrap_95ci": [-0.10291666666666667, -0.012500000000000006], "sign_flip_p": 1.0, "passes": false}
+  },
+  "decision": "reject support-width adaptation within the current single global nearest-prototype envelope. The fully nested selector does not produce stable lift over global maximum coverage and does not recover the fixed-q10 low-budget signal. Preserve q/K/r, domain handling, and the set-level max-coverage optimizer; change only ecological-support representation next, beginning with training-only multi-modal support.",
+  "next_allowed_change": "multi-modal environmental support inferred from training occurrences; reuse the historical robust MST-gap occupancy-geometry component without tuning its gap rule on outer outcomes",
+  "outer_heldout_coordinates_used_to_select_q": false,
+  "campanula_field_coordinates_used": false,
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

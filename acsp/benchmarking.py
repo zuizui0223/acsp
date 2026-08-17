@@ -13,23 +13,44 @@ import pandas as pd
 import requests
 
 
+_TRANSIENT_HTTP_STATUS = {429, 500, 502, 503, 504}
+
+
 def get_json(
     url: str,
     params: dict[str, Any] | None = None,
     timeout: int = 60,
-    attempts: int = 3,
+    attempts: int = 8,
 ) -> dict[str, Any]:
-    """Fetch JSON with bounded retries for transient GBIF failures."""
+    """Fetch JSON with bounded retries for transient network/GBIF failures.
+
+    Retry only conditions that can plausibly recover without changing the
+    scientific request: rate limiting, 5xx responses, timeouts, connection
+    failures, and a transient malformed/empty JSON response. Permanent HTTP
+    errors are raised immediately so protocol mistakes are not hidden.
+    """
     last_error: Exception | None = None
-    for attempt in range(max(1, int(attempts))):
+    total_attempts = max(1, int(attempts))
+    for attempt in range(total_attempts):
         try:
             response = requests.get(url, params=params, timeout=timeout)
+            # Preserve the original helper contract (and simple response mocks):
+            # let requests decide whether the response is an HTTP error, then
+            # inspect the concrete HTTPError only to decide retry eligibility.
             response.raise_for_status()
             return response.json()
-        except (requests.RequestException, ValueError) as exc:
+        except requests.HTTPError as exc:
+            status = getattr(exc.response, "status_code", None)
+            if status not in _TRANSIENT_HTTP_STATUS:
+                raise
             last_error = exc
-            if attempt + 1 < max(1, int(attempts)):
-                time.sleep(0.5 * (2 ** attempt))
+        except (requests.ConnectionError, requests.Timeout, ValueError) as exc:
+            last_error = exc
+        except requests.RequestException:
+            # Non-transient request failures should not be masked by retries.
+            raise
+        if attempt + 1 < total_attempts:
+            time.sleep(min(30.0, 1.0 * (2 ** attempt)))
     assert last_error is not None
     raise last_error
 

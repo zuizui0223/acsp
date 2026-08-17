@@ -1,0 +1,45 @@
+{
+  "protocol_id": "izu-microenvironment-generalization-development-v1",
+  "status": "development_only_after_failed_unseen_taxon_transfer",
+  "development_cohort": "validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv",
+  "cohort_role": "inspected development only; never independent confirmation again",
+  "starting_failure": {
+    "hybrid_recall": 0.7191666666666667,
+    "ndvi_recall": 0.7547916666666666,
+    "random_recall": 0.8608145833333334,
+    "hybrid_minus_random": -0.14164791666666668
+  },
+  "frozen_input_methods": {
+    "hybrid": "0.90*ndvi_state_rank + 0.10*joint_ndvi_microclimate_rank",
+    "ndvi_only": "ndvi_state_rank",
+    "random": "same-island candidate counts as hybrid"
+  },
+  "diagnostic": {
+    "candidate_budgets": [5, 10, 20, 40, 80, 160, 320, 793],
+    "recovery_radii_km": [0.25, 0.5, 1.0],
+    "random_draws_per_fold": 200,
+    "spatial_blocks_degrees": 0.03,
+    "repeats": 5,
+    "holdout_fraction": 0.2,
+    "outputs": [
+      "recall_by_budget_radius_method",
+      "hybrid_minus_random_by_budget_radius",
+      "ndvi_minus_random_by_budget_radius",
+      "hybrid_minus_ndvi_by_budget_radius",
+      "selected_island_allocation",
+      "effective_buffered_grid_coverage_for_deterministic_methods"
+    ]
+  },
+  "decision_logic": {
+    "first_question": "Does occurrence-conditioned environmental support beat random at realistic low budgets before random geographic coverage saturates?",
+    "if_no_low_budget_lift": "Abandon the current cell-level environmental-ranking family for generalization.",
+    "if_low_budget_lift_then_saturation": "Move to equal-surveyed-area compact patch or route-time selection; do not use isolated-cell count as field budget.",
+    "confirmation": "Any revised method must be frozen and tested on a newly predeclared cohort excluding these 16 taxa and the frozen 192 Practical Core taxa."
+  },
+  "hard_boundaries": [
+    "Do not retune or relabel the failed Campanula transfer as validation.",
+    "Do not consume the frozen 192-pair Practical Core cohort.",
+    "Retain negative budget/radius cells.",
+    "No existing-tool superiority claim in this development stage."
+  ]
+}

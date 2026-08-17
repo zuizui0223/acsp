@@ -1,0 +1,30 @@
+{
+  "status": "operational_geometry_trip_budget_complete",
+  "protocol_fingerprint": "6bd7c35e2e3de369088691ebe8861d0578f5933374895fe06cb390bfe9a4383f",
+  "islands_expected": 12,
+  "islands_completed": 12,
+  "missing_islands": [],
+  "unexpected_islands": [],
+  "duplicate_islands": [],
+  "day_budget_primary_hub": {
+    "1": {"selected_k": {"n": 12, "min": 1.0, "median": 2.5, "max": 3.0, "mean": 2.4166666666666665}, "coverage_fraction": {"n": 12, "min": 0.002412584186733, "median": 0.026435977766885048, "max": 0.0587528116031955, "mean": 0.027469512201713342}, "estimated_road_km": {"n": 12, "min": 24.1, "median": 49.0, "max": 139.1, "mean": 61.56666666666667}, "total_hours": {"n": 12, "min": 5.2, "median": 6.2, "max": 6.8, "mean": 6.183333333333334}, "all_fit": true},
+    "2": {"selected_k": {"n": 12, "min": 2.0, "median": 5.0, "max": 6.0, "mean": 4.833333333333333}, "coverage_fraction": {"n": 12, "min": 0.0048251683734661, "median": 0.05560010994722795, "max": 0.117505623206391, "mean": 0.05553874825988103}, "estimated_road_km": {"n": 12, "min": 45.2, "median": 90.0, "max": 277.5, "mean": 117.49166666666667}, "total_hours": {"n": 12, "min": 11.4, "median": 12.2, "max": 13.3, "mean": 12.216666666666667}, "all_fit": true},
+    "3": {"selected_k": {"n": 12, "min": 3.0, "median": 8.5, "max": 9.0, "mean": 7.416666666666667}, "coverage_fraction": {"n": 12, "min": 0.0072377525601992, "median": 0.083400164920842, "max": 0.1762584348095865, "mean": 0.08470096123104244}, "estimated_road_km": {"n": 12, "min": 67.0, "median": 120.8, "max": 411.1, "mean": 168.31666666666666}, "total_hours": {"n": 12, "min": 16.9, "median": 18.45, "max": 20.0, "mean": 18.400000000000002}, "all_fit": true},
+    "4": {"selected_k": {"n": 12, "min": 4.0, "median": 11.0, "max": 12.0, "mean": 9.833333333333334}, "coverage_fraction": {"n": 12, "min": 0.0096503367469323, "median": 0.11120021989445594, "max": 0.2350112464127821, "mean": 0.11215779228774386}, "estimated_road_km": {"n": 12, "min": 86.8, "median": 160.39999999999998, "max": 550.5, "mean": 218.79166666666666}, "total_hours": {"n": 12, "min": 22.0, "median": 24.55, "max": 26.4, "mean": 24.29166666666666}, "all_fit": true},
+    "5": {"selected_k": {"n": 12, "min": 5.0, "median": 13.5, "max": 15.0, "mean": 12.25}, "coverage_fraction": {"n": 12, "min": 0.0120629209336654, "median": 0.14533400434084434, "max": 0.2741797874815792, "mean": 0.1386855240873706}, "estimated_road_km": {"n": 12, "min": 102.8, "median": 184.6, "max": 684.2, "mean": 265.03333333333336}, "total_hours": {"n": 12, "min": 28.6, "median": 29.2, "max": 32.8, "mean": 30.05}, "all_fit": true}
+  },
+  "hub_proxy_sensitivity": {
+    "1": {"k_range_across_hubs": {"n": 12, "min": 0.0, "median": 1.0, "max": 2.0, "mean": 1.0}, "coverage_range_across_hubs": {"n": 12, "min": 0.0, "median": 0.005691514925714252, "max": 0.0253349178910977, "mean": 0.007981740888716175}, "islands_with_k_change": 9},
+    "2": {"k_range_across_hubs": {"n": 12, "min": 0.0, "median": 2.0, "max": 4.0, "mean": 1.8333333333333333}, "coverage_range_across_hubs": {"n": 12, "min": 0.0, "median": 0.011383029851428552, "max": 0.038002376836646506, "mean": 0.013419302228373243}, "islands_with_k_change": 9},
+    "3": {"k_range_across_hubs": {"n": 12, "min": 0.0, "median": 3.0, "max": 6.0, "mean": 3.0}, "coverage_range_across_hubs": {"n": 12, "min": 0.0, "median": 0.018723483088779552, "max": 0.07600475367329301, "mean": 0.02186907857409061}, "islands_with_k_change": 11},
+    "4": {"k_range_across_hubs": {"n": 12, "min": 0.0, "median": 4.0, "max": 8.0, "mean": 3.6666666666666665}, "coverage_range_across_hubs": {"n": 12, "min": 0.0, "median": 0.022664384653717402, "max": 0.07600475367329299, "mean": 0.024613237345659497}, "islands_with_k_change": 10},
+    "5": {"k_range_across_hubs": {"n": 12, "min": 0.0, "median": 4.5, "max": 10.0, "mean": 4.333333333333333}, "coverage_range_across_hubs": {"n": 12, "min": 0.0, "median": 0.021855056200864663, "max": 0.07586970613656009, "mean": 0.028324535421057475}, "islands_with_k_change": 11}
+  },
+  "fixed_k5_across_islands": {"estimated_days": {"n": 12, "min": 2.0, "median": 2.0, "max": 5.0, "mean": 2.5833333333333335}, "total_hours": {"n": 12, "min": 10.5, "median": 11.75, "max": 28.7, "mean": 14.25}, "estimated_road_km": {"n": 12, "min": 45.7, "median": 89.9, "max": 684.2, "mean": 177.82499999999996}, "islands_fitting_one_day": 0, "islands_requiring_more_than_one_day": 12},
+  "per_island_contract": {"amami_oshima": true, "iriomote": true, "ishigaki": true, "miyakojima": true, "oki_dogo": true, "okinawa_main": true, "rishiri": true, "sado": true, "shodoshima": true, "tanegashima": true, "tsushima": true, "yakushima": true},
+  "all_primary_day_prefixes_fit": true,
+  "taxon_and_environment_modifier_free": true,
+  "operational_contract_pass": true,
+  "interpretation": "Geometry-only fine-scale coverage can be translated to field-day budgets with the production trip estimator. This is an operational proxy benchmark; it is not a road-network, access, detection, or biological-superiority validation.",
+  "frozen_192_consumed": false
+}

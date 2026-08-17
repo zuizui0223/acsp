@@ -1,0 +1,51 @@
+{
+  "protocol_id": "acsp-operational-budget-development-cohort-v1",
+  "status": "development_only_predeclared_after_failed_cross_island_confirmation",
+  "purpose": "Develop a scale-normalized operational survey-budget representation without reusing the inspected 24-pair confirmation cohort.",
+  "scope": {
+    "taxon_group": "Tracheophyta",
+    "island_cells": [
+      {"island_id":"yakushima","west":130.38,"south":30.2,"east":130.7,"north":30.43},
+      {"island_id":"amami_oshima","west":129.2,"south":28.05,"east":129.75,"north":28.55},
+      {"island_id":"tsushima","west":129.1,"south":34.0,"east":129.55,"north":34.75},
+      {"island_id":"sado","west":138.15,"south":37.75,"east":138.65,"north":38.38},
+      {"island_id":"tanegashima","west":130.82,"south":30.3,"east":131.08,"north":30.85},
+      {"island_id":"iriomote","west":123.65,"south":24.22,"east":124.0,"north":24.5},
+      {"island_id":"ishigaki","west":124.05,"south":24.3,"east":124.35,"north":24.6},
+      {"island_id":"okinawa_main","west":127.6,"south":26.05,"east":128.35,"north":26.88}
+    ]
+  },
+  "cohort": {
+    "pair_count": 24,
+    "taxa_per_island": 3,
+    "within_island_record_count_strata": 3,
+    "seed": 20260820,
+    "minimum_coordinate_records_in_cell": 25,
+    "facet_limit": 600,
+    "required_phylum": "Tracheophyta",
+    "required_rank": "SPECIES",
+    "global_taxon_uniqueness": true,
+    "no_replacement_after_declaration": true
+  },
+  "exclusions": {
+    "files": [
+      "validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+      "validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv",
+      "validation/previous_outside_izu_24_taxa_excluded_20260816.csv",
+      "validation/acsp_adaptive_cross_island_confirmation_20260816/predeclared_taxon_island_pairs.csv"
+    ],
+    "explicit_prefixes": ["Campanula microdonta","Castanopsis sieboldii","Styrax japonica","Weigela coraeensis","Cornus controversa"]
+  },
+  "sampling_boundary": {
+    "uses_only_species_facets_and_species_metadata": true,
+    "selected_taxon_occurrence_coordinates_fetched": false,
+    "heldout_outcomes_inspected": false
+  },
+  "separation": {
+    "failed_confirmation_24_reused_for_development": false,
+    "frozen_192_practical_core_consumed": false,
+    "izu_16_reused_as_new_development": false
+  },
+  "protocol_fingerprint": "00916d8eb5755c4bea19a415615c9b46fdb69804b22e97146f03565692d73b79"
+}

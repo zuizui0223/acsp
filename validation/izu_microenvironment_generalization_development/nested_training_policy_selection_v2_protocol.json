@@ -1,0 +1,33 @@
+{
+  "protocol_id": "izu-nested-training-policy-selection-v2",
+  "status": "development_only_pre_outcome_methodology_correction",
+  "supersedes": "izu-nested-training-policy-selection-v1",
+  "reason_for_v2": "Code audit before inspecting v1 output found that a q with fewer than K eligible centers in some inner folds could be averaged over only its surviving folds, creating unequal comparison support across q values.",
+  "cohort": "16 inspected Izu vascular-plant taxa",
+  "objective": "select ecological support breadth from outer-training data using the same downstream set-level survey-recovery objective, with strictly paired and complete inner-fold comparisons",
+  "method": {
+    "environment_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+    "candidate_grid_m": 100,
+    "selector": "greedy maximum newly covered public land-grid cells within the support mask",
+    "budgets": [5, 10, 20],
+    "survey_radius_km": 1.0,
+    "outer_folds": {"block_degrees": 0.03, "repeats": 5, "holdout_fraction": 0.20, "minimum_training_prototypes": 8},
+    "inner_folds": {"block_degrees": 0.03, "repeats": 3, "holdout_fraction": 0.25, "minimum_training_prototypes": 6},
+    "selection_rule": "for each outer-training fold and budget, every q must produce K sites in every inner fold; compute paired per-inner-fold recall differences q minus q=1; if no feasible q<1 has positive mean paired lift, choose q=1; otherwise choose the q with the largest mean paired lift, exact ties toward broader q",
+    "fallback": "q=1 pure geographic maximum coverage"
+  },
+  "controls": {
+    "fixed_q10": "development reference only",
+    "global_max_coverage": "q=1.00 maximum coverage"
+  },
+  "hard_boundaries": [
+    "No v1 output was inspected before this correction was defined.",
+    "Outer-held-out coordinates are invisible to q selection.",
+    "All q comparisons use identical inner folds for a given budget.",
+    "Infeasible q values are rejected, not averaged over a subset of folds.",
+    "No Campanula field coordinates are used.",
+    "Frozen 192 Practical Core taxa remain untouched.",
+    "No new q, K, radius, or environmental variable is introduced."
+  ]
+}

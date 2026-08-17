@@ -1,0 +1,49 @@
+{
+  "protocol_id": "izu-multimodal-ecological-support-development-v1",
+  "status": "development_only",
+  "trigger": "strict fully nested support-width selection failed within the single global nearest-prototype envelope (run 31946240154)",
+  "cohort": "same 16 inspected Izu vascular-plant taxa; development-only",
+  "one_changed_layer": "ecological_support_representation",
+  "retained_layers": {
+    "domain": "terrestrial Izu development frame; new training-only domain gate is not tuned in this experiment",
+    "environment_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "prototype_thinning_m": 500,
+    "feature_scaling": "training median and IQR, unchanged from current NDVI support",
+    "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+    "candidate_grid_m": 100,
+    "set_selector": "greedy maximum newly covered public land-grid cells",
+    "budgets": [5, 10, 20],
+    "survey_radius_km": 1.0,
+    "outer_folds": {"block_degrees": 0.03, "repeats": 5, "holdout_fraction": 0.20, "minimum_training_prototypes": 8},
+    "inner_folds": {"block_degrees": 0.03, "repeats": 3, "holdout_fraction": 0.25, "minimum_training_prototypes": 6},
+    "inner_selection": "strict paired complete-fold lift versus q=1; no positive lift falls back to q=1; exact positive ties prefer broader q"
+  },
+  "multimodal_representation": {
+    "mode_inference": "minimum spanning tree in globally robust-scaled training NDVI-state space; cut edges above the historical robust gap threshold",
+    "gap_multiplier": 3.0,
+    "gap_rule_source": "historical ACSP occupancy-geometry implementation, stabilized in commit d50164bb795bd4f2bf1c7af529b7812a5dc45332; not tuned on the present outer outcomes",
+    "mode_weighting": "equal mode opportunity after 500 m spatial thinning",
+    "support_size_control": "for every q<1, the multimodal eligibility mask must contain exactly the same number of public-grid cells as the corresponding current single-envelope q mask",
+    "construction": "rank grid cells by nearest environmental distance separately for each inferred mode and add the nearest still-unselected cell from each mode in deterministic round-robin order until the single-envelope target cell count is reached",
+    "single_mode_identity": "if training data contain one inferred mode, multimodal support is exactly the existing single-envelope support mask"
+  },
+  "controls": {
+    "global_max_coverage": "q=1 geometry-only selector",
+    "single_envelope_fixed_q10": "existing NDVI nearest-prototype q=0.10 support + identical max-coverage selector",
+    "multimodal_fixed_q10": "new representation at q=0.10 + identical max-coverage selector"
+  },
+  "primary_question": "does fully nested training-selected multimodal support recover stable low-budget ecological value over global maximum coverage without hard-coding q=0.10?",
+  "secondary_questions": [
+    "does multimodal fixed q10 improve on the existing single-envelope fixed q10?",
+    "are gains concentrated in training folds with more than one inferred environmental mode?"
+  ],
+  "hard_boundaries": [
+    "No new environmental variable is introduced.",
+    "No q, K, radius, gap multiplier, or mode weight is tuned on outer-held-out outcomes.",
+    "Outer-held-out coordinates remain invisible until support representation, q, and selected sets are frozen.",
+    "The set-level optimizer is unchanged.",
+    "Campanula field coordinates are not used.",
+    "Frozen 192 Practical Core taxa remain untouched.",
+    "If multimodal support fails, retain the failure and move next to support scale, not back to weight tuning."
+  ]
+}

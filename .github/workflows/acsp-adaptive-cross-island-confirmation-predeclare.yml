@@ -1,0 +1,68 @@
+name: ACSP adaptive cross-island confirmation predeclaration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - acsp/benchmarking.py
+      - research/predeclare_acsp_adaptive_cross_island_confirmation.py
+      - research/predeclare_acsp_adaptive_cross_island_confirmation_v11.py
+      - validation/acsp_adaptive_survey_cross_island_confirmation_cohort_protocol.json
+      - validation/acsp_adaptive_survey_method_freeze_v1.json
+      - validation/previous_outside_izu_24_taxa_excluded_20260816.csv
+      - .github/workflows/acsp-adaptive-cross-island-confirmation-predeclare.yml
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  predeclare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install sampling dependencies
+        run: |
+          python -m pip install -e .
+          python -m pip install pandas numpy requests
+      - name: Sample taxon identities only
+        run: |
+          python research/predeclare_acsp_adaptive_cross_island_confirmation_v11.py \
+            --protocol validation/acsp_adaptive_survey_cross_island_confirmation_cohort_protocol.json \
+            --output adaptive-cross-island-confirmation-cohort
+      - name: Audit no-outcome boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('adaptive-cross-island-confirmation-cohort')
+          m=json.loads((root/'cohort_manifest.json').read_text())
+          allowed={
+              'b54ddec24993e107a722c1fd345e9e1592c44c87ae9892439756c7da81c2bd6f',
+              '7bc745ffbcaa23146c56f61e9cf3a1c2ba22bd28cc4ad37468b9b6b726520a65',
+          }
+          assert m['protocol_fingerprint'] in allowed
+          assert m['occurrence_coordinates_fetched'] is False
+          assert m['support_built'] is False
+          assert m['heldout_outcomes_inspected'] is False
+          if m['status']=='ready_frozen_before_occurrence_retrieval':
+              assert m['declared_pairs']==24
+              assert m['unique_taxa']==24
+              assert m['islands']==12
+              assert m['method_freeze_fingerprint']=='1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0'
+          print(json.dumps(m,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-adaptive-cross-island-confirmation-predeclared-cohort
+          path: adaptive-cross-island-confirmation-cohort/
+          if-no-files-found: error
+          retention-days: 90

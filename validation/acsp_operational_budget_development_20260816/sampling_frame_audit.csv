@@ -1,0 +1,9 @@
+island_id,raw_species_frame,vascular_frame,post_exclusion_frame,stratum_0,stratum_1,stratum_2,sufficient
+yakushima,192,183,142,48,47,47,True
+amami_oshima,139,136,102,34,34,34,True
+tsushima,12,12,4,2,1,1,True
+sado,15,15,3,1,1,1,True
+tanegashima,35,35,21,7,7,7,True
+iriomote,389,389,338,113,112,113,True
+ishigaki,162,162,140,47,46,47,True
+okinawa_main,511,510,438,146,146,146,True

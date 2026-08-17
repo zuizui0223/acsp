@@ -1,0 +1,31 @@
+Izu microenvironment generalization-development budget diagnostic
+
+Workflow run: 31935811420
+Workflow head SHA: d0f968b854eb4334923bcedc763ba2a1991ab724
+Artifact ID: 9260629161
+Artifact digest: sha256:0f47365ef8b1bf952441fb0f6c1fdac310314b66422285a7595271e3b936d442
+
+Artifact file SHA256:
+- budget_curve.csv: 88bac7a44da53188f132bbfa6f2d5eb61d75b214eb92902c5e64c50ccd88bb4f
+- budget_fold_results.csv: 87c492d92c43758c85b788fc158f4084c4d837187ee7858effce706bc87d2971
+- budget_taxon_results.csv: 11b439313862f3f38814987208a8f95f8dd6299e2be238d883ea4a2f10f2f695
+- diagnostic_summary.json: d7d0801358aa13acbb7a38183e58f508bfb03cad5d8a7ba035adffe262d0d17d
+
+Cohort role: inspected generalization-development only (16 taxa from the failed frozen transfer test).
+Frozen 192-pair Practical Core cohort consumed: no.
+
+Post-diagnostic taxon-level inference for the only superficially favorable low-budget cells:
+
+Hybrid K=5, recovery radius 0.5 km:
+- mean hybrid minus random = +0.0036177083
+- taxon bootstrap 95% CI ~= [-0.0179, +0.0342]
+- one-sided sign-flip p ~= 0.4443
+- 3/16 taxa positive, 13/16 negative
+
+NDVI-only K=10, recovery radius 1 km:
+- mean NDVI minus random = +0.0174739583
+- taxon bootstrap 95% CI ~= [-0.0285, +0.0717]
+- one-sided sign-flip p ~= 0.2719
+- 7/16 taxa positive, 9/16 negative
+
+Decision: the tiny low-budget positive cells are not stable across taxa. Do not continue the independent top-ranked environmental-cell family by adjusting weights or thresholds. Move to a set-level family in which occurrence-conditioned environmental support defines an eligible survey region and geographic coverage/logistics defines the selected set. Any eventual revised rule requires a new unseen confirmation cohort.

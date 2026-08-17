@@ -1,0 +1,13 @@
+ACSP coverage-equivalent operational-budget development result
+
+workflow_run_id=31955160949
+workflow_head_sha=e148122036526d4020178149da0413bb4e64a073
+aggregate_artifact_id=9265828084
+aggregate_artifact_digest=sha256:80c78e741ff6ec81ca0803f4a896c11840b16cb9d679bc531deda8514c200844
+development_protocol_fingerprint=877cc5f4240ce5ab19c45bf16bde42eb9a32405df55c03dcf74267503d470450
+cohort_sha256=fe0aa6222af28a32d3e6b76dea317a8aeb67776d4d8c9289625cfe4a45f921a1
+development_summary.json.sha256=c0e78f0005b81fa3e595ecacfebc198053988ba52b06c99ceb0e22392861d4fb
+pair_results.csv.sha256=c1f6010a6789c5e661f7a327a6a408b24d48e3847cd51d69e875e7387150cb72
+coverage_curve_results.csv.sha256=46c6692bf82631270dde6417b12a6e6bbb8eb9189cb7ee5d8297a0e3d309b737
+
+All eight island jobs and aggregate completed successfully. No inspected cross-island confirmation pair and no frozen Practical Core 192 pair was reused. The q=0.10 ecological eligibility modifier failed its predeclared paired normalized-AUC gate; this result is retained and is not a trigger for q/feature retuning.

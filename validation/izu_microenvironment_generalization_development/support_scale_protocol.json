@@ -1,0 +1,53 @@
+{
+  "protocol_id": "izu-local-prototype-support-scale-development-v1",
+  "status": "development_only",
+  "trigger": "strict single-envelope q adaptation and equal-opportunity MST multimodal support both failed on the inspected 16-taxon development cohort",
+  "cohort": "same 16 inspected Izu vascular-plant taxa; development-only",
+  "one_changed_layer": "ecological_support_local_prototype_scale",
+  "retained_layers": {
+    "environment_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "prototype_thinning_m": 500,
+    "feature_scaling": "training median and IQR",
+    "support_quantiles": [0.05, 0.10, 0.25, 0.50, 0.75, 1.00],
+    "candidate_grid_m": 100,
+    "set_selector": "exact greedy maximum newly covered public land-grid cells",
+    "budgets": [5, 10, 20],
+    "survey_radius_km": 1.0,
+    "outer_folds": {"block_degrees": 0.03, "repeats": 5, "holdout_fraction": 0.20, "minimum_training_prototypes": 8},
+    "inner_folds": {"block_degrees": 0.03, "repeats": 3, "holdout_fraction": 0.25, "minimum_training_prototypes": 6},
+    "fallback": "k=1, q=1 pure geographic maximum coverage"
+  },
+  "support_scale": {
+    "prototype_neighbour_counts": [1, 2, 3],
+    "score": "mean robust-scaled environmental distance to the k nearest training prototypes",
+    "k1_identity": "k=1 is exactly the current nearest-prototype support representation",
+    "support_area_control": "for every q<1 and every k, select exactly the number of grid cells selected by the current k=1 support mask at that q; k>1 changes only which cells are eligible, not support area",
+    "candidate_policy_grid": "all (k,q) combinations with k in {1,2,3} and q in the retained q list; q=1 is a single geometry-only control independent of k"
+  },
+  "inner_selection": {
+    "rule": "within each outer-training fold and budget, evaluate every feasible (k,q) policy on identical complete inner spatial folds; compute paired mean recall lift over geometry-only q=1; if no policy has positive mean lift, choose k=1,q=1; otherwise choose maximum positive mean lift",
+    "tie_break": "exact ties prefer broader q, then smaller k",
+    "outer_outcomes_visible": false
+  },
+  "controls": {
+    "global_max_coverage": "k=1,q=1",
+    "single_k1_fixed_q10": "current strongest low-budget development reference",
+    "fixed_k2_q10": "two-neighbour local-support scale with q10 area held equal to k1 q10",
+    "fixed_k3_q10": "three-neighbour local-support scale with q10 area held equal to k1 q10"
+  },
+  "primary_question": "can training-only nested selection of local prototype-support scale recover a stable K5 ecological lift over global maximum coverage without hard-coding q or k?",
+  "secondary_questions": [
+    "does k2 or k3 at fixed q10 improve over k1 q10 under identical support area?",
+    "which k values are selected across outer folds when inner data support an ecological constraint?"
+  ],
+  "hard_boundaries": [
+    "No new environmental variable is introduced.",
+    "No q, K, radius, thinning distance, or field endpoint is changed.",
+    "No k value beyond the predeclared {1,2,3} family is added after outer outcomes are inspected.",
+    "Outer-held-out coordinates are invisible until k, q and all site sets are frozen.",
+    "The set-level optimizer is unchanged.",
+    "Campanula field coordinates are not used.",
+    "Frozen 192 Practical Core taxa remain untouched.",
+    "If this support-scale family fails, retain the failure and move to spatial support scale rather than weight/variable/q/K/r tuning."
+  ]
+}

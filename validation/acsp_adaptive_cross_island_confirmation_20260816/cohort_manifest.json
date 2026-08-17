@@ -1,0 +1,12 @@
+{
+  "status": "ready_frozen_before_occurrence_retrieval",
+  "protocol_fingerprint": "7bc745ffbcaa23146c56f61e9cf3a1c2ba22bd28cc4ad37468b9b6b726520a65",
+  "method_freeze_fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0",
+  "declared_pairs": 24,
+  "unique_taxa": 24,
+  "islands": 12,
+  "occurrence_coordinates_fetched": false,
+  "support_built": false,
+  "heldout_outcomes_inspected": false,
+  "taxon_replacement_after_declaration_allowed": false
+}

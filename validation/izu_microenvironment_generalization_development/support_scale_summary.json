@@ -1,0 +1,41 @@
+{
+  "status": "development_only",
+  "run_id": 31948447142,
+  "workflow_head_sha": "5030fd8711d761f2fb8ce32bba12cc66cde82644",
+  "artifact_id": 9264139058,
+  "artifact_digest": "sha256:5cee8b8972344fdc57cc8ff94b5ca14d009543a05f7d126610e99f5199460432",
+  "protocol_id": "izu-local-prototype-support-scale-development-v1",
+  "taxa": 16,
+  "failures": [],
+  "method_means": {
+    "K5": {"scale_nested_selected": 0.14145833333333332, "single_k1_fixed_q10": 0.1625, "fixed_k2_q10": 0.15208333333333335, "fixed_k3_q10": 0.13229166666666667, "global_max_coverage": 0.1325},
+    "K10": {"scale_nested_selected": 0.19208333333333333, "single_k1_fixed_q10": 0.20854166666666665, "fixed_k2_q10": 0.18770833333333334, "fixed_k3_q10": 0.16604166666666667, "global_max_coverage": 0.216875},
+    "K20": {"scale_nested_selected": 0.33791666666666664, "single_k1_fixed_q10": 0.41333333333333333, "fixed_k2_q10": 0.3839583333333333, "fixed_k3_q10": 0.4075, "global_max_coverage": 0.3910416666666667}
+  },
+  "nested_vs_global": {
+    "K5": {"difference": 0.008958333333333332, "bootstrap_95ci": [-0.003750000000000005, 0.024999999999999998], "sign_flip_p": 0.18857622847543049, "passes": false},
+    "K10": {"difference": -0.024791666666666667, "bootstrap_95ci": [-0.05541666666666666, 0.005208333333333336], "passes": false},
+    "K20": {"difference": -0.053125000000000006, "bootstrap_95ci": [-0.12520833333333334, 0.010208333333333349], "passes": false}
+  },
+  "nested_vs_k1_q10": {
+    "K5": {"difference": -0.021041666666666667, "bootstrap_95ci": [-0.04938020833333333, 0.0010416666666666673], "passes": false},
+    "K10": {"difference": -0.016458333333333332, "bootstrap_95ci": [-0.05229166666666667, 0.02041666666666667], "passes": false},
+    "K20": {"difference": -0.07541666666666666, "bootstrap_95ci": [-0.14021354166666666, -0.016249999999999987], "passes": false}
+  },
+  "fixed_k2_q10_vs_k1_q10": {
+    "K5": {"difference": -0.010416666666666668, "bootstrap_95ci": [-0.034375, 0.012499999999999999], "passes": false},
+    "K10": {"difference": -0.020833333333333332, "bootstrap_95ci": [-0.05416666666666667, 0.007291666666666667], "passes": false},
+    "K20": {"difference": -0.029375, "bootstrap_95ci": [-0.08562499999999999, 0.02563020833333326], "passes": false}
+  },
+  "fixed_k3_q10_vs_k1_q10": {
+    "K5": {"difference": -0.030208333333333334, "bootstrap_95ci": [-0.056249999999999994, -0.006250000000000001], "passes": false},
+    "K10": {"difference": -0.0425, "bootstrap_95ci": [-0.08313020833333333, -0.0072916666666666685], "passes": false},
+    "K20": {"difference": -0.005833333333333319, "bootstrap_95ci": [-0.07250520833333331, 0.061458333333333344], "passes": false}
+  },
+  "decision": "reject local prototype-agreement scale k=2/3 as the missing transferable support representation. Requiring agreement with multiple nearest training prototypes did not improve fixed q10 and fully nested (k,q) selection did not beat global maximum coverage.",
+  "next_allowed_change": "spatial aggregation scale of the same NDVI state signal only; keep q candidates, K, radius, thinning, nested selection and set-level optimizer fixed",
+  "outer_heldout_coordinates_used_to_select_policy": false,
+  "campanula_field_coordinates_used": false,
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

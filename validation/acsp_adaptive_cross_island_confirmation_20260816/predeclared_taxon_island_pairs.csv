@@ -1,0 +1,25 @@
+pair_id,status,island_id,west,south,east,north,speciesKey,scientific_name,phylum,class,coordinate_records,record_count_stratum
+1,predeclared,yakushima,130.38,30.2,130.7,30.43,4101244,Elatostema brevifolium (Benth.) Hallier fil.,Tracheophyta,Magnoliopsida,29,0
+2,predeclared,yakushima,130.38,30.2,130.7,30.43,7331693,Melampyrum laxum Miq.,Tracheophyta,Magnoliopsida,32,1
+3,predeclared,amami_oshima,129.2,28.05,129.75,28.55,3745136,Morella rubra Lour.,Tracheophyta,Magnoliopsida,17,0
+4,predeclared,amami_oshima,129.2,28.05,129.75,28.55,2687779,Nageia nagi (Thunb.) Kuntze,Tracheophyta,Pinopsida,26,1
+5,predeclared,tsushima,129.1,34.0,129.55,34.75,5275404,Pteris cretica L.,Tracheophyta,Polypodiopsida,16,0
+6,predeclared,tsushima,129.1,34.0,129.55,34.75,11208838,Lepisorus microphyllus (C.Presl),Tracheophyta,Polypodiopsida,25,1
+7,predeclared,sado,138.15,37.75,138.65,38.38,7304416,Lindera umbellata Thunb.,Tracheophyta,Magnoliopsida,20,0
+8,predeclared,sado,138.15,37.75,138.65,38.38,4046542,Polystichum longifrons Sa.Kurata,Tracheophyta,Polypodiopsida,34,1
+9,predeclared,oki_dogo,133.1,36.05,133.4,36.35,7289218,Athyrium clivicola Tagawa,Tracheophyta,Polypodiopsida,16,0
+10,predeclared,oki_dogo,133.1,36.05,133.4,36.35,3857225,Viburnum carlesii Hemsl. ex Forbes & Hemsl.,Tracheophyta,Magnoliopsida,23,1
+11,predeclared,shodoshima,134.1,34.4,134.42,34.58,4940390,Selaginella tamariscina (P.Beauv.) Spring,Tracheophyta,Lycopodiopsida,15,0
+12,predeclared,shodoshima,134.1,34.4,134.42,34.58,7266635,Salix chaenomeloides Kimura,Tracheophyta,Magnoliopsida,18,1
+13,predeclared,tanegashima,130.82,30.3,131.08,30.85,5836539,Selaginella lutchuensis Koidz.,Tracheophyta,Lycopodiopsida,21,0
+14,predeclared,tanegashima,130.82,30.3,131.08,30.85,5654491,Dryopteris subexaltata (Christ) C.Chr.,Tracheophyta,Polypodiopsida,26,1
+15,predeclared,iriomote,123.65,24.22,124.0,24.5,2954036,Ormocarpum cochinchinense (Lour.) Merr.,Tracheophyta,Magnoliopsida,37,0
+16,predeclared,iriomote,123.65,24.22,124.0,24.5,3188511,Melastoma malabathricum L.,Tracheophyta,Magnoliopsida,54,1
+17,predeclared,ishigaki,124.05,24.3,124.35,24.6,8042954,Ficus ampelas Burm.f.,Tracheophyta,Magnoliopsida,21,0
+18,predeclared,ishigaki,124.05,24.3,124.35,24.6,5524292,Wikstroemia retusa A.Gray,Tracheophyta,Magnoliopsida,31,1
+19,predeclared,miyakojima,125.2,24.65,125.5,24.95,5525292,Vincetoxicum tanakae (Maxim.) Franch. & Sav.,Tracheophyta,Magnoliopsida,18,0
+20,predeclared,miyakojima,125.2,24.65,125.5,24.95,5836315,Aristolochia zollingeriana Miq.,Tracheophyta,Magnoliopsida,20,1
+21,predeclared,rishiri,141.15,45.05,141.35,45.3,3171680,Pedicularis chamissonis Steven,Tracheophyta,Magnoliopsida,17,0
+22,predeclared,rishiri,141.15,45.05,141.35,45.3,8102785,Athyrium monomachii (Kom.) Kom.,Tracheophyta,Polypodiopsida,21,1
+23,predeclared,okinawa_main,127.6,26.05,128.35,26.88,7317695,Diplocyclos palmatus (L.) C.Jeffrey,Tracheophyta,Magnoliopsida,34,0
+24,predeclared,okinawa_main,127.6,26.05,128.35,26.88,3643396,Symplocos microcalyx Hayata,Tracheophyta,Magnoliopsida,57,1

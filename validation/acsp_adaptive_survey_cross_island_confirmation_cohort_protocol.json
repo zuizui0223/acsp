@@ -1,0 +1,63 @@
+{
+  "protocol_id": "acsp-adaptive-survey-cross-island-confirmation-cohort-v1.1",
+  "status": "availability_amended_before_any_taxon_draw_or_occurrence_retrieval",
+  "method_freeze": {
+    "path": "validation/acsp_adaptive_survey_method_freeze_v1.json",
+    "fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0"
+  },
+  "scope": {
+    "taxon_group": "terrestrial-policy-candidate vascular plants; final applicability decided by frozen training-only domain gate",
+    "island_cells": [
+      {"island_id":"yakushima","west":130.38,"south":30.2,"east":130.7,"north":30.43},
+      {"island_id":"amami_oshima","west":129.2,"south":28.05,"east":129.75,"north":28.55},
+      {"island_id":"tsushima","west":129.1,"south":34.0,"east":129.55,"north":34.75},
+      {"island_id":"sado","west":138.15,"south":37.75,"east":138.65,"north":38.38},
+      {"island_id":"oki_dogo","west":133.1,"south":36.05,"east":133.4,"north":36.35},
+      {"island_id":"shodoshima","west":134.1,"south":34.4,"east":134.42,"north":34.58},
+      {"island_id":"tanegashima","west":130.82,"south":30.3,"east":131.08,"north":30.85},
+      {"island_id":"iriomote","west":123.65,"south":24.22,"east":124.0,"north":24.5},
+      {"island_id":"ishigaki","west":124.05,"south":24.3,"east":124.35,"north":24.6},
+      {"island_id":"miyakojima","west":125.2,"south":24.65,"east":125.5,"north":24.95},
+      {"island_id":"rishiri","west":141.15,"south":45.05,"east":141.35,"north":45.3},
+      {"island_id":"okinawa_main","west":127.6,"south":26.05,"east":128.35,"north":26.88}
+    ]
+  },
+  "cohort": {
+    "pair_count": 24,
+    "taxa_per_island": 2,
+    "within_island_record_count_strata": 2,
+    "seed": 20260818,
+    "minimum_coordinate_records_in_cell": 15,
+    "facet_limit": 500,
+    "required_phylum": "Tracheophyta",
+    "required_rank": "SPECIES",
+    "global_taxon_uniqueness": true,
+    "no_replacement_after_declaration": true,
+    "availability_amendment": "v1 sampling-frame audit drew zero taxa because Kumejima had only 2 vascular species before exclusions and 0 after exclusions. No selected-taxon occurrence coordinates, support surfaces, or held-out outcomes were retrieved. Kumejima was replaced by Iriomote before any cohort draw; all other scientific settings are unchanged."
+  },
+  "exclusions": {
+    "files": [
+      "validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+      "validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv",
+      "validation/previous_outside_izu_24_taxa_excluded_20260816.csv"
+    ],
+    "explicit_prefixes": ["Campanula microdonta","Castanopsis sieboldii","Styrax japonica","Weigela coraeensis","Cornus controversa"]
+  },
+  "sampling_boundary": {
+    "occurrence_coordinates_fetched": false,
+    "support_built": false,
+    "heldout_outcomes_inspected": false,
+    "sampling_uses_only_species_facets_and_species_metadata": true
+  },
+  "confirmation_design": {
+    "primary_budget": 5,
+    "survey_radius_km": 1.0,
+    "primary_method": "frozen q10 ecological eligibility plus maximum geographic coverage",
+    "control": "q1 maximum geographic coverage",
+    "intention_to_evaluate": true,
+    "domain_inapplicable_pairs": "retained as declared but excluded from terrestrial-policy estimand only under the frozen training-only domain gate; report eligibility rate separately",
+    "no_retuning": true
+  },
+  "protocol_fingerprint": "7bc745ffbcaa23146c56f61e9cf3a1c2ba22bd28cc4ad37468b9b6b726520a65"
+}

@@ -1,0 +1,130 @@
+name: ACSP coverage-equivalent budget development
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/microenvironment-generalization-development
+    paths:
+      - research/prepare_acsp_operational_budget_public_layers.py
+      - research/develop_acsp_coverage_equivalent_budget_island.py
+      - research/develop_acsp_coverage_equivalent_budget_island_v11.py
+      - research/aggregate_acsp_coverage_equivalent_budget_development.py
+      - research/aggregate_acsp_coverage_equivalent_budget_development_v11.py
+      - research/acsp_training_domain_gate.py
+      - research/fast_max_coverage.py
+      - validation/acsp_coverage_equivalent_budget_development_protocol.json
+      - validation/acsp_operational_budget_development_20260816/**
+      - .github/workflows/acsp-coverage-equivalent-budget-development.yml
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  island:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        island:
+          - yakushima
+          - amami_oshima
+          - tsushima
+          - sado
+          - tanegashima
+          - iriomote
+          - ishigaki
+          - okinawa_main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install awscli scipy rasterio pyproj
+      - name: Prepare public layers
+        run: |
+          python research/prepare_acsp_operational_budget_public_layers.py \
+            --development-protocol validation/acsp_coverage_equivalent_budget_development_protocol.json \
+            --cohort-protocol validation/acsp_operational_budget_development_cohort_protocol.json \
+            --island '${{ matrix.island }}' \
+            --out island-public
+      - name: Run coverage-equivalent development
+        run: |
+          python research/develop_acsp_coverage_equivalent_budget_island_v11.py \
+            --development-protocol validation/acsp_coverage_equivalent_budget_development_protocol.json \
+            --cohort validation/acsp_operational_budget_development_20260816/predeclared_taxon_island_pairs.csv \
+            --island '${{ matrix.island }}' \
+            --dem island-public/dem.tif \
+            --ndvi island-public/ndvi.tif \
+            --layer-manifest island-public/layer_manifest.json \
+            --out island-result
+      - name: Audit separation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('island-result/island_summary.json').read_text())
+          assert s['development_protocol_fingerprint']=='877cc5f4240ce5ab19c45bf16bde42eb9a32405df55c03dcf74267503d470450'
+          assert s['confirmation_24_reused'] is False
+          assert s['frozen_192_consumed'] is False
+          print(json.dumps(s,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-coverage-budget-${{ matrix.island }}
+          path: |
+            island-result/
+            island-public/layer_manifest.json
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: island
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install aggregation dependencies
+        run: python -m pip install pandas numpy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: acsp-coverage-budget-*
+          path: all-results
+          merge-multiple: false
+      - name: Aggregate development
+        run: |
+          python research/aggregate_acsp_coverage_equivalent_budget_development_v11.py \
+            --development-protocol validation/acsp_coverage_equivalent_budget_development_protocol.json \
+            --cohort validation/acsp_operational_budget_development_20260816/predeclared_taxon_island_pairs.csv \
+            --results-root all-results \
+            --out development-result
+      - name: Audit development boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('development-result/development_summary.json').read_text())
+          assert s['development_protocol_fingerprint']=='877cc5f4240ce5ab19c45bf16bde42eb9a32405df55c03dcf74267503d470450'
+          assert s['confirmation_24_reused'] is False
+          assert s['frozen_192_consumed'] is False
+          assert s['status']=='development_complete'
+          print(json.dumps(s,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-coverage-equivalent-budget-development-result
+          path: development-result/
+          if-no-files-found: error
+          retention-days: 90

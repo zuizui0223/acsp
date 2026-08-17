@@ -1,0 +1,71 @@
+{
+  "protocol_id": "acsp-adaptive-survey-method-freeze-v1",
+  "status": "development_frozen_pending_new_cross_taxon_cross_island_confirmation",
+  "scientific_object": "occurrence-conditioned survey decision procedure; not occupancy or suitability probability",
+  "architecture": {
+    "1_domain_gate": "training-only applicability gate; terrestrial policy only when candidate-land support is established",
+    "2_ecological_support": "NDVI-state nearest-prototype support used only as an eligibility mask",
+    "3_policy": "cross-taxon development-learned budget-dependent support policy",
+    "4_set_selection": "greedy exact sparse maximum newly covered candidate-land cells",
+    "5_operational_output": "survey-site set under externally supplied budget; route/patch remains downstream operational representation"
+  },
+  "training_representation": {
+    "occurrence_thinning_m": 500,
+    "environment_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "candidate_grid_m": 100,
+    "distance_support": "single nearest training prototype after robust median/IQR scaling",
+    "ndvi_source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v200"
+  },
+  "budget_policy": {
+    "survey_radius_km": 1.0,
+    "K5": {"support_quantile": 0.10, "policy": "q10 ecological eligibility then maximum geographic coverage"},
+    "K10_or_more": {"support_quantile": 1.0, "policy": "pure maximum geographic coverage in current development evidence", "claim_scope": "K10,K20,K40 tested; no extrapolation to arbitrary budgets"}
+  },
+  "development_evidence": {
+    "cohort": "16 inspected Izu vascular-plant taxa; development only",
+    "cross_taxon_jackknife_run_id": 31950073703,
+    "artifact_id": 9264393536,
+    "artifact_digest": "sha256:5d4f036e8b3bcdc74a9ebc04de653dfd4e5c5ce3b98f29a7879a389723198f84",
+    "K5": {
+      "jackknife_selected_qs": [0.10],
+      "all_taxa_selected_q": 0.10,
+      "mean_lift_vs_global": 0.03,
+      "bootstrap_95ci": [0.007703124999999991, 0.05499999999999999],
+      "exact_sign_flip_p": 0.01953125,
+      "positive_taxa": 7,
+      "negative_taxa": 1,
+      "ties": 8,
+      "development_gate": true
+    },
+    "K10_K20_K40": "cross-taxon jackknife selected q=1.0; ecological restriction not retained",
+    "rejected_representation_searches": [
+      "Campanula 0.90 NDVI + 0.10 microclimate fixed correction",
+      "independent environmental top-cell ranking",
+      "prototype-LOO support-width selector",
+      "within-taxon fully nested q selection",
+      "equal-opportunity MST multimodal balancing",
+      "k=2/3 nearest-prototype agreement",
+      "point-only/100m-only/250m-only spatial support-scale adaptation",
+      "mandatory persistent-patch biological filtering",
+      "between-island NDVI allocation",
+      "training-occurrence-count island allocation"
+    ]
+  },
+  "validation_boundaries": {
+    "campanula_field_coordinates_used_for_freeze": false,
+    "frozen_192_practical_core_consumed": false,
+    "development_16_may_not_be_confirmation": true,
+    "previous_outside_izu_24_pairs_may_not_be_final_confirmation": "taxon identities were inspected and motivated the domain gate",
+    "new_confirmation_required": true,
+    "no_retuning_after_new_cohort_sampling": true
+  },
+  "confirmation_gate": {
+    "primary": "K5 frozen method vs q=1 strong geographic coverage on new taxa and new islands",
+    "minimum_mean_lift": 0.015,
+    "bootstrap_95ci_lower_gt": 0.0,
+    "sign_flip_p_lt": 0.05,
+    "failure_rule": "retain failure; do not retune on confirmation outcomes"
+  },
+  "fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0",
+  "fingerprint_method": "sha256 canonical JSON excluding fingerprint fields"
+}

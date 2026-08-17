@@ -1,0 +1,46 @@
+{
+  "status": "development_only",
+  "run_id": 31937057601,
+  "artifact_id": 9260964498,
+  "artifact_digest": "sha256:1f19b9780a5700f7b14c78e71be1b52e25f147979c227b9c4a385ff88859d783",
+  "budget": 20,
+  "radius_km": 1.0,
+  "taxa": 16,
+  "failures": [],
+  "method_means": {
+    "global_max_coverage": 0.3910416666666667,
+    "equal_islands": 0.40541666666666665,
+    "land_area": 0.4425,
+    "ndvi_support_area": 0.3885416666666667,
+    "training_occurrence_alpha_0": 0.33625,
+    "training_occurrence_alpha_0.5": 0.41354166666666664,
+    "training_occurrence_alpha_1": 0.4554166666666667,
+    "training_occurrence_alpha_2": 0.47104166666666664,
+    "training_occurrence_alpha_4": 0.4302083333333333
+  },
+  "ndvi_support_vs_global": {
+    "difference": -0.0024999999999999953,
+    "bootstrap_95ci": [-0.043338541666666675, 0.037708333333333344],
+    "sign_flip_p": 1.0,
+    "passes": false
+  },
+  "best_occurrence_allocation_vs_global": {
+    "method": "training_occurrence_alpha_2",
+    "difference": 0.07999999999999999,
+    "bootstrap_95ci": [-0.009171875000000012, 0.15479687499999994],
+    "sign_flip_p": 0.04651906961860763,
+    "positive_taxa": 11,
+    "negative_taxa": 5,
+    "passes": false
+  },
+  "ndvi_support_vs_best_occurrence_allocation": {
+    "difference": -0.0825,
+    "bootstrap_95ci": [-0.15833333333333333, 0.0031302083333332757],
+    "passes": false
+  },
+  "environment_allocation_survives": false,
+  "occurrence_allocation_survives": false,
+  "interpretation": "At K=20/r=1 km, NDVI support area adds no value to island allocation. Smoothed training-occurrence allocation is the strongest hierarchical signal but does not pass the predeclared bootstrap gate on this 16-taxon development cohort. The remaining q=0.10/K=5 NDVI-support signal requires a low-budget allocation decomposition before deciding whether any environmental role survives.",
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

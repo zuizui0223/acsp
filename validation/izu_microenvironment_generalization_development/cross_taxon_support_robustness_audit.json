@@ -1,0 +1,55 @@
+{
+  "status": "development_only",
+  "source_run_id": 31950073703,
+  "source_artifact_id": 9264393536,
+  "source_artifact_digest": "sha256:5d4f036e8b3bcdc74a9ebc04de653dfd4e5c5ce3b98f29a7879a389723198f84",
+  "method_freeze_fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0",
+  "cohort": "16 inspected Izu vascular-plant taxa; development only",
+  "primary_cell": {
+    "budget": 5,
+    "support_quantile": 0.10,
+    "survey_radius_km": 1.0,
+    "mean_lift_vs_global_max_coverage": 0.030000000000000002,
+    "bootstrap_95ci": [0.007703124999999991, 0.05499999999999999],
+    "exact_sign_flip_p": 0.01953125,
+    "positive_taxa": 7,
+    "negative_taxa": 1,
+    "ties": 8
+  },
+  "taxon_influence": {
+    "leave_one_taxon_out_mean_lift_range": [0.02266666666666667, 0.035333333333333335],
+    "all_leave_one_taxon_out_means_exceed_practical_0_015": true,
+    "remove_largest_positive_mean_lift": 0.02266666666666667,
+    "remove_two_largest_positive_mean_lift": 0.017142857142857144,
+    "remove_three_largest_positive_mean_lift": 0.01076923076923077,
+    "interpretation": "The development lift is not driven by one or two taxa, but it is not uniform: three strongest-benefit taxa are sufficient to move the residual mean below the +0.015 practical threshold."
+  },
+  "exact_subset_stability": {
+    "8_of_16": {
+      "subsets": 12870,
+      "fraction_positive_mean_lift": 0.9928,
+      "fraction_mean_lift_ge_0_015": 0.8846,
+      "mean_lift_2_5_to_97_5_percentile": [0.00625, 0.05375]
+    },
+    "10_of_16": {
+      "fraction_positive_mean_lift": 0.9996,
+      "fraction_mean_lift_ge_0_015": 0.9354
+    },
+    "12_of_16": {
+      "fraction_positive_mean_lift": 1.0,
+      "fraction_mean_lift_ge_0_015": 0.9764
+    },
+    "14_or_15_of_16": {
+      "fraction_positive_mean_lift": 1.0,
+      "fraction_mean_lift_ge_0_015": 1.0
+    }
+  },
+  "budget_dependence": {
+    "K5": "q=0.10 selected in every cross-taxon jackknife fit and the all-taxa fit",
+    "K10_K20_K40": "q=1.0 selected; ecological restriction did not survive",
+    "interpretation": "The supported development object is a low-budget policy, not a universal fixed environmental mask."
+  },
+  "robustness_conclusion": "Development evidence is robust to single-taxon removal and most moderate taxon subsets, but benefits are concentrated rather than universal. This supports freezing the low-budget K5 policy for a genuinely new cross-island, cross-taxon confirmation; it does not justify skipping external confirmation.",
+  "confirmation_claim": false,
+  "frozen_192_consumed": false
+}

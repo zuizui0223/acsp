@@ -1,0 +1,36 @@
+{
+  "status": "development_only",
+  "run_id": 31949485951,
+  "workflow_head_sha": "7a039cd3d1df98440107bb1cd64c67c3a8228781",
+  "artifact_id": 9264279858,
+  "artifact_digest": "sha256:eab8e8bbe5a1ccb67f48548a2e288c4d8d951156f76109ed562d88b98ec43b3e",
+  "protocol_id": "izu-ndvi-spatial-support-scale-development-v1",
+  "taxa": 16,
+  "failures": [],
+  "method_means": {
+    "K5": {"spatial_scale_nested_selected": 0.13041666666666668, "current_multiscale_fixed_q10": 0.1625, "point_fixed_q10": 0.13916666666666666, "local100_fixed_q10": 0.15020833333333333, "local250_fixed_q10": 0.14020833333333332, "global_max_coverage": 0.1325},
+    "K10": {"spatial_scale_nested_selected": 0.200625, "current_multiscale_fixed_q10": 0.20854166666666665, "point_fixed_q10": 0.20270833333333332, "local100_fixed_q10": 0.20395833333333332, "local250_fixed_q10": 0.19979166666666667, "global_max_coverage": 0.216875},
+    "K20": {"spatial_scale_nested_selected": 0.384375, "current_multiscale_fixed_q10": 0.41333333333333333, "point_fixed_q10": 0.36666666666666664, "local100_fixed_q10": 0.38416666666666666, "local250_fixed_q10": 0.3902083333333333, "global_max_coverage": 0.3910416666666667}
+  },
+  "nested_vs_global": {
+    "K5": {"difference": -0.0020833333333333324, "bootstrap_95ci": [-0.020416666666666666, 0.01645833333333333], "passes": false},
+    "K10": {"difference": -0.016249999999999997, "bootstrap_95ci": [-0.04645833333333332, 0.013750000000000005], "passes": false},
+    "K20": {"difference": -0.006666666666666671, "bootstrap_95ci": [-0.06354166666666666, 0.047291666666666676], "passes": false}
+  },
+  "nested_vs_current_q10": {
+    "K5": {"difference": -0.03208333333333333, "bootstrap_95ci": [-0.062083333333333324, -0.008333333333333335], "passes": false},
+    "K10": {"difference": -0.007916666666666664, "bootstrap_95ci": [-0.040625, 0.02416666666666667], "passes": false},
+    "K20": {"difference": -0.02895833333333333, "bootstrap_95ci": [-0.085, 0.026458333333333347], "passes": false}
+  },
+  "fixed_q10_views_vs_current": {
+    "point_K5": {"difference": -0.023333333333333334, "bootstrap_95ci": [-0.043333333333333335, -0.005833333333333334]},
+    "local100_K5": {"difference": -0.01229166666666667, "bootstrap_95ci": [-0.037500000000000006, 0.010416666666666666]},
+    "local250_K5": {"difference": -0.022291666666666668, "bootstrap_95ci": [-0.04083333333333333, -0.004166666666666668]}
+  },
+  "decision": "reject within-taxon NDVI spatial aggregation-scale adaptation. Point and 250 m fixed-q10 views clearly degraded the current multiscale q10 reference; 100 m did not improve it; fully nested scale/q selection did not beat global maximum coverage.",
+  "next_allowed_change": "stop within-taxon support-representation tuning. Consolidate the surviving Top-5 q10 policy across multiple development taxa with a leave-one-taxon-out stability gate, then freeze before a newly sampled external cohort if the cross-taxon gate passes.",
+  "outer_heldout_coordinates_used_to_select_policy": false,
+  "campanula_field_coordinates_used": false,
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

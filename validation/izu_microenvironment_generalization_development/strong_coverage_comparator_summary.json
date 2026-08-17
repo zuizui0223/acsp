@@ -1,0 +1,34 @@
+{
+  "status": "development_only",
+  "run_id": 31936475520,
+  "artifact_id": 9260806253,
+  "artifact_digest": "sha256:0b490bc6d77f7b2af07959e701c5db325dbb4d1e52f431103add6234b57a8092",
+  "support_quantile": 0.05,
+  "budget": 20,
+  "survey_radius_km": 1.0,
+  "taxa": 16,
+  "failures": [],
+  "mean_support_max_coverage_recall": 0.37916666666666665,
+  "mean_coverage_only_recall": 0.3910416666666667,
+  "mean_matched_random_recall": 0.268505,
+  "support_vs_coverage_only": {
+    "mean_difference": -0.011875000000000002,
+    "bootstrap_95ci": [-0.08229166666666668, 0.0639635416666666],
+    "sign_flip_p": 1.0,
+    "positive_taxa": 7,
+    "negative_taxa": 8,
+    "passes": false
+  },
+  "support_vs_matched_random": {
+    "mean_difference": 0.11066166666666663,
+    "bootstrap_95ci": [0.048782999999999986, 0.17414138541666663],
+    "sign_flip_p": 0.0020599588008239837,
+    "positive_taxa": 13,
+    "negative_taxa": 3,
+    "passes": true
+  },
+  "promotion_gate": false,
+  "interpretation": "Set-level maximum geographic coverage is the dominant improvement. The top-5%-NDVI eligibility mask adds no detectable value over the strong coverage-only selector, although it remains better than matched random with the same island allocation. A final support-quantile sweep under the same strong coverage objective is required before dropping the NDVI support family.",
+  "frozen_192_consumed": false,
+  "confirmation_claim": false
+}

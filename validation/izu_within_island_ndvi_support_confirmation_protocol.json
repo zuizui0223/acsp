@@ -1,0 +1,94 @@
+{
+  "protocol_id": "izu-within-island-ndvi-support-max-coverage-v1",
+  "status": "development_frozen_pending_new_unseen_taxon_confirmation",
+  "scope": "same five Izu islands; terrestrial vascular plants; taxon-transfer confirmation only",
+  "development_evidence": {
+    "cohort": "16 inspected Izu vascular-plant taxa",
+    "source_run_id": 31942973391,
+    "artifact_id": 9262526432,
+    "artifact_digest": "sha256:5a6c75cc0e928fdb7f007797603af5abcf1620d6a3afd7af80d4aaf6c88257e1",
+    "target": {"support_quantile": 0.1, "budget": 5, "recovery_radius_km": 1.0},
+    "within_island_ndvi_vs_same_allocation_no_environment": {
+      "difference": 0.03,
+      "bootstrap_95ci": [0.007083333333333332, 0.05458333333333333],
+      "sign_flip_p": 0.019839603207935843,
+      "positive_taxa": 7,
+      "negative_taxa": 1,
+      "ties": 8
+    },
+    "q10_vs_global_max_coverage": {
+      "difference": 0.03,
+      "bootstrap_95ci": [0.007291666666666667, 0.05437499999999999],
+      "sign_flip_p": 0.020639587208255834
+    },
+    "unsupported_components": {
+      "between_island_ndvi_allocation": "not supported",
+      "training_occurrence_count_allocation": "not supported",
+      "campanula_hybrid_microclimate_correction": "failed unseen 16-taxon transfer",
+      "independent_top_cell_ranking": "abandoned after budget-saturation diagnosis"
+    }
+  },
+  "frozen_method": {
+    "environment_role": "eligibility constraint only",
+    "environment_support": "training-only NDVI-state nearest-prototype distance rank",
+    "ndvi_state_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "spatial_thinning_m": 500,
+    "support_quantile": 0.1,
+    "candidate_grid_m": 100,
+    "selection": "greedy maximum newly covered public land-grid cells among q10-eligible centers",
+    "survey_budget": 5,
+    "survey_radius_km": 1.0,
+    "heldout_coordinates_visible_during_selection": false
+  },
+  "sampling": {
+    "taxa": 32,
+    "record_strata": 4,
+    "taxa_per_stratum": 8,
+    "minimum_coordinate_records": 25,
+    "facet_limit": 1000,
+    "seed": 20260817,
+    "required_phylum": "Tracheophyta",
+    "no_replacement": true,
+    "exclude_prefix": ["Campanula microdonta", "Castanopsis sieboldii", "Styrax japonica", "Weigela coraeensis", "Cornus controversa"],
+    "excluded_sources": [
+      "validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+      "validation/izu_island_microenvironment_random_taxa_20260816/predeclared_taxa.csv"
+    ]
+  },
+  "new_confirmation": {
+    "taxa": 32,
+    "taxon_group": "Tracheophyta",
+    "record_strata": 4,
+    "taxa_per_stratum": 8,
+    "minimum_coordinate_records": 25,
+    "no_replacement": true,
+    "seed": 20260817,
+    "exclude_campanula": true,
+    "exclude_16_generalization_development_taxa": true,
+    "exclude_frozen_192_practical_core_taxa": true,
+    "exclude_all_prior_acsp_development_taxa": true,
+    "validation": {"block_degrees": 0.03, "repeats": 5, "holdout_fraction": 0.2, "minimum_training_prototypes": 8, "recovery_radius_km": 1.0},
+    "primary_comparator": "global maximum geographic coverage on the identical public grid, K=5, r=1 km",
+    "mechanism_control": "same-island allocation maximum coverage without NDVI",
+    "primary_gate": {
+      "minimum_mean_recall_gain": 0.015,
+      "taxon_bootstrap_95ci_lower_gt": 0.0,
+      "sign_flip_p_lt": 0.05,
+      "minimum_evaluable_taxa": 24
+    },
+    "no_retuning_after_taxon_sample_or_outcome_inspection": true
+  },
+  "claim_boundary": {
+    "if_pass": "supports transferable within-island NDVI eligibility value for low-budget Izu vascular-plant surveys under the frozen K=5/r=1 km set-level design",
+    "if_fail": "drop the NDVI microenvironment generalization claim; retain geographic/logistical coverage as the transferable survey-selection signal",
+    "not_allowed": "cross-region, universal, SDM-superiority, GRTS-superiority, or biosurvey-superiority claim"
+  },
+  "separation": {
+    "frozen_192_practical_core_consumed": false,
+    "campanula_reused_as_confirmation": false,
+    "development_16_reused_as_confirmation": false
+  },
+  "fingerprint": "75d78ef654a5a07beb54ca80516aed05d9a5322db678dddc4b3059a5151208ab",
+  "fingerprint_method": "sha256 canonical JSON excluding fingerprint fields"
+}

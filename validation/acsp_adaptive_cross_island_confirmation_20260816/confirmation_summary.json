@@ -1,0 +1,81 @@
+{
+  "status": "confirmation_complete",
+  "execution_protocol_fingerprint": "24a5cc0d21bcfd4fdfce5dc9b8ccbb2cd8dc1fc717928d8ed6775c79ef8591e1",
+  "method_freeze_fingerprint": "1bff5eb8571928e9b26c193bc7bc0756f239b30def062ab49e0b94ed0c3029f0",
+  "cohort_sha256": "0bf03cdbf338f57de129a904b29beef91bfa8dd60a31af13c44f94f596ab4843",
+  "primary": {
+    "n": 15,
+    "mean_lift": 0.020873015873015866,
+    "bootstrap_95ci": [-0.004365079365079366, 0.05277777777777777],
+    "exact_one_sided_sign_flip_p": 0.15625,
+    "positive": 4,
+    "negative": 1,
+    "ties": 10
+  },
+  "primary_confirmation_pass": false,
+  "practicality": {
+    "declared_pairs": 24,
+    "pair_result_rows": 24,
+    "eligible_pairs": 15,
+    "eligibility_rate": 0.625,
+    "domain_inapplicable_pairs": 2,
+    "information_inapplicable_pairs": 7,
+    "infrastructure_failure_pairs": 0,
+    "missing_pair_results": [],
+    "duplicate_pair_results": [],
+    "method_failure_folds": 0,
+    "valid_fold_fraction_of_declared": 0.7083333333333334,
+    "mean_support_eligible_grid_fraction": 0.09999123951448854,
+    "mean_selected_set_jaccard": 0.043809523809523784,
+    "median_support_selection_runtime_seconds": 0.0056951162000018,
+    "declared_cohort_zero_filled_lift": {
+      "n": 24,
+      "mean_lift": 0.013045634920634916,
+      "bootstrap_95ci": [-0.002728174603174604, 0.03402777777777777],
+      "exact_one_sided_sign_flip_p": 0.15625,
+      "positive": 4,
+      "negative": 1,
+      "ties": 19
+    }
+  },
+  "robustness": {
+    "leave_one_pair_out_mean_lift_range": [0.009268707482993192, 0.026785714285714277],
+    "leave_one_island_out_mean_lift_range": [-0.00027472527472527695, 0.028846153846153837],
+    "exact_half_cohort_subset_stability": {
+      "computed": true,
+      "subset_size": 7,
+      "subsets": 6435,
+      "fraction_positive": 0.8377622377622378,
+      "fraction_ge_minimum_lift": 0.6289044289044289,
+      "mean_lift_2_5_to_97_5_percentile": [-0.008843537414965985, 0.04999999999999998]
+    },
+    "record_stratum": {
+      "0": {"n": 8, "mean_lift": 0.018303571428571423, "bootstrap_95ci": [-0.020089285714285712, 0.07187499999999998], "exact_one_sided_sign_flip_p": 0.375, "positive": 2, "negative": 1, "ties": 5},
+      "1": {"n": 7, "mean_lift": 0.0238095238095238, "bootstrap_95ci": [0.0, 0.06190476190476189], "exact_one_sided_sign_flip_p": 0.25, "positive": 2, "negative": 0, "ties": 5}
+    },
+    "island": {
+      "amami_oshima": {"pairs": 1, "mean_lift": 0.0, "positive": 0, "negative": 0, "ties": 1},
+      "iriomote": {"pairs": 2, "mean_lift": 0.02916666666666665, "positive": 2, "negative": 0, "ties": 0},
+      "ishigaki": {"pairs": 2, "mean_lift": 0.1583333333333333, "positive": 2, "negative": 0, "ties": 0},
+      "miyakojima": {"pairs": 1, "mean_lift": 0.0, "positive": 0, "negative": 0, "ties": 1},
+      "okinawa_main": {"pairs": 2, "mean_lift": -0.03095238095238095, "positive": 0, "negative": 1, "ties": 1},
+      "sado": {"pairs": 2, "mean_lift": 0.0, "positive": 0, "negative": 0, "ties": 2},
+      "shodoshima": {"pairs": 1, "mean_lift": 0.0, "positive": 0, "negative": 0, "ties": 1},
+      "tsushima": {"pairs": 2, "mean_lift": 0.0, "positive": 0, "negative": 0, "ties": 2},
+      "yakushima": {"pairs": 2, "mean_lift": 0.0, "positive": 0, "negative": 0, "ties": 2}
+    }
+  },
+  "radius_sensitivity": {
+    "0.5": {"n": 15, "mean_lift": 0.00444444444444444, "bootstrap_95ci": [0.0, 0.013333333333333319], "exact_one_sided_sign_flip_p": 0.5, "positive": 1, "negative": 0, "ties": 14},
+    "2.0": {"n": 15, "mean_lift": 0.027555555555555555, "bootstrap_95ci": [0.00444444444444444, 0.05422222222222222], "exact_one_sided_sign_flip_p": 0.0625, "positive": 4, "negative": 0, "ties": 11}
+  },
+  "infrastructure_failures": [],
+  "retuning_performed": false,
+  "frozen_192_consumed": false,
+  "decision": "FAIL. The frozen K5/q10/r=1 km cross-island confirmation did not meet the predeclared applicability or inferential promotion gates. Do not retune on this cohort. Separate deployment information adequacy from retrospective benchmark evaluability and reopen operational-budget development on a new cohort.",
+  "claim_boundary": {
+    "if_primary_passes": "supports transfer of the frozen low-budget K5 ecological-eligibility-plus-set-coverage survey policy to new vascular-plant taxa and new Japanese island domains that pass the frozen training-only terrestrial applicability gate",
+    "if_primary_fails": "do not retune on this cohort; retain the result as a limit on transferability and reopen development only on a new development cohort",
+    "not_claimed": ["occupancy probability", "suitability probability", "detection probability", "arbitrary survey budgets", "all taxa", "all regions", "superiority over GRTS or biosurvey"]
+  }
+}
