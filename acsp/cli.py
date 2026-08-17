@@ -9,7 +9,10 @@ from typing import Sequence
 
 import pandas as pd
 
+from .coverage import select_maximum_coverage_sites
+from .operational_budget import select_largest_feasible_prefix
 from .planning import recommend_candidates, recommend_survey_zones
+from .trip_proxy import estimate_operational_trip
 
 
 def _positive_int(value: str) -> int:
@@ -22,10 +25,20 @@ def _positive_int(value: str) -> int:
     return number
 
 
+def _positive_float(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"Expected a number, got {value!r}.") from exc
+    if number <= 0:
+        raise argparse.ArgumentTypeError("Value must be greater than 0.")
+    return number
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="acsp-recommend",
-        description="Select transparent, ranked ACSP field-survey candidates from a CSV file.",
+        description="Select transparent ACSP field-survey candidates from a CSV file.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -53,6 +66,7 @@ def _build_parser() -> argparse.ArgumentParser:
     recommend.add_argument("--extent", nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH"), help="Optional rectangular candidate extent.")
     recommend.add_argument("--latitude-column", default="latitude", help="Latitude column used with --extent.")
     recommend.add_argument("--longitude-column", default="longitude", help="Longitude column used with --extent.")
+
     zones = subparsers.add_parser(
         "zones",
         help="Consolidate nearby candidate points and rank practical survey zones.",
@@ -69,7 +83,48 @@ def _build_parser() -> argparse.ArgumentParser:
     zones.add_argument("--latitude-column", default="latitude")
     zones.add_argument("--longitude-column", default="longitude")
     zones.add_argument("--merge-distance-m", type=float, default=None)
+
+    budget = subparsers.add_parser(
+        "budget",
+        help="Select a geometry-coverage sequence, then truncate it to an explicit hub + field-day budget.",
+    )
+    budget.add_argument("--input", required=True, help="Prefiltered candidate CSV for one survey area.")
+    budget.add_argument("--output", required=True, help="Output CSV path for the feasible ordered survey set.")
+    budget.add_argument("--summary-json", default="acsp-budget-summary.json")
+    budget.add_argument("--prefix-audit", default="acsp-budget-prefix-audit.csv")
+    budget.add_argument("--hub-latitude", type=float, required=True, help="Actual field base / start-end hub latitude.")
+    budget.add_argument("--hub-longitude", type=float, required=True, help="Actual field base / start-end hub longitude.")
+    budget.add_argument("--days", type=_positive_int, required=True, help="Available field days.")
+    budget.add_argument("--coverage-radius-km", type=_positive_float, default=1.0, help="Geometry coverage radius in km (default: 1).")
+    budget.add_argument("--max-sites", type=_positive_int, default=40, help="Maximum geometry-order sites evaluated (default: 40).")
+    budget.add_argument("--latitude-column", default="latitude")
+    budget.add_argument("--longitude-column", default="longitude")
+    budget.add_argument("--area-column", default="survey_area_id")
+    budget.add_argument(
+        "--taxon-profile",
+        required=True,
+        choices=["plant", "bird", "amphibian", "reptile", "arthropod", "mammal", "fish", "unknown"],
+        help="Operational effort profile; required so field effort is not silently guessed.",
+    )
     return parser
+
+
+def _protocol_for_profile(profile: str) -> dict[str, object]:
+    from acsp_discover import infer_survey_protocol
+
+    metadata_by_profile = {
+        "plant": {"kingdom": "Plantae"},
+        "bird": {"kingdom": "Animalia", "class": "Aves"},
+        "amphibian": {"kingdom": "Animalia", "class": "Amphibia"},
+        "reptile": {"kingdom": "Animalia", "class": "Reptilia"},
+        "arthropod": {"kingdom": "Animalia", "class": "Insecta"},
+        "mammal": {"kingdom": "Animalia", "class": "Mammalia"},
+        "fish": {"kingdom": "Animalia", "class": "Actinopterygii"},
+        "unknown": {},
+    }
+    protocol = infer_survey_protocol(metadata_by_profile[str(profile)]).as_dict()
+    protocol["surface_domain"] = "inland_aquatic" if profile == "fish" else "terrestrial"
+    return protocol
 
 
 def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
@@ -140,11 +195,89 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
     return summary
 
 
+def run_budget(args: argparse.Namespace) -> dict[str, object]:
+    input_path = Path(args.input)
+    output_path = Path(args.output)
+    summary_path = Path(args.summary_json)
+    audit_path = Path(args.prefix_audit)
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Candidate CSV was not found: {input_path}")
+
+    candidates = pd.read_csv(input_path)
+    if candidates.empty:
+        raise ValueError("Candidate CSV is empty.")
+    if args.area_column in candidates.columns:
+        areas = candidates[args.area_column].dropna().astype(str).unique().tolist()
+        if len(areas) > 1:
+            raise ValueError(
+                "The explicit single-hub budget command supports one survey area at a time. "
+                "Split the candidate CSV by survey area; ferry/flight transfers are not modeled."
+            )
+
+    ordered, coverage_audit = select_maximum_coverage_sites(
+        candidates,
+        radius_km=float(args.coverage_radius_km),
+        max_sites=int(args.max_sites),
+        latitude_col=args.latitude_column,
+        longitude_col=args.longitude_column,
+        group_col=None,
+    )
+    if args.latitude_column != "latitude" or args.longitude_column != "longitude":
+        ordered = ordered.rename(
+            columns={args.latitude_column: "latitude", args.longitude_column: "longitude"}
+        )
+    if "site_id" not in ordered.columns:
+        ordered["site_id"] = range(1, len(ordered) + 1)
+    if args.area_column in ordered.columns and args.area_column != "survey_area_id":
+        ordered = ordered.rename(columns={args.area_column: "survey_area_id"})
+
+    protocol = _protocol_for_profile(args.taxon_profile)
+    selected, budget_audit, prefix_audit = select_largest_feasible_prefix(
+        ordered,
+        hub_latitude=float(args.hub_latitude),
+        hub_longitude=float(args.hub_longitude),
+        target_days=int(args.days),
+        trip_estimator=estimate_operational_trip,
+        survey_protocol=protocol,
+        max_sites=int(args.max_sites),
+    )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    selected.to_csv(output_path, index=False)
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    prefix_audit.to_csv(audit_path, index=False)
+
+    summary: dict[str, object] = {
+        "input_csv": str(input_path),
+        "output_csv": str(output_path),
+        "prefix_audit_csv": str(audit_path),
+        "input_candidate_count": int(len(candidates)),
+        "geometry_order_count": int(len(ordered)),
+        "selected_count": int(len(selected)),
+        "hub_latitude": float(args.hub_latitude),
+        "hub_longitude": float(args.hub_longitude),
+        "target_days": int(args.days),
+        "taxon_profile": str(args.taxon_profile),
+        "survey_protocol": protocol,
+        "coverage_selection": coverage_audit.as_dict(),
+        "operational_budget": budget_audit.as_dict(),
+        "selection_rule": "geometry-only maximum candidate coverage followed by order-preserving field-day truncation",
+        "routing_claim": "proxy only; road/trail/ferry topology, traffic, access permission, safety and detection are not validated",
+    }
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return summary
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     if args.command in {"recommend", "zones"}:
         summary = run_recommendation(args)
+        print(json.dumps(summary, ensure_ascii=False))
+        return 0
+    if args.command == "budget":
+        summary = run_budget(args)
         print(json.dumps(summary, ensure_ascii=False))
         return 0
     parser.error(f"Unsupported command: {args.command}")
