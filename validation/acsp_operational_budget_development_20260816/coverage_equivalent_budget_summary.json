@@ -1,0 +1,84 @@
+{
+  "status": "development_complete",
+  "development_protocol_fingerprint": "877cc5f4240ce5ab19c45bf16bde42eb9a32405df55c03dcf74267503d470450",
+  "cohort_sha256": "fe0aa6222af28a32d3e6b76dea317a8aeb67776d4d8c9289625cfe4a45f921a1",
+  "declared_pairs": 24,
+  "pair_rows": 24,
+  "deployment_information_adequate_pairs": 19,
+  "deployment_information_adequacy_rate": 0.7916666666666666,
+  "benchmark_evaluable_pairs": 20,
+  "benchmark_evaluable_rate": 0.8333333333333334,
+  "completed_auc_pairs": 20,
+  "primary_auc_lift": {
+    "n": 20,
+    "mean": 0.0027520350838233744,
+    "bootstrap_95ci": [-0.01169683998036305, 0.015926235788458625],
+    "exact_one_sided_sign_flip_p": 0.3564453125,
+    "positive": 6,
+    "negative": 4,
+    "ties": 10
+  },
+  "primary_gate_pass": false,
+  "coverage_targets": {
+    "0.01": {
+      "lift": {"n": 20, "mean": -0.0027649769585253448, "bootstrap_95ci": [-0.01071428571428571, 0.0024193548387096745], "exact_one_sided_sign_flip_p": 0.75, "positive": 1, "negative": 1, "ties": 18},
+      "mean_support_sites": 2.55,
+      "mean_control_sites": 2.55,
+      "mean_site_count_difference": 0.0,
+      "mean_support_recall": 0.00936145246629117,
+      "mean_control_recall": 0.012126429424816515,
+      "mean_support_recall_per_site": 0.005729433350401091,
+      "mean_control_recall_per_site": 0.006282428742106159
+    },
+    "0.025": {
+      "lift": {"n": 20, "mean": 0.0006633789992423749, "bootstrap_95ci": [-0.013753987947536328, 0.013941729917773503], "exact_one_sided_sign_flip_p": 0.453125, "positive": 4, "negative": 2, "ties": 14},
+      "mean_support_sites": 5.7,
+      "mean_control_sites": 5.7,
+      "mean_site_count_difference": 0.0,
+      "mean_support_recall": 0.025261470538035992,
+      "mean_control_recall": 0.02459809153879361,
+      "mean_support_recall_per_site": 0.0043077018034323525,
+      "mean_control_recall_per_site": 0.003970397109391414
+    },
+    "0.05": {
+      "lift": {"n": 20, "mean": 0.009315826089189471, "bootstrap_95ci": [-0.007054487179487171, 0.02745202019203736], "exact_one_sided_sign_flip_p": 0.171875, "positive": 4, "negative": 3, "ties": 13},
+      "mean_support_sites": 10.95,
+      "mean_control_sites": 10.95,
+      "mean_site_count_difference": 0.0,
+      "mean_support_recall": 0.04632793879200424,
+      "mean_control_recall": 0.03701211270281477,
+      "mean_support_recall_per_site": 0.0036484090791909065,
+      "mean_control_recall_per_site": 0.003310822717102646
+    },
+    "0.1": {
+      "lift": {"n": 20, "mean": -0.003767622943856336, "bootstrap_95ci": [-0.026866463371604483, 0.01672790289951104], "exact_one_sided_sign_flip_p": 0.615234375, "positive": 6, "negative": 4, "ties": 10},
+      "mean_support_sites": 21.75,
+      "mean_control_sites": 21.75,
+      "mean_site_count_difference": 0.0,
+      "mean_support_recall": 0.10646937665903197,
+      "mean_control_recall": 0.11023699960288832,
+      "mean_support_recall_per_site": 0.005516959180041035,
+      "mean_control_recall_per_site": 0.005925644031612396
+    }
+  },
+  "island_effects": {
+    "amami_oshima": {"pairs": 3, "mean_auc_lift": 0.016739288307915767},
+    "iriomote": {"pairs": 3, "mean_auc_lift": -0.010030435528120699},
+    "ishigaki": {"pairs": 3, "mean_auc_lift": 0.0},
+    "okinawa_main": {"pairs": 3, "mean_auc_lift": 0.017132553273532934},
+    "sado": {"pairs": 3, "mean_auc_lift": 0.0185185185185185},
+    "tanegashima": {"pairs": 1, "mean_auc_lift": 0.0},
+    "tsushima": {"pairs": 3, "mean_auc_lift": -0.030626780626780602},
+    "yakushima": {"pairs": 1, "mean_auc_lift": 0.0198412698412698}
+  },
+  "record_stratum_effects": {
+    "0": {"n": 7, "mean": 0.004112756213596543, "bootstrap_95ci": [-0.010770975056689327, 0.023109243697478958], "exact_one_sided_sign_flip_p": 0.5, "positive": 1, "negative": 1, "ties": 5},
+    "1": {"n": 6, "mean": -0.0036707291336920828, "bootstrap_95ci": [-0.043556769019731933, 0.035048010973936866], "exact_one_sided_sign_flip_p": 0.5625, "positive": 2, "negative": 3, "ties": 1},
+    "2": {"n": 7, "mean": 0.006896540426206315, "bootstrap_95ci": [0.0004778439153439143, 0.014814761478067914], "exact_one_sided_sign_flip_p": 0.125, "positive": 3, "negative": 0, "ties": 4}
+  },
+  "missing_pair_results": [],
+  "infrastructure_failures": [],
+  "confirmation_24_reused": false,
+  "frozen_192_consumed": false,
+  "decision": "drop_q10_from_transferable_operational_core_and_retain_geometry_only_coverage"
+}
