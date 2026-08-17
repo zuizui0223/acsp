@@ -25,6 +25,7 @@ from .comparator_export import (
     iter_comparator_folds,
     write_comparator_pair_export,
 )
+from .coverage import CoverageSelectionAudit, select_maximum_coverage_sites
 from .decision_baselines import (
     DecisionBaselineConfig,
     compare_decision_baselines,
@@ -82,6 +83,7 @@ __all__ = [
     "AutomaticSdmCoreConfig",
     "CLAIM_MATRIX",
     "ComparatorFold",
+    "CoverageSelectionAudit",
     "DecisionBaselineConfig",
     "ENVIRONMENTAL_METHODS",
     "PRACTICAL_CORE_FINGERPRINT",
@@ -120,6 +122,7 @@ __all__ = [
     "select_environmental_farthest",
     "select_geographic_farthest",
     "select_heldout_greedy_oracle",
+    "select_maximum_coverage_sites",
     "select_practical_core",
     "select_score_top_k",
     "select_sdm_top_k",
