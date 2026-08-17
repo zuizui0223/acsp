@@ -1,0 +1,66 @@
+{
+  "protocol_id": "izu-island-microenvironment-random-taxon-transfer-v1",
+  "status": "predeclared_before_final_taxon_sampling_and_outcome_recovery",
+  "development_fingerprint": "575d42a829ac7910433ed562491fe75a7c702ab2305cfff8314275524be6edc4",
+  "scope": "same five Izu islands; unseen terrestrial vascular plant taxa; taxon transfer only",
+  "sampling": {
+    "taxa": 16,
+    "record_strata": 4,
+    "taxa_per_stratum": 4,
+    "minimum_coordinate_records": 25,
+    "facet_limit": 600,
+    "seed": 20260816,
+    "required_phylum": "Tracheophyta",
+    "no_replacement": true,
+    "exclude_practical_core_untouched_192": true,
+    "exclude_prior_acsp_taxa": true,
+    "exclude_prefix": [
+      "Campanula microdonta",
+      "Castanopsis sieboldii",
+      "Styrax japonica",
+      "Weigela coraeensis",
+      "Cornus controversa"
+    ]
+  },
+  "occurrences": {
+    "max_records_per_taxon": 300,
+    "exact_dedup": true,
+    "thinning_m": 500,
+    "minimum_thinned_points": 10
+  },
+  "validation": {
+    "block_degrees": 0.03,
+    "repeats": 5,
+    "holdout_fraction": 0.2,
+    "minimum_training_prototypes": 8,
+    "recovery_radius_km": 1.0
+  },
+  "selection": {
+    "hybrid_formula": "0.90*ndvi_state_rank + 0.10*joint_ndvi_microclimate_rank",
+    "candidate_count": 793,
+    "no_outcome_threshold_tuning": true
+  },
+  "comparators": {
+    "ndvi_only_same_budget": 793,
+    "matched_random_draws_per_fold": 500,
+    "random_allocation": "same island counts as hybrid"
+  },
+  "secondary_endpoints": [
+    "heldout points >=1 km from nearest training prototype",
+    "heldout points >=2 km from nearest training prototype"
+  ],
+  "inference": {
+    "unit": "taxon",
+    "minimum_evaluable_taxa": 12,
+    "bootstrap_draws": 10000,
+    "sign_flip_draws": 50000,
+    "primary_gate": "hybrid-random mean >0, bootstrap lower95 >0, sign-flip p<0.05",
+    "microclimate_gate": "hybrid-NDVI-only bootstrap lower95 >0 and sign-flip p<0.05"
+  },
+  "decision_if_microclimate_gate_fails": "Do not retune. If NDVI-only still beats random, support NDVI-state transfer but not the Campanula-tuned microclimate correction.",
+  "claim_boundary": "No cross-region/universal claim and no SDM/GRTS/biosurvey superiority claim.",
+  "separation": "Exclude every taxon in validation/practical_core_untouched_cohort_20260811/{excluded_taxa.csv,predeclared_taxon_region_pairs.csv} plus project-used focal taxa; do not consume the frozen 192-pair cohort.",
+  "pre_outcome_sampling_frame_correction": "First sampling-only run used a GBIF MULTIPOLYGON rejected with HTTP 400. Second no-outcome run exposed one marine red alga in a Plantae-only frame. Before any focal occurrence rows, candidate generation, or held-out outcomes were retrieved, eligibility was frozen to GBIF phylum Tracheophyta and prior project focal taxa were explicitly excluded.",
+  "fingerprint": "3a5baa065b83e95ecc1da6252a79e482ba0c92665e371da7a8723f8aa4382850",
+  "fingerprint_method": "sha256 canonical JSON excluding fingerprint fields"
+}

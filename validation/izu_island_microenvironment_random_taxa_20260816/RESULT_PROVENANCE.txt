@@ -1,0 +1,30 @@
+Izu microenvironment unseen-taxon validation result provenance
+
+Workflow run: 31935523757
+Workflow head SHA: ef3fbad0636ff456266ca9f5eac89aaa9655511a
+Artifact ID: 9260527195
+Artifact digest: sha256:3474b9ab60eeb72b5471d15e983ce41f54d0dd511abcb6bea46cca1bc609517a
+Protocol fingerprint: 3a5baa065b83e95ecc1da6252a79e482ba0c92665e371da7a8723f8aa4382850
+Development fingerprint: 575d42a829ac7910433ed562491fe75a7c702ab2305cfff8314275524be6edc4
+
+Result file SHA256:
+- validation_summary.json: 405b4c61bf4f3db96ff1867942ce849cce406a1d32de13f0c22e6735d34de54b
+- taxon_results.csv: b2f3b2f349c4a67b964a2d69687c7cc65bf34ca398d2d7ee88dacd12c2d54ded
+- fold_results.csv (artifact only): 124dc82e751436706295aac2015f3f851790513036c3ef612f3e7bf1415151a8
+
+All 16 predeclared taxa were evaluable with five spatial folds. No taxon was replaced. Campanula microdonta was not used in validation and no taxon from the frozen 192-pair Practical Core cohort was consumed.
+
+Primary transfer gate FAILED:
+- hybrid mean recall = 0.7191666666666667
+- same-allocation matched-random mean recall = 0.8608145833333334
+- hybrid minus random = -0.14164791666666668
+- taxon-bootstrap 95% CI = [-0.18963752083333335, -0.09398684375000003]
+- one-sided sign-flip p = 1.0
+
+Microclimate increment gate FAILED:
+- NDVI-only mean recall = 0.7547916666666666
+- hybrid minus NDVI = -0.03562499999999998
+- taxon-bootstrap 95% CI = [-0.05979166666666666, -0.010624999999999975]
+- one-sided sign-flip p = 1.0
+
+Decision: do not promote the Campanula-derived 0.90 NDVI + 0.10 microclimate rule as a transferable Izu plant method. Do not retune it after this result. The 16 taxa now become an inspected generalization-development cohort only; any revised method requires a new predeclared unseen cohort for confirmation.

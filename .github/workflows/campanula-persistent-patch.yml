@@ -1,0 +1,106 @@
+name: Campanula persistent patch
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/campanula-discovery-development
+    paths:
+      - research/campanula_persistent_patch.py
+      - research/campanula_persistent_patch_fast.py
+      - research/campanula_persistent_patch_hash.py
+      - .github/workflows/campanula-persistent-patch.yml
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  persistent-patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP and geospatial dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install rasterio pyproj scipy awscli
+
+      - name: Download frozen Campanula development cache and GSI DEM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-development-data
+          path: campanula-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31856717236
+
+      - name: Download pinned ESA WorldCover NDVI composite
+        run: |
+          set -euo pipefail
+          mkdir -p public-layers
+          NDVI_KEY="ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif"
+          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" public-layers/ndvi.tif --no-sign-request
+          echo "$NDVI_KEY" > public-layers/ndvi_s3_key.txt
+          sha256sum public-layers/ndvi.tif | tee public-layers/ndvi_sha256.txt
+          grep -q '^641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638 ' public-layers/ndvi_sha256.txt
+
+      - name: Rebuild outcome-blind full-island universe
+        run: |
+          python research/campanula_microterrain_discovery.py \
+            --gbif campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --out microterrain-results
+
+      - name: Build and evaluate bounded persistent survey patches
+        run: |
+          python research/campanula_persistent_patch_hash.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --random-iterations 2000 \
+            --seed 20260815 \
+            --out persistent-patch-results
+
+      - name: Audit development boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r = json.loads(Path('persistent-patch-results/persistent_patch_report.json').read_text())
+          assert r['status'] == 'development_only'
+          assert r['field_coordinates_used_by_generator'] is False
+          assert r['best_1km']['recovered'] == 19
+          assert r['best_1km']['total'] == 19
+          print(json.dumps({
+              'best_1km': r['best_1km'],
+              'best_500m': r['best_count_only_500m'],
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campanula-persistent-patch
+          path: |
+            public-layers/ndvi_s3_key.txt
+            public-layers/ndvi_sha256.txt
+            microterrain-results/microterrain_report.json
+            persistent-patch-results/persistent_patch_report.json
+            persistent-patch-results/persistent_patch_frontier.csv
+            persistent-patch-results/best_persistent_patches.csv
+          if-no-files-found: error
+          retention-days: 90

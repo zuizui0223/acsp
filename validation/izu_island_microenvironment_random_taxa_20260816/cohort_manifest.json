@@ -1,0 +1,18 @@
+{
+  "protocol_id": "izu-island-microenvironment-random-taxon-transfer-v1",
+  "protocol_fingerprint": "3a5baa065b83e95ecc1da6252a79e482ba0c92665e371da7a8723f8aa4382850",
+  "declared_taxa": 16,
+  "required_phylum": "Tracheophyta",
+  "sampling_geometry": "five independent GBIF POLYGON facets; speciesKey counts summed before thresholding",
+  "record_strata": {
+    "0": 4,
+    "1": 4,
+    "2": 4,
+    "3": 4
+  },
+  "outcomes_inspected": false,
+  "focal_occurrence_rows_fetched": false,
+  "candidate_generation_run": false,
+  "heldout_recovery_run": false,
+  "taxon_replacement_after_declaration": false
+}

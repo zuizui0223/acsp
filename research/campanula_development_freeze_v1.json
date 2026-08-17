@@ -1,0 +1,122 @@
+{
+  "schema_version": "campanula-development-freeze-v1",
+  "status": "development_frozen_for_external_random_validation",
+  "species": "Campanula microdonta",
+  "scientific_role": "development_instrument_not_independent_confirmation",
+  "inference_target": "occurrence_conditioned_robust_survey_support_envelope",
+  "not_interpretable_as": [
+    "occupancy_probability",
+    "calibrated_suitability_probability",
+    "independent_field_validation",
+    "validated_finite_top_k_policy"
+  ],
+  "development_inputs": {
+    "occurrence_source": "pre-2026 GBIF cache through 2025",
+    "gbif_cache_workflow_run": 31856717236,
+    "gbif_training_rows_manifest": 281,
+    "prototype_spatial_thinning_m": 500,
+    "thinned_prototypes_campanula": 18,
+    "candidate_grid_nominal_m": 100,
+    "candidate_universe": "GSI DEM-supported land grid over the five Izu survey islands",
+    "gsi_dem_role": "candidate land universe and microterrain development diagnostics; final frozen support score uses the NDVI state vector below",
+    "ndvi_source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v200",
+    "ndvi_s3_key": "ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif",
+    "ndvi_sha256": "641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638",
+    "ndvi_features": [
+      "ndvi_p50",
+      "ndvi_amp",
+      "ndvi_mean100",
+      "ndvi_mean250",
+      "ndvi_amp_mean100"
+    ],
+    "feature_scaling": "prototype median and IQR",
+    "single_world_support": "percentile rank of robust Euclidean distance to nearest retained occurrence prototype in NDVI state space",
+    "consensus_support": "median single-world support rank across all internal leave-one-prototype-out worlds"
+  },
+  "campanula_development_outcomes": {
+    "field_rows": 28,
+    "field_clusters_500m": 19,
+    "primary_radius_km": 1.0,
+    "sensitivity_radius_km": 0.5,
+    "field_coordinates_allowed_for_inference": false
+  },
+  "frozen_primary_rule": {
+    "radius_km": 1.0,
+    "support_threshold": 0.09945575892925262,
+    "threshold_derivation": "maximum exact threshold required across 18 outer leave-one-prototype-out nested consensus reconstructions",
+    "campanula_canonical_cells_at_threshold": 2367,
+    "campanula_canonical_grid_fraction": 0.10388869382022473,
+    "campanula_canonical_recovery": "19/19",
+    "campanula_canonical_max_nearest_km": 0.8687897057613438
+  },
+  "frozen_sensitivity_rule": {
+    "radius_km": 0.5,
+    "support_threshold": 0.413843035697937,
+    "campanula_canonical_cells_at_threshold": 9619,
+    "campanula_canonical_grid_fraction": 0.4221822331460674,
+    "campanula_canonical_recovery": "19/19",
+    "campanula_canonical_max_nearest_km": 0.41321799475848453
+  },
+  "finite_patch_policy_status": {
+    "promotion": "rejected_for_freeze",
+    "sharp_canonical_diagnostic": {
+      "patches": 32,
+      "cells": 284,
+      "recovery": "19/19",
+      "matched_random_complete_probability": 0.0004
+    },
+    "jackknife_consensus_diagnostic": {
+      "patches": 42,
+      "cells": 650,
+      "recovery": "19/19",
+      "matched_random_complete_probability": 0.0036
+    },
+    "outer_leave_one_out_fixed_42": {
+      "complete_rate": 0.05555555555555555,
+      "mean_recovered": 16.5,
+      "min_recovered": 13,
+      "mean_required_complete_prefix_patches": 61.0,
+      "max_required_complete_prefix_patches": 112
+    },
+    "reason": "finite patch compression remains occurrence-sensitive even when the support envelope is comparatively robust"
+  },
+  "negative_ablations_retained": [
+    "WorldCover categorical composition did not improve the terrain/NDVI frontier",
+    "NDVI transition/gradient features did not beat the simpler NDVI state representation",
+    "facility/catchment patch coverage reduced patch count by one but worsened matched-random complete recovery",
+    "equal per-prototype quota failed canonical complete recovery",
+    "direct 32-patch spatial policy failed prototype-deletion robustness"
+  ],
+  "external_validation_contract": {
+    "no_retuning_after_freeze": true,
+    "primary_domain": "small or compact Japanese islands / island-like components where within-component macroclimate variation is reduced and public fine-scale vegetation structure is meaningful",
+    "primary_output": "held-out occurrence-cluster recovery by the fixed robust support envelope at 1 km",
+    "primary_threshold": 0.09945575892925262,
+    "secondary_output": "500 m recovery using the fixed sensitivity threshold",
+    "secondary_threshold": 0.413843035697937,
+    "controls": [
+      "same-component matched random cells at equal selected-cell count",
+      "non-consensus nearest-prototype support ablation",
+      "macro-SDM high-support cells when a fair frozen implementation is available"
+    ],
+    "failures_retained": true,
+    "campanula_excluded_from_external_validation": true
+  },
+  "provenance": {
+    "campanula_development_cache_run": 31856717236,
+    "spatial_policy_run": 31868672843,
+    "facility_policy_run": 31891034752,
+    "direct_robustness_run": 31891310239,
+    "support_stability_diagnosis_run": 31891624132,
+    "jackknife_consensus_run": 31891999758,
+    "outer_consensus_robustness_run": 31892291831,
+    "robust_support_upper_bound_run": 31892691452,
+    "robust_support_upper_bound_artifact": 9248972351,
+    "robust_support_upper_bound_artifact_sha256": "32486fc52920b3e847af3eacd634758783e207fc4c374aebce225f6018188b72"
+  },
+  "fingerprint": {
+    "algorithm": "sha256",
+    "canonicalization": "UTF-8 JSON of all top-level fields except fingerprint, sort_keys=true, separators=(',', ':'), ensure_ascii=false",
+    "sha256": "79276d8396f3254975dcd89b519e59d98f18c133097c562716f05a15b8a6ab90"
+  }
+}

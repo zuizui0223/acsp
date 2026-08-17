@@ -1,0 +1,107 @@
+{
+  "protocol_id": "acsp-robust-support-island-random-validation-v1.1",
+  "status": "availability_amended_before_any_taxon_draw_or_occurrence_retrieval",
+  "development_freeze": {
+    "path": "research/campanula_development_freeze_v1.json",
+    "fingerprint_sha256": "79276d8396f3254975dcd89b519e59d98f18c133097c562716f05a15b8a6ab90",
+    "primary_support_threshold": 0.09945575892925262,
+    "primary_radius_km": 1.0,
+    "sensitivity_support_threshold": 0.413843035697937,
+    "sensitivity_radius_km": 0.5,
+    "retuning_allowed": false
+  },
+  "scope": {
+    "taxon_group": "vascular_plants_via_GBIF_Plantae_species_frame",
+    "geography": "Japanese islands outside the Izu development region",
+    "interpretation": "external retrospective generalization of the frozen robust support envelope; not prospective detection-probability validation",
+    "island_cells": [
+      {"island_id": "yakushima", "west": 130.38, "south": 30.2, "east": 130.7, "north": 30.43},
+      {"island_id": "amami_oshima", "west": 129.2, "south": 28.05, "east": 129.75, "north": 28.55},
+      {"island_id": "tsushima", "west": 129.1, "south": 34.0, "east": 129.55, "north": 34.75},
+      {"island_id": "sado", "west": 138.15, "south": 37.75, "east": 138.65, "north": 38.38},
+      {"island_id": "oki_dogo", "west": 133.1, "south": 36.05, "east": 133.4, "north": 36.35},
+      {"island_id": "shodoshima", "west": 134.1, "south": 34.4, "east": 134.42, "north": 34.58},
+      {"island_id": "tanegashima", "west": 130.82, "south": 30.3, "east": 131.08, "north": 30.85},
+      {"island_id": "kumejima", "west": 126.65, "south": 26.28, "east": 126.9, "north": 26.43},
+      {"island_id": "ishigaki", "west": 124.05, "south": 24.3, "east": 124.35, "north": 24.6},
+      {"island_id": "miyakojima", "west": 125.2, "south": 24.65, "east": 125.5, "north": 24.95},
+      {"island_id": "rishiri", "west": 141.15, "south": 45.05, "east": 141.35, "north": 45.3},
+      {"island_id": "okinawa_main", "west": 127.6, "south": 26.05, "east": 128.35, "north": 26.88}
+    ]
+  },
+  "cohort": {
+    "pair_count": 24,
+    "taxa_per_island": 2,
+    "within_island_record_count_strata": 2,
+    "seed": 20260815,
+    "minimum_coordinate_records_in_cell": 15,
+    "facet_limit": 300,
+    "sampling_rule": "within each island frame, after all historical-development and 192-pair exclusions, split eligible species into two rank-based record-count strata and sample exactly one unused taxon per stratum; taxa are globally unique and are never replaced after declaration",
+    "availability_amendment": "v1 audit found no cohort was drawn because Fukue, Iki, and Rebun lacked two post-exclusion record strata; replaced those cells with Sado, Tanegashima, and Okinawa main using sampling-frame availability only"
+  },
+  "exclusions": {
+    "files": [
+      "validation/practical_core_untouched_cohort_20260811/excluded_taxa.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv"
+    ],
+    "explicit_prefixes": ["Campanula microdonta"],
+    "exclude_izu_geography": true
+  },
+  "retrospective_split": {
+    "unit": "taxon-island pair",
+    "repeats": 5,
+    "seed_base": 20260815,
+    "spatial_block_degrees": 0.02,
+    "holdout_block_fraction": 0.2,
+    "minimum_training_occurrences_after_cleaning": 8,
+    "minimum_training_prototypes_after_500m_thinning": 6,
+    "minimum_heldout_occurrence_clusters": 2,
+    "heldout_cluster_radius_m": 500,
+    "training_embargo_from_heldout_m": 1000,
+    "failure_rule": "declared pair/repeat failures remain in intention-to-evaluate denominator as zero; no taxon replacement or threshold change"
+  },
+  "frozen_method": {
+    "candidate_grid_nominal_m": 100,
+    "candidate_land_universe": "GSI DEM-supported land grid; generalized with the same public GSI terrain acquisition path used by ACSP",
+    "ndvi_source": "ESA WorldCover annual Sentinel-2 NDVI composite 2021 v200",
+    "ndvi_features": ["ndvi_p50", "ndvi_amp", "ndvi_mean100", "ndvi_mean250", "ndvi_amp_mean100"],
+    "prototype_thinning_m": 500,
+    "feature_scaling": "training-prototype median and IQR within each inner world",
+    "inner_consensus": "median support rank across leave-one-training-prototype-out worlds",
+    "primary_threshold": 0.09945575892925262,
+    "sensitivity_threshold": 0.413843035697937,
+    "no_finite_patch_policy_primary_claim": true
+  },
+  "comparators": {
+    "primary": "same-island random cells matched exactly to the frozen support-envelope selected-cell count",
+    "secondary": [
+      "single-world nearest-prototype support using the same frozen threshold",
+      "uniform spatial cells matched to selected-cell count"
+    ],
+    "sdm": "optional secondary if implemented once with a frozen fair island-specific extent; SDM performance cannot alter the frozen support method"
+  },
+  "estimands": {
+    "primary": "held-out 500m cluster recall within 1 km of the frozen support envelope",
+    "sensitivity": "held-out 500m cluster recall within 0.5 km using the frozen sensitivity threshold",
+    "random_lift": "frozen support recall minus mean matched-random recall",
+    "coverage_cost": "selected support cells divided by candidate land-grid cells"
+  },
+  "inference": {
+    "unit": "taxon-island pair",
+    "failure_inclusive": true,
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "claim_rule": "report mean paired lift, pair-bootstrap 95% interval, and pair-level sign-flip p; no superiority/generalization claim if CI crosses zero or p>=0.05; negative results are retained and the method is not retuned"
+  },
+  "claim_boundaries": {
+    "can_support": "cross-taxon retrospective transfer of an occurrence-conditioned robust survey-support envelope on island domains",
+    "cannot_support": [
+      "occupancy probability",
+      "calibrated suitability probability",
+      "detection probability",
+      "prospective discoveries per field day",
+      "robust finite Top-k or patch compression"
+    ]
+  },
+  "protocol_fingerprint": "e62e0e65e490ee6f04ce50dc3009407cb9ed1875fd610f153592104934b77acd"
+}

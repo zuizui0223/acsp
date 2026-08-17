@@ -1,0 +1,138 @@
+name: Campanula microenvironment frontier
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/campanula-discovery-development
+    paths:
+      - research/campanula_microterrain_discovery.py
+      - research/campanula_ndvi_microclimate_hybrid.py
+      - research/campanula_hybrid_prototype_robustness.py
+      - research/campanula_microenvironment_sources.json
+      - .github/workflows/campanula-worldcover-development.yml
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  current-frontier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install rasterio pyproj scipy awscli
+      - name: Download frozen Campanula cache and GSI DEMs
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-development-data
+          path: campanula-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31856717236
+      - name: Download official ESA NDVI composite
+        run: |
+          set -euo pipefail
+          mkdir -p public-layers
+          NDVI_KEY=""
+          for PREFIX in "ndvi/2021/N34E139/" "ndvi/2021/N34/" "ndvi/2021/"; do
+            KEYS=$(aws s3api list-objects-v2 --bucket esa-worldcover-s2 --prefix "$PREFIX" --max-items 1000 --no-sign-request --query 'Contents[].Key' --output text 2>/dev/null || true)
+            NDVI_KEY=$(printf '%s\n' "$KEYS" | tr '\t' '\n' | grep -Ei 'N34E139.*NDVI.*\.tif$' | head -n 1 || true)
+            [ -n "$NDVI_KEY" ] && break
+          done
+          test -n "$NDVI_KEY"
+          printf '%s\n' "$NDVI_KEY" | tee public-layers/ndvi_s3_key.txt
+          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" public-layers/ndvi.tif --no-sign-request
+          sha256sum public-layers/ndvi.tif | tee public-layers/ndvi_sha256.txt
+      - name: Rebuild outcome-blind microterrain universe
+        run: |
+          python research/campanula_microterrain_discovery.py \
+            --gbif campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --out microterrain-results
+      - name: Run NDVI plus microclimate hybrid Pareto frontier
+        run: |
+          python research/campanula_ndvi_microclimate_hybrid.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --radius-km 1.0 \
+            --random-iterations 10000 \
+            --seed 20260816 \
+            --out hybrid-results
+      - name: Leave-one-prototype-out robustness audit
+        run: |
+          python research/campanula_hybrid_prototype_robustness.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --hybrid-report hybrid-results/hybrid_report.json \
+            --radius-km 1.0 \
+            --out robustness-results
+      - name: Audit development boundary and promotion gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          micro=json.loads(Path('microterrain-results/microterrain_report.json').read_text())
+          hybrid=json.loads(Path('hybrid-results/hybrid_report.json').read_text())
+          robust=json.loads(Path('robustness-results/prototype_loo_report.json').read_text())
+          assert micro['field_coordinates_used_by_generator'] is False
+          assert hybrid['field_coordinates_used_by_generator'] is False
+          assert robust['field_coordinates_used_by_generator'] is False
+          assert hybrid['status']=='development_only'
+          assert robust['status']=='development_only'
+          assert hybrid['candidate_count_best']['recovered']==19
+          assert hybrid['candidate_count_best']['total']==19
+          assert hybrid['promotion_candidates'], 'hybrid did not beat the previous NDVI frontier on both gates'
+          assert robust['weights_retuned_inside_loo'] is False
+          print(json.dumps({
+              'candidate_count_best': hybrid['candidate_count_best'],
+              'matched_random_best': hybrid['matched_random_best'],
+              'pareto_frontier': hybrid['pareto_frontier'],
+              'prototype_loo': robust['endpoints'],
+          }, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campanula-current-frontier
+          path: |
+            public-layers/ndvi_s3_key.txt
+            public-layers/ndvi_sha256.txt
+            microterrain-results/microterrain_report.json
+            microterrain-results/gbif_microterrain_prototypes.csv
+            hybrid-results/hybrid_report.json
+            hybrid-results/best_hybrid_candidates.csv
+            hybrid-results/hybrid_scored_universe.csv
+            robustness-results/prototype_loo_report.json
+            robustness-results/prototype_loo_rows.csv
+          if-no-files-found: error
+          retention-days: 90
