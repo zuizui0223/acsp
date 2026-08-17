@@ -1,0 +1,17 @@
+ACSP geometry-only field-day operational validation
+
+workflow_run_id=32024886388
+workflow_head_sha=d1459dafd8b545069f33708090c1e6a19443cc6c
+aggregate_artifact_id=9286790606
+aggregate_artifact_digest=sha256:a3842de0e75c43e9be2b28cf9d02f8d33833392f4868101bbc2f288ad74dbe85
+protocol_fingerprint=6bd7c35e2e3de369088691ebe8861d0578f5933374895fe06cb390bfe9a4383f
+
+geometry_trip_budget_summary.json.sha256=2d3de8c11a71a6b15fe63e2933e9d5573e26678f17940508f2764b20e774c3b2
+primary_hub_day_budget_results.csv.sha256=3e575e234212b4b3cd7fb2373d5c7e94fb9bcf67e15b130938b0586c1d649f92
+all_hub_day_budget_results.csv.sha256=14961160188966eba9f9296036dabc48b468e3cb213a7da1ad239490ed6119a4
+all_hub_fixed_k5_results.csv.sha256=9070570c7a9dda8dd0d123b8a61aa9f5cccb9424e286e0ae5b5f88400ce67a05
+island_summaries.jsonl.sha256=f2f5bc548927149bd20e89954135f7f53303c0931e02d97572ec84deec30fc9b
+
+All 12 island jobs completed successfully. No taxon occurrence coordinates, held-out biological outcomes, NDVI support modifier, failed-confirmation outcome, or frozen Practical Core 192-pair outcome was used. The geometry sequence was fixed before trip-budget translation and was never reordered by route/time estimates.
+
+The production vascular-plant reconnaissance defaults were asserted at runtime: 8 field hours/day, 90 search minutes/site, 20 access-buffer minutes/site, one minimum repeat visit. Hub positions are deterministic land-grid proxies, not actual ports, roads, trailheads, or accommodation locations.
