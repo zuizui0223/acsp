@@ -45,6 +45,7 @@ from .field_validation import (
     recovery_summary,
     stratified_random_recovery_benchmark,
 )
+from .operational_budget import OperationalBudgetAudit, select_largest_feasible_prefix
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -86,6 +87,7 @@ __all__ = [
     "CoverageSelectionAudit",
     "DecisionBaselineConfig",
     "ENVIRONMENTAL_METHODS",
+    "OperationalBudgetAudit",
     "PRACTICAL_CORE_FINGERPRINT",
     "PRACTICAL_CORE_PROTOCOL_ID",
     "PracticalCorePolicy",
@@ -122,6 +124,7 @@ __all__ = [
     "select_environmental_farthest",
     "select_geographic_farthest",
     "select_heldout_greedy_oracle",
+    "select_largest_feasible_prefix",
     "select_maximum_coverage_sites",
     "select_practical_core",
     "select_score_top_k",
