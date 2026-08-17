@@ -1,16 +1,12 @@
-# ACSP adaptive survey architecture
+# ACSP scale-separated survey architecture
 
 Status: **development architecture**, not a new superiority claim.
 
-This document records the algorithmic structure that has survived repeated ACSP development, nested evaluation, Campanula field-driven development, and cross-taxon failure analysis. Components are retained only when their role is supported, and negative experiments constrain future development.
-
-The machine-readable evidence ledger is `research/acsp_algorithm_component_ledger.json`.
+This document records the structure that survives the full development history through the failed cross-island q10 confirmation and the subsequent coverage-equivalent budget experiment. The machine-readable evidence ledger is `research/acsp_algorithm_component_ledger.json`.
 
 ## Current algorithmic object
 
-ACSP is not being developed as a universal cell-wise suitability model or as a universal weighted ranking formula.
-
-The current target is a survey decision procedure:
+ACSP is no longer being developed as a universal cell-wise suitability model or a universal weighted cell-ranking formula. The current target is a **scale-separated survey decision procedure**:
 
 ```text
 training occurrences O
@@ -19,163 +15,167 @@ training occurrences O
 [1] domain / information adequacy
         |
         v
-[2] occurrence-conditioned ecological support E(O)
+[2] regional occurrence-conditioned ecological screen
+    (frozen Practical Core role; no new fine-scale claim)
         |
         v
-[3] training-only support-policy selection
+[3] full local land candidate universe
         |
         v
-[4] set-level survey optimization under budget B
+[4] geometry-only set-level maximum coverage
         |
         v
-[5] operational patch / route / site set
+[5] operational budget translation
+    (days / route proxy / site effort)
+        |
+        v
+field survey site set
 ```
 
-The decision object is closer to
+The important separation is now **scale**, not another environmental weight:
 
-`S*(O, B) = argmax_{S subset E(O), cost(S) <= B} SurveyCoverage(S)`
+- ecological occurrence evidence is retained at the regional decision scale where the parsimonious Practical Core survived simplification;
+- within a selected local survey domain, repeated attempts to use NDVI/microenvironment as a transferable fine-scale filter failed;
+- local site selection therefore falls back to the strongest surviving structure: non-overlapping set-level geographic coverage;
+- route, patch and time are downstream operational representations, not biological truth criteria.
 
-than to a cell-wise `P(presence | x)`.
+Optional SDM/SSDM remains a separate evidence source in the production app and is not required for this non-model decision path.
 
-The ecological layer constrains where a survey is defensible. The set layer decides how to spend a finite field budget inside that support. Optional SDM/SSDM remains a separate evidence source in the production app and is not required for this non-model decision path.
+## 1. Domain and information adequacy
 
-## Layer 1 — domain and information gate
+A terrestrial survey policy must not be forced onto an unsupported domain. The research-layer domain gate uses training-surface support before held-out outcomes. Taxonomy is only a conservative prior.
 
-Before an ecological support surface is trusted, the training data must establish that the requested policy is applicable.
+The failed cross-island confirmation also exposed a second distinction:
 
-Earlier mixed-taxon work showed that one land-based candidate surface cannot be transferred blindly to marine, coastal, freshwater, and terrestrial taxa. The same issue reappeared when a predeclared outside-Izu plant frame contained seagrasses and an alga.
+- **deployment information adequacy**: enough training information exists to generate a survey plan;
+- **retrospective benchmark evaluability**: enough independent spatial blocks exist to estimate held-out recovery reliably.
 
-The research-layer gate now gives observed training-surface support precedence over coarse kingdom labels. A vascular plant with strong land-supported training occurrences may enter the terrestrial policy; a nominal plant with predominantly non-land training support does not. Missing support evidence returns an unverified/inapplicable state rather than silently forcing a terrestrial policy.
+These must be reported separately. A species can be deployable but difficult to benchmark with five independent folds.
 
-The gate remains outcome-free. Held-out recovery cannot decide applicability.
+## 2. Regional ecological screen
 
-## Layer 2 — occurrence-conditioned ecological support
+The frozen Practical Core remains the ecological survey-decision baseline:
 
-The surviving ecological role is **support-region reconstruction**, not final Top-k ranking.
+- candidate pool built from training occurrences only;
+- known/occurrence-supported candidates removed before ranking;
+- Top-5 by `component_local_habitat_score`;
+- same rule for plants and animals;
+- score interpreted as **occurrence-conditioned local environmental support**, not occupancy or calibrated suitability probability.
 
-Evidence for this separation is strong:
+Its scientific fingerprint remains `3dafe65b6bef09b1878d688730d5feb64a8de58843b06ff9fb14a876512d4905` and its separate 192-pair protocol remains isolated from this development line.
 
-- old Campanula candidate pools could reach only 13/19 field clusters within 1 km, so ranking could never solve the problem;
-- full-island generation removed that ceiling;
-- static WorldCover composition and the current NDVI transition/gradient variants did not outperform simpler NDVI-state support;
-- a Campanula-specific NDVI + microclimate weighted rank compressed the field case but failed on 16 unseen Izu plant taxa;
-- after final selection was changed to strong set-level coverage, a narrow NDVI eligibility mask retained a low-budget within-island signal at q=0.10, K=5, r=1 km.
+This regional ecological role must not be confused with the rejected fine-scale NDVI experiments below.
 
-Environmental information therefore currently answers:
+## 3. Fine-scale ecological support: development conclusion
 
-> Which parts of the survey domain remain ecologically supported by the observed occurrence states?
+The Campanula case was useful as a stress-test system but did not produce a transferable microenvironmental ranking rule.
 
-It does not directly answer:
+The development sequence was:
 
-> Which cells have the highest calibrated probability of presence?
+1. old candidate pools imposed an upstream ceiling (13/19 Campanula field clusters within 1 km);
+2. full-island generation removed that ceiling;
+3. terrain was real but insufficiently selective;
+4. static WorldCover composition failed;
+5. NDVI state compressed the Campanula field case;
+6. the Campanula 0.90 NDVI + 0.10 microclimate rule failed the predeclared 16-taxon Izu transfer;
+7. independent environmental Top-cell ranking failed under low-budget sweeps;
+8. strong set-level maximum coverage dominated weak geometry controls;
+9. a q=0.10 NDVI eligibility mask retained a narrow K=5 Izu development signal (+0.030 versus q=1 geometry-only);
+10. prototype-LOO q selection failed;
+11. fully nested within-taxon q selection failed;
+12. MST multimodal support failed;
+13. k=2/3 local prototype agreement failed;
+14. point/100 m/250 m NDVI scale adaptation failed;
+15. cross-taxon jackknife consistently selected q=0.10 at K=5, motivating one frozen external test;
+16. that frozen K5/q10 method **failed** on 24 new taxa / 12 new island domains: eligible n=15, mean lift +0.0209, bootstrap 95% CI crossing zero, exact p=0.156, and eligibility rate 0.625;
+17. a new development cohort then replaced fixed K with equal land-grid design-footprint targets; q=0.10 still failed, with normalized-AUC lift +0.00275, bootstrap CI crossing zero and p=0.356.
 
-### Representation failures already learned
+Therefore:
 
-A single global nearest-prototype envelope with taxon-specific q chosen by fully nested inner spatial recovery did **not** generalize. At K=5 its lift over pure geographic coverage was only +0.009 with a confidence interval crossing zero; K=10 and K=20 were negative.
+> **NDVI q10 is rejected as a transferable fine-scale operational modifier in the current ACSP line.**
 
-A second representation split training occurrence space into robust MST-gap environmental modes and gave every mode equal search opportunity at identical total support area. Multimodality was genuinely detected in 42/80 outer folds, but the representation made fixed-q10 recovery clearly worse at all K. Thus the failure was not solved by simply protecting rare modes equally.
+This is stronger than saying that the threshold was wrong. Fixed K, q adaptation, multimodality, prototype agreement, spatial aggregation and equal-coverage budget representations were all tested without producing stable transfer.
 
-The active representation question is now narrower:
+A future ecological micro-support family would require a genuinely new biological representation and a new development cohort. It must not be created by retuning q, NDVI features or thresholds on any inspected cohort above.
 
-> How much **local prototype agreement** should a candidate require?
+## 4. Set-level local optimization
 
-The current experiment keeps the same NDVI-state variables and total support area but compares distance to one versus the mean distance to two or three nearest training prototypes. This tests support scale without adding variables or changing survey footprint.
+This is the strongest surviving fine-scale component.
 
-## Layer 3 — training-only support-policy selection
+A field survey is a **set decision**, not independent high-scoring cells. The exact sparse selector greedily maximizes newly covered land-grid cells at every step and uses a deterministic tie break. This absorbs the useful part of earlier geographic complementarity without retaining a fixed additive geography weight.
 
-This layer now has a fixed validation architecture even though the best ecological representation is unresolved.
+Current local transferable core:
 
-A fixed q=0.10 remains a development reference, not a universal biological constant.
+```text
+full local land candidate grid
+        |
+        v
+exact sparse maximum-new-coverage order
+        |
+        v
+operational budget translator
+```
 
-Two lessons are frozen:
+The geometry layer is deliberately ecology-free at this scale because the tested ecological micro-support modifiers did not transfer reliably.
 
-1. prototype-LOO environmental reconstruction is the wrong internal objective because internal environmental stability is not downstream survey value;
-2. support-policy adaptation must be **fully nested** and optimize the same survey-set recovery objective used at deployment.
+## 5. Operational field budget and output
 
-For every active representation, the procedure is:
+Candidate count is not itself a field budget. The 793-point / 1-km Campanula design showed that large buffered candidate sets can nearly saturate an island and make random selection appear strong.
 
-1. outer training / held-out split defines the evaluation world;
-2. within outer training only, create identical inner spatial holdouts;
-3. construct every predeclared candidate policy from inner training data;
-4. select K sites with the same set-level coverage objective used in deployment;
-5. compare paired inner-fold recovery against the q=1 geometry-only policy;
-6. require a candidate policy to be feasible on every inner fold;
-7. if no ecological policy has positive mean inner lift, fall back to q=1;
-8. rebuild the chosen policy on all outer training data;
-9. only then expose outer held-out coordinates.
+The operational layer should translate the fixed geometry sequence into quantities the field team actually controls:
 
-The current support-scale experiment selects `(k, q)` inside this unchanged framework, with k in the predeclared set {1,2,3}. Exact ties prefer broader support and then smaller k.
-
-## Layer 4 — set-level survey optimization
-
-This is currently the strongest structural result.
-
-A survey is a set decision, not a collection of independent cell scores. The selected set should avoid wasting slots on overlapping search footprints.
-
-The development selector greedily maximizes newly covered public land-grid cells within the declared survey radius. It is deliberately compared against a q=1 geometry-only control.
-
-This layer absorbed several earlier ideas without retaining their weaker forms:
-
-- geographic complementarity survives as a **set objective**, not as a fixed additive score weight;
-- area balancing is treated as a constraint/control problem, not a universal bonus;
-- random Top-k remains useful, but a strong geometry-only selector is required whenever geometry alone can dominate random;
-- candidate count is not equated with survey budget because large buffered candidate sets can saturate the domain.
-
-The reference Python selector has also been replaced in heavy nested workflows by an exact sparse implementation. Regression tests and a full strict-nested rerun produced byte-identical scientific outputs, so this is computational optimization only.
-
-## Layer 5 — operational field budget and output
-
-K and recovery radius are not inferred biological constants. They represent the current operational evaluation design.
-
-The deployable system should eventually accept field constraints such as:
-
+- survey days;
+- site-search time;
+- access buffer time;
+- route-distance proxy;
 - number of survey stops;
-- survey hours;
-- route distance;
-- searched area;
-- access or ferry/road constraints.
+- ultimately real road/trail/ferry constraints when those data are available.
 
-Patch persistence is not a mandatory ecological truth criterion. Campanula development showed that forcing support into persistent connected patches can exclude genuine detections or require excessive expansion. Patch and route representations therefore belong primarily in the operational-output layer.
+The active experiment is outcome-free: it keeps the geometry coverage order fixed and uses the existing production `estimate_default_short_trip` plus the production vascular-plant reconnaissance defaults to find the largest prefix fitting 1–5 days. Route estimates **do not reorder** the biological/coverage sequence. Five deterministic hub proxies test sensitivity to the arbitrary benchmark hub location.
 
-## Rejected components
+Patch persistence remains an operational presentation option. It is not a required biological gate.
 
-The following should not return to the main line without a new predeclared ablation rationale and evidence:
+## Rejected / demoted components
+
+Do not return these to the main line without a new predeclared rationale and genuinely new evidence:
 
 - universal fixed evidence-weight sums as the scientific core;
-- independent environmental Top-cell ranking as the transferable selection family;
+- independent environmental Top-cell ranking as a transferable local selector;
 - Campanula's fixed 90% NDVI + 10% microclimate correction;
-- WorldCover composition as a promoted microenvironment feature;
-- current NDVI transition/gradient representation;
+- q=0.10 NDVI eligibility as a transferable fine-scale operational modifier;
+- within-taxon q adaptation;
+- prototype-LOO environmental reconstruction as policy selection;
+- equal-opportunity MST multimodal support;
+- k=2/3 nearest-prototype agreement;
+- point-only / 100 m-only / 250 m-only NDVI scale adaptation;
+- static WorldCover composition;
+- the current NDVI transition/gradient representation;
 - mandatory persistent-patch filtering;
 - NDVI-driven between-island allocation;
 - training-occurrence-count island allocation;
-- prototype-LOO environmental reconstruction as support-width selection;
-- fully nested q adaptation inside the unchanged single nearest-prototype envelope;
-- equal-opportunity MST multimodal support balancing;
 - fixed geographic complementarity bonuses applied to every taxon.
 
-Negative results remain evidence. They narrow the algorithm rather than being discarded.
+Negative results are retained as constraints on the method.
 
-## Conditional rather than rejected
+## Retained components
 
-- NDVI state: still the active ecological support signal, but its transferable representation is unresolved;
-- terrain / aspect / coast: diagnostics or candidate-domain construction, not a supported universal cross-taxon correction;
-- persistent patches: field presentation / route aggregation, not a required support filter;
-- prototype consensus: robustness diagnostics, not a guaranteed finite Top-k solution;
-- SDM/SSDM: optional model evidence and exploration in the production tool, not a prerequisite for occurrence-supported survey decisions.
+- full-domain candidate generation;
+- spatial occurrence thinning as duplicate-control, not a biological constant;
+- occurrence-conditioned local environmental evidence at its validated/frozen regional role;
+- training-only domain/information adequacy;
+- strong same-budget controls;
+- exact sparse set-level maximum geographic coverage at fine scale;
+- survey budget as an external operational input;
+- leakage-safe nested and untouched validation;
+- route/patch/time as downstream operational outputs;
+- explicit fallback instead of forcing unsupported ecological detail.
 
 ## Development rule from this point
 
-Every new experiment must target exactly one unresolved layer.
+1. Finish the outcome-free geometry-to-1–5-day operational robustness experiment.
+2. If operational translation is stable, freeze the **scale-separated procedure**: regional Practical Core role + local geometry coverage + field-budget translation.
+3. Add real access/road/trail/ferry information only as explicit operational constraints, never as inferred biological suitability.
+4. Claims about discoveries per day, detection probability or realized route efficiency require prospective attempted-site data including non-detections and effort.
+5. The frozen 192-pair Practical Core cohort remains separate and untouched.
 
-Current order:
-
-1. local prototype-support scale (active: k=1/2/3, fully nested);
-2. spatial support scale only if local prototype scale fails;
-3. external integration/freeze of the domain gate;
-4. operational route/equal-area budget after ecological support is stable;
-5. untouched cross-taxon, cross-island confirmation after the complete procedure is frozen.
-
-An experiment must preserve all other retained components unless it explicitly declares an ablation of one of them. It must use the strongest surviving comparator, not only random.
-
-The frozen 192-pair Practical Core cohort remains separate and untouched by this development line. The previously declared outside-Izu 24-pair cohort also cannot confirm the new domain gate because inspection of its taxon identities directly motivated that gate; a new final cohort must be sampled after method freeze.
+The next scientific gain should come from a better definition of the survey decision problem or prospective field outcomes—not another search over fine-scale NDVI weights.
