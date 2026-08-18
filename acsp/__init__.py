@@ -66,6 +66,11 @@ from .practical_core import (
     select_practical_core,
 )
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
+from .travel_matrix import (
+    estimate_matrix_trip,
+    normalize_travel_time_matrix,
+    read_travel_time_matrix,
+)
 from .trip_proxy import estimate_operational_trip
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
@@ -103,6 +108,7 @@ __all__ = [
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
     "derive_power_bioclim",
+    "estimate_matrix_trip",
     "estimate_operational_trip",
     "evaluate_candidate_fold",
     "fit_automatic_sdm_core",
@@ -115,8 +121,10 @@ __all__ = [
     "aggregate_candidates_to_zones",
     "compare_zone_rankings",
     "normalize_extent",
+    "normalize_travel_time_matrix",
     "pair_level_intention_to_evaluate",
     "random_same_pool_sets",
+    "read_travel_time_matrix",
     "recommend_candidates",
     "recommend_survey_zones",
     "recovered_fraction",
