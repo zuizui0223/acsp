@@ -112,14 +112,14 @@ class TravelMatrixTests(unittest.TestCase):
 
     def test_budget_cli_accepts_multi_area_only_with_explicit_matrix(self):
         candidates = pd.DataFrame({
-            "site_id": ["a", "b"],
+            "site_id": ["001", "002"],
             "survey_area_id": ["island-a", "island-b"],
             "latitude": [35.0, 34.0],
             "longitude": [139.0, 138.0],
         })
         matrix = pd.DataFrame([
-            {"from_id": "port", "to_id": "a", "travel_minutes": 10, "mode": "road"},
-            {"from_id": "port", "to_id": "b", "travel_minutes": 20, "mode": "ferry"},
+            {"from_id": "port", "to_id": "001", "travel_minutes": 10, "mode": "road"},
+            {"from_id": "port", "to_id": "002", "travel_minutes": 20, "mode": "ferry"},
         ])
         with tempfile.TemporaryDirectory() as temporary_directory:
             workdir = Path(temporary_directory)
@@ -147,11 +147,12 @@ class TravelMatrixTests(unittest.TestCase):
                 "--travel-matrix", str(matrix_csv),
                 "--undirected-travel-matrix",
             ])
-            selected = pd.read_csv(output_csv)
+            selected = pd.read_csv(output_csv, dtype={"site_id": "string"})
             summary = json.loads(summary_json.read_text(encoding="utf-8"))
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(len(selected), 2)
+        self.assertEqual(selected["site_id"].tolist(), ["001", "002"])
         self.assertEqual(selected["coverage_rank"].tolist(), [1, 2])
         self.assertEqual(summary["routing_mode"], "external_travel_time_matrix")
         self.assertEqual(summary["survey_area_count"], 2)
