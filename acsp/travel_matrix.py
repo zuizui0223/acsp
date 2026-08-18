@@ -19,7 +19,7 @@ _FALSE_VALUES = {"0", "false", "f", "no", "n"}
 
 
 def _normalize_endpoint(value: object) -> str:
-    if value is None or (isinstance(value, float) and np.isnan(value)):
+    if value is None or bool(pd.isna(value)):
         raise ValueError("travel-matrix endpoint IDs must be non-missing")
     if isinstance(value, (int, np.integer)):
         return str(int(value))
@@ -138,7 +138,11 @@ def read_travel_time_matrix(
     matrix_path = Path(path)
     if not matrix_path.is_file():
         raise FileNotFoundError(f"Travel-time matrix CSV was not found: {matrix_path}")
-    normalized = normalize_travel_time_matrix(pd.read_csv(matrix_path), undirected=undirected)
+    raw = pd.read_csv(
+        matrix_path,
+        dtype={"from_id": "string", "to_id": "string"},
+    )
+    normalized = normalize_travel_time_matrix(raw, undirected=undirected)
     normalized.attrs["source_path"] = str(matrix_path)
     normalized.attrs["undirected_input"] = bool(undirected)
     return normalized
