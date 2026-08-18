@@ -66,6 +66,7 @@ from .practical_core import (
     select_practical_core,
 )
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
+from .trip_proxy import estimate_operational_trip
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
     calibrate_candidate_weights,
@@ -102,6 +103,7 @@ __all__ = [
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
     "derive_power_bioclim",
+    "estimate_operational_trip",
     "evaluate_candidate_fold",
     "fit_automatic_sdm_core",
     "interpolate_power_bioclim",

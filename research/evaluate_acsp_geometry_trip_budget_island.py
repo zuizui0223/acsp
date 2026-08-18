@@ -2,8 +2,8 @@
 """Evaluate geometry-only ACSP survey coverage under 1-5 day field budgets.
 
 No taxon occurrence or outcome is read. The geometry-only max-coverage order is
-fixed first; the production trip estimator is then used only as a downstream
-budget translator. Route estimates never reorder the coverage sequence.
+fixed first; the package trip proxy is then used only as a downstream budget
+translator. Route estimates never reorder the coverage sequence.
 """
 from __future__ import annotations
 
@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 
 from acsp.operational_budget import select_largest_feasible_prefix
+from acsp.trip_proxy import estimate_operational_trip
 from acsp_discover import infer_survey_protocol
 from develop_izu_strong_coverage_comparator import build_geometry
 from fast_max_coverage import SparseCoverageIndex
-from gbif_fieldmap_builder_app import estimate_default_short_trip
 from run_acsp_cross_island_confirmation_island import build_grid
 
 EXPECTED_PROTOCOL = "6bd7c35e2e3de369088691ebe8861d0578f5933374895fe06cb390bfe9a4383f"
@@ -99,7 +99,7 @@ def trip_row(
     survey_protocol: dict,
 ) -> dict:
     plan = make_plan(selected, int(k))
-    trip = estimate_default_short_trip(
+    trip = estimate_operational_trip(
         plan,
         float(hub_lat),
         float(hub_lon),
@@ -201,6 +201,7 @@ def main() -> None:
     ordered_plan = make_plan(selected, max_sites)
 
     survey = infer_survey_protocol({"kingdom": "Plantae"}).as_dict()
+    survey["surface_domain"] = "terrestrial"
     expected_field = protocol["field_protocol"]
     assertions = {
         "protocol_id": survey["protocol_id"] == expected_field["required_protocol_id"],
@@ -233,7 +234,7 @@ def main() -> None:
                 hub_latitude=float(hub["latitude"]),
                 hub_longitude=float(hub["longitude"]),
                 target_days=day,
-                trip_estimator=estimate_default_short_trip,
+                trip_estimator=estimate_operational_trip,
                 survey_protocol=survey,
                 max_sites=max_sites,
             )
@@ -274,8 +275,6 @@ def main() -> None:
     coverage_monotone = bool(np.all(np.diff(coverage_values) >= -1e-12))
     all_primary_fit = bool(primary["fits_target_days"].fillna(False).all())
 
-    # K=5 is retained only as a diagnostic illustrating why fixed site count is
-    # not an equal operational budget across islands.
     fixed_k = min(5, max_sites)
     fixed_k_rows = []
     for hub_name in declared_hubs:
