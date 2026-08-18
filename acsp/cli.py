@@ -245,7 +245,8 @@ def run_budget(args: argparse.Namespace) -> dict[str, object]:
     if not input_path.is_file():
         raise FileNotFoundError(f"Candidate CSV was not found: {input_path}")
 
-    candidates = pd.read_csv(input_path)
+    candidate_dtypes = {args.site_column: "string"} if matrix_path is not None else None
+    candidates = pd.read_csv(input_path, dtype=candidate_dtypes)
     if candidates.empty:
         raise ValueError("Candidate CSV is empty.")
     if matrix_path is not None and args.site_column not in candidates.columns:
