@@ -39,8 +39,6 @@ jobs:
           gbif_fieldmap_builder_app.py
           acsp/__init__.py
           acsp/app.py
-          acsp/auto_budget.py
-          acsp/auto_plan.py
           acsp/automatic_sdm.py
           acsp/benchmarking.py
           acsp/claims.py
@@ -50,13 +48,10 @@ jobs:
           acsp/coverage.py
           acsp/decision_baselines.py
           acsp/field_validation.py
-          acsp/movement_constraints.py
-          acsp/movement_graph.py
           acsp/planning.py
           acsp/modeling.py
           acsp/practical_core.py
           acsp/sdm.py
-          acsp/travel_matrix.py
           acsp/validated_core.py
           acsp_discover.py
           research/aggregate_sdm_topk_benchmark.py
@@ -86,7 +81,8 @@ jobs:
         run: |
           acsp-fieldmap --help
           acsp-recommend --help
-          acsp-recommend auto-effort --help
+          acsp-recommend recommend --help
+          acsp-recommend zones --help
 
   validation-stability:
     name: Frozen validation and paper-output audit
