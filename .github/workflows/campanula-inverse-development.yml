@@ -16,7 +16,7 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  support-fragment-development:
+  spatial-kcenter-development:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -61,32 +61,30 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
-      - name: Test equal support-fragment set coverage
+      - name: Test automatic within-island spatial k-center
         run: |
-          python research/campanula_support_fragment_set_policy.py \
+          python research/campanula_spatial_kcenter_policy.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
             --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --out campanula-support-fragments
-          cat campanula-support-fragments/support_fragment_report.json
+            --out campanula-spatial-kcenter
+          cat campanula-spatial-kcenter/spatial_kcenter_report.json
 
       - name: Verify development guardrails
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          report=json.loads(Path('campanula-support-fragments/support_fragment_report.json').read_text())
-          assert report['status']=='development_only_support_fragment_set_policy'
-          assert report['field_coordinates_used_to_define_fragments'] is False
+          report=json.loads(Path('campanula-spatial-kcenter/spatial_kcenter_report.json').read_text())
+          assert report['status']=='development_only_spatial_kcenter_policy'
           assert report['field_coordinates_used_to_order_patches'] is False
           assert report['field_coordinates_used_to_choose_stopping_point'] is False
-          assert report['support_fragment_components'] == 5
-          assert report['patch_universe'] == report['support_fragment_count']
+          assert report['support_components'] == 5
           print(json.dumps({
               'selected_patches': report['selected_patches'],
-              'represented_fragments': report['represented_fragments'],
-              'selected_fragment_weight': report['selected_fragment_weight'],
+              'spatial_representation': report['spatial_representation'],
+              'maximum_normalized_residual': report['maximum_normalized_residual'],
               'field_recovery': report['field_development_result'],
               'first_complete_recovery_prefix': report['first_complete_recovery_prefix'],
           }, indent=2))
@@ -94,10 +92,10 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: campanula-support-fragment-development
+          name: campanula-spatial-kcenter-development
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
-            campanula-support-fragments/
+            campanula-spatial-kcenter/
           if-no-files-found: error
           retention-days: 90
