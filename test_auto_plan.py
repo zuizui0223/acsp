@@ -21,6 +21,9 @@ class AutoPlanTests(unittest.TestCase):
             "survey_area_id": ["x", "x", "x"],
             "latitude": [35.000, 35.010, 35.020],
             "longitude": [139.000, 139.010, 139.020],
+            # Mirrors metadata carried by the frozen Campanula support-patch export.
+            "ecological_status": ["frozen_robust_support_patch"] * 3,
+            "consensus_support_rank_best": [0.01, 0.02, 0.03],
         })
         # blocked has no path at all. a and b are connected through explicit walk edges.
         edges = pd.DataFrame({
@@ -44,6 +47,13 @@ class AutoPlanTests(unittest.TestCase):
         self.assertFalse(bool(blocked["roundtrip_reachable"]))
         self.assertNotIn("blocked", selected["site_id"].tolist())
         self.assertTrue(frontier["reachable"].all())
+        self.assertIn("ecological_status", selected.columns)
+        self.assertTrue(selected["ecological_status"].eq("frozen_robust_support_patch").all())
+        self.assertIn("consensus_support_rank_best", selected.columns)
+        self.assertEqual(
+            frontier.attrs["routing_source"],
+            "explicit_sparse_movement_graph_hub_roundtrips",
+        )
 
     def test_shortest_path_can_use_intermediate_explicit_nodes(self):
         candidates = pd.DataFrame({
@@ -70,6 +80,33 @@ class AutoPlanTests(unittest.TestCase):
         self.assertEqual(float(row["outbound_minutes"]), 12.0)
         self.assertEqual(float(row["return_minutes"]), 14.0)
         self.assertEqual(audit.reachable_candidates, 1)
+
+    def test_missing_return_edge_is_not_repaired_by_straight_line_fallback(self):
+        candidates = pd.DataFrame({
+            "site_id": ["roundtrip", "outbound-only"],
+            "survey_area_id": ["x", "x"],
+            "latitude": [35.0, 35.005],
+            "longitude": [139.0, 139.005],
+        })
+        edges = pd.DataFrame({
+            "from_id": ["hub", "roundtrip", "hub"],
+            "to_id": ["roundtrip", "hub", "outbound-only"],
+            "travel_minutes": [10, 10, 1],
+            "mode": ["walk", "walk", "walk"],
+        })
+        selected, audit, _, reachability = plan_auto_effort(
+            candidates,
+            movement_edges=edges,
+            hub_id="hub",
+            allowed_modes=["walk"],
+            survey_protocol=PROTOCOL,
+        )
+        self.assertEqual(audit.reachable_candidates, 1)
+        self.assertEqual(selected["site_id"].tolist(), ["roundtrip"])
+        row = reachability.set_index("site_id").loc["outbound-only"]
+        self.assertFalse(bool(row["roundtrip_reachable"]))
+        self.assertEqual(float(row["outbound_minutes"]), 1.0)
+        self.assertEqual(float(row["return_minutes"]), float("inf"))
 
     def test_disallowed_flight_does_not_create_reachability(self):
         candidates = pd.DataFrame({
