@@ -41,16 +41,6 @@ The matrix is directed by default. A missing directed pair means that movement i
 
 This is an allow-list, not a preference ranking. Every matrix edge whose mode is not in the list is removed. A `flight` edge therefore cannot be used unless the caller explicitly allows `flight`. Missing edges also remain unreachable. ACSP never fabricates a straight-line edge to bridge a gap in the movement network.
 
-Example matrix:
-
-```csv
-from_id,to_id,travel_minutes,distance_km,mode,available
-__hub__,site-01,35,12.4,road,true
-site-01,__hub__,42,12.4,road,true
-site-01,site-02,18,3.1,trail,true
-site-02,__hub__,55,18.0,ferry,true
-```
-
 ## Default command: infer the effort
 
 ```bash
@@ -61,8 +51,6 @@ acsp-recommend auto-effort \
   --frontier-audit auto_effort_frontier.csv \
   --hub-id __hub__ \
   --taxon-profile plant \
-  --coverage-radius-km 1 \
-  --max-sites 40 \
   --travel-matrix travel_times.csv \
   --allowed-mode walk \
   --allowed-mode road \
@@ -70,12 +58,12 @@ acsp-recommend auto-effort \
   --allowed-mode ferry
 ```
 
-There is intentionally no `--days` argument. ACSP reports the recommended site count, total operational hours, and estimated field days.
+There is intentionally no `--days`, `--max-sites`, or user survey-budget argument. The automatic mode evaluates the full candidate-order frontier and reports the recommended site count, total operational hours, and estimated field days. The coverage scale is an internal method parameter rather than a user budget control.
 
 ## Decision sequence
 
 1. The input candidate table has already passed the upstream ecological/domain screen.
-2. ACSP constructs a deterministic maximum-coverage order within survey-area boundaries.
+2. ACSP constructs the full deterministic maximum-coverage order within survey-area boundaries.
 3. The travel matrix is normalized and then restricted to explicitly allowed movement modes.
 4. Every ordered prefix is scheduled on that reachable network. Missing/disallowed legs make the affected prefix unreachable.
 5. ACSP builds the cumulative candidate-coverage versus total-effort frontier.
@@ -90,11 +78,6 @@ The movement layer never reorders ecological evidence and never creates biologic
 
 ## What the contract does not validate
 
-The matrix is accepted as operational evidence. ACSP does not verify how it was produced and does not infer:
-
-- roads, trails, ferry links, or other missing topology;
-- departure windows, cancellations, overnight transfers, traffic, closures, tides, or weather;
-- landowner permission, permits, safety, or individual physical capability;
-- occupancy probability, detection probability, discoveries per day, or adaptive survey yield.
+The matrix is accepted as operational evidence. ACSP does not verify how it was produced and does not infer roads, trails, ferry links, schedules, closures, weather, permits, safety, occupancy probability, detection probability, discoveries per day, or adaptive survey yield.
 
 Campanula 2026 outcomes are used only in the separate development sandbox to reverse-engineer the architecture. Generalization requires untouched taxa after the development rule is frozen.
