@@ -1,12 +1,12 @@
 # Explicit movement graph and automatic survey-effort contract
 
-ACSP separates ecological screening, local set selection, and field logistics. The default operational input is now a **physical movement graph**, not a user-selected field-day or site-count budget.
+ACSP separates ecological screening, local set selection, and field logistics. The operational input is a **physical movement graph**, not a user-selected field-day or site-count budget.
 
 The user declares only constraints ACSP cannot infer safely: where the field trip starts, which directed movement edges exist, and which movement modes are actually available. ACSP then determines which candidate sites are reachable, constructs the survey coverage order on that reachable set, and estimates the recommended number of sites, total hours, and field days.
 
 ## Movement-edge schema
 
-`acsp-recommend auto-effort --travel-matrix movement_edges.csv` accepts either a sparse movement graph or a complete pairwise matrix.
+`acsp-recommend auto-effort --movement-edges movement_edges.csv` accepts a sparse movement graph. `--travel-matrix` remains only as an input-name alias for existing data files; the algorithm treats the rows as graph edges, not as a requirement for a complete pairwise matrix.
 
 Required columns:
 
@@ -19,7 +19,7 @@ Required columns:
 
 Optional `distance_km` is audit metadata. Optional `available=false` removes an edge.
 
-Candidate `site_id` values must appear as graph nodes or be connected to graph nodes through explicit edges. Intermediate road/trail/ferry nodes are allowed and need not be survey candidates.
+Candidate `site_id` values must appear as graph nodes or be connected through explicit edges. Intermediate road/trail/ferry nodes are allowed and need not be survey candidates.
 
 ## Human movement allow-list
 
@@ -32,11 +32,9 @@ Repeat `--allowed-mode` for every mode that can actually be used:
 --allowed-mode ferry
 ```
 
-Edges with any other mode are removed before routing. Thus a `flight` edge does not exist for an analysis that allows only walking/road/trail/ferry. Missing edges also remain missing. ACSP never creates a Euclidean shortcut across sea, cliffs, disconnected roads, or other gaps.
+Edges with any other mode are removed before routing. Thus a `flight` edge does not exist for an analysis that allows only walking/road/trail/ferry. Missing edges remain missing. ACSP never creates a Euclidean shortcut across sea, cliffs, disconnected roads, or other gaps.
 
 ## Reachability comes before coverage
-
-The automatic sequence is:
 
 ```text
 regional ecological/domain screen
@@ -58,11 +56,11 @@ automatic diminishing-return knee
 recommended sites + hours + days
 ```
 
-This ordering matters. An unreachable high-coverage candidate must not block later reachable candidates. Reachability therefore filters the candidate universe **before** set-level coverage ordering.
+An unreachable high-coverage candidate must not block later reachable candidates. Reachability therefore filters the candidate universe **before** set-level coverage ordering.
 
-Only two shortest-path passes are required for the default conservative effort calculation: hub-to-site and site-to-hub. Each selected site is costed as an explicit shortest hub round trip plus taxon-protocol search effort. This is intentionally conservative and scalable; no direct site-to-site edge is invented.
+The current operational estimator uses explicit shortest hub-to-site and site-to-hub paths. Each selected site is conservatively costed as a hub round trip plus taxon-protocol search effort. This is intentionally conservative; no direct site-to-site shortcut is invented.
 
-## Default command
+## Command
 
 ```bash
 acsp-recommend auto-effort \
@@ -71,7 +69,7 @@ acsp-recommend auto-effort \
   --summary-json auto_effort_summary.json \
   --frontier-audit auto_effort_frontier.csv \
   --reachability-audit auto_effort_reachability.csv \
-  --travel-matrix movement_edges.csv \
+  --movement-edges movement_edges.csv \
   --hub-id __hub__ \
   --taxon-profile plant \
   --allowed-mode walk \
@@ -82,18 +80,11 @@ acsp-recommend auto-effort \
 
 There is intentionally no `--days`, `--max-sites`, or user survey-budget argument. The internal coverage scale and taxon search protocol are method assumptions, not requested effort targets.
 
-Outputs include:
+Outputs include every candidate's directed round-trip reachability, the coverage-effort frontier for reachable candidates, the automatically recommended site count, total operational hours, estimated field days, and selected site set.
 
-- every candidate's directed hub round-trip reachability;
-- the complete coverage-effort frontier for reachable candidates;
-- automatically recommended site count;
-- recommended total operational hours;
-- estimated field days;
-- the selected site set.
+## Removed legacy paths
 
-## Legacy what-if command
-
-`acsp-recommend budget --days N` remains available only for backward-compatible scenario questions such as "what would fit in two days?". It is not the default scientific decision object.
+The old explicit-day `budget` CLI, straight-line trip proxy, pairwise-prefix budget scheduler, and their operational-development workflows have been removed from the runnable codebase. Their historical protocols and result ledgers may remain as provenance for negative or superseded experiments, but they are not supported planning methods.
 
 ## Scientific boundary
 
