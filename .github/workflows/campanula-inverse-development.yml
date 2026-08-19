@@ -1,0 +1,36 @@
+name: Campanula inverse development
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  inverse-development:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Run inverse development analysis
+        run: |
+          python research/campanula_inverse_effort_development.py \
+            --output-dir campanula_inverse_effort_development
+          cat campanula_inverse_effort_development/summary.json
+      - name: Verify development guardrails
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('campanula_inverse_effort_development/summary.json').read_text())
+          assert result['status']=='development_only_not_independent_validation'
+          assert result['field_labels_used_for_candidate_order'] is False
+          assert result['field_labels_used_after_order_for_inverse_diagnosis'] is True
+          assert result['field_detection_clusters']==19
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campanula-inverse-development
+          path: campanula_inverse_effort_development/
