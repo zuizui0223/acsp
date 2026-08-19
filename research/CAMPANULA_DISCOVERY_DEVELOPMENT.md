@@ -2,131 +2,151 @@
 
 ## Status
 
-`Campanula microdonta` is **development data, not an independent validation cohort**.
-The 2026 field outcomes have already been inspected and have already motivated ACSP changes. They
-are therefore used deliberately as a reverse-engineering instrument: the development question is
-what decision structure would have been required to recover the realized field distribution without
-feeding the 2026 coordinates into inference.
+`Campanula microdonta` is **development data, not an independent validation cohort**. The 2026 field outcomes have already been inspected and have already influenced ACSP development. They are used only to diagnose architecture and compression before a rule is frozen for untouched-taxon evaluation.
 
-The frozen cross-taxon Practical Core and the frozen 192-pair confirmation artifacts remain separate.
-Nothing in this development track changes their fingerprints, taxa, splits, or claims.
+The frozen cross-taxon Practical Core / retrospective evidence remains separate and unchanged.
 
-## Correct direction of the operational problem
+## Active problem
 
-The user does **not** choose a target number of sites, target field days, or a budget that ACSP then
-fills. Those are outputs of the algorithm.
+The current problem is no longer basic candidate generation.
 
-The user supplies only physical movement constraints that ACSP cannot infer safely, for example:
+Using pre-2026 GBIF occurrences plus frozen public GSI DEM and pinned ESA WorldCover NDVI, the full-island candidate universe can recover all **19/19** Campanula field clusters within 1 km. The old 97/102-candidate pools that reached only 13/19 are retained only as historical evidence of the earlier candidate-generation bottleneck.
 
-- the field-entry / hub node;
-- which travel edges actually exist;
-- which movement modes are available (`walk`, `road`, `trail`, `ferry`, etc.);
-- unavailable / closed links.
+The active gap is **set compression / ranking**:
 
-ACSP must never invent a straight-line movement edge when the real network does not contain one.
-An undeclared sea crossing, cliff crossing, flight, or other missing edge is unreachable.
+- full-island patch universe at the working 5% support envelope: 104 patches;
+- best existing outcome-blind complete-recovery spatial policy: 32 patches;
+- field-outcome minimum set-cover diagnostic: 11 patches in the current 5% patch universe.
 
-The operational target is therefore:
+The goal is not to reproduce the 11 field-informed patches directly. It is to identify a simple, outcome-blind set-level rule that closes as much of the 32-to-11 gap as possible and can later be frozen for new taxa.
+
+## Operational planning is reachability-first
+
+The user does **not** choose target days, target site count, or a survey budget. The user supplies only physical constraints ACSP cannot infer safely: hub, explicit movement edges, and allowed movement modes.
+
+The active operational sequence is:
 
 ```text
-occurrence-conditioned regional screen
-        -> local candidate universe
-        -> set-level coverage order
-        -> physically reachable movement graph
-        -> coverage-versus-effort frontier
-        -> automatically recommended survey size / hours / days
+regional ecological/domain screen
+        ↓
+local candidate / patch universe
+        ↓
+explicit allowed movement graph
+        ↓
+directed hub round-trip reachability
+        ↓
+set-level coverage on reachable candidates
+        ↓
+coverage-versus-effort frontier
+        ↓
+automatic diminishing-return knee
+        ↓
+recommended sites + hours + days
 ```
 
-A legacy explicit-day budget remains a what-if tool, not the default scientific object.
+Missing movement edges remain missing. ACSP never inserts straight-line sea, cliff, road, trail, ferry, or flight links. The old explicit-day budget CLI and straight-line trip proxy have been removed from the runnable main line.
 
-## Inputs already present in the repository
+## Development guardrails
 
-- training occurrences: `field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv`
-- field detections: `field_validation/campanula_microdonta/locations_2026.csv`
-- 500 m field clusters: `field_validation/campanula_microdonta/development_data/detection_clusters.csv`
-- cached candidate pool: `field_validation/campanula_microdonta/development_data/candidate_pool.csv`
-
-The development target contains 19 field-detection clusters across Oshima, Toshima, Niijima,
-Shikinejima, and Kozushima.
-
-## Inverse-development sequence
-
-### 1. Freeze an outcome-free candidate / coverage order
-
-Candidate generation and set-level coverage order are computed from pre-2026 information only. The
-2026 field coordinates are not read during this stage.
-
-### 2. Read the 19 field clusters only after the order is fixed
-
-The field clusters are then used as development labels to diagnose:
-
-- how many realized clusters the candidate universe can reach at 1 km;
-- the first prefix at which each additional realized cluster becomes recoverable;
-- whether the bottleneck is candidate generation, compression, or stopping too early;
-- which structural changes improve the development loss.
-
-This is intentional reverse engineering, not validation.
-
-### 3. Add real human movement constraints
-
-When an auditable road / trail / walking / ferry matrix is available, apply an explicit mode
-allow-list before scheduling. Missing or disallowed edges remain unreachable. Do not substitute the
-straight-line proxy to complete the network.
-
-### 4. Infer survey effort rather than requesting it
-
-For every reachable prefix, compute the cumulative set-level coverage and total operational effort.
-The automatic policy selects the diminishing-return knee of this frontier and reports:
-
-- recommended survey stops;
-- recommended total hours;
-- recommended field days under the taxon protocol;
-- unreachable candidate prefixes.
-
-The algorithm may use taxon/protocol defaults for per-site search effort and daily work capacity;
-these are model assumptions, not a user-specified target budget.
-
-### 5. Freeze the learned design before generalization tests
-
-Campanula can be used to choose the architecture, loss function, stopping rule, and operational
-representation. Once those are fixed, new untouched taxa must be used to test whether the design
-transfers. Campanula itself cannot establish generality.
-
-## Guardrails against a trivial reverse-engineered solution
-
-Field coordinates may be used to score development experiments **after** candidate generation and
-ordering, but never as inference-time features.
+Everything used to construct an inference-time candidate, patch, feature, ordering, or stopping point must be frozen before the 2026 field clusters are opened.
 
 Disallowed inference-time inputs include:
 
 - 2026 field latitude / longitude;
 - distance to a 2026 field detection;
 - field cluster identifiers;
-- whether a candidate recovered a field cluster.
+- whether a candidate or patch recovered a field cluster;
+- a stopping point chosen by extending the prefix until all field clusters are recovered.
 
-Allowed uses of the 2026 outcomes include diagnosing which experimental architecture failed, choosing
-the next development experiment, and selecting a final architecture before untouched validation.
+Allowed use of field outcomes is post-freeze development scoring and diagnosis of why an outcome-blind rule failed.
 
-## Current implementation
+## Retained development evidence
 
-`research/campanula_inverse_effort_development.py` implements the first reproducible inverse loop:
+### Full-island generation solved the 13/19 ceiling
 
-1. create the geometry-only coverage order without reading field detections;
-2. read the 19 clusters and calculate the full prefix recovery curve;
-3. report the maximum reachable cluster count and first prefix reaching it;
-4. optionally accept a real travel matrix plus explicit allowed movement modes;
-5. when a matrix is supplied, infer the coverage-effort knee without a user day budget.
+The full-island outcome-blind generator rebuilt from the frozen Campanula development cache and pinned public layers reaches all 19 field clusters. Candidate generation is therefore not the current limiting layer.
 
-The movement-constrained API is `acsp.infer_recommended_effort_from_matrix()`. It has no
-straight-line fallback.
+### Existing 32-patch spatial policy remains the active outcome-blind reference
+
+The best retained spatial patch policy reaches 19/19 with 32 patches (284 support cells). A matched-random patch set has a very low complete-recovery probability in the frozen development artifact. This policy is not yet a satisfactory final compression rule, but it remains the current outcome-blind benchmark until a simpler rule beats it without reading field labels.
+
+### Minimum-cover family: diagnostic only
+
+A field-outcome set-cover calculation on the 104-patch universe gives a minimum of **11 patches**. Because multiple minimum covers exist, one arbitrary MILP solution must not be treated as the unique target.
+
+The inverse diagnostic therefore classifies patches as:
+
+- `oracle_compatible`: can occur in at least one minimum-size cover;
+- `oracle_necessary`: removing the patch forces the optimum above the minimum size.
+
+Current result:
+
+- minimum size: 11;
+- oracle-compatible patches: 23;
+- oracle-necessary patches: 0;
+- four forced-out solves were unresolved within the development time limit and are not interpreted as necessity.
+
+This proves that the 11-patch target is not a single fixed list to memorize.
+
+## Negative experiments retained
+
+### 1. Pointwise inverse classifier — rejected
+
+A transparent logistic classifier was trained only on outcome-blind patch features (support, area cost, occurrence gap, prototype coverage / rarity / breadth, and simple spatial structure) to predict minimum-cover compatibility. Leave-one-island-out predictions were used as the anti-memorization diagnostic.
+
+Result:
+
+- cross-fit first complete-recovery prefix: **82 patches**;
+- full-fit first complete-recovery prefix: **86 patches**;
+- both are much worse than the existing 32-patch outcome-blind policy.
+
+Interpretation: patch membership is not a useful independent classification target. Even moderately informative pointwise scores do not reproduce a complementary set. The missing object is **state-dependent marginal value after other patches have already been selected**.
+
+This classifier is not a promotion candidate.
+
+### 2. Component environmental-prototype knee — rejected
+
+A second outcome-blind experiment kept the frozen spatial order inside each island but stopped independently at a knee between cumulative occurrence-prototype coverage and patch-cell cost.
+
+Result:
+
+- selected patches: **19**;
+- field-cluster recovery: **11/19**;
+- maximum nearest field-cluster distance: about **7.49 km**.
+
+The sharp failure is Niijima: the pre-2026 data contain only one local occurrence prototype, so prototype coverage saturates almost immediately even though the 2026 survey contains four distinct field clusters. Therefore **known-prototype saturation is not a valid completeness/stopping signal**.
+
+This stopping rule is rejected.
+
+## Current hypothesis: cover the support envelope, not the known prototypes
+
+The two negative experiments imply a simpler next object.
+
+The occurrence model defines an outcome-blind **support envelope** over the island. The survey selector should value a patch by how much *new spatially distinct support-envelope structure* it covers after accounting for patches already selected. This differs from:
+
+- a pointwise patch score;
+- counting how many known occurrence prototypes are represented;
+- extending a field-informed prefix until all detections are recovered.
+
+The next experiment therefore uses a deterministic set function over the frozen support envelope:
+
+1. build the 5% outcome-blind support-cell universe and bounded patches;
+2. within each disconnected component, let each patch cover nearby support-envelope cells at the already declared patch-neighborhood scale;
+3. greedily add the patch with the largest **new support-envelope coverage** (ties prefer smaller patches / stable IDs);
+4. stop at a deterministic coverage-versus-patch-area knee fixed before field outcomes are opened;
+5. only then measure 2026 field-cluster recovery.
+
+This can continue exploring a component even when only one training occurrence prototype exists, because geographically separated support regions remain distinct survey value.
 
 ## Promotion rule
 
-A method leaves this development sandbox only after:
+A Campanula-derived rule is not promoted merely because it improves this development dataset. Promotion requires:
 
-- the Campanula inverse loss has been made explicit and the architecture is frozen;
-- the frozen rule uses no 2026 field label at inference time;
-- movement feasibility is represented only by explicit available edges/modes;
-- target site count / days are outputs rather than tuned user budgets;
-- random taxon-region validation uses no Campanula-tuned outcomes;
-- negative untouched validation results are retained and are not used for retuning the final test.
+1. an explicit outcome-blind algorithm and preprocessing freeze;
+2. no 2026 field coordinate or recovery label at inference time;
+3. no hidden post-field threshold extension;
+4. movement represented only by explicit available edges/modes;
+5. untouched taxon-region evaluation after freeze, with failures retained;
+6. no retuning on the final untouched cohort.
+
+Until those conditions are met, Campanula results are development evidence only.
