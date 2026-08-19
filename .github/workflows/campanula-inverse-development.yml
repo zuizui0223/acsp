@@ -80,10 +80,14 @@ jobs:
           assert report['status']=='development_only_inverse_patch_learning'
           assert report['field_coordinates_used_to_construct_features'] is False
           assert report['field_outcomes_used_to_define_oracle_labels'] is True
-          assert report['oracle_patch_count'] <= 12
-          assert report['patch_count'] >= report['oracle_patch_count']
+          assert report['oracle_label_definition']=='membership in any minimum-size patch cover'
+          assert report['oracle_minimum_patch_count'] <= 12
+          assert report['patch_count'] >= report['oracle_compatible_patch_count'] >= report['oracle_minimum_patch_count']
+          assert report['oracle_necessary_patch_count'] <= report['oracle_minimum_patch_count']
           print(json.dumps({
-              'oracle_patch_count': report['oracle_patch_count'],
+              'oracle_minimum_patch_count': report['oracle_minimum_patch_count'],
+              'oracle_compatible_patch_count': report['oracle_compatible_patch_count'],
+              'oracle_necessary_patch_count': report['oracle_necessary_patch_count'],
               'crossfit_result': report['crossfit_result'],
               'full_fit_result': report['full_fit_result'],
               'coefficients': report['full_fit_coefficients'],
