@@ -23,13 +23,24 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          # The archived freeze was generated under Python 3.12.  Keep the
+          # reproduction runner on the same interpreter line because a handful
+          # of cells sit exactly at the frozen consensus-support boundary.
+          python-version: "3.12"
 
       - name: Install ACSP and development dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install rasterio pyproj scipy awscli
+          python - <<'PY'
+          import numpy, pandas, scipy, rasterio, sys
+          print('python', sys.version)
+          print('numpy', numpy.__version__)
+          print('pandas', pandas.__version__)
+          print('scipy', scipy.__version__)
+          print('rasterio', rasterio.__version__)
+          PY
 
       - name: Download frozen Campanula development cache and GSI DEM artifacts
         uses: actions/download-artifact@v4
@@ -95,11 +106,12 @@ jobs:
           PY
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: campanula-robust-support-patches
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
             campanula-robust-support/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
