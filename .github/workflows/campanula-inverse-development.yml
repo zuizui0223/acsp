@@ -1,11 +1,11 @@
-name: Campanula inverse development
+name: Campanula set-level development
 
 on:
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: campanula-inverse-${{ github.event.pull_request.number || github.ref }}
+  group: campanula-set-level-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +16,7 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  inverse-development:
+  support-fragment-development:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -61,81 +61,43 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
-      - name: Learn Campanula inverse patch utility
+      - name: Test equal support-fragment set coverage
         run: |
-          python research/campanula_inverse_patch_learning.py \
+          python research/campanula_support_fragment_set_policy.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
             --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --out campanula-inverse-development
-          cat campanula-inverse-development/inverse_patch_learning_report.json
-
-      - name: Test component-wise environmental stopping
-        run: |
-          python research/campanula_component_knee_policy.py \
-            --microterrain-universe microterrain-results/microterrain_universe.csv \
-            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
-            --ndvi public-layers/ndvi.tif \
-            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --out campanula-component-knee
-          cat campanula-component-knee/component_knee_report.json
-
-      - name: Test support-envelope set coverage
-        run: |
-          python research/campanula_support_envelope_set_policy.py \
-            --microterrain-universe microterrain-results/microterrain_universe.csv \
-            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
-            --ndvi public-layers/ndvi.tif \
-            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --out campanula-support-envelope
-          cat campanula-support-envelope/support_envelope_report.json
+            --out campanula-support-fragments
+          cat campanula-support-fragments/support_fragment_report.json
 
       - name: Verify development guardrails
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          inverse=json.loads(Path('campanula-inverse-development/inverse_patch_learning_report.json').read_text())
-          knee=json.loads(Path('campanula-component-knee/component_knee_report.json').read_text())
-          envelope=json.loads(Path('campanula-support-envelope/support_envelope_report.json').read_text())
-          assert inverse['status']=='development_only_inverse_patch_learning'
-          assert inverse['field_coordinates_used_to_construct_features'] is False
-          assert inverse['field_outcomes_used_to_define_oracle_labels'] is True
-          assert inverse['oracle_label_definition']=='membership in any minimum-size patch cover'
-          assert inverse['oracle_minimum_patch_count'] <= 12
-          assert inverse['patch_count'] >= inverse['oracle_compatible_patch_count'] >= inverse['oracle_minimum_patch_count']
-          assert inverse['oracle_necessary_patch_count'] <= inverse['oracle_minimum_patch_count']
-          assert knee['status']=='development_only_component_environmental_knee'
-          assert knee['field_coordinates_used_to_select_patches'] is False
-          assert envelope['status']=='development_only_support_envelope_set_policy'
-          assert envelope['field_coordinates_used_to_build_envelope'] is False
-          assert envelope['field_coordinates_used_to_order_patches'] is False
-          assert envelope['field_coordinates_used_to_choose_stopping_point'] is False
-          assert envelope['support_envelope_components'] == 5
+          report=json.loads(Path('campanula-support-fragments/support_fragment_report.json').read_text())
+          assert report['status']=='development_only_support_fragment_set_policy'
+          assert report['field_coordinates_used_to_define_fragments'] is False
+          assert report['field_coordinates_used_to_order_patches'] is False
+          assert report['field_coordinates_used_to_choose_stopping_point'] is False
+          assert report['support_fragment_components'] == 5
+          assert report['patch_universe'] == report['support_fragment_count']
           print(json.dumps({
-              'oracle_minimum_patch_count': inverse['oracle_minimum_patch_count'],
-              'oracle_compatible_patch_count': inverse['oracle_compatible_patch_count'],
-              'inverse_crossfit_patches': inverse['crossfit_result']['n_patches'],
-              'inverse_fullfit_patches': inverse['full_fit_result']['n_patches'],
-              'component_knee_selected_patches': knee['selected_patches'],
-              'component_knee_field_recovery': knee['field_development_result']['recovered'],
-              'component_knee_field_total': knee['field_development_result']['total'],
-              'support_envelope_selected_patches': envelope['selected_patches'],
-              'support_envelope_mass': envelope['selected_envelope_mass'],
-              'support_envelope_field_recovery': envelope['field_development_result']['recovered'],
-              'support_envelope_first_complete_prefix': envelope['first_complete_recovery_prefix'],
+              'selected_patches': report['selected_patches'],
+              'represented_fragments': report['represented_fragments'],
+              'selected_fragment_weight': report['selected_fragment_weight'],
+              'field_recovery': report['field_development_result'],
+              'first_complete_recovery_prefix': report['first_complete_recovery_prefix'],
           }, indent=2))
           PY
 
       - uses: actions/upload-artifact@v4
         with:
-          name: campanula-inverse-development
+          name: campanula-support-fragment-development
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
-            campanula-inverse-development/
-            campanula-component-knee/
-            campanula-support-envelope/
+            campanula-support-fragments/
           if-no-files-found: error
           retention-days: 90
