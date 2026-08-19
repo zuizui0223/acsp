@@ -2,105 +2,79 @@
 
 > **Status: development data, not independent confirmation.**
 >
-> The 2026 field outcomes have been inspected, and the
-> `select_area_balanced_candidates` update was made *because* those outcomes
-> exposed a failure — `METHODS_PAPER_PLAN.md` already records that update as
-> post-baseline development. This taxon therefore cannot support a validation
-> claim about ACSP. It is now used deliberately as a development instrument:
-> somewhere to work out a candidate rule that reaches real field sites, before
-> that rule is frozen and tested on untouched taxa.
+> The 2026 field outcomes have been inspected and have already influenced ACSP development. They therefore cannot support an independent validation claim. This dataset is used deliberately to reverse-engineer candidate generation, patch compression, ranking, and stopping rules before any resulting method is frozen and taken to untouched taxa.
 
-This directory holds the first prospective field case study for ACSP, and the
-data it produced.
+## Current development target
 
-## Development target
+`locations_2026.csv` contains 28 positive GPS rows from the 2026 Izu Islands survey. The 500 m clustering cache contains **19 field-detection clusters** across Oshima, Toshima, Niijima, Shikinejima, and Kozushima.
 
-The national retrospective claim uses a 10 km endpoint. **That endpoint is
-saturated here**: the Izu islands are smaller than the radius, so five
-candidates placed anywhere recover about 86% of detection clusters and same-pool
-random scores essentially the same (`0.8947` vs `0.8573` for the area-balanced
-update). Within-island nearest-cluster separation has a median of 0.9-1.9 km, so
-the working target is **19 detection clusters recovered at 1 km**.
+These rows are positive detections only. They cannot estimate detection probability, specificity, false absence, or discoveries per field day without a complete visit/effort log.
 
-Why a plain SDM does not settle this: the one-click SDM path derives climate from
-NASA POWER MERRA-2 at a native 0.5° × 0.625° grid, about 56 × 57 km per cell. The
-whole five-island system spans 64.5 × 29.2 km — roughly **1.16 × 0.51 cells** —
-and Toshima occupies about 0.03 × 0.01 of one cell. A macro climate surface
-cannot separate these islands from each other, let alone rank sites within one.
-The informative surface here is terrain, which the app fetches from GSI per
-island at 5 m.
+The old regional 10 km endpoint is not informative for this within-island development problem. The active diagnostic radius is 1 km, with smaller radii used only as sensitivity checks.
 
-Iterate with [`research/campanula_development_loop.py`](../../research/campanula_development_loop.py).
+## What the old candidate pools established
 
-## Original prospective design
+Historical 97/102-candidate pools reached only 13/19 clusters within 1 km. That failure established that the old hierarchical candidate universe was incomplete; it is retained as development history rather than an active planning implementation.
 
-## Current data
+The active full-island development subsequently removed that ceiling. Using only pre-2026 GBIF occurrences plus public fine-scale environmental inputs, the full-island generator can make all 19 clusters reachable. The current bottleneck is therefore **patch compression/ranking**, not basic candidate generation.
 
-`locations_2026.csv` contains 28 positive GPS rows supplied after the 2026 Izu Islands survey:
+## Active inputs
 
-- Oshima: 13
-- Toshima: 8
-- Niijima: 4
-- Shikinejima: 1
-- Kozushima: 2
+`development_data/` preserves the offline development inputs and labels:
 
-The Oshima `oshima-15` longitude is stored as `139.349870`, following the data owner's correction of the original `135.349870` entry. A duplicated Toshima coordinate is retained for audit and collapsed by the clustering analysis.
+- `gbif_training_occurrences_through_2025.csv` — pre-2026 occurrence evidence;
+- `detection_clusters.csv` — 500 m clusters derived from the inspected 2026 field detections;
+- `candidate_pool.csv` — historical candidate pool retained for failure diagnosis;
+- `manifest.json` — provenance.
 
-These rows are **positive detections only**. They cannot estimate detection probability, specificity, false absence, or discoveries per field day without the complete visit/effort log.
+The full-island inverse workflow additionally rebuilds the land-grid universe from the frozen GSI DEM artifacts and pinned ESA WorldCover NDVI input.
 
-## Candidate pool
+## Active development path
 
-`frozen_candidate_pool.csv` **does not exist in this repository** and never did;
-`frozen_candidate_pool_schema.csv` is a one-row schema example, not data. The
-published Campanula numbers came from `run_temporal_external_validation.py`,
-which rebuilds the pool from GBIF records through 2025 at run time.
+The current workflow is `.github/workflows/campanula-inverse-development.yml`.
 
-That is a temporal external design, not an archived pre-registration, and it is
-the honest description of what exists. Because the taxon is now development
-data, the pool is cached for offline iteration instead:
+Its sequence is:
 
-```bash
-# needs GBIF and GSI, so run it on a runner via the campanula-development-data workflow
-python research/cache_campanula_development_data.py
+```text
+pre-2026 GBIF + frozen GSI DEM
+        ↓
+outcome-blind full-island candidate universe
+        ↓
+pinned NDVI state representation
+        ↓
+outcome-blind patch universe + patch features
+        ↓
+open 2026 field clusters only after features are frozen
+        ↓
+minimum set-cover family diagnosis
+        ↓
+learn outcome-blind patch utility from oracle-compatible membership
+        ↓
+leave-one-island-out internal development cross-fit
 ```
 
-which writes `development_data/{gbif_training_occurrences_through_2025.csv,
-candidate_pool.csv, detection_clusters.csv, manifest.json}`.
+`research/campanula_inverse_patch_learning.py` does **not** learn one arbitrary MILP solution. A patch is labeled `oracle_compatible` when it can occur in at least one minimum-size field-outcome cover, and `oracle_necessary` when excluding it increases the minimum cover size. The model learns compatibility using only outcome-blind patch attributes.
 
-If a genuinely pre-registered pool is ever wanted for a future expedition, export
-it before fieldwork and store it as `frozen_candidate_pool.csv` with at least:
+The existing development gap is approximately:
 
-- `site_id`
-- `survey_area_id`
-- `latitude`, `longitude`
-- `candidate_type`
-- `priority_rank`, `priority_score`
-- `is_recommended`
-- algorithm commit/release and generation time
+- best existing outcome-blind complete-recovery policy: about 32 patches;
+- field-outcome minimum set-cover diagnostic: about 11–12 patches.
 
-`frozen_candidate_pool_schema.csv` is a schema example, not analytical data.
+The scientific question is whether region-agnostic, outcome-blind patch structure can close that compression gap without reading field coordinates at inference time.
 
-## Analysis
+## Retained field-recovery utilities
 
-Install the package, then run:
+`analyze.py` and the package-level field-recovery helpers remain useful for descriptive positive-detection recall and same-area random comparisons. They are diagnostics, not an external-validation pipeline.
 
-```bash
-python field_validation/campanula_microdonta/analyze.py \
-  --candidate-pool field_validation/campanula_microdonta/frozen_candidate_pool.csv
-```
+The old `run_temporal_external_validation.py`, area-balanced validation comparison, and their GitHub Actions workflow were removed because they assigned this already-inspected taxon an obsolete external-validation role.
 
-The analysis:
+## Scientific boundary
 
-1. clusters nearby positive GPS rows into independent detection units;
-2. measures nearest frozen-candidate distance;
-3. reports recovery at 0.5, 1, 2, 5, and 10 km;
-4. compares the frozen ACSP set against random sets drawn from the identical candidate pool;
-5. preserves the number of selected candidates per survey area/island.
+Campanula can establish an algorithmic design, reveal failure modes, and provide development labels. It cannot establish generalization.
 
-The primary claim remains the pre-supported **10 km regional-zone** endpoint. Smaller radii are sensitivity analyses.
+Promotion requires:
 
-## Interpretation
-
-This case study complements, rather than replaces, the national unseen-taxon retrospective benchmark. Retrospective recovery tests ranking transferability. The field case tests whether a recommendation object remains useful when taken into a real expedition.
-
-A positive-only recovery result should be described as field-detection-cluster recall. It must not be described as occupancy-model accuracy or detection probability.
+1. freeze the Campanula-derived rule and preprocessing;
+2. do not retune it after opening the new evaluation cohort;
+3. test on untouched taxon-region data with failures retained;
+4. keep movement/accessibility as an operational constraint rather than ecological suitability.
