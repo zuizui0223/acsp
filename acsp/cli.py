@@ -17,6 +17,8 @@ from .planning import recommend_candidates, recommend_survey_zones
 from .travel_matrix import estimate_matrix_trip, read_travel_time_matrix
 from .trip_proxy import estimate_operational_trip
 
+AUTO_COVERAGE_RADIUS_KM = 1.0
+
 
 def _positive_int(value: str) -> int:
     try:
@@ -38,9 +40,7 @@ def _positive_float(value: str) -> float:
     return number
 
 
-def _add_common_geometry_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--coverage-radius-km", type=_positive_float, default=1.0)
-    parser.add_argument("--max-sites", type=_positive_int, default=40)
+def _add_column_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--latitude-column", default="latitude")
     parser.add_argument("--longitude-column", default="longitude")
     parser.add_argument("--area-column", default="survey_area_id")
@@ -49,8 +49,14 @@ def _add_common_geometry_args(parser: argparse.ArgumentParser) -> None:
         "--taxon-profile",
         required=True,
         choices=["plant", "bird", "amphibian", "reptile", "arthropod", "mammal", "fish", "unknown"],
-        help="Operational effort profile used for per-site search assumptions.",
+        help="Taxon metadata used to select internal field-effort assumptions.",
     )
+
+
+def _add_legacy_geometry_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--coverage-radius-km", type=_positive_float, default=1.0)
+    parser.add_argument("--max-sites", type=_positive_int, default=40)
+    _add_column_args(parser)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -60,12 +66,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    recommend = subparsers.add_parser(
-        "recommend",
-        help="Rank candidate rows and apply an equal per-area quota when multiple survey areas exist.",
-    )
-    recommend.add_argument("--input", required=True, help="Input candidate CSV path.")
-    recommend.add_argument("--output", required=True, help="Output CSV path for selected candidates.")
+    recommend = subparsers.add_parser("recommend")
+    recommend.add_argument("--input", required=True)
+    recommend.add_argument("--output", required=True)
     recommend.add_argument("--summary-json", default="acsp-summary.json")
     recommend.add_argument("--per-area", type=_positive_int, default=3)
     recommend.add_argument("--default-total", type=_positive_int, default=8)
@@ -76,12 +79,9 @@ def _build_parser() -> argparse.ArgumentParser:
     recommend.add_argument("--latitude-column", default="latitude")
     recommend.add_argument("--longitude-column", default="longitude")
 
-    zones = subparsers.add_parser(
-        "zones",
-        help="Consolidate nearby candidate points and rank practical survey zones.",
-    )
-    zones.add_argument("--input", required=True, help="Input candidate CSV path.")
-    zones.add_argument("--output", required=True, help="Output CSV path for recommended zones.")
+    zones = subparsers.add_parser("zones")
+    zones.add_argument("--input", required=True)
+    zones.add_argument("--output", required=True)
     zones.add_argument("--summary-json", default="acsp-summary.json")
     zones.add_argument("--per-area", type=_positive_int, default=3)
     zones.add_argument("--default-total", type=_positive_int, default=8)
@@ -97,11 +97,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "auto-effort",
         help=(
             "Infer survey size, hours, and field days from an explicit human-reachable movement network. "
-            "No target-day budget and no straight-line fallback are used."
+            "Users do not specify target days, target site count, or a survey budget."
         ),
     )
     auto.add_argument("--input", required=True, help="Prefiltered candidate CSV.")
-    auto.add_argument("--output", required=True, help="Output CSV for the automatically recommended survey set.")
+    auto.add_argument("--output", required=True)
     auto.add_argument("--summary-json", default="acsp-auto-effort-summary.json")
     auto.add_argument("--frontier-audit", default="acsp-auto-effort-frontier.csv")
     auto.add_argument("--travel-matrix", required=True, help="Long-form travel matrix with explicit mode column.")
@@ -114,29 +114,24 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Physically available movement mode; repeat for walk/road/trail/ferry as applicable.",
     )
     auto.add_argument("--undirected-travel-matrix", action="store_true")
-    _add_common_geometry_args(auto)
+    _add_column_args(auto)
+    auto.set_defaults(coverage_radius_km=AUTO_COVERAGE_RADIUS_KM, max_sites=None)
 
     budget = subparsers.add_parser(
         "budget",
         help="Legacy what-if: truncate a geometry sequence to an explicitly supplied field-day budget.",
     )
-    budget.add_argument("--input", required=True, help="Prefiltered candidate CSV.")
-    budget.add_argument("--output", required=True, help="Output CSV path for the feasible ordered survey set.")
+    budget.add_argument("--input", required=True)
+    budget.add_argument("--output", required=True)
     budget.add_argument("--summary-json", default="acsp-budget-summary.json")
     budget.add_argument("--prefix-audit", default="acsp-budget-prefix-audit.csv")
     budget.add_argument("--hub-latitude", type=float, required=True)
     budget.add_argument("--hub-longitude", type=float, required=True)
     budget.add_argument("--hub-id", default="__hub__")
     budget.add_argument("--days", type=_positive_int, required=True)
-    budget.add_argument(
-        "--travel-matrix",
-        help=(
-            "Optional long-form CSV with from_id,to_id,travel_minutes and optional "
-            "distance_km,mode,available columns. Missing directed pairs are unreachable."
-        ),
-    )
+    budget.add_argument("--travel-matrix")
     budget.add_argument("--undirected-travel-matrix", action="store_true")
-    _add_common_geometry_args(budget)
+    _add_legacy_geometry_args(budget)
     return parser
 
 
@@ -195,10 +190,13 @@ def _prepare_geometry_order(args: argparse.Namespace, *, require_site_ids: bool)
     if args.area_column in candidates.columns:
         areas = candidates[args.area_column].dropna().astype(str).unique().tolist()
     group_col = args.area_column if args.area_column in candidates.columns else None
+    requested_max = getattr(args, "max_sites", None)
+    max_sites = len(candidates) if requested_max is None else min(len(candidates), int(requested_max))
+    radius_km = float(getattr(args, "coverage_radius_km", AUTO_COVERAGE_RADIUS_KM))
     ordered, coverage_audit = select_maximum_coverage_sites(
         candidates,
-        radius_km=float(args.coverage_radius_km),
-        max_sites=int(args.max_sites),
+        radius_km=radius_km,
+        max_sites=max_sites,
         latitude_col=args.latitude_column,
         longitude_col=args.longitude_column,
         group_col=group_col,
@@ -227,9 +225,7 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
     candidates = pd.read_csv(input_path)
     if args.extent is not None:
         from .planning import filter_candidates_to_extent
-        candidates_for_selection = filter_candidates_to_extent(
-            candidates, args.extent, args.latitude_column, args.longitude_column
-        )
+        candidates_for_selection = filter_candidates_to_extent(candidates, args.extent, args.latitude_column, args.longitude_column)
     else:
         candidates_for_selection = candidates
     if args.command == "zones":
@@ -294,7 +290,7 @@ def run_auto_effort(args: argparse.Namespace) -> dict[str, object]:
         hub_id=args.hub_id,
         allowed_modes=args.allowed_modes,
         survey_protocol=protocol,
-        max_sites=int(args.max_sites),
+        max_sites=None,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     selected.to_csv(output_path, index=False)
@@ -318,9 +314,12 @@ def run_auto_effort(args: argparse.Namespace) -> dict[str, object]:
         "travel_matrix_csv": str(matrix_path),
         "travel_matrix_undirected": bool(args.undirected_travel_matrix),
         "target_days_user_supplied": False,
+        "target_site_count_user_supplied": False,
+        "survey_budget_user_supplied": False,
         "straight_line_fallback": False,
+        "coverage_radius_km_internal": AUTO_COVERAGE_RADIUS_KM,
         "selection_rule": (
-            "geometry-only maximum coverage order followed by an automatically inferred "
+            "full geometry-only maximum-coverage order followed by an automatically inferred "
             "coverage-versus-effort knee on explicitly allowed movement edges"
         ),
     }
@@ -335,9 +334,7 @@ def run_budget(args: argparse.Namespace) -> dict[str, object]:
     summary_path = Path(args.summary_json)
     audit_path = Path(args.prefix_audit)
     matrix_path = Path(args.travel_matrix) if args.travel_matrix else None
-    candidates, ordered, coverage_audit, areas = _prepare_geometry_order(
-        args, require_site_ids=matrix_path is not None
-    )
+    candidates, ordered, coverage_audit, areas = _prepare_geometry_order(args, require_site_ids=matrix_path is not None)
     if len(areas) > 1 and matrix_path is None:
         raise ValueError(
             "Multiple survey areas require --travel-matrix with explicit inter-area costs. "
