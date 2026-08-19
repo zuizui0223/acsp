@@ -1,11 +1,11 @@
 """Infer survey effort from a reachable value-cost frontier.
 
 Users do not predeclare field days here. They provide physical movement
-constraints (for example a start hub and a travel matrix containing only
-available road, trail, walking, or ferry legs). ACSP evaluates the fixed
-upstream coverage order on that reachable network and recommends the
-value-cost knee: the point after which extra field effort yields sharply
-smaller gains in candidate-space coverage.
+constraints: a start hub, an explicit travel matrix, and the movement modes
+that are actually available. ACSP evaluates the fixed upstream coverage order
+on that reachable network and recommends the value-cost knee: the point after
+which extra field effort yields sharply smaller gains in candidate-space
+coverage.
 
 This is an operational recommendation, not a biological probability. Monetary
 cost is deliberately out of scope unless real prices are supplied separately.
@@ -13,10 +13,14 @@ cost is deliberately out of scope unless real prices are supplied separately.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Mapping
+from functools import partial
+from typing import Callable, Iterable, Mapping
 
 import numpy as np
 import pandas as pd
+
+from .movement_constraints import apply_movement_constraints
+from .travel_matrix import estimate_matrix_trip, normalize_travel_time_matrix
 
 TripEstimator = Callable[..., Mapping[str, object]]
 
@@ -60,9 +64,8 @@ def infer_recommended_effort(
     ceiling; unreachable prefixes remain in the audit but cannot be selected.
 
     The knee is the feasible prefix maximizing ``normalized coverage -
-    normalized total hours`` after including the origin (zero effort, zero
-    coverage). This is deterministic and favors the point of strongest
-    diminishing returns. Exact ties prefer the shorter prefix.
+    normalized total hours``. This is deterministic and favors the point of
+    strongest diminishing returns. Exact ties prefer the shorter prefix.
     """
     if not callable(trip_estimator):
         raise TypeError("trip_estimator must be callable")
@@ -136,4 +139,43 @@ def infer_recommended_effort(
         evaluated_prefixes=int(limit),
         unreachable_prefixes=int((~frontier["reachable"]).sum()),
     )
+    return selected, audit, frontier
+
+
+def infer_recommended_effort_from_matrix(
+    ordered_sites: pd.DataFrame,
+    *,
+    travel_matrix: pd.DataFrame,
+    hub_id: object,
+    allowed_modes: Iterable[str],
+    survey_protocol: Mapping[str, object],
+    max_sites: int | None = None,
+    undirected: bool = False,
+) -> tuple[pd.DataFrame, AutoEffortAudit, pd.DataFrame]:
+    """Infer survey effort using only explicitly allowed movement edges.
+
+    This is the preferred automatic operational interface. There is no user
+    day budget and no straight-line routing fallback. ``allowed_modes`` defines
+    the human movement network; every other edge is removed before scheduling.
+    Missing edges remain unreachable.
+    """
+    normalized = normalize_travel_time_matrix(travel_matrix, undirected=undirected)
+    constrained = apply_movement_constraints(normalized, allowed_modes=allowed_modes)
+    if constrained.empty:
+        raise ValueError("No travel edges remain after applying movement constraints")
+    estimator = partial(
+        estimate_matrix_trip,
+        travel_matrix=constrained,
+        hub_id=hub_id,
+    )
+    selected, audit, frontier = infer_recommended_effort(
+        ordered_sites,
+        hub_latitude=0.0,
+        hub_longitude=0.0,
+        trip_estimator=estimator,
+        survey_protocol=survey_protocol,
+        max_sites=max_sites,
+    )
+    frontier.attrs["allowed_modes"] = list(constrained.attrs.get("allowed_modes", []))
+    frontier.attrs["removed_edge_count"] = int(constrained.attrs.get("removed_edge_count", 0))
     return selected, audit, frontier
