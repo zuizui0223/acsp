@@ -10,7 +10,7 @@ from typing import Sequence
 
 import pandas as pd
 
-from .auto_budget import infer_recommended_effort_from_matrix
+from .auto_plan import plan_auto_effort
 from .coverage import select_maximum_coverage_sites
 from .operational_budget import select_largest_feasible_prefix
 from .planning import recommend_candidates, recommend_survey_zones
@@ -96,7 +96,7 @@ def _build_parser() -> argparse.ArgumentParser:
     auto = subparsers.add_parser(
         "auto-effort",
         help=(
-            "Infer survey size, hours, and field days from an explicit human-reachable movement network. "
+            "Infer survey size, hours, and field days from an explicit human-reachable movement graph. "
             "Users do not specify target days, target site count, or a survey budget."
         ),
     )
@@ -104,8 +104,13 @@ def _build_parser() -> argparse.ArgumentParser:
     auto.add_argument("--output", required=True)
     auto.add_argument("--summary-json", default="acsp-auto-effort-summary.json")
     auto.add_argument("--frontier-audit", default="acsp-auto-effort-frontier.csv")
-    auto.add_argument("--travel-matrix", required=True, help="Long-form travel matrix with explicit mode column.")
-    auto.add_argument("--hub-id", default="__hub__", help="Start/end hub endpoint ID in the travel matrix.")
+    auto.add_argument("--reachability-audit", default="acsp-auto-effort-reachability.csv")
+    auto.add_argument(
+        "--travel-matrix",
+        required=True,
+        help="Sparse or pairwise directed movement-edge CSV with explicit mode column.",
+    )
+    auto.add_argument("--hub-id", default="__hub__", help="Start/end hub endpoint ID in the movement graph.")
     auto.add_argument(
         "--allowed-mode",
         action="append",
@@ -115,7 +120,6 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     auto.add_argument("--undirected-travel-matrix", action="store_true")
     _add_column_args(auto)
-    auto.set_defaults(coverage_radius_km=AUTO_COVERAGE_RADIUS_KM, max_sites=None)
 
     budget = subparsers.add_parser(
         "budget",
@@ -190,13 +194,10 @@ def _prepare_geometry_order(args: argparse.Namespace, *, require_site_ids: bool)
     if args.area_column in candidates.columns:
         areas = candidates[args.area_column].dropna().astype(str).unique().tolist()
     group_col = args.area_column if args.area_column in candidates.columns else None
-    requested_max = getattr(args, "max_sites", None)
-    max_sites = len(candidates) if requested_max is None else min(len(candidates), int(requested_max))
-    radius_km = float(getattr(args, "coverage_radius_km", AUTO_COVERAGE_RADIUS_KM))
     ordered, coverage_audit = select_maximum_coverage_sites(
         candidates,
-        radius_km=radius_km,
-        max_sites=max_sites,
+        radius_km=float(args.coverage_radius_km),
+        max_sites=min(len(candidates), int(args.max_sites)),
         latitude_col=args.latitude_column,
         longitude_col=args.longitude_column,
         group_col=group_col,
@@ -225,7 +226,9 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
     candidates = pd.read_csv(input_path)
     if args.extent is not None:
         from .planning import filter_candidates_to_extent
-        candidates_for_selection = filter_candidates_to_extent(candidates, args.extent, args.latitude_column, args.longitude_column)
+        candidates_for_selection = filter_candidates_to_extent(
+            candidates, args.extent, args.latitude_column, args.longitude_column
+        )
     else:
         candidates_for_selection = candidates
     if args.command == "zones":
@@ -253,7 +256,10 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
     selected.to_csv(output_path, index=False)
     area_counts: dict[str, int] = {}
     if args.area_column in selected.columns:
-        area_counts = {str(area): int(count) for area, count in selected.groupby(args.area_column, dropna=False).size().items()}
+        area_counts = {
+            str(area): int(count)
+            for area, count in selected.groupby(args.area_column, dropna=False).size().items()
+        }
     summary: dict[str, object] = {
         "input_csv": str(input_path),
         "output_csv": str(output_path),
@@ -275,52 +281,69 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_auto_effort(args: argparse.Namespace) -> dict[str, object]:
+    input_path = Path(args.input)
+    matrix_path = Path(args.travel_matrix)
     output_path = Path(args.output)
     summary_path = Path(args.summary_json)
     frontier_path = Path(args.frontier_audit)
-    matrix_path = Path(args.travel_matrix)
+    reachability_path = Path(args.reachability_audit)
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Candidate CSV was not found: {input_path}")
     if not matrix_path.is_file():
-        raise FileNotFoundError(f"Travel-time matrix CSV was not found: {matrix_path}")
-    candidates, ordered, coverage_audit, areas = _prepare_geometry_order(args, require_site_ids=True)
-    matrix = read_travel_time_matrix(matrix_path, undirected=bool(args.undirected_travel_matrix))
+        raise FileNotFoundError(f"Movement-edge CSV was not found: {matrix_path}")
+
+    candidates = pd.read_csv(input_path, dtype={args.site_column: "string"})
+    movement_edges = pd.read_csv(
+        matrix_path,
+        dtype={"from_id": "string", "to_id": "string"},
+    )
     protocol = _protocol_for_profile(args.taxon_profile)
-    selected, effort_audit, frontier = infer_recommended_effort_from_matrix(
-        ordered,
-        travel_matrix=matrix,
+    selected, plan_audit, frontier, reachability = plan_auto_effort(
+        candidates,
+        movement_edges=movement_edges,
         hub_id=args.hub_id,
         allowed_modes=args.allowed_modes,
         survey_protocol=protocol,
-        max_sites=None,
+        coverage_radius_km=AUTO_COVERAGE_RADIUS_KM,
+        site_id_col=args.site_column,
+        latitude_col=args.latitude_column,
+        longitude_col=args.longitude_column,
+        group_col=args.area_column,
+        undirected=bool(args.undirected_travel_matrix),
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     selected.to_csv(output_path, index=False)
     frontier_path.parent.mkdir(parents=True, exist_ok=True)
     frontier.to_csv(frontier_path, index=False)
+    reachability_path.parent.mkdir(parents=True, exist_ok=True)
+    reachability.to_csv(reachability_path, index=False)
+
     summary: dict[str, object] = {
-        "input_csv": str(args.input),
+        "input_csv": str(input_path),
         "output_csv": str(output_path),
         "frontier_audit_csv": str(frontier_path),
+        "reachability_audit_csv": str(reachability_path),
         "input_candidate_count": int(len(candidates)),
-        "geometry_order_count": int(len(ordered)),
+        "reachable_candidate_count": int(plan_audit.reachable_candidates),
+        "unreachable_candidate_count": int(plan_audit.unreachable_candidates),
         "selected_count": int(len(selected)),
-        "survey_area_count": int(len(areas)) if areas else 1,
         "hub_id": str(args.hub_id),
         "allowed_modes": sorted(set(str(x) for x in args.allowed_modes)),
         "taxon_profile": str(args.taxon_profile),
         "survey_protocol": protocol,
-        "coverage_selection": coverage_audit.as_dict(),
-        "automatic_effort": effort_audit.as_dict(),
-        "routing_mode": "explicit_human_reachable_travel_matrix_only",
-        "travel_matrix_csv": str(matrix_path),
-        "travel_matrix_undirected": bool(args.undirected_travel_matrix),
+        "automatic_plan": plan_audit.as_dict(),
+        "routing_mode": "explicit_sparse_human_movement_graph",
+        "movement_edges_csv": str(matrix_path),
+        "movement_graph_undirected": bool(args.undirected_travel_matrix),
+        "reachability_applied_before_coverage": True,
         "target_days_user_supplied": False,
         "target_site_count_user_supplied": False,
         "survey_budget_user_supplied": False,
         "straight_line_fallback": False,
         "coverage_radius_km_internal": AUTO_COVERAGE_RADIUS_KM,
         "selection_rule": (
-            "full geometry-only maximum-coverage order followed by an automatically inferred "
-            "coverage-versus-effort knee on explicitly allowed movement edges"
+            "filter to candidates with explicit directed hub round trips; construct full maximum-coverage "
+            "order on that reachable set; then choose the deterministic coverage-versus-effort knee"
         ),
     }
     summary_path.parent.mkdir(parents=True, exist_ok=True)
@@ -334,7 +357,9 @@ def run_budget(args: argparse.Namespace) -> dict[str, object]:
     summary_path = Path(args.summary_json)
     audit_path = Path(args.prefix_audit)
     matrix_path = Path(args.travel_matrix) if args.travel_matrix else None
-    candidates, ordered, coverage_audit, areas = _prepare_geometry_order(args, require_site_ids=matrix_path is not None)
+    candidates, ordered, coverage_audit, areas = _prepare_geometry_order(
+        args, require_site_ids=matrix_path is not None
+    )
     if len(areas) > 1 and matrix_path is None:
         raise ValueError(
             "Multiple survey areas require --travel-matrix with explicit inter-area costs. "
@@ -343,8 +368,14 @@ def run_budget(args: argparse.Namespace) -> dict[str, object]:
     protocol = _protocol_for_profile(args.taxon_profile)
     travel_matrix = None
     if matrix_path is not None:
-        travel_matrix = read_travel_time_matrix(matrix_path, undirected=bool(args.undirected_travel_matrix))
-        trip_estimator = partial(estimate_matrix_trip, travel_matrix=travel_matrix, hub_id=args.hub_id)
+        travel_matrix = read_travel_time_matrix(
+            matrix_path, undirected=bool(args.undirected_travel_matrix)
+        )
+        trip_estimator = partial(
+            estimate_matrix_trip,
+            travel_matrix=travel_matrix,
+            hub_id=args.hub_id,
+        )
         routing_mode = "external_travel_time_matrix"
         routing_claim = "user-supplied pairwise travel costs; no straight-line fallback for missing matrix legs"
     else:
