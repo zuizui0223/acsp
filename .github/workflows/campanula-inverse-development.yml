@@ -1,11 +1,11 @@
-name: Campanula set-level development
+name: Campanula robust support export
 
 on:
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: campanula-set-level-${{ github.event.pull_request.number || github.ref }}
+  group: campanula-robust-support-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +16,7 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  structure-diagnostic:
+  robust-support-export:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -61,42 +61,45 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
-      - name: Diagnose late recovery witness patches
+      - name: Reproduce frozen robust support and export bounded patches
         run: |
-          python research/campanula_spatial_policy_structure_diagnostic.py \
+          python research/campanula_robust_support_patch_export.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
             --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --out campanula-structure-diagnostic
-          cat campanula-structure-diagnostic/structure_diagnostic_report.json
+            --out campanula-robust-support
+          cat campanula-robust-support/robust_support_patch_report.json
 
-      - name: Verify diagnostic guardrails
+      - name: Verify frozen ecological contract
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          report=json.loads(Path('campanula-structure-diagnostic/structure_diagnostic_report.json').read_text())
-          assert report['status']=='development_only_structure_diagnostic'
-          assert report['field_coordinates_used_to_build_patch_features'] is False
-          assert report['field_coordinates_used_to_build_canonical_order'] is False
-          assert report['canonical_policy']['top32_fixed_reference'] is True
-          assert report['latest_first_recovery_rank'] <= 32
+          report=json.loads(Path('campanula-robust-support/robust_support_patch_report.json').read_text())
+          assert report['status']=='frozen_robust_support_patch_export'
+          assert report['field_coordinates_used_to_build_consensus_support'] is False
+          assert report['field_coordinates_used_to_choose_threshold'] is False
+          assert report['field_coordinates_used_to_define_patches'] is False
+          assert report['freeze_reproduction']['pass'] is True
+          assert report['selected_cells'] == report['expected_frozen_cells'] == 2367
+          assert report['field_development_verification']['recovered'] == 19
+          assert report['operational_contract']['straight_line_movement_fallback'] is False
           print(json.dumps({
-              'latest_first_recovery_rank': report['latest_first_recovery_rank'],
-              'detections_recovered_by_rank20': report['detections_recovered_by_rank20'],
-              'detections_recovered_rank21_to_32': report['detections_recovered_rank21_to_32'],
-              'late_detection_ids': report['late_detection_ids'],
-              'top_feature_contrasts': report['top_feature_contrasts'],
+              'selected_cells': report['selected_cells'],
+              'patch_count': report['patch_count'],
+              'island_patch_counts': report['island_patch_counts'],
+              'field_verification': report['field_development_verification'],
+              'next_layer': report['operational_contract']['next_layer'],
           }, indent=2))
           PY
 
       - uses: actions/upload-artifact@v4
         with:
-          name: campanula-structure-diagnostic
+          name: campanula-robust-support-patches
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
-            campanula-structure-diagnostic/
+            campanula-robust-support/
           if-no-files-found: error
           retention-days: 90
