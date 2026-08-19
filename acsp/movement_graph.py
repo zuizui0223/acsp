@@ -65,16 +65,18 @@ def hub_roundtrip_table(
 ) -> pd.DataFrame:
     """Return shortest explicit hub round-trip costs for candidate endpoints.
 
-    The graph is first normalized and filtered by the movement-mode allow-list.
     A candidate is operationally reachable only when both hub->site and
-    site->hub directed paths exist. Missing paths are never replaced by
-    straight-line distance.
+    site->hub directed paths exist. The input must declare every edge's movement
+    mode explicitly. Missing paths are never replaced by straight-line distance.
     """
+    if movement_edges is None or "mode" not in movement_edges.columns:
+        raise ValueError("movement graph requires an explicit mode column")
     normalized = normalize_travel_time_matrix(movement_edges, undirected=undirected)
     constrained = apply_movement_constraints(normalized, allowed_modes=allowed_modes)
+    if constrained.empty:
+        raise ValueError("No movement edges remain after applying allowed modes")
     hub = _endpoint(hub_id)
     outward = dijkstra_minutes(constrained, hub, reverse=False)
-    # Running Dijkstra from the hub on the reversed graph gives site->hub costs.
     inward = dijkstra_minutes(constrained, hub, reverse=True)
 
     rows: list[dict[str, object]] = []
@@ -111,11 +113,9 @@ def estimate_hub_roundtrip_effort(
 ) -> dict[str, object]:
     """Conservative prefix effort using explicit shortest hub round trips.
 
-    This estimator intentionally ignores hub coordinates and the caller's
-    target-day ceiling. It returns total effort and an internally estimated day
-    count so it can plug into the generic automatic-effort frontier. Each site
-    is conservatively costed as a hub round trip; no direct site-to-site edge is
-    invented.
+    This estimator ignores hub coordinates and the caller's target-day ceiling.
+    Each site is conservatively costed as a hub round trip; no direct
+    site-to-site edge is invented.
     """
     if survey_protocol is None:
         raise ValueError("survey_protocol is required")
@@ -132,7 +132,11 @@ def estimate_hub_roundtrip_effort(
 
     lookup = roundtrip_table.set_index("site_id", drop=False)
     site_ids = [str(value).strip() for value in plan["site_id"]]
-    unreachable = [site for site in site_ids if site not in lookup.index or not bool(lookup.loc[site, "roundtrip_reachable"])]
+    unreachable = [
+        site
+        for site in site_ids
+        if site not in lookup.index or not bool(lookup.loc[site, "roundtrip_reachable"])
+    ]
     service = float(survey_protocol["search_minutes_per_cell"]) + float(
         survey_protocol["access_buffer_minutes_per_cell"]
     )
@@ -144,8 +148,6 @@ def estimate_hub_roundtrip_effort(
     if not unreachable:
         costs = [float(lookup.loc[site, "roundtrip_minutes"]) + service for site in site_ids]
 
-    # Sequential day packing preserves the upstream coverage order. A single
-    # long site may occupy multiple nominal days; it is reported explicitly.
     days = 0
     current = 0.0
     long_day_sites: list[str] = []
