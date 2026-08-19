@@ -16,7 +16,7 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  spatial-kcenter-development:
+  structure-diagnostic:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -61,41 +61,42 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
-      - name: Test automatic within-island spatial k-center
+      - name: Diagnose late recovery witness patches
         run: |
-          python research/campanula_spatial_kcenter_policy.py \
+          python research/campanula_spatial_policy_structure_diagnostic.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
             --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
             --ndvi public-layers/ndvi.tif \
             --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
-            --out campanula-spatial-kcenter
-          cat campanula-spatial-kcenter/spatial_kcenter_report.json
+            --out campanula-structure-diagnostic
+          cat campanula-structure-diagnostic/structure_diagnostic_report.json
 
-      - name: Verify development guardrails
+      - name: Verify diagnostic guardrails
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          report=json.loads(Path('campanula-spatial-kcenter/spatial_kcenter_report.json').read_text())
-          assert report['status']=='development_only_spatial_kcenter_policy'
-          assert report['field_coordinates_used_to_order_patches'] is False
-          assert report['field_coordinates_used_to_choose_stopping_point'] is False
-          assert report['support_components'] == 5
+          report=json.loads(Path('campanula-structure-diagnostic/structure_diagnostic_report.json').read_text())
+          assert report['status']=='development_only_structure_diagnostic'
+          assert report['field_coordinates_used_to_build_patch_features'] is False
+          assert report['field_coordinates_used_to_build_canonical_order'] is False
+          assert report['canonical_policy']['top32_fixed_reference'] is True
+          assert report['latest_first_recovery_rank'] <= 32
           print(json.dumps({
-              'selected_patches': report['selected_patches'],
-              'spatial_representation': report['spatial_representation'],
-              'maximum_normalized_residual': report['maximum_normalized_residual'],
-              'field_recovery': report['field_development_result'],
-              'first_complete_recovery_prefix': report['first_complete_recovery_prefix'],
+              'latest_first_recovery_rank': report['latest_first_recovery_rank'],
+              'detections_recovered_by_rank20': report['detections_recovered_by_rank20'],
+              'detections_recovered_rank21_to_32': report['detections_recovered_rank21_to_32'],
+              'late_detection_ids': report['late_detection_ids'],
+              'top_feature_contrasts': report['top_feature_contrasts'],
           }, indent=2))
           PY
 
       - uses: actions/upload-artifact@v4
         with:
-          name: campanula-spatial-kcenter-development
+          name: campanula-structure-diagnostic
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
-            campanula-spatial-kcenter/
+            campanula-structure-diagnostic/
           if-no-files-found: error
           retention-days: 90
