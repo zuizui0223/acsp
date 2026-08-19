@@ -1,6 +1,10 @@
 """Reusable ACSP survey-planning methods."""
 
-from .auto_budget import AutoEffortAudit, infer_recommended_effort
+from .auto_budget import (
+    AutoEffortAudit,
+    infer_recommended_effort,
+    infer_recommended_effort_from_matrix,
+)
 from .automatic_sdm import (
     AUTO_SDM_VARIABLES,
     AutomaticSdmCoreConfig,
@@ -46,6 +50,7 @@ from .field_validation import (
     recovery_summary,
     stratified_random_recovery_benchmark,
 )
+from .movement_constraints import apply_movement_constraints, normalize_mode
 from .operational_budget import OperationalBudgetAudit, select_largest_feasible_prefix
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
@@ -102,6 +107,7 @@ __all__ = [
     "StandardBaselineProtocol",
     "UNIVERSAL_METHODS",
     "ValidatedCorePolicy",
+    "apply_movement_constraints",
     "choose_spatial_partition",
     "claim_status_table",
     "comparator_inference",
@@ -115,6 +121,7 @@ __all__ = [
     "evaluate_candidate_fold",
     "fit_automatic_sdm_core",
     "infer_recommended_effort",
+    "infer_recommended_effort_from_matrix",
     "interpolate_power_bioclim",
     "iter_comparator_folds",
     "make_classifier",
@@ -124,6 +131,7 @@ __all__ = [
     "aggregate_candidates_to_zones",
     "compare_zone_rankings",
     "normalize_extent",
+    "normalize_mode",
     "normalize_travel_time_matrix",
     "pair_level_intention_to_evaluate",
     "random_same_pool_sets",
