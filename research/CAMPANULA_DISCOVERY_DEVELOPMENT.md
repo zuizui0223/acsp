@@ -74,12 +74,12 @@ The best retained spatial patch policy reaches 19/19 with 32 patches (284 suppor
 
 A field-outcome set-cover calculation on the 104-patch universe gives a minimum of **11 patches**. Because multiple minimum covers exist, one arbitrary MILP solution must not be treated as the unique target.
 
-The inverse diagnostic therefore classifies patches as:
+The inverse diagnostic characterized:
 
 - `oracle_compatible`: can occur in at least one minimum-size cover;
 - `oracle_necessary`: removing the patch forces the optimum above the minimum size.
 
-Current result:
+Retained result:
 
 - minimum size: 11;
 - oracle-compatible patches: 23;
@@ -92,7 +92,7 @@ This proves that the 11-patch target is not a single fixed list to memorize.
 
 ### 1. Pointwise inverse classifier — rejected
 
-A transparent logistic classifier was trained only on outcome-blind patch features (support, area cost, occurrence gap, prototype coverage / rarity / breadth, and simple spatial structure) to predict minimum-cover compatibility. Leave-one-island-out predictions were used as the anti-memorization diagnostic.
+A transparent logistic classifier used only outcome-blind patch features (support, area cost, occurrence gap, prototype coverage / rarity / breadth, and simple spatial structure) to predict minimum-cover compatibility. Leave-one-island-out predictions were used as the anti-memorization diagnostic.
 
 Result:
 
@@ -102,7 +102,7 @@ Result:
 
 Interpretation: patch membership is not a useful independent classification target. Even moderately informative pointwise scores do not reproduce a complementary set. The missing object is **state-dependent marginal value after other patches have already been selected**.
 
-This classifier is not a promotion candidate.
+The rejected runner has been removed from the active repository path; these results remain here as provenance.
 
 ### 2. Component environmental-prototype knee — rejected
 
@@ -116,27 +116,52 @@ Result:
 
 The sharp failure is Niijima: the pre-2026 data contain only one local occurrence prototype, so prototype coverage saturates almost immediately even though the 2026 survey contains four distinct field clusters. Therefore **known-prototype saturation is not a valid completeness/stopping signal**.
 
-This stopping rule is rejected.
+The rejected runner has been removed from the active repository path.
 
-## Current hypothesis: cover the support envelope, not the known prototypes
+### 3. Support-envelope mass coverage — rejected
 
-The two negative experiments imply a simpler next object.
+The next experiment replaced prototype counting with direct set coverage of the 5% outcome-blind support envelope. Support-cell mass was normalized so each island contributed equal total weight; one patch per island was seeded, then patches were added by maximum marginal newly covered support mass within 1 km.
 
-The occurrence model defines an outcome-blind **support envelope** over the island. The survey selector should value a patch by how much *new spatially distinct support-envelope structure* it covers after accounting for patches already selected. This differs from:
+Result:
 
-- a pointwise patch score;
-- counting how many known occurrence prototypes are represented;
-- extending a field-informed prefix until all detections are recovered.
+- support envelope: 1,139 cells across all five islands;
+- deterministic knee: **20 patches**;
+- support mass represented at the knee: **0.9343**;
+- field-cluster recovery at the knee: **13/19**;
+- first complete-recovery prefix of this order: **38 patches**, worse than the retained 32-patch policy.
 
-The next experiment therefore uses a deterministic set function over the frozen support envelope:
+The six failures are structurally concentrated: Niijima cluster 4 and Oshima clusters 11–15. The selector did not omit whole islands; instead it delayed small, spatially separated support fragments because their area contributed little mass. Therefore **support area is not the correct unit of survey value**.
 
-1. build the 5% outcome-blind support-cell universe and bounded patches;
-2. within each disconnected component, let each patch cover nearby support-envelope cells at the already declared patch-neighborhood scale;
-3. greedily add the patch with the largest **new support-envelope coverage** (ties prefer smaller patches / stable IDs);
-4. stop at a deterministic coverage-versus-patch-area knee fixed before field outcomes are opened;
-5. only then measure 2026 field-cluster recovery.
+The rejected runner has been removed from the active repository path.
 
-This can continue exploring a component even when only one training occurrence prototype exists, because geographically separated support regions remain distinct survey value.
+## Current hypothesis: represent distinct support fragments, not support area
+
+The three negative experiments progressively narrow the correct object:
+
+- pointwise patch probability fails because set complementarity is state dependent;
+- occurrence-prototype saturation fails because sparse training records do not enumerate the realized within-island structure;
+- support-envelope area fails because a small isolated support fragment can be biologically important while contributing little area.
+
+The active experiment therefore treats the already outcome-blind 5% bounded support patches themselves as **structural units**.
+
+1. build the 104 bounded 5% support patches before field outcomes are opened;
+2. give every support fragment equal weight within its island and normalize every island to equal total weight;
+3. let a selected patch represent same-island support fragments within the already declared 1-km operational radius;
+4. seed one representative per disconnected island;
+5. greedily add the patch with the largest **newly represented support-fragment weight**;
+6. stop at the deterministic fragment-coverage versus selected-patch-fraction knee;
+7. only then measure the 2026 field clusters.
+
+This changes the estimand from “how much high-support area has been covered?” to “how many spatially distinct supported structures have been represented?”. No new field-informed threshold is introduced.
+
+## Runnable development path
+
+Only the current set-level hypothesis remains runnable in the Campanula CI path:
+
+- `research/campanula_support_fragment_set_policy.py`
+- `.github/workflows/campanula-inverse-development.yml` (workflow display name: `Campanula set-level development`)
+
+Rejected pointwise inverse, prototype-knee, and support-envelope-mass runners are retained only as documented negative results, not competing executable branches.
 
 ## Promotion rule
 
