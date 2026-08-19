@@ -27,6 +27,10 @@ on:
       - .github/workflows/campanula-temporal-validation.yml
   workflow_dispatch:
 
+concurrency:
+  group: campanula-temporal-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
