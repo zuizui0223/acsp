@@ -1,57 +1,101 @@
-# Campanula discovery-algorithm development contract
+# Campanula inverse survey-algorithm development contract
 
 ## Status
 
-`Campanula microdonta` is **development data**, not an independent validation cohort.
-The 2026 field outcomes have already been inspected and previously motivated changes to ACSP.
-They may therefore be used freely to diagnose failures, tune candidate generation, and compare
-experimental strategies. They must not be presented as untouched evidence of generalization.
+`Campanula microdonta` is **development data, not an independent validation cohort**.
+The 2026 field outcomes have already been inspected and have already motivated ACSP changes. They
+are therefore used deliberately as a reverse-engineering instrument: the development question is
+what decision structure would have been required to recover the realized field distribution without
+feeding the 2026 coordinates into inference.
 
-The frozen cross-taxon Practical Core and the frozen 192-pair confirmation artifacts remain
-separate. Nothing in this development track changes their fingerprints, taxa, splits, or claims.
+The frozen cross-taxon Practical Core and the frozen 192-pair confirmation artifacts remain separate.
+Nothing in this development track changes their fingerprints, taxa, splits, or claims.
+
+## Correct direction of the operational problem
+
+The user does **not** choose a target number of sites, target field days, or a budget that ACSP then
+fills. Those are outputs of the algorithm.
+
+The user supplies only physical movement constraints that ACSP cannot infer safely, for example:
+
+- the field-entry / hub node;
+- which travel edges actually exist;
+- which movement modes are available (`walk`, `road`, `trail`, `ferry`, etc.);
+- unavailable / closed links.
+
+ACSP must never invent a straight-line movement edge when the real network does not contain one.
+An undeclared sea crossing, cliff crossing, flight, or other missing edge is unreachable.
+
+The operational target is therefore:
+
+```text
+occurrence-conditioned regional screen
+        -> local candidate universe
+        -> set-level coverage order
+        -> physically reachable movement graph
+        -> coverage-versus-effort frontier
+        -> automatically recommended survey size / hours / days
+```
+
+A legacy explicit-day budget remains a what-if tool, not the default scientific object.
 
 ## Inputs already present in the repository
 
 - training occurrences: `field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv`
 - field detections: `field_validation/campanula_microdonta/locations_2026.csv`
 - 500 m field clusters: `field_validation/campanula_microdonta/development_data/detection_clusters.csv`
-- leakage-controlled validation candidate pool: `candidate_pool.csv`
-- real-use survey pool may be explored separately, but can never be used to claim independent validation.
+- cached candidate pool: `field_validation/campanula_microdonta/development_data/candidate_pool.csv`
 
-Current development target contains 19 field-detection clusters across Oshima, Toshima, Niijima,
+The development target contains 19 field-detection clusters across Oshima, Toshima, Niijima,
 Shikinejima, and Kozushima.
 
-## Primary development objective
+## Inverse-development sequence
 
-The first objective is **candidate-generation completeness**, not Top-5 superiority.
+### 1. Freeze an outcome-free candidate / coverage order
 
-A candidate generator passes the development coverage gate only when every one of the 19 field
-clusters has at least one generated candidate within 1 km:
+Candidate generation and set-level coverage order are computed from pre-2026 information only. The
+2026 field coordinates are not read during this stage.
 
-`candidate_generation_recall_1km = 19 / 19`.
+### 2. Read the 19 field clusters only after the order is fixed
 
-This gate deliberately ignores the final candidate ranking. A ranking method cannot recover a
-field cluster if candidate generation never placed any candidate near it.
+The field clusters are then used as development labels to diagnose:
 
-The current cached pools fail this gate: only 13 of the 19 clusters are reachable within 1 km.
-Therefore candidate generation is the active development bottleneck.
+- how many realized clusters the candidate universe can reach at 1 km;
+- the first prefix at which each additional realized cluster becomes recoverable;
+- whether the bottleneck is candidate generation, compression, or stopping too early;
+- which structural changes improve the development loss.
 
-## Development order
+This is intentional reverse engineering, not validation.
 
-1. **Generation gate** — make the candidate universe reach all 19 clusters at 1 km using only
-   pre-2026 GBIF occurrences plus environmental / terrain / landscape inputs available at decision time.
-2. **Compression gate** — after 19/19 is reachable, reduce the candidate universe into stable,
-   interpretable patches or representative survey sites without losing that coverage.
-3. **Budget curve** — measure recall at equal budgets (Top-5, Top-10, route/time budget) rather than
-   forcing 19 dispersed clusters to be recoverable by exactly five points.
-4. **Ablation** — identify which structural components are necessary: full-island terrain search,
-   occurrence-conditioned analogue, multi-scale support, patch persistence, connectivity, etc.
-5. **Only after the algorithm is frozen** — move to random cross-taxon / cross-region validation.
+### 3. Add real human movement constraints
 
-## Guardrails against a trivial 19/19 solution
+When an auditable road / trail / walking / ferry matrix is available, apply an explicit mode
+allow-list before scheduling. Missing or disallowed edges remain unreachable. Do not substitute the
+straight-line proxy to complete the network.
 
-Field coordinates are labels for development diagnostics only. They may be used to decide whether
-an experiment worked, but must not be read by the candidate generator or scoring function.
+### 4. Infer survey effort rather than requesting it
+
+For every reachable prefix, compute the cumulative set-level coverage and total operational effort.
+The automatic policy selects the diminishing-return knee of this frontier and reports:
+
+- recommended survey stops;
+- recommended total hours;
+- recommended field days under the taxon protocol;
+- unreachable candidate prefixes.
+
+The algorithm may use taxon/protocol defaults for per-site search effort and daily work capacity;
+these are model assumptions, not a user-specified target budget.
+
+### 5. Freeze the learned design before generalization tests
+
+Campanula can be used to choose the architecture, loss function, stopping rule, and operational
+representation. Once those are fixed, new untouched taxa must be used to test whether the design
+transfers. Campanula itself cannot establish generality.
+
+## Guardrails against a trivial reverse-engineered solution
+
+Field coordinates may be used to score development experiments **after** candidate generation and
+ordering, but never as inference-time features.
 
 Disallowed inference-time inputs include:
 
@@ -60,35 +104,29 @@ Disallowed inference-time inputs include:
 - field cluster identifiers;
 - whether a candidate recovered a field cluster.
 
-The generator may use the field outcomes only after generation to compute development loss and to
-choose the next experiment.
+Allowed uses of the 2026 outcomes include diagnosing which experimental architecture failed, choosing
+the next development experiment, and selecting a final architecture before untouched validation.
 
-## Working hypothesis
+## Current implementation
 
-The present hierarchy refines only selected parent regions. That creates an artificial ceiling:
-large parts of an island never enter the candidate universe even when they contain terrain states
-similar to known occurrences.
+`research/campanula_inverse_effort_development.py` implements the first reproducible inverse loop:
 
-The next line of development therefore tests **full-island structural search** rather than merely
-changing final ranking weights:
+1. create the geometry-only coverage order without reading field detections;
+2. read the 19 clusters and calculate the full prefix recovery curve;
+3. report the maximum reachable cluster count and first prefix reaching it;
+4. optionally accept a real travel matrix plus explicit allowed movement modes;
+5. when a matrix is supplied, infer the coverage-effort knee without a user day budget.
 
-- scan the full island at a computationally tractable terrain resolution;
-- characterize occurrence-conditioned local terrain states from pre-2026 occurrences;
-- find repeated / connected occurrences of those states anywhere on the island;
-- retain candidates or patches that remain supported across reasonable scales / thresholds;
-- then optimize the finite survey set.
-
-This is intentionally different from fitting a coarse climate SDM and taking its highest cells.
-The development question is whether occurrence-supported local structures can be rediscovered
-throughout an island strongly enough to include all observed field clusters.
+The movement-constrained API is `acsp.infer_recommended_effort_from_matrix()`. It has no
+straight-line fallback.
 
 ## Promotion rule
 
-Campanula can establish an algorithmic design, but cannot establish generality.
-
 A method leaves this development sandbox only after:
 
-- 19/19 candidate-generation coverage at 1 km is reached without field-label leakage;
-- the rule is frozen before new taxa are evaluated;
+- the Campanula inverse loss has been made explicit and the architecture is frozen;
+- the frozen rule uses no 2026 field label at inference time;
+- movement feasibility is represented only by explicit available edges/modes;
+- target site count / days are outputs rather than tuned user budgets;
 - random taxon-region validation uses no Campanula-tuned outcomes;
-- negative random-validation results are retained and the final test set is not used for retuning.
+- negative untouched validation results are retained and are not used for retuning the final test.
