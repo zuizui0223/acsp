@@ -1,26 +1,17 @@
-"""Infer survey effort from a reachable value-cost frontier.
+"""Infer an automatic survey stopping point from a coverage-effort frontier.
 
-Users do not predeclare field days here. They provide physical movement
-constraints: a start hub, an explicit travel matrix, and the movement modes
-that are actually available. ACSP evaluates the fixed upstream coverage order
-on that reachable network and recommends the value-cost knee: the point after
-which extra field effort yields sharply smaller gains in candidate-space
-coverage.
-
-This is an operational recommendation, not a biological probability. Monetary
-cost is deliberately out of scope unless real prices are supplied separately.
+This module is deliberately routing-agnostic. Reachability and physical movement
+are resolved upstream by :mod:`acsp.auto_plan`; this layer only evaluates an
+already ordered reachable sequence and chooses the deterministic diminishing-
+return knee. Users do not supply target days or target site count.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import partial
-from typing import Callable, Iterable, Mapping
+from typing import Callable, Mapping
 
 import numpy as np
 import pandas as pd
-
-from .movement_constraints import apply_movement_constraints
-from .travel_matrix import estimate_matrix_trip, normalize_travel_time_matrix
 
 TripEstimator = Callable[..., Mapping[str, object]]
 
@@ -56,16 +47,13 @@ def infer_recommended_effort(
     survey_protocol: Mapping[str, object],
     max_sites: int | None = None,
 ) -> tuple[pd.DataFrame, AutoEffortAudit, pd.DataFrame]:
-    """Return the reachable prefix at the coverage-versus-effort knee.
+    """Return the ordered prefix at the coverage-versus-effort knee.
 
-    ``ordered_sites`` must already be ordered by the set-level survey selector
-    and contain ``cumulative_coverage_fraction``. No target-day budget is
-    accepted. Each prefix is scheduled with a deliberately non-binding day
-    ceiling; unreachable prefixes remain in the audit but cannot be selected.
-
-    The knee is the feasible prefix maximizing ``normalized coverage -
-    normalized total hours``. This is deterministic and favors the point of
-    strongest diminishing returns. Exact ties prefer the shorter prefix.
+    ``ordered_sites`` must contain ``cumulative_coverage_fraction`` and must
+    already satisfy the operational reachability rules. ``hub_latitude`` and
+    ``hub_longitude`` remain in the low-level estimator signature for generic
+    estimator compatibility; the reachability-first movement estimator ignores
+    them. No user day budget is accepted.
     """
     if not callable(trip_estimator):
         raise TypeError("trip_estimator must be callable")
@@ -92,34 +80,52 @@ def infer_recommended_effort(
             )
         )
         unreachable = result.get("unreachable_site_ids", []) or []
-        total_hours = pd.to_numeric(pd.Series([result.get("total_hours")]), errors="coerce").iloc[0]
-        estimated_days = pd.to_numeric(pd.Series([result.get("estimated_days")]), errors="coerce").iloc[0]
-        coverage = float(pd.to_numeric(prefix["cumulative_coverage_fraction"], errors="coerce").iloc[-1])
-        feasible = len(unreachable) == 0 and pd.notna(total_hours) and np.isfinite(float(total_hours))
-        rows.append({
-            "k": int(k),
-            "cumulative_coverage_fraction": coverage,
-            "total_hours": float(total_hours) if pd.notna(total_hours) else np.nan,
-            "estimated_days": int(estimated_days) if pd.notna(estimated_days) else np.nan,
-            "reachable": bool(feasible),
-            "unreachable_site_ids": list(unreachable),
-        })
+        total_hours = pd.to_numeric(
+            pd.Series([result.get("total_hours")]), errors="coerce"
+        ).iloc[0]
+        estimated_days = pd.to_numeric(
+            pd.Series([result.get("estimated_days")]), errors="coerce"
+        ).iloc[0]
+        coverage = float(
+            pd.to_numeric(prefix["cumulative_coverage_fraction"], errors="coerce").iloc[-1]
+        )
+        feasible = (
+            len(unreachable) == 0
+            and pd.notna(total_hours)
+            and np.isfinite(float(total_hours))
+            and pd.notna(estimated_days)
+        )
+        rows.append(
+            {
+                "k": int(k),
+                "cumulative_coverage_fraction": coverage,
+                "total_hours": float(total_hours) if pd.notna(total_hours) else np.nan,
+                "estimated_days": int(estimated_days) if pd.notna(estimated_days) else np.nan,
+                "reachable": bool(feasible),
+                "unreachable_site_ids": list(unreachable),
+            }
+        )
 
     frontier = pd.DataFrame(rows)
     feasible = frontier[frontier["reachable"]].copy()
     if feasible.empty:
-        raise ValueError("No non-empty ordered prefix is reachable under the supplied movement constraints")
+        raise ValueError("No non-empty ordered prefix is operationally feasible")
 
     max_hours = float(feasible["total_hours"].max())
-    if max_hours <= 0:
-        feasible["normalized_effort"] = 0.0
-    else:
-        feasible["normalized_effort"] = feasible["total_hours"].astype(float) / max_hours
-    feasible["normalized_coverage"] = feasible["cumulative_coverage_fraction"].astype(float).clip(0.0, 1.0)
-    feasible["knee_score"] = feasible["normalized_coverage"] - feasible["normalized_effort"]
+    feasible["normalized_effort"] = (
+        0.0 if max_hours <= 0 else feasible["total_hours"].astype(float) / max_hours
+    )
+    feasible["normalized_coverage"] = feasible[
+        "cumulative_coverage_fraction"
+    ].astype(float).clip(0.0, 1.0)
+    feasible["knee_score"] = (
+        feasible["normalized_coverage"] - feasible["normalized_effort"]
+    )
 
     best_score = float(feasible["knee_score"].max())
-    chosen = feasible[np.isclose(feasible["knee_score"], best_score)].sort_values("k", kind="mergesort").iloc[0]
+    chosen = feasible[np.isclose(feasible["knee_score"], best_score)].sort_values(
+        "k", kind="mergesort"
+    ).iloc[0]
     selected_count = int(chosen["k"])
     selected = ordered.iloc[:selected_count].copy()
 
@@ -139,43 +145,4 @@ def infer_recommended_effort(
         evaluated_prefixes=int(limit),
         unreachable_prefixes=int((~frontier["reachable"]).sum()),
     )
-    return selected, audit, frontier
-
-
-def infer_recommended_effort_from_matrix(
-    ordered_sites: pd.DataFrame,
-    *,
-    travel_matrix: pd.DataFrame,
-    hub_id: object,
-    allowed_modes: Iterable[str],
-    survey_protocol: Mapping[str, object],
-    max_sites: int | None = None,
-    undirected: bool = False,
-) -> tuple[pd.DataFrame, AutoEffortAudit, pd.DataFrame]:
-    """Infer survey effort using only explicitly allowed movement edges.
-
-    This is the preferred automatic operational interface. There is no user
-    day budget and no straight-line routing fallback. ``allowed_modes`` defines
-    the human movement network; every other edge is removed before scheduling.
-    Missing edges remain unreachable.
-    """
-    normalized = normalize_travel_time_matrix(travel_matrix, undirected=undirected)
-    constrained = apply_movement_constraints(normalized, allowed_modes=allowed_modes)
-    if constrained.empty:
-        raise ValueError("No travel edges remain after applying movement constraints")
-    estimator = partial(
-        estimate_matrix_trip,
-        travel_matrix=constrained,
-        hub_id=hub_id,
-    )
-    selected, audit, frontier = infer_recommended_effort(
-        ordered_sites,
-        hub_latitude=0.0,
-        hub_longitude=0.0,
-        trip_estimator=estimator,
-        survey_protocol=survey_protocol,
-        max_sites=max_sites,
-    )
-    frontier.attrs["allowed_modes"] = list(constrained.attrs.get("allowed_modes", []))
-    frontier.attrs["removed_edge_count"] = int(constrained.attrs.get("removed_edge_count", 0))
     return selected, audit, frontier
