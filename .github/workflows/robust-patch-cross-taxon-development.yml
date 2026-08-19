@@ -1,0 +1,127 @@
+name: Robust patch cross-taxon development
+
+on:
+  pull_request:
+    paths:
+      - acsp/robust_patches.py
+      - research/export_robust_candidate_patches.py
+      - research/evaluate_robust_candidate_tiers.py
+      - research/evaluate_robust_patches_on_comparator_exports.py
+      - .github/workflows/robust-patch-cross-taxon-development.yml
+  workflow_dispatch:
+
+concurrency:
+  group: robust-patch-development-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  historical-development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Prepare already-inspected non-Izu development subsets
+        run: |
+          mkdir -p robust-development/samples
+          python - <<'PY'
+          import pandas as pd
+          mixed = pd.read_csv('benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv')
+          plant = pd.read_csv('benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv')
+          mixed_ids = [1, 2, 3, 4, 5, 21, 22, 23]
+          plant_ids = [1, 2, 3, 4, 5, 6, 7, 8]
+          mixed = mixed[mixed['pair_id'].isin(mixed_ids)].copy()
+          plant = plant[plant['pair_id'].isin(plant_ids)].copy()
+          assert len(mixed) == 8 and len(plant) == 8
+          assert not mixed['region_name'].astype(str).str.contains('Izu', case=False).any()
+          assert not plant['region_name'].astype(str).str.contains('Izu', case=False).any()
+          mixed.to_csv('robust-development/samples/mixed.csv', index=False)
+          plant.to_csv('robust-development/samples/plants.csv', index=False)
+          print(mixed[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
+          print(plant[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
+          PY
+
+      - name: Rebuild historical spatial-holdout folds
+        run: |
+          python research/export_standard_baseline_folds.py \
+            --sample-file robust-development/samples/mixed.csv \
+            --protocol validation/standard_baseline_protocol.json \
+            --output robust-development/exports/mixed \
+            --pairs 8 \
+            --records-per-pair 150
+          python research/export_standard_baseline_folds.py \
+            --sample-file robust-development/samples/plants.csv \
+            --protocol validation/standard_baseline_protocol.json \
+            --output robust-development/exports/plants \
+            --pairs 8 \
+            --records-per-pair 150
+
+      - name: Evaluate generic robust support on held-out occurrences
+        run: |
+          python research/evaluate_robust_patches_on_comparator_exports.py \
+            --export-root robust-development/exports/mixed \
+            --tiers 0.025,0.05,0.10,0.20 \
+            --radii-km 1,2,5,10 \
+            --random-draws 100 \
+            --seed 20260819 \
+            --out robust-development/results/mixed
+          python research/evaluate_robust_patches_on_comparator_exports.py \
+            --export-root robust-development/exports/plants \
+            --tiers 0.025,0.05,0.10,0.20 \
+            --radii-km 1,2,5,10 \
+            --random-draws 100 \
+            --seed 20260820 \
+            --out robust-development/results/plants
+
+      - name: Aggregate development evidence without selecting a tier
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import pandas as pd
+          frames=[]
+          manifests={}
+          for cohort in ['mixed','plants']:
+              root=Path('robust-development/results')/cohort
+              table=pd.read_csv(root/'robust_patch_development_summary.csv')
+              table['cohort']=cohort
+              frames.append(table)
+              manifests[cohort]=json.loads((root/'robust_patch_development_manifest.json').read_text())
+          combined=pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+          combined.to_csv('robust-development/combined_summary.csv', index=False)
+          print(combined.to_string(index=False))
+          evaluated=sum(int(value['folds_evaluated']) for value in manifests.values())
+          if evaluated == 0:
+              raise SystemExit('No environmentally eligible historical folds were evaluated')
+          report={
+              'status':'historical_development_only',
+              'untouched_confirmation_opened':False,
+              'campanula_or_izu_used':False,
+              'auto_selected_support_tier':False,
+              'cohorts':manifests,
+              'total_folds_evaluated':evaluated,
+          }
+          Path('robust-development/combined_manifest.json').write_text(json.dumps(report, indent=2)+'\n')
+          print(json.dumps(report, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robust-patch-cross-taxon-development
+          path: robust-development
+          if-no-files-found: warn
+          retention-days: 90
