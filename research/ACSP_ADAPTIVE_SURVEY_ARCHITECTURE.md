@@ -25,19 +25,25 @@ training occurrences O
 [4] geometry-only set-level maximum coverage
         |
         v
-[5] operational budget translation
-    (days / route proxy / site effort)
+[5] physical movement constraints
+    (start/access nodes; walk/road/trail/ferry reachability)
         |
         v
-field survey site set
+[6] algorithm-inferred effort knee
+    (recommended stops / field days / total hours)
+        |
+        v
+field survey plan
 ```
 
-The important separation is now **scale**, not another environmental weight:
+The important separation is now **scale and constraint type**, not another environmental weight:
 
 - ecological occurrence evidence is retained at the regional decision scale where the parsimonious Practical Core survived simplification;
 - within a selected local survey domain, repeated attempts to use NDVI/microenvironment as a transferable fine-scale filter failed;
 - local site selection therefore falls back to the strongest surviving structure: non-overlapping set-level geographic coverage;
-- route, patch and time are downstream operational representations, not biological truth criteria.
+- roads, trails, walking links and ferries are physical reachability constraints, not biological predictors;
+- users do **not** need to predeclare a target number of field days for the automatic mode;
+- ACSP evaluates the reachable coverage-versus-effort frontier and recommends the diminishing-returns knee itself.
 
 Optional SDM/SSDM remains a separate evidence source in the production app and is not required for this non-model decision path.
 
@@ -113,27 +119,67 @@ full local land candidate grid
 exact sparse maximum-new-coverage order
         |
         v
-operational budget translator
+physical reachability graph
+        |
+        v
+automatic effort knee
 ```
 
 The geometry layer is deliberately ecology-free at this scale because the tested ecological micro-support modifiers did not transfer reliably.
 
-## 5. Operational field budget and output
+## 5. Physical movement constraints
 
-Candidate count is not itself a field budget. The 793-point / 1-km Campanula design showed that large buffered candidate sets can nearly saturate an island and make random selection appear strong.
+The operational input is not "I have N days". It is what a human field team can physically do.
 
-The operational layer should translate the fixed geometry sequence into quantities the field team actually controls:
+Allowed examples:
 
-- survey days;
-- site-search time;
-- access buffer time;
-- route-distance proxy;
-- number of survey stops;
-- ultimately real road/trail/ferry constraints when those data are available.
+- a real start/access node;
+- walking links;
+- roads that can actually be driven;
+- trails that can actually be walked;
+- ferry links with externally supplied travel times;
+- explicit unavailable/closed links.
 
-The active experiment is outcome-free: it keeps the geometry coverage order fixed and uses the existing production `estimate_default_short_trip` plus the production vascular-plant reconnaissance defaults to find the largest prefix fitting 1–5 days. Route estimates **do not reorder** the biological/coverage sequence. Five deterministic hub proxies test sensitivity to the arbitrary benchmark hub location.
+Missing directed links are unreachable. ACSP must never silently replace a missing road/trail/ferry leg with straight-line movement. Humans cannot fly across sea, cliffs, or disconnected terrain simply because two coordinates are close.
 
-Patch persistence remains an operational presentation option. It is not a required biological gate.
+Movement constraints do not change the ecological ranking. They remove impossible plans from the operational frontier.
+
+## 6. Algorithm-inferred survey effort
+
+Candidate count and field days are outputs in automatic mode, not user-set hyperparameters.
+
+For every reachable prefix of the fixed coverage sequence, ACSP records:
+
+- cumulative candidate-space coverage;
+- total travel + search hours;
+- implied field days under the taxon-appropriate daily protocol;
+- reachability failures.
+
+It then selects a deterministic diminishing-returns knee on the coverage-versus-effort frontier. The primary product becomes:
+
+```text
+recommended stops
+recommended field days
+recommended total field hours
+coverage achieved at that effort
+unreachable alternatives / limiting movement edges
+```
+
+A monetary currency budget is only emitted if real external price inputs exist. ACSP must not invent ferry fares, accommodation prices, vehicle costs or labor costs.
+
+The legacy explicit-day translator remains useful as a secondary "what fits if I only have N days?" scenario tool, but it is no longer the conceptual default.
+
+## 7. Role of Campanula microdonta
+
+The 2026 Campanula field detections are **development data**. They are not an untouched confirmation cohort.
+
+Their primary role is reverse engineering:
+
+> given where real field detections occurred, identify which candidate-universe, set-coverage, reachability and effort-selection principles would have produced a useful field plan without reading those detections at inference time.
+
+Campanula can therefore be used aggressively to diagnose failures and design the algorithm. Once a rule is chosen, generalization claims must come from genuinely untouched taxa/regions.
+
+Positive-only Campanula detections cannot estimate detection probability, absence, discoveries per day, or occupancy because complete attempted-site and effort logs are unavailable.
 
 ## Rejected / demoted components
 
@@ -153,7 +199,8 @@ Do not return these to the main line without a new predeclared rationale and gen
 - mandatory persistent-patch filtering;
 - NDVI-driven between-island allocation;
 - training-occurrence-count island allocation;
-- fixed geographic complementarity bonuses applied to every taxon.
+- fixed geographic complementarity bonuses applied to every taxon;
+- user-specified field days as the default automatic decision target.
 
 Negative results are retained as constraints on the method.
 
@@ -165,17 +212,19 @@ Negative results are retained as constraints on the method.
 - training-only domain/information adequacy;
 - strong same-budget controls;
 - exact sparse set-level maximum geographic coverage at fine scale;
-- survey budget as an external operational input;
+- physical movement as an explicit external constraint;
+- automatic effort selection from the reachable value-cost frontier;
 - leakage-safe nested and untouched validation;
-- route/patch/time as downstream operational outputs;
 - explicit fallback instead of forcing unsupported ecological detail.
 
 ## Development rule from this point
 
-1. Finish the outcome-free geometry-to-1–5-day operational robustness experiment.
-2. If operational translation is stable, freeze the **scale-separated procedure**: regional Practical Core role + local geometry coverage + field-budget translation.
-3. Add real access/road/trail/ferry information only as explicit operational constraints, never as inferred biological suitability.
-4. Claims about discoveries per day, detection probability or realized route efficiency require prospective attempted-site data including non-detections and effort.
-5. The frozen 192-pair Practical Core cohort remains separate and untouched.
+1. Use Campanula as reverse-engineering development evidence, not confirmation.
+2. Generate the fixed set-level coverage sequence without using field outcomes at inference time.
+3. Apply real movement reachability constraints; no straight-line fallback across disconnected terrain or water.
+4. Infer the recommended stop count and field effort from the coverage-versus-effort knee rather than asking the user for a day budget.
+5. Freeze that decision rule before genuinely untouched cross-taxon confirmation.
+6. Claims about discoveries per day, detection probability or realized route efficiency still require prospective attempted-site data including non-detections and effort.
+7. The frozen 192-pair Practical Core cohort remains separate and untouched.
 
 The next scientific gain should come from a better definition of the survey decision problem or prospective field outcomes—not another search over fine-scale NDVI weights.
