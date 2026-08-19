@@ -1,3 +1,4 @@
+import math
 import unittest
 
 import pandas as pd
@@ -12,54 +13,71 @@ from acsp.field_validation import (
 
 class FieldValidationTests(unittest.TestCase):
     def test_forward_fills_islands_and_clusters_duplicate_points(self):
-        locations = pd.DataFrame(
-            {
-                "island": ["oshima", None, "toshima", None],
-                "latitude": [34.70, 34.7001, 34.53, 34.53],
-                "longitude": [139.40, 139.4001, 139.28, 139.28],
-            }
-        )
+        locations = pd.DataFrame({
+            "island": ["oshima", None, "toshima", None],
+            "latitude": [34.70, 34.7001, 34.53, 34.53],
+            "longitude": [139.40, 139.4001, 139.28, 139.28],
+        })
         rows, clusters = cluster_field_detections(locations, cluster_radius_m=100)
         self.assertEqual(rows["island"].tolist(), ["oshima", "oshima", "toshima", "toshima"])
         self.assertEqual(len(clusters), 2)
         self.assertEqual(sorted(clusters["n_source_points"].tolist()), [2, 2])
 
     def test_recovery_is_computed_at_multiple_radii(self):
-        candidates = pd.DataFrame(
-            {"site_id": [1], "survey_area_id": ["a"], "latitude": [35.0], "longitude": [139.0]}
-        )
-        detections = pd.DataFrame(
-            {"detection_cluster_id": [1], "island": ["a"], "latitude": [35.004], "longitude": [139.0]}
-        )
+        candidates = pd.DataFrame({"site_id": [1], "survey_area_id": ["a"], "latitude": [35.0], "longitude": [139.0]})
+        detections = pd.DataFrame({"detection_cluster_id": [1], "island": ["a"], "latitude": [35.004], "longitude": [139.0]})
         recovery = detection_recovery_table(candidates, detections, radii_km=(0.2, 1.0))
         self.assertFalse(bool(recovery.loc[0, "recovered_0.2km"]))
         self.assertTrue(bool(recovery.loc[0, "recovered_1km"]))
         summary = recovery_summary(recovery, radii_km=(0.2, 1.0))
         self.assertEqual(summary["n_recovered"].tolist(), [0, 1])
 
+    def test_cross_area_candidate_cannot_recover_detection(self):
+        candidates = pd.DataFrame({
+            "site_id": ["wrong-near", "right-far"],
+            "survey_area_id": ["b", "a"],
+            "latitude": [35.0001, 35.02],
+            "longitude": [139.0, 139.0],
+        })
+        detections = pd.DataFrame({
+            "detection_cluster_id": [1], "island": ["a"],
+            "latitude": [35.0], "longitude": [139.0],
+        })
+        recovery = detection_recovery_table(candidates, detections, radii_km=(1.0, 5.0))
+        self.assertEqual(recovery.loc[0, "nearest_candidate_id"], "right-far")
+        self.assertEqual(recovery.loc[0, "nearest_candidate_area"], "a")
+        self.assertFalse(bool(recovery.loc[0, "recovered_1km"]))
+        self.assertTrue(bool(recovery.loc[0, "recovered_5km"]))
+
+    def test_multi_area_recovery_requires_detection_area(self):
+        candidates = pd.DataFrame({
+            "site_id": [1, 2], "survey_area_id": ["a", "b"],
+            "latitude": [35.0, 34.0], "longitude": [139.0, 138.0],
+        })
+        detections = pd.DataFrame({"detection_cluster_id": [1], "latitude": [35.0], "longitude": [139.0]})
+        with self.assertRaisesRegex(ValueError, "requires detection area column"):
+            detection_recovery_table(candidates, detections)
+
+    def test_area_without_selected_candidate_is_explicit_failure(self):
+        candidates = pd.DataFrame({"site_id": [1], "survey_area_id": ["a"], "latitude": [35.0], "longitude": [139.0]})
+        detections = pd.DataFrame({"detection_cluster_id": [1], "island": ["b"], "latitude": [34.0], "longitude": [138.0]})
+        recovery = detection_recovery_table(candidates, detections, radii_km=(10.0,))
+        self.assertFalse(bool(recovery.loc[0, "recovered_10km"]))
+        self.assertTrue(math.isinf(float(recovery.loc[0, "nearest_candidate_distance_km"])))
+
     def test_random_benchmark_keeps_area_quotas(self):
-        pool = pd.DataFrame(
-            {
-                "site_id": [1, 2, 3, 4],
-                "survey_area_id": ["a", "a", "b", "b"],
-                "latitude": [35.0, 35.5, 34.0, 34.5],
-                "longitude": [139.0, 139.5, 138.0, 138.5],
-            }
-        )
-        detections = pd.DataFrame(
-            {
-                "detection_cluster_id": [1, 2],
-                "latitude": [35.0, 34.0],
-                "longitude": [139.0, 138.0],
-            }
-        )
+        pool = pd.DataFrame({
+            "site_id": [1, 2, 3, 4],
+            "survey_area_id": ["a", "a", "b", "b"],
+            "latitude": [35.0, 35.5, 34.0, 34.5],
+            "longitude": [139.0, 139.5, 138.0, 138.5],
+        })
+        detections = pd.DataFrame({
+            "detection_cluster_id": [1, 2], "island": ["a", "b"],
+            "latitude": [35.0, 34.0], "longitude": [139.0, 138.0],
+        })
         benchmark, draws = stratified_random_recovery_benchmark(
-            pool,
-            [1, 3],
-            detections,
-            radii_km=(1.0,),
-            iterations=50,
-            seed=7,
+            pool, [1, 3], detections, radii_km=(1.0,), iterations=50, seed=7,
         )
         self.assertEqual(len(draws), 50)
         self.assertEqual(float(benchmark.loc[0, "acsp_detection_recall"]), 1.0)
