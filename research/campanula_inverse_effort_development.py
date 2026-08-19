@@ -50,8 +50,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def plant_protocol() -> dict[str, object]:
-    # Development default inherited from the existing reconnaissance protocol.
-    # These are algorithm defaults, not user-set target days or target budget.
     return {
         "daily_field_hours": 8.0,
         "search_minutes_per_cell": 30,
@@ -78,7 +76,6 @@ def prefix_recovery_curve(
             candidate_id_col="site_id",
             area_col="survey_area_id",
             detection_area_col="island",
-            require_same_area=True,
         )
         summary = recovery_summary(recovery, radii_km=(float(radius_km),)).iloc[0]
         rows.append(
@@ -101,7 +98,6 @@ def main() -> None:
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
 
-    # Outcome-free stage: construct the full geometry order before reading field labels.
     pool = pd.read_csv(args.candidate_pool, dtype={"site_id": "string"})
     if pool.empty:
         raise ValueError("candidate pool is empty")
@@ -116,7 +112,6 @@ def main() -> None:
     ordered["site_id"] = ordered["site_id"].astype(str)
     ordered.to_csv(output / "outcome_free_geometry_order.csv", index=False)
 
-    # Development-label stage: field clusters are read only after the order is fixed.
     detections = pd.read_csv(args.detections)
     curve = prefix_recovery_curve(
         ordered,
@@ -172,7 +167,6 @@ def main() -> None:
             candidate_id_col="site_id",
             area_col="survey_area_id",
             detection_area_col="island",
-            require_same_area=True,
         )
         auto_summary = recovery_summary(recovery, radii_km=(float(args.recovery_radius_km),)).iloc[0]
         summary["auto_effort"] = effort_audit.as_dict()
