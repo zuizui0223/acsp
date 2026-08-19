@@ -58,6 +58,7 @@ jobs:
           research/aggregate_sdm_topk_benchmark.py
           research/audit_random_validation_stability.py
           research/campanula_robust_support_patch_export.py
+          research/export_robust_candidate_patches.py
           research/execute_sdm_topk_pair.py
           research/export_standard_baseline_folds.py
           research/predeclare_sdm_topk_cohort.py
