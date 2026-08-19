@@ -52,13 +52,11 @@ jobs:
           acsp/field_validation.py
           acsp/movement_constraints.py
           acsp/movement_graph.py
-          acsp/operational_budget.py
           acsp/planning.py
           acsp/modeling.py
           acsp/practical_core.py
           acsp/sdm.py
           acsp/travel_matrix.py
-          acsp/trip_proxy.py
           acsp/validated_core.py
           acsp_discover.py
           research/aggregate_sdm_topk_benchmark.py
