@@ -1,10 +1,6 @@
 """Reusable ACSP survey-planning methods."""
 
-from .auto_budget import (
-    AutoEffortAudit,
-    infer_recommended_effort,
-    infer_recommended_effort_from_matrix,
-)
+from .auto_budget import AutoEffortAudit, infer_recommended_effort
 from .auto_plan import AutoPlanAudit, plan_auto_effort
 from .automatic_sdm import (
     AUTO_SDM_VARIABLES,
@@ -49,7 +45,6 @@ from .field_validation import (
 )
 from .movement_constraints import apply_movement_constraints, normalize_mode
 from .movement_graph import dijkstra_minutes, estimate_hub_roundtrip_effort, hub_roundtrip_table
-from .operational_budget import OperationalBudgetAudit, select_largest_feasible_prefix
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
     aggregate_candidates_to_zones,
@@ -70,8 +65,7 @@ from .practical_core import (
     select_practical_core,
 )
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
-from .travel_matrix import estimate_matrix_trip, normalize_travel_time_matrix, read_travel_time_matrix
-from .trip_proxy import estimate_operational_trip
+from .travel_matrix import normalize_travel_time_matrix, read_travel_time_matrix
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
     calibrate_candidate_weights,
@@ -95,7 +89,6 @@ __all__ = [
     "CoverageSelectionAudit",
     "DecisionBaselineConfig",
     "ENVIRONMENTAL_METHODS",
-    "OperationalBudgetAudit",
     "PRACTICAL_CORE_FINGERPRINT",
     "PRACTICAL_CORE_PROTOCOL_ID",
     "PracticalCorePolicy",
@@ -113,13 +106,10 @@ __all__ = [
     "derive_power_bioclim",
     "dijkstra_minutes",
     "estimate_hub_roundtrip_effort",
-    "estimate_matrix_trip",
-    "estimate_operational_trip",
     "evaluate_candidate_fold",
     "fit_automatic_sdm_core",
     "hub_roundtrip_table",
     "infer_recommended_effort",
-    "infer_recommended_effort_from_matrix",
     "interpolate_power_bioclim",
     "iter_comparator_folds",
     "make_classifier",
@@ -144,7 +134,6 @@ __all__ = [
     "select_environmental_farthest",
     "select_geographic_farthest",
     "select_heldout_greedy_oracle",
-    "select_largest_feasible_prefix",
     "select_maximum_coverage_sites",
     "select_practical_core",
     "select_score_top_k",
