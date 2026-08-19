@@ -4,33 +4,94 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
 jobs:
   inverse-development:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install ACSP
-        run: python -m pip install -e .
-      - name: Run inverse development analysis
+
+      - name: Install ACSP and development dependencies
         run: |
-          python research/campanula_inverse_effort_development.py \
-            --output-dir campanula_inverse_effort_development
-          cat campanula_inverse_effort_development/summary.json
-      - name: Verify development guardrails
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install rasterio pyproj scipy awscli
+
+      - name: Download frozen Campanula development cache and GSI DEM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-development-data
+          path: campanula-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31856717236
+
+      - name: Download pinned ESA WorldCover NDVI composite
+        run: |
+          set -euo pipefail
+          mkdir -p public-layers
+          NDVI_KEY="ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif"
+          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" public-layers/ndvi.tif --no-sign-request
+          sha256sum public-layers/ndvi.tif | tee public-layers/ndvi_sha256.txt
+          grep -q '^641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638 ' public-layers/ndvi_sha256.txt
+
+      - name: Rebuild outcome-blind full-island universe
+        run: |
+          python research/campanula_microterrain_discovery.py \
+            --gbif campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --out microterrain-results
+
+      - name: Learn Campanula inverse patch utility
+        run: |
+          python research/campanula_inverse_patch_learning.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --out campanula-inverse-development
+          cat campanula-inverse-development/inverse_patch_learning_report.json
+
+      - name: Verify inverse-development guardrails
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          result=json.loads(Path('campanula_inverse_effort_development/summary.json').read_text())
-          assert result['status']=='development_only_not_independent_validation'
-          assert result['field_labels_used_for_candidate_order'] is False
-          assert result['field_labels_used_after_order_for_inverse_diagnosis'] is True
-          assert result['field_detection_clusters']==19
+          report=json.loads(Path('campanula-inverse-development/inverse_patch_learning_report.json').read_text())
+          assert report['status']=='development_only_inverse_patch_learning'
+          assert report['field_coordinates_used_to_construct_features'] is False
+          assert report['field_outcomes_used_to_define_oracle_labels'] is True
+          assert report['oracle_patch_count'] <= 12
+          assert report['patch_count'] >= report['oracle_patch_count']
+          print(json.dumps({
+              'oracle_patch_count': report['oracle_patch_count'],
+              'crossfit_result': report['crossfit_result'],
+              'full_fit_result': report['full_fit_result'],
+              'coefficients': report['full_fit_coefficients'],
+          }, indent=2))
           PY
+
       - uses: actions/upload-artifact@v4
         with:
           name: campanula-inverse-development
-          path: campanula_inverse_effort_development/
+          path: |
+            public-layers/ndvi_sha256.txt
+            microterrain-results/microterrain_report.json
+            campanula-inverse-development/
+          if-no-files-found: error
+          retention-days: 90
