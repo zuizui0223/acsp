@@ -25,7 +25,7 @@ training occurrences O
 [4] geometry-only set-level maximum coverage
         |
         v
-[5] physical movement constraints
+[5] physical movement constraints only
     (start/access nodes; walk/road/trail/ferry reachability)
         |
         v
@@ -42,7 +42,8 @@ The important separation is now **scale and constraint type**, not another envir
 - within a selected local survey domain, repeated attempts to use NDVI/microenvironment as a transferable fine-scale filter failed;
 - local site selection therefore falls back to the strongest surviving structure: non-overlapping set-level geographic coverage;
 - roads, trails, walking links and ferries are physical reachability constraints, not biological predictors;
-- users do **not** need to predeclare a target number of field days for the automatic mode;
+- users do **not** predeclare a target number of field days or a target monetary budget in automatic mode;
+- the only required operational inputs are facts needed to define physical reachability (for example start/access node and which real movement links exist);
 - ACSP evaluates the reachable coverage-versus-effort frontier and recommends the diminishing-returns knee itself.
 
 Optional SDM/SSDM remains a separate evidence source in the production app and is not required for this non-model decision path.
@@ -200,7 +201,7 @@ Do not return these to the main line without a new predeclared rationale and gen
 - NDVI-driven between-island allocation;
 - training-occurrence-count island allocation;
 - fixed geographic complementarity bonuses applied to every taxon;
-- user-specified field days as the default automatic decision target.
+- user-specified field days or money as the default automatic decision target.
 
 Negative results are retained as constraints on the method.
 
@@ -222,7 +223,7 @@ Negative results are retained as constraints on the method.
 1. Use Campanula as reverse-engineering development evidence, not confirmation.
 2. Generate the fixed set-level coverage sequence without using field outcomes at inference time.
 3. Apply real movement reachability constraints; no straight-line fallback across disconnected terrain or water.
-4. Infer the recommended stop count and field effort from the coverage-versus-effort knee rather than asking the user for a day budget.
+4. Infer the recommended stop count and field effort from the coverage-versus-effort knee rather than asking the user for a day or money budget.
 5. Freeze that decision rule before genuinely untouched cross-taxon confirmation.
 6. Claims about discoveries per day, detection probability or realized route efficiency still require prospective attempted-site data including non-detections and effort.
 7. The frozen 192-pair Practical Core cohort remains separate and untouched.
