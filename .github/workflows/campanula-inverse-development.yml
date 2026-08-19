@@ -23,9 +23,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          # The archived freeze was generated under Python 3.12.  Keep the
-          # reproduction runner on the same interpreter line because a handful
-          # of cells sit exactly at the frozen consensus-support boundary.
           python-version: "3.12"
 
       - name: Install ACSP and development dependencies
@@ -72,7 +69,7 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
-      - name: Reproduce frozen robust support and export bounded patches
+      - name: Reproduce frozen robust support through generic core
         run: |
           python research/campanula_robust_support_patch_export.py \
             --microterrain-universe microterrain-results/microterrain_universe.csv \
@@ -82,26 +79,28 @@ jobs:
             --out campanula-robust-support
           cat campanula-robust-support/robust_support_patch_report.json
 
-      - name: Verify frozen ecological contract
+      - name: Verify generic-core freeze regression
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           report=json.loads(Path('campanula-robust-support/robust_support_patch_report.json').read_text())
           assert report['status']=='frozen_robust_support_patch_export'
+          assert report['generic_core']=='acsp.robust_patches.leave_one_out_consensus_support'
           assert report['field_coordinates_used_to_build_consensus_support'] is False
           assert report['field_coordinates_used_to_choose_threshold'] is False
           assert report['field_coordinates_used_to_define_patches'] is False
           assert report['freeze_reproduction']['pass'] is True
           assert report['selected_cells'] == report['expected_frozen_cells'] == 2367
           assert report['field_development_verification']['recovered'] == 19
-          assert report['operational_contract']['straight_line_movement_fallback'] is False
+          assert report['candidate_output_contract']['output_stops_at_candidate_patches'] is True
+          assert report['candidate_output_contract']['route_or_effort_optimization'] is False
           print(json.dumps({
               'selected_cells': report['selected_cells'],
               'patch_count': report['patch_count'],
               'island_patch_counts': report['island_patch_counts'],
               'field_verification': report['field_development_verification'],
-              'next_layer': report['operational_contract']['next_layer'],
+              'generic_core': report['generic_core'],
           }, indent=2))
           PY
 
