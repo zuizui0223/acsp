@@ -1,5 +1,6 @@
 """Reusable ACSP survey-planning methods."""
 
+from .auto_budget import AutoEffortAudit, infer_recommended_effort
 from .automatic_sdm import (
     AUTO_SDM_VARIABLES,
     AutomaticSdmCoreConfig,
@@ -87,6 +88,7 @@ from .validation import (
 __all__ = [
     "ALL_METHODS",
     "AUTO_SDM_VARIABLES",
+    "AutoEffortAudit",
     "AutomaticSdmCoreConfig",
     "CLAIM_MATRIX",
     "ComparatorFold",
@@ -112,6 +114,7 @@ __all__ = [
     "estimate_operational_trip",
     "evaluate_candidate_fold",
     "fit_automatic_sdm_core",
+    "infer_recommended_effort",
     "interpolate_power_bioclim",
     "iter_comparator_folds",
     "make_classifier",
