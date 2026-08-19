@@ -81,6 +81,16 @@ jobs:
             --out campanula-component-knee
           cat campanula-component-knee/component_knee_report.json
 
+      - name: Test support-envelope set coverage
+        run: |
+          python research/campanula_support_envelope_set_policy.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --out campanula-support-envelope
+          cat campanula-support-envelope/support_envelope_report.json
+
       - name: Verify development guardrails
         run: |
           python - <<'PY'
@@ -88,6 +98,7 @@ jobs:
           from pathlib import Path
           inverse=json.loads(Path('campanula-inverse-development/inverse_patch_learning_report.json').read_text())
           knee=json.loads(Path('campanula-component-knee/component_knee_report.json').read_text())
+          envelope=json.loads(Path('campanula-support-envelope/support_envelope_report.json').read_text())
           assert inverse['status']=='development_only_inverse_patch_learning'
           assert inverse['field_coordinates_used_to_construct_features'] is False
           assert inverse['field_outcomes_used_to_define_oracle_labels'] is True
@@ -97,6 +108,11 @@ jobs:
           assert inverse['oracle_necessary_patch_count'] <= inverse['oracle_minimum_patch_count']
           assert knee['status']=='development_only_component_environmental_knee'
           assert knee['field_coordinates_used_to_select_patches'] is False
+          assert envelope['status']=='development_only_support_envelope_set_policy'
+          assert envelope['field_coordinates_used_to_build_envelope'] is False
+          assert envelope['field_coordinates_used_to_order_patches'] is False
+          assert envelope['field_coordinates_used_to_choose_stopping_point'] is False
+          assert envelope['support_envelope_components'] == 5
           print(json.dumps({
               'oracle_minimum_patch_count': inverse['oracle_minimum_patch_count'],
               'oracle_compatible_patch_count': inverse['oracle_compatible_patch_count'],
@@ -105,6 +121,10 @@ jobs:
               'component_knee_selected_patches': knee['selected_patches'],
               'component_knee_field_recovery': knee['field_development_result']['recovered'],
               'component_knee_field_total': knee['field_development_result']['total'],
+              'support_envelope_selected_patches': envelope['selected_patches'],
+              'support_envelope_mass': envelope['selected_envelope_mass'],
+              'support_envelope_field_recovery': envelope['field_development_result']['recovered'],
+              'support_envelope_first_complete_prefix': envelope['first_complete_recovery_prefix'],
           }, indent=2))
           PY
 
@@ -116,5 +136,6 @@ jobs:
             microterrain-results/microterrain_report.json
             campanula-inverse-development/
             campanula-component-knee/
+            campanula-support-envelope/
           if-no-files-found: error
           retention-days: 90
