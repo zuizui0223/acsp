@@ -5,6 +5,7 @@ from .auto_budget import (
     infer_recommended_effort,
     infer_recommended_effort_from_matrix,
 )
+from .auto_plan import AutoPlanAudit, plan_auto_effort
 from .automatic_sdm import (
     AUTO_SDM_VARIABLES,
     AutomaticSdmCoreConfig,
@@ -25,11 +26,7 @@ from .comparator_benchmark import (
     pair_level_intention_to_evaluate,
     select_heldout_greedy_oracle,
 )
-from .comparator_export import (
-    ComparatorFold,
-    iter_comparator_folds,
-    write_comparator_pair_export,
-)
+from .comparator_export import ComparatorFold, iter_comparator_folds, write_comparator_pair_export
 from .coverage import CoverageSelectionAudit, select_maximum_coverage_sites
 from .decision_baselines import (
     DecisionBaselineConfig,
@@ -51,6 +48,7 @@ from .field_validation import (
     stratified_random_recovery_benchmark,
 )
 from .movement_constraints import apply_movement_constraints, normalize_mode
+from .movement_graph import dijkstra_minutes, estimate_hub_roundtrip_effort, hub_roundtrip_table
 from .operational_budget import OperationalBudgetAudit, select_largest_feasible_prefix
 from .planning import (
     DEFAULT_INTEGRATED_WEIGHTS,
@@ -72,11 +70,7 @@ from .practical_core import (
     select_practical_core,
 )
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
-from .travel_matrix import (
-    estimate_matrix_trip,
-    normalize_travel_time_matrix,
-    read_travel_time_matrix,
-)
+from .travel_matrix import estimate_matrix_trip, normalize_travel_time_matrix, read_travel_time_matrix
 from .trip_proxy import estimate_operational_trip
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
@@ -94,6 +88,7 @@ __all__ = [
     "ALL_METHODS",
     "AUTO_SDM_VARIABLES",
     "AutoEffortAudit",
+    "AutoPlanAudit",
     "AutomaticSdmCoreConfig",
     "CLAIM_MATRIX",
     "ComparatorFold",
@@ -116,10 +111,13 @@ __all__ = [
     "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM",
     "derive_power_bioclim",
+    "dijkstra_minutes",
+    "estimate_hub_roundtrip_effort",
     "estimate_matrix_trip",
     "estimate_operational_trip",
     "evaluate_candidate_fold",
     "fit_automatic_sdm_core",
+    "hub_roundtrip_table",
     "infer_recommended_effort",
     "infer_recommended_effort_from_matrix",
     "interpolate_power_bioclim",
@@ -134,6 +132,7 @@ __all__ = [
     "normalize_mode",
     "normalize_travel_time_matrix",
     "pair_level_intention_to_evaluate",
+    "plan_auto_effort",
     "random_same_pool_sets",
     "read_travel_time_matrix",
     "recommend_candidates",
