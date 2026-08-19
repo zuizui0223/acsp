@@ -71,26 +71,40 @@ jobs:
             --out campanula-inverse-development
           cat campanula-inverse-development/inverse_patch_learning_report.json
 
-      - name: Verify inverse-development guardrails
+      - name: Test component-wise environmental stopping
+        run: |
+          python research/campanula_component_knee_policy.py \
+            --microterrain-universe microterrain-results/microterrain_universe.csv \
+            --gbif-prototypes microterrain-results/gbif_microterrain_prototypes.csv \
+            --ndvi public-layers/ndvi.tif \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --out campanula-component-knee
+          cat campanula-component-knee/component_knee_report.json
+
+      - name: Verify development guardrails
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          report=json.loads(Path('campanula-inverse-development/inverse_patch_learning_report.json').read_text())
-          assert report['status']=='development_only_inverse_patch_learning'
-          assert report['field_coordinates_used_to_construct_features'] is False
-          assert report['field_outcomes_used_to_define_oracle_labels'] is True
-          assert report['oracle_label_definition']=='membership in any minimum-size patch cover'
-          assert report['oracle_minimum_patch_count'] <= 12
-          assert report['patch_count'] >= report['oracle_compatible_patch_count'] >= report['oracle_minimum_patch_count']
-          assert report['oracle_necessary_patch_count'] <= report['oracle_minimum_patch_count']
+          inverse=json.loads(Path('campanula-inverse-development/inverse_patch_learning_report.json').read_text())
+          knee=json.loads(Path('campanula-component-knee/component_knee_report.json').read_text())
+          assert inverse['status']=='development_only_inverse_patch_learning'
+          assert inverse['field_coordinates_used_to_construct_features'] is False
+          assert inverse['field_outcomes_used_to_define_oracle_labels'] is True
+          assert inverse['oracle_label_definition']=='membership in any minimum-size patch cover'
+          assert inverse['oracle_minimum_patch_count'] <= 12
+          assert inverse['patch_count'] >= inverse['oracle_compatible_patch_count'] >= inverse['oracle_minimum_patch_count']
+          assert inverse['oracle_necessary_patch_count'] <= inverse['oracle_minimum_patch_count']
+          assert knee['status']=='development_only_component_environmental_knee'
+          assert knee['field_coordinates_used_to_select_patches'] is False
           print(json.dumps({
-              'oracle_minimum_patch_count': report['oracle_minimum_patch_count'],
-              'oracle_compatible_patch_count': report['oracle_compatible_patch_count'],
-              'oracle_necessary_patch_count': report['oracle_necessary_patch_count'],
-              'crossfit_result': report['crossfit_result'],
-              'full_fit_result': report['full_fit_result'],
-              'coefficients': report['full_fit_coefficients'],
+              'oracle_minimum_patch_count': inverse['oracle_minimum_patch_count'],
+              'oracle_compatible_patch_count': inverse['oracle_compatible_patch_count'],
+              'inverse_crossfit_patches': inverse['crossfit_result']['n_patches'],
+              'inverse_fullfit_patches': inverse['full_fit_result']['n_patches'],
+              'component_knee_selected_patches': knee['selected_patches'],
+              'component_knee_field_recovery': knee['field_development_result']['recovered'],
+              'component_knee_field_total': knee['field_development_result']['total'],
           }, indent=2))
           PY
 
@@ -101,5 +115,6 @@ jobs:
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
             campanula-inverse-development/
+            campanula-component-knee/
           if-no-files-found: error
           retention-days: 90
