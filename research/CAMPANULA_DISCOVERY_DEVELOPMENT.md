@@ -22,6 +22,8 @@ The frozen primary 1-km support rule is:
 
 - support threshold: `0.09945575892925262`;
 - archived numerical semantics: each leave-one-prototype-out support-rank vector is cast to `float32` before the consensus median; threshold inclusion is `rank <= threshold + 1e-12`;
+- reproduction runtime: **Python 3.12**, matching the original freeze workflow run `31892691452`; Python 3.11 reproduced the biological 19/19 endpoint but moved five threshold-boundary cells (`2367 -> 2362`), so the interpreter line is part of the numerical reproduction contract;
+- frozen development artifact: workflow run `31856717236`, artifact digest `sha256:d05de653400abc76537aeeb3554506fbf8fd0e197f381401cb3a03e69b058ce8`;
 - expected canonical cells: **2,367**;
 - archived Campanula development recovery: **19/19**;
 - archived maximum nearest distance: **0.8687897057613438 km**.
@@ -51,6 +53,8 @@ recommended patches + hours + days
 ```
 
 Missing movement edges remain missing. ACSP must not invent straight-line sea, cliff, road, trail, ferry, or flight links. Movement is an operational constraint and never becomes biological suitability.
+
+The current exact reproduction exports **2,367 eligible cells as 134 bounded patches**: Oshima 96, Niijima 20, Kozushima 13, Toshima 4, and Shikinejima 1. These 134 patches are the ecological candidate universe, **not** a user target or survey budget. Operational reachability and the automatic effort knee determine which subset is recommended for an actual trip.
 
 ## Why finite patch compression is not the active ecological target
 
@@ -83,8 +87,9 @@ The Campanula ecological-to-operational bridge is:
 
 - `research/campanula_robust_support_patch_export.py`
 - `.github/workflows/campanula-inverse-development.yml` (workflow display name: `Campanula robust support export`)
+- `acsp.auto_plan.plan_auto_effort()` for the separate explicit-movement operational layer.
 
-The exporter must first reproduce the archived 2,367-cell / 19-of-19 contract exactly. Only then may its bounded support patches be passed to the reachability-first operational planner.
+The exporter must first reproduce the archived 2,367-cell / 19-of-19 contract exactly. Only then may its bounded support patches be passed to the reachability-first operational planner. The exported schema already carries the required operational keys (`site_id`, `latitude`, `longitude`, `survey_area_id`) while retaining ecological provenance fields.
 
 ## Guardrails
 
