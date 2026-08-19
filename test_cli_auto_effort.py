@@ -9,7 +9,7 @@ from acsp.cli import main
 
 
 class AutoEffortCliTests(unittest.TestCase):
-    def test_auto_effort_requires_movement_not_day_budget(self):
+    def test_auto_effort_requires_movement_not_day_or_site_budget(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             candidates = pd.DataFrame({
@@ -42,13 +42,15 @@ class AutoEffortCliTests(unittest.TestCase):
                 "--hub-id", "hub",
                 "--allowed-mode", "walk",
                 "--taxon-profile", "plant",
-                "--max-sites", "3",
             ])
             self.assertEqual(code, 0)
             summary = json.loads(summary_path.read_text())
             self.assertFalse(summary["target_days_user_supplied"])
+            self.assertFalse(summary["target_site_count_user_supplied"])
+            self.assertFalse(summary["survey_budget_user_supplied"])
             self.assertFalse(summary["straight_line_fallback"])
             self.assertEqual(summary["allowed_modes"], ["walk"])
+            self.assertEqual(summary["geometry_order_count"], 3)
             self.assertGreaterEqual(summary["automatic_effort"]["recommended_days"], 1)
             self.assertTrue(output_path.is_file())
             self.assertTrue(frontier_path.is_file())
