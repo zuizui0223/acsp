@@ -146,6 +146,39 @@ def _training_prototypes(training: pd.DataFrame) -> pd.DataFrame:
     return enriched
 
 
+def _zero_rows(
+    fold_dir: Path,
+    *,
+    tiers: tuple[float, ...],
+    radii_km: tuple[float, ...],
+    heldout_count: int,
+    failure_reason: str,
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for tier in tiers:
+        for radius in radii_km:
+            rows.append(
+                {
+                    "fold": str(fold_dir),
+                    "support_fraction": float(tier),
+                    "radius_km": float(radius),
+                    "surface_points": 0,
+                    "surface_seed": np.nan,
+                    "prototype_count": 0,
+                    "selected_cells": 0,
+                    "patch_count": 0,
+                    "heldout_count": int(heldout_count),
+                    "recall": 0.0,
+                    "random_mean_recall": 0.0,
+                    "lift_over_random": 0.0,
+                    "median_nearest_km": np.nan,
+                    "max_nearest_km": np.nan,
+                    "failure_reason": str(failure_reason),
+                }
+            )
+    return rows
+
+
 def _evaluate_fold(
     fold_dir: Path,
     *,
@@ -188,9 +221,6 @@ def _evaluate_fold(
             area_col="survey_area_id",
         )
         if selected.empty:
-            # Empty support tiers are a valid outcome, not a reason to drop the
-            # fold. Count them explicitly as zero-recovery / zero-random rows so
-            # narrow tiers cannot look better by silently excluding failures.
             for radius in radii_km:
                 rows.append(
                     {
@@ -206,8 +236,9 @@ def _evaluate_fold(
                         "recall": 0.0,
                         "random_mean_recall": 0.0,
                         "lift_over_random": 0.0,
-                        "median_nearest_km": float("nan"),
-                        "max_nearest_km": float("nan"),
+                        "median_nearest_km": np.nan,
+                        "max_nearest_km": np.nan,
+                        "failure_reason": "empty_support_tier",
                     }
                 )
             continue
@@ -257,6 +288,7 @@ def _evaluate_fold(
                     "lift_over_random": float(record.detection_recall) - random_mean,
                     "median_nearest_km": float(record.median_nearest_candidate_km),
                     "max_nearest_km": float(record.max_nearest_candidate_km),
+                    "failure_reason": "",
                 }
             )
     return rows
@@ -290,9 +322,36 @@ def main() -> None:
             if result:
                 rows.extend(result)
             else:
-                skipped.append({"fold": str(fold_dir), "reason": "no evaluable rows"})
+                reason = "no_evaluable_rows"
+                skipped.append({"fold": str(fold_dir), "reason": reason})
+                heldout_path = fold_dir / "held_out_occurrences.csv"
+                heldout_count = len(pd.read_csv(heldout_path)) if heldout_path.exists() else 0
+                rows.extend(
+                    _zero_rows(
+                        fold_dir,
+                        tiers=args.tiers,
+                        radii_km=args.radii_km,
+                        heldout_count=heldout_count,
+                        failure_reason=reason,
+                    )
+                )
         except Exception as exc:
-            skipped.append({"fold": str(fold_dir), "reason": f"{type(exc).__name__}: {exc}"})
+            reason = f"{type(exc).__name__}: {exc}"
+            skipped.append({"fold": str(fold_dir), "reason": reason})
+            heldout_path = fold_dir / "held_out_occurrences.csv"
+            try:
+                heldout_count = len(pd.read_csv(heldout_path)) if heldout_path.exists() else 0
+            except Exception:
+                heldout_count = 0
+            rows.extend(
+                _zero_rows(
+                    fold_dir,
+                    tiers=args.tiers,
+                    radii_km=args.radii_km,
+                    heldout_count=heldout_count,
+                    failure_reason=reason,
+                )
+            )
 
     results = pd.DataFrame(rows)
     args.out.mkdir(parents=True, exist_ok=True)
@@ -319,10 +378,11 @@ def main() -> None:
         "universe_rule": "one deterministic land surface per predeclared region, shared across folds; WorldClim 2.5m terrain extracted independently of held-out outcomes",
         "prototype_rule": "training occurrences deterministically spatially thinned to at most 32 prototypes; terrain extracted directly at retained training coordinates",
         "empty_tier_rule": "count as zero-recovery and zero-random, never drop the fold",
+        "failed_fold_rule": "count as zero-recovery and zero-random for every tier/radius; retain failure reason in audit",
         "terrain_features": list(ROBUST_FEATURES),
         "folds_discovered": int(len(fold_dirs)),
         "folds_evaluated": int(results["fold"].nunique()) if not results.empty else 0,
-        "folds_skipped": int(len(skipped)),
+        "folds_failed_but_retained": int(len(skipped)),
         "surface_points_requested": int(args.surface_points),
         "max_prototypes": MAX_PROTOTYPES,
         "tiers": list(args.tiers),
@@ -332,8 +392,8 @@ def main() -> None:
     (args.out / "dense_robust_patch_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(summary.to_string(index=False) if not summary.empty else "no evaluable folds")
     print(json.dumps(manifest, indent=2))
-    if not results.empty and results["fold"].nunique() < max(1, int(len(fold_dirs) * 0.75)):
-        raise RuntimeError("dense-surface evaluator covered fewer than 75% of discovered folds")
+    if not results.empty and results["fold"].nunique() != len(fold_dirs):
+        raise RuntimeError("intention-to-evaluate accounting lost one or more declared folds")
 
 
 if __name__ == "__main__":
