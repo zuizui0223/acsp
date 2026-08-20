@@ -161,9 +161,17 @@ def fetch_region_occurrences(
 def _prototype_coordinates(occurrences: pd.DataFrame) -> pd.DataFrame:
     from gbif_fieldmap_builder_app import spatial_thin
 
-    work = occurrences[["latitude", "longitude"]].copy()
+    columns = ["latitude", "longitude"]
+    columns.extend(column for column in ("_year", "_media_url") if column in occurrences.columns)
+    work = occurrences.loc[:, columns].copy().reset_index(drop=True)
     work["_latitude"] = pd.to_numeric(work["latitude"], errors="coerce")
     work["_longitude"] = pd.to_numeric(work["longitude"], errors="coerce")
+    if "_year" not in work.columns:
+        work["_year"] = pd.Series(np.nan, index=work.index, dtype=float)
+    if "_media_url" not in work.columns:
+        work["_media_url"] = pd.Series("", index=work.index, dtype=str)
+    else:
+        work["_media_url"] = work["_media_url"].fillna("").astype(str)
     work = work.dropna(subset=["_latitude", "_longitude"]).reset_index(drop=True)
     if len(work) < 5:
         raise ValueError("fewer than five occurrence coordinates")
