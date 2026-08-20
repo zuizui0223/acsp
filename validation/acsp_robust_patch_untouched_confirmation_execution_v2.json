@@ -1,0 +1,54 @@
+{
+  "execution_id": "acsp-robust-patch-untouched-confirmation-execution-v2",
+  "status": "frozen_before_focal_occurrence_fetch_or_confirmation_outcome_inspection",
+  "protocol_path": "validation/acsp_robust_patch_untouched_confirmation_protocol_v2.json",
+  "protocol_fingerprint": "68f94dbb5ad9cd6ec433653df83df323a7fc489b1ef8ded2422bd8520b0f71e6",
+  "cohort_artifact": {
+    "workflow_run_id": 32335791948,
+    "artifact_id": 9394691112,
+    "artifact_name": "acsp-robust-patch-untouched-confirmation-cohort-v2",
+    "sha256": "cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "declared_pairs": 96
+  },
+  "occurrence_fetch": {
+    "records_per_pair": 150
+  },
+  "fold_generation": {
+    "block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "repeats": 5,
+    "pair_seed_rule": "fold_seed_base + pair_id",
+    "fold_seed_base": 20260823,
+    "repeat_rule": "one per-pair RNG; choose held-out blocks sequentially for repeats 1..5 without using outcomes",
+    "insufficient_spatial_blocks_rule": "write all five declared folds as failed placeholders; retain them as zero in intention-to-evaluate"
+  },
+  "robust_support": {
+    "support_fraction": 0.025,
+    "surface_points": 800,
+    "surface_seed_base": 20260823,
+    "max_prototypes": 32,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0
+  },
+  "recovery": {
+    "primary_radius_km": 10.0,
+    "secondary_radii_km": [1.0, 2.0, 5.0],
+    "random_draws_per_fold": 200,
+    "random_seed_rule": "random_seed_base + pair_id*10000 + repeat*1009",
+    "random_seed_base": 20260823,
+    "failure_rule": "any declared fold that cannot be exported or evaluated contributes recall=0, random_mean_recall=0, lift=0"
+  },
+  "inference": {
+    "unit": "taxon-region pair",
+    "pair_value": "mean lift_over_random across five declared folds at support_fraction=0.025 and radius_km=10",
+    "bootstrap_draws": 30000,
+    "bootstrap_seed": 20260823,
+    "sign_flip_draws": 30000,
+    "sign_flip_seed": 20260824,
+    "sign_flip_p": "one-sided: (1 + number(null mean >= observed mean)) / (draws + 1)",
+    "minimum_practical_absolute_recall_gain": 0.015,
+    "success_gate": "overall mean lift >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND one-sided sign-flip p < 0.05 AND plant mean lift > 0 AND animal mean lift > 0"
+  },
+  "retuning_after_opening_allowed": false,
+  "execution_fingerprint": "47afe0f78fdc253f395cb0eb6410ae846ab15e12da1b922c72edad357c722a45"
+}

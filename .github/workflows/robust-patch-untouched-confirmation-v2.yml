@@ -1,0 +1,113 @@
+name: Robust-patch untouched confirmation v2
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - validation/acsp_robust_patch_untouched_confirmation_execution_v2.json
+      - research/export_robust_patch_confirmation_folds_v2.py
+      - research/run_robust_patch_untouched_confirmation_v2.py
+      - research/test_robust_patch_untouched_confirmation_execution_v2.py
+      - .github/workflows/robust-patch-untouched-confirmation-v2.yml
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify frozen execution before opening cohort occurrences
+        run: |
+          python -m unittest -v research/test_robust_patch_untouched_confirmation_execution_v2.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          execution = json.loads(Path('validation/acsp_robust_patch_untouched_confirmation_execution_v2.json').read_text())
+          assert execution['execution_fingerprint'] == '47afe0f78fdc253f395cb0eb6410ae846ab15e12da1b922c72edad357c722a45'
+          assert execution['protocol_fingerprint'] == '68f94dbb5ad9cd6ec433653df83df323a7fc489b1ef8ded2422bd8520b0f71e6'
+          assert execution['retuning_after_opening_allowed'] is False
+          PY
+      - name: Download frozen taxonomy-safe cohort identities
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: frozen-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+      - name: Audit frozen cohort before focal occurrence fetch
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('frozen-cohort')
+          manifest = json.loads((root/'cohort_manifest.json').read_text())
+          declared = pd.read_csv(root/'predeclared_taxon_region_pairs.csv')
+          assert manifest['protocol_fingerprint'] == '68f94dbb5ad9cd6ec433653df83df323a7fc489b1ef8ded2422bd8520b0f71e6'
+          assert manifest['declared_pairs'] == 96
+          assert manifest['unique_declared_taxa'] == 96
+          assert manifest['taxon_group_counts'] == {'animal': 48, 'plant': 48}
+          assert not declared['scientific_name'].astype(str).str.startswith(('Campanula microdonta','Campanula punctata')).any()
+          assert manifest['outcomes_inspected'] is False
+          assert manifest['occurrence_rows_fetched_for_declared_taxa'] is False
+          assert manifest['candidate_generation_run'] is False
+          assert manifest['robust_support_run'] is False
+          assert manifest['heldout_recovery_run'] is False
+          PY
+      - name: Open confirmation and export all 480 declared spatial folds
+        run: |
+          python research/export_robust_patch_confirmation_folds_v2.py \
+            --sample-file frozen-cohort/predeclared_taxon_region_pairs.csv \
+            --output confirmation-folds
+      - name: Run frozen 2.5-percent robust-patch confirmation
+        run: |
+          python research/run_robust_patch_untouched_confirmation_v2.py \
+            --export-root confirmation-folds \
+            --output confirmation-results
+      - name: Audit no retuning and complete intention-to-evaluate denominator
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          fold_manifest = json.loads((Path('confirmation-folds')/'export_manifest.json').read_text())
+          summary = json.loads((Path('confirmation-results')/'confirmation_summary.json').read_text())
+          pairs = pd.read_csv(Path('confirmation-results')/'confirmation_pair_results.csv')
+          folds = pd.read_csv(Path('confirmation-results')/'confirmation_fold_results.csv')
+          assert fold_manifest['expected_folds'] == 480
+          assert fold_manifest['written_fold_manifests'] == 480
+          assert summary['execution_fingerprint'] == '47afe0f78fdc253f395cb0eb6410ae846ab15e12da1b922c72edad357c722a45'
+          assert summary['frozen_pairs'] == 96
+          assert summary['declared_folds'] == 480
+          assert summary['primary_support_fraction'] == 0.025
+          assert summary['primary_radius_km'] == 10.0
+          assert summary['retuned_after_outcome_opening'] is False
+          assert len(pairs) == 96
+          primary = folds[(folds['support_fraction'].round(6) == 0.025) & (folds['radius_km'].round(6) == 10.0)]
+          assert len(primary) == 480
+          print(json.dumps(summary, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-v2-results
+          path: |
+            confirmation-folds/export_manifest.json
+            confirmation-folds/pair_export_status.csv
+            confirmation-results
+          if-no-files-found: error
+          retention-days: 90
