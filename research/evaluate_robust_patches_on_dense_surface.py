@@ -188,6 +188,28 @@ def _evaluate_fold(
             area_col="survey_area_id",
         )
         if selected.empty:
+            # Empty support tiers are a valid outcome, not a reason to drop the
+            # fold. Count them explicitly as zero-recovery / zero-random rows so
+            # narrow tiers cannot look better by silently excluding failures.
+            for radius in radii_km:
+                rows.append(
+                    {
+                        "fold": str(fold_dir),
+                        "support_fraction": float(tier),
+                        "radius_km": float(radius),
+                        "surface_points": int(len(surface)),
+                        "surface_seed": int(surface_seed),
+                        "prototype_count": int(audit.prototype_count),
+                        "selected_cells": 0,
+                        "patch_count": 0,
+                        "heldout_count": int(len(held)),
+                        "recall": 0.0,
+                        "random_mean_recall": 0.0,
+                        "lift_over_random": 0.0,
+                        "median_nearest_km": float("nan"),
+                        "max_nearest_km": float("nan"),
+                    }
+                )
             continue
         observed = recovery_summary(
             detection_recovery_table(
@@ -296,6 +318,7 @@ def main() -> None:
         "untouched_confirmation_opened": False,
         "universe_rule": "one deterministic land surface per predeclared region, shared across folds; WorldClim 2.5m terrain extracted independently of held-out outcomes",
         "prototype_rule": "training occurrences deterministically spatially thinned to at most 32 prototypes; terrain extracted directly at retained training coordinates",
+        "empty_tier_rule": "count as zero-recovery and zero-random, never drop the fold",
         "terrain_features": list(ROBUST_FEATURES),
         "folds_discovered": int(len(fold_dirs)),
         "folds_evaluated": int(results["fold"].nunique()) if not results.empty else 0,
