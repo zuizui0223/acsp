@@ -26,6 +26,33 @@ VALIDATED_ROBUST_PLANT_MEAN_LIFT = 0.057023839246432256
 VALIDATED_ROBUST_STATUS = "untouched_confirmation_passed"
 
 
+def _empty_patch_table(area_col: str) -> pd.DataFrame:
+    """Return a readable zero-row product table when the frozen tier is empty."""
+    return pd.DataFrame(
+        columns=[
+            "zone_id",
+            area_col,
+            "zone_score",
+            "zone_rank",
+            "zone_member_count",
+            "zone_radius_m",
+            "zone_merge_threshold_m",
+            "representative_site_id",
+            "latitude",
+            "longitude",
+            "site_id",
+            "ecological_support_threshold",
+            "ecological_status",
+            "validation_status",
+            "validation_support_fraction",
+            "validation_primary_radius_km",
+            "validation_confirmation_pairs",
+            "validation_confirmation_folds",
+            "validation_mean_lift_over_random",
+        ]
+    )
+
+
 def validated_robust_candidate_patches(
     universe: pd.DataFrame,
     prototypes: pd.DataFrame,
@@ -60,8 +87,10 @@ def validated_robust_candidate_patches(
         area_col=area_col,
         ecological_status="validated_cross_taxon_robust_support_patch",
     )
-    patches = patches.copy()
-    if not patches.empty:
+    if patches.empty:
+        patches = _empty_patch_table(area_col)
+    else:
+        patches = patches.copy()
         patches["validation_status"] = VALIDATED_ROBUST_STATUS
         patches["validation_support_fraction"] = VALIDATED_ROBUST_SUPPORT_FRACTION
         patches["validation_primary_radius_km"] = VALIDATED_ROBUST_PRIMARY_RADIUS_KM
