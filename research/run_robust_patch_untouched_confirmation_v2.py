@@ -71,6 +71,10 @@ def run(export_root: Path, output: Path) -> dict[str, object]:
         pair_id = int(meta["pair_id"])
         repeat = int(meta["repeat"])
         try:
+            # _evaluate_fold adds 991 internally before creating the RNG.
+            # Subtract it here so the effective seed exactly matches the
+            # pre-open frozen rule: base + pair_id*10000 + repeat*1009.
+            frozen_effective_seed = random_seed_base + pair_id * 10000 + repeat * 1009
             result = _evaluate_fold(
                 fold_dir,
                 tiers=(support_fraction,),
@@ -78,7 +82,7 @@ def run(export_root: Path, output: Path) -> dict[str, object]:
                 surface_points=surface_points,
                 random_draws=random_draws,
                 surface_seed_base=surface_seed_base,
-                random_seed=random_seed_base + pair_id * 10000 + repeat * 1009,
+                random_seed=frozen_effective_seed - 991,
             )
             if not result:
                 result = _zero_rows(
