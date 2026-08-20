@@ -7,6 +7,7 @@ on:
       - research/export_robust_candidate_patches.py
       - research/evaluate_robust_candidate_tiers.py
       - research/evaluate_robust_patches_on_comparator_exports.py
+      - research/inspect_automatic_bundle_tables.py
       - .github/workflows/robust-patch-cross-taxon-development.yml
   workflow_dispatch:
 
@@ -53,6 +54,15 @@ jobs:
           print(mixed[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
           print(plant[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
           PY
+
+      - name: Inspect uncompressed automatic bundle tables
+        run: |
+          python research/inspect_automatic_bundle_tables.py \
+            --sample-file robust-development/samples/plants.csv \
+            --pair-id 1 \
+            --records 150 \
+            --out robust-development/bundle-inspection
+          cat robust-development/bundle-inspection/inventory.json
 
       - name: Rebuild historical spatial-holdout folds
         run: |
