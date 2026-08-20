@@ -1,0 +1,112 @@
+{
+  "protocol_id": "acsp-robust-patch-untouched-confirmation-v1",
+  "status": "frozen_before_new_cohort_sampling_candidate_generation_or_outcome_inspection",
+  "development_selection": {
+    "source": "historical non-Izu development cohorts only",
+    "support_fraction": 0.025,
+    "primary_recovery_radius_km": 10.0,
+    "reason": "smallest tested descriptive tier with positive 10-km mean lift over same-size random in both mixed and plant development cohorts after intention-to-evaluate empty-tier correction",
+    "no_retuning_after_confirmation": true
+  },
+  "robust_patch_rule": {
+    "feature_columns": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "raw_terrain_features": [
+      "elevation",
+      "slope",
+      "aspect",
+      "roughness",
+      "tpi"
+    ],
+    "environment_resolution": "2.5m",
+    "prototype_rule": "training occurrences only; deterministic spatial thinning to at most 32 complete unique environmental prototypes",
+    "support_rule": "leave-one-prototype-out median percentile rank with float32 support worlds",
+    "support_fraction": 0.025,
+    "patch_merge_distance_m": 1000.0,
+    "empty_tier_rule": "retain declared fold with selected_cells=0, recall=0, random_mean_recall=0, lift=0",
+    "field_outcomes_used_for_generation": false
+  },
+  "candidate_universe": {
+    "surface_points": 800,
+    "rule": "one deterministic land-point surface per predeclared taxon-region cell, shared across all folds in that region",
+    "surface_seed_base": 20260823,
+    "heldout_coordinates_used_for_surface": false
+  },
+  "outer_validation": {
+    "block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "repeats": 5,
+    "fold_seed_base": 20260823,
+    "primary_radius_km": 10.0,
+    "secondary_radii_km": [
+      1.0,
+      2.0,
+      5.0
+    ],
+    "heldout_coordinates_attached_only_after_support_selection": true,
+    "declared_fold_failure_rule": "retain in intention-to-evaluate denominator as zero; no taxon replacement after cohort freeze"
+  },
+  "random_comparator": {
+    "rule": "same candidate universe and same selected-cell count as robust tier within each fold",
+    "draws_per_fold": 200,
+    "seed_base": 20260823,
+    "empty_selected_rule": "zero selected cells implies zero random recall"
+  },
+  "cohort": {
+    "pair_count": 96,
+    "taxon_groups": [
+      "plant",
+      "animal"
+    ],
+    "region_cell_count": 12,
+    "record_count_strata": 4,
+    "taxa_per_region_group_record_stratum": 1,
+    "seed": 20260823,
+    "minimum_records": 20,
+    "facet_limit": 400,
+    "records_per_pair": 150,
+    "sampling_rule": "for every fixed Japanese region cell x plant/animal x within-frame record-count quartile, sample exactly one previously unused species; no substitution across cells/strata and no replacement after declaration"
+  },
+  "exclusion_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+    "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv",
+    "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv"
+  ],
+  "explicit_exclusion_prefixes": [
+    "Campanula microdonta"
+  ],
+  "primary_inference": {
+    "unit": "taxon-region pair",
+    "estimand": "mean over five spatial folds of robust 2.5%-tier 10-km recall minus same-size random mean recall",
+    "bootstrap_draws": 30000,
+    "sign_flip_draws": 30000,
+    "minimum_practical_absolute_recall_gain": 0.015,
+    "success_gate": "overall mean lift >= 0.015 AND pair-bootstrap 95% CI lower bound > 0 AND sign-flip p < 0.05",
+    "cross_taxon_guardrail": "plant mean lift > 0 and animal mean lift > 0; subgroup CIs are descriptive unless separately predeclared",
+    "failure_interpretation": "do not retune support fraction, terrain features, surface size, prototype cap, patch merge distance, or recovery radius after confirmation outcomes"
+  },
+  "claim_boundary": {
+    "if_passes": "supports cross-taxon enrichment of held-out occurrences by the frozen narrow robust-support candidate tier at the 10-km regional screening scale",
+    "does_not_claim": [
+      "occupancy probability",
+      "calibrated suitability probability",
+      "exact field-site precision",
+      "route efficiency",
+      "budget optimality",
+      "universal optimality of 2.5% outside this ACSP candidate-generation contract"
+    ]
+  },
+  "untouched_confirmation_opened": false,
+  "protocol_fingerprint": "1d35e5c49a800f63b7f29f55001163c5be3e2d2436dc49d22cbd81ce9f221818"
+}
