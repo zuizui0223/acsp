@@ -22,6 +22,44 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
+  bundle-inspection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Prepare one already-inspected plant pair
+        run: |
+          mkdir -p robust-bundle-inspection
+          python - <<'PY'
+          import pandas as pd
+          source='benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv'
+          sample=pd.read_csv(source)
+          sample=sample[sample['pair_id'].eq(1)].copy()
+          sample.to_csv('robust-bundle-inspection/sample.csv', index=False)
+          PY
+      - name: Inspect automatic bundle tables
+        run: |
+          python research/inspect_automatic_bundle_tables.py \
+            --sample-file robust-bundle-inspection/sample.csv \
+            --pair-id 1 \
+            --records 150 \
+            --out robust-bundle-inspection/output
+          cat robust-bundle-inspection/output/inventory.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robust-bundle-inspection
+          path: robust-bundle-inspection
+          if-no-files-found: error
+          retention-days: 30
+
   historical-development:
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -54,15 +92,6 @@ jobs:
           print(mixed[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
           print(plant[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
           PY
-
-      - name: Inspect uncompressed automatic bundle tables
-        run: |
-          python research/inspect_automatic_bundle_tables.py \
-            --sample-file robust-development/samples/plants.csv \
-            --pair-id 1 \
-            --records 150 \
-            --out robust-development/bundle-inspection
-          cat robust-development/bundle-inspection/inventory.json
 
       - name: Rebuild historical spatial-holdout folds
         run: |
