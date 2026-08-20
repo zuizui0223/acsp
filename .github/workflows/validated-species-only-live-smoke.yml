@@ -1,0 +1,53 @@
+name: Validated species-only live smoke
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/validated-species-only-live-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Run species-only validated Japan scan
+        run: |
+          mkdir -p smoke
+          acsp-patches \
+            --taxon "Castanopsis sieboldii" \
+            --output smoke/candidate_patches.csv \
+            --summary-json smoke/summary.json
+      - name: Audit live output
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          summary = json.loads(Path('smoke/summary.json').read_text())
+          patches = pd.read_csv('smoke/candidate_patches.csv')
+          assert summary['input_mode'] == 'taxon_japan_validated_regions'
+          assert summary['declared_region_count'] == 12
+          assert summary['evaluated_region_count'] >= 1
+          assert summary['candidate_patch_count'] == len(patches)
+          assert summary['candidate_generation_only'] is True
+          assert summary['routing_or_budget_optimization'] is False
+          assert summary['validated_support_fraction'] == 0.025
+          assert len(summary['region_status']) == 12
+          print(json.dumps(summary, indent=2, ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-species-only-live-smoke
+          path: smoke
+          if-no-files-found: error
+          retention-days: 30
