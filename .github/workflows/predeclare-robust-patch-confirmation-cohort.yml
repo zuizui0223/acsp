@@ -2,11 +2,15 @@ name: Predeclare robust-patch untouched confirmation cohort
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
-      - agent/generalize-robust-patches
+      - main
     paths:
       - validation/robust_patch_confirmation_predeclare_trigger.txt
+      - .github/workflows/predeclare-robust-patch-confirmation-cohort.yml
+      - research/predeclare_robust_patch_confirmation_cohort.py
+      - research/test_robust_patch_confirmation_cohort.py
+      - validation/acsp_robust_patch_untouched_confirmation_protocol.json
 
 permissions:
   contents: read
