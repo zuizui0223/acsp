@@ -49,6 +49,14 @@ def _feature_matrix(frame: pd.DataFrame, feature_columns: Sequence[str]) -> tupl
     return values, valid
 
 
+def _complete_prototypes(prototypes: pd.DataFrame, feature_columns: Sequence[str]) -> pd.DataFrame:
+    _, valid = _feature_matrix(prototypes, feature_columns)
+    complete = prototypes.loc[valid].copy().reset_index(drop=True)
+    if len(complete) < 1:
+        raise ValueError("no prototypes have complete environmental features")
+    return complete
+
+
 def robust_environment_geometry(
     universe: pd.DataFrame,
     prototypes: pd.DataFrame,
@@ -70,16 +78,13 @@ def robust_environment_geometry(
         raise ValueError("chunk_size must be positive")
 
     universe_values, universe_valid = _feature_matrix(universe, feature_columns)
-    prototype_values, prototype_valid = _feature_matrix(prototypes, feature_columns)
-    if int(prototype_valid.sum()) < 1:
-        raise ValueError("no prototypes have complete environmental features")
-
-    prototype_complete = prototype_values[prototype_valid]
-    median = np.nanmedian(prototype_complete, axis=0)
-    q1 = np.nanquantile(prototype_complete, 0.25, axis=0)
-    q3 = np.nanquantile(prototype_complete, 0.75, axis=0)
+    prototype_complete = _complete_prototypes(prototypes, feature_columns)
+    prototype_values, _ = _feature_matrix(prototype_complete, feature_columns)
+    median = np.nanmedian(prototype_values, axis=0)
+    q1 = np.nanquantile(prototype_values, 0.25, axis=0)
+    q3 = np.nanquantile(prototype_values, 0.75, axis=0)
     scale = np.where((q3 - q1) > 1e-9, q3 - q1, 1.0)
-    prototype_z = (prototype_complete - median) / scale
+    prototype_z = (prototype_values - median) / scale
 
     if len(prototype_z) > 1:
         pairwise = np.sqrt(
@@ -104,8 +109,7 @@ def robust_environment_geometry(
     responsibility[~np.isfinite(responsibility)] = 0.0
     nearest = np.min(distances, axis=1)
     support_rank = pd.Series(nearest).rank(method="average", pct=True).to_numpy(float)
-    prototype_rows = prototypes.loc[prototype_valid].reset_index(drop=True)
-    return responsibility, support_rank, prototype_rows, kernel_scale
+    return responsibility, support_rank, prototype_complete, kernel_scale
 
 
 def leave_one_out_consensus_support(
@@ -118,12 +122,13 @@ def leave_one_out_consensus_support(
     chunk_size: int = 3000,
 ) -> tuple[np.ndarray, np.ndarray, RobustSupportAudit]:
     """Reconstruct a leave-one-prototype-out consensus support rank surface."""
-    if len(prototypes) < 2:
-        raise ValueError("at least two prototypes are required for leave-one-out support")
+    complete = _complete_prototypes(prototypes, feature_columns)
+    if len(complete) < 2:
+        raise ValueError("at least two complete prototypes are required for leave-one-out support")
     ranks: list[np.ndarray] = []
     kernel_scales: list[float] = []
-    for removed in range(len(prototypes)):
-        subset = prototypes.drop(index=prototypes.index[removed]).reset_index(drop=True)
+    for removed in range(len(complete)):
+        subset = complete.drop(index=complete.index[removed]).reset_index(drop=True)
         _, support_rank, _, kernel_scale = robust_environment_geometry(
             universe,
             subset,
@@ -137,7 +142,7 @@ def leave_one_out_consensus_support(
     consensus = np.median(stack, axis=0)
     uncertainty = np.std(stack, axis=0)
     audit = RobustSupportAudit(
-        prototype_count=int(len(prototypes)),
+        prototype_count=int(len(complete)),
         leave_one_out_worlds=int(len(ranks)),
         feature_columns=tuple(str(column) for column in feature_columns),
         kernel_scale_min=float(np.min(kernel_scales)),
