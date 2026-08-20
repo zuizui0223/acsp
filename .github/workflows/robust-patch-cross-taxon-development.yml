@@ -6,8 +6,8 @@ on:
       - acsp/robust_patches.py
       - research/export_robust_candidate_patches.py
       - research/evaluate_robust_candidate_tiers.py
-      - research/evaluate_robust_patches_on_comparator_exports.py
-      - research/inspect_automatic_bundle_tables.py
+      - research/evaluate_robust_patches_on_dense_surface.py
+      - research/export_standard_baseline_folds.py
       - .github/workflows/robust-patch-cross-taxon-development.yml
   workflow_dispatch:
 
@@ -22,44 +22,6 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  bundle-inspection:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install ACSP
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-      - name: Prepare one already-inspected plant pair
-        run: |
-          mkdir -p robust-bundle-inspection
-          python - <<'PY'
-          import pandas as pd
-          source='benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv'
-          sample=pd.read_csv(source)
-          sample=sample[sample['pair_id'].eq(1)].copy()
-          sample.to_csv('robust-bundle-inspection/sample.csv', index=False)
-          PY
-      - name: Inspect automatic bundle tables
-        run: |
-          python research/inspect_automatic_bundle_tables.py \
-            --sample-file robust-bundle-inspection/sample.csv \
-            --pair-id 1 \
-            --records 150 \
-            --out robust-bundle-inspection/output
-          cat robust-bundle-inspection/output/inventory.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: robust-bundle-inspection
-          path: robust-bundle-inspection
-          if-no-files-found: error
-          retention-days: 30
-
   historical-development:
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -80,11 +42,11 @@ jobs:
           import pandas as pd
           mixed = pd.read_csv('benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv')
           plant = pd.read_csv('benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv')
-          mixed_ids = [1, 2, 3, 4, 5, 21, 22, 23]
-          plant_ids = [1, 2, 3, 4, 5, 6, 7, 8]
+          mixed_ids = [1, 3, 5, 21]
+          plant_ids = [1, 2, 5, 7]
           mixed = mixed[mixed['pair_id'].isin(mixed_ids)].copy()
           plant = plant[plant['pair_id'].isin(plant_ids)].copy()
-          assert len(mixed) == 8 and len(plant) == 8
+          assert len(mixed) == 4 and len(plant) == 4
           assert not mixed['region_name'].astype(str).str.contains('Izu', case=False).any()
           assert not plant['region_name'].astype(str).str.contains('Izu', case=False).any()
           mixed.to_csv('robust-development/samples/mixed.csv', index=False)
@@ -93,36 +55,38 @@ jobs:
           print(plant[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
           PY
 
-      - name: Rebuild historical spatial-holdout folds
+      - name: Rebuild training-only spatial-holdout folds
         run: |
           python research/export_standard_baseline_folds.py \
             --sample-file robust-development/samples/mixed.csv \
             --protocol validation/standard_baseline_protocol.json \
             --output robust-development/exports/mixed \
-            --pairs 8 \
+            --pairs 4 \
             --records-per-pair 150
           python research/export_standard_baseline_folds.py \
             --sample-file robust-development/samples/plants.csv \
             --protocol validation/standard_baseline_protocol.json \
             --output robust-development/exports/plants \
-            --pairs 8 \
+            --pairs 4 \
             --records-per-pair 150
 
-      - name: Evaluate generic robust support on held-out occurrences
+      - name: Evaluate dense generic robust support
         run: |
-          python research/evaluate_robust_patches_on_comparator_exports.py \
+          python research/evaluate_robust_patches_on_dense_surface.py \
             --export-root robust-development/exports/mixed \
             --tiers 0.025,0.05,0.10,0.20 \
             --radii-km 1,2,5,10 \
-            --random-draws 100 \
-            --seed 20260819 \
+            --surface-points 800 \
+            --random-draws 50 \
+            --seed 20260820 \
             --out robust-development/results/mixed
-          python research/evaluate_robust_patches_on_comparator_exports.py \
+          python research/evaluate_robust_patches_on_dense_surface.py \
             --export-root robust-development/exports/plants \
             --tiers 0.025,0.05,0.10,0.20 \
             --radii-km 1,2,5,10 \
-            --random-draws 100 \
-            --seed 20260820 \
+            --surface-points 800 \
+            --random-draws 50 \
+            --seed 20260821 \
             --out robust-development/results/plants
 
       - name: Aggregate development evidence without selecting a tier
@@ -135,22 +99,24 @@ jobs:
           manifests={}
           for cohort in ['mixed','plants']:
               root=Path('robust-development/results')/cohort
-              table=pd.read_csv(root/'robust_patch_development_summary.csv')
+              table=pd.read_csv(root/'dense_robust_patch_summary.csv')
               table['cohort']=cohort
               frames.append(table)
-              manifests[cohort]=json.loads((root/'robust_patch_development_manifest.json').read_text())
+              manifests[cohort]=json.loads((root/'dense_robust_patch_manifest.json').read_text())
           combined=pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
           combined.to_csv('robust-development/combined_summary.csv', index=False)
           print(combined.to_string(index=False))
           evaluated=sum(int(value['folds_evaluated']) for value in manifests.values())
-          if evaluated == 0:
-              raise SystemExit('No environmentally eligible historical folds were evaluated')
+          discovered=sum(int(value['folds_discovered']) for value in manifests.values())
+          if discovered == 0 or evaluated < int(0.75 * discovered):
+              raise SystemExit(f'Insufficient dense-surface fold coverage: {evaluated}/{discovered}')
           report={
               'status':'historical_development_only',
               'untouched_confirmation_opened':False,
               'campanula_or_izu_used':False,
               'auto_selected_support_tier':False,
               'cohorts':manifests,
+              'total_folds_discovered':discovered,
               'total_folds_evaluated':evaluated,
           }
           Path('robust-development/combined_manifest.json').write_text(json.dumps(report, indent=2)+'\n')
