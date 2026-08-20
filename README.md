@@ -8,19 +8,33 @@ It does **not** ask the user to choose a survey budget, number of sites, route, 
 
 ## Simplest use
 
-For a species and a declared rectangular survey region, ACSP can build the validated inputs itself and return candidate patches directly:
+For the validated Japanese domain, the user now supplies only a scientific species name:
+
+```bash
+acsp-patches \
+  --taxon "Castanopsis sieboldii" \
+  --output candidate_patches.csv \
+  --summary-json candidate_patches_summary.json
+```
+
+ACSP resolves the species through the GBIF backbone and evaluates the **same 12 Japanese region rectangles used by the cross-taxon confirmation design**. Each region is processed independently with the frozen input-generation conventions: up to 150 regional occurrence records, deterministic thinning to at most 32 prototypes, one deterministic 800-point terrain surface, the confirmed terrain features, and the fixed 2.5% robust-support rule.
+
+Regions with too few usable occurrence/environment prototypes are recorded as skipped. ACSP does not widen the support threshold, replace the region, or create a route/budget optimization problem. Candidate patches from evaluable regions are concatenated and retain their validation-region identity.
+
+The 12 validation units intentionally remain separate; overlapping units such as Kanto and Izu are not merged after candidate generation.
+
+### Optional custom extent
+
+A custom rectangular region remains available when the user explicitly wants one:
 
 ```bash
 acsp-patches \
   --taxon "Castanopsis sieboldii" \
   --extent 139.20 34.60 139.50 34.85 \
-  --output candidate_patches.csv \
-  --summary-json candidate_patches_summary.json
+  --output candidate_patches.csv
 ```
 
-This path resolves the species with the GBIF backbone, retrieves occurrence records inside the declared rectangle, uses the same deterministic spatial-thinning and 800-point terrain-surface conventions used in the untouched confirmation, extracts the confirmed terrain features, and applies the fixed validated robust-support rule.
-
-The user supplies the **taxon and survey extent only**. The validated path has no budget, day, route, site-count, support-threshold, or travel-mode parameter.
+The fixed Japan-region path is the closest match to the spatial domain used in the untouched confirmation. A custom extent changes that spatial domain and should be interpreted as a convenience application of the same candidate-generation rule, not a new independent validation result.
 
 ## Validated product
 
@@ -46,7 +60,7 @@ At the predeclared 10 km regional screening scale:
 - animal mean lift = **+0.11415**;
 - plant mean lift = **+0.05702**.
 
-The confirmation passed every predeclared gate without post-outcome retuning. The supported claim is therefore narrow: **the frozen 2.5% robust-support candidate tier enriches held-out occurrences relative to same-size random selection at the 10 km regional screening scale across the tested plant and animal cohort.**
+The confirmation passed every predeclared gate without post-outcome retuning. The supported claim is narrow: **the frozen 2.5% robust-support candidate tier enriches held-out occurrences relative to same-size random selection at the 10 km regional screening scale across the tested plant and animal cohort.**
 
 This does not establish occupancy probability, calibrated suitability probability, exact-site precision, route efficiency, budget optimality, or universal optimality of 2.5% outside this ACSP candidate-generation contract.
 
@@ -60,14 +74,22 @@ The installable distribution is `acsp-survey`; the import package is `acsp`.
 
 ## Python API
 
-The same simple taxon-to-patch path is available from Python:
+Species-only Japan scan:
+
+```python
+from acsp import discover_validated_candidate_patches_japan
+
+patches, audit = discover_validated_candidate_patches_japan("Castanopsis sieboldii")
+```
+
+Custom region:
 
 ```python
 from acsp import discover_validated_candidate_patches
 
 patches, audit = discover_validated_candidate_patches(
     "Castanopsis sieboldii",
-    (139.20, 34.60, 139.50, 34.85),  # west, south, east, north
+    (139.20, 34.60, 139.50, 34.85),
 )
 ```
 
@@ -90,64 +112,35 @@ patches, audit = validated_robust_candidate_patches(
 )
 ```
 
-The equivalent CSV mode is retained for reproducible batch workflows:
-
-```bash
-acsp-patches \
-  --universe candidate_universe.csv \
-  --prototypes occurrence_prototypes.csv \
-  --feature-columns elevation,slope,aspect_sin,aspect_cos,roughness,tpi \
-  --output candidate_patches.csv
-```
-
 ## Input interpretation
 
 The candidate universe is an environmental surface, not a probability raster. Environmental features are centered and robustly scaled against occurrence prototypes. Candidate support is based on environmental distance to those prototypes across leave-one-prototype-out worlds.
 
-The confirmed terrain features are:
-
-- elevation;
-- slope;
-- aspect represented as sine and cosine;
-- roughness;
-- topographic position index.
-
-The generic package core can accept other shared numeric environmental feature columns for research, but changing the feature set is outside the frozen validated product claim.
-
-Lower-level research/audit utilities remain available in `acsp.robust_patches`:
-
-- `robust_environment_geometry()`;
-- `leave_one_out_consensus_support()`;
-- `support_cells_to_patches()`.
-
-Those functions expose thresholds and other parameters for method development and audit. They are not the validated no-retuning product API.
+The confirmed terrain features are elevation, slope, aspect represented as sine/cosine, roughness, and topographic position index. Changing the feature set belongs to research/audit use, not the frozen validated path.
 
 ## Campanula development role
 
-The 2026 *Campanula punctata* / microdonta field material was used as **development data**, not as independent confirmation. It helped identify the robust support-envelope design and is retained as a regression fixture. Independent generalization was established only with the later taxonomy-safe untouched 96-pair cohort.
+The 2026 *Campanula punctata* / microdonta field material was used as **development data**, not as independent confirmation. Independent generalization was established only with the later taxonomy-safe untouched 96-pair cohort.
 
 ## Failure handling
 
-The untouched confirmation used intention-to-evaluate accounting. Folds with too few spatial blocks, too few complete environmental prototypes, or an empty 2.5% support tier were retained as zero. In the final confirmation, 23 of 96 pairs had at least one failed fold; the overall result still passed the frozen gate. This makes the reported cross-taxon lift conservative with respect to those operational failures.
-
-In normal use, ACSP reports an explicit error if there are too few usable occurrence/environment prototypes to reconstruct the validated support surface. A valid 2.5% tier may also contain zero patches; this is a legitimate candidate-generation result rather than a signal to widen the threshold automatically.
+In normal use, a Japanese region with insufficient occurrence/environment prototypes is skipped and retained in the audit. If none of the 12 fixed regions is evaluable, ACSP returns an explicit failure. An evaluable region may legitimately yield zero patches at the frozen 2.5% tier; the threshold is not widened automatically.
 
 ## Legacy compatibility
 
-`acsp-recommend`, `acsp-fieldmap`, the Streamlit app, integrated-score ranking, SDM/SSDM helpers, and earlier Top-k/zone-selection functions remain in the repository for backward compatibility and historical analyses. They are **not the current validated product boundary**.
+`acsp-recommend`, `acsp-fieldmap`, the Streamlit app, integrated-score ranking, SDM/SSDM helpers, and earlier Top-k/zone-selection functions remain for backward compatibility and historical analyses. They are **not the current validated product boundary**.
 
-No new route, field-day, travel-mode, or budget optimizer should be added to the validated candidate-patch path.
+No route, field-day, travel-mode, or budget optimizer belongs in the validated candidate-patch path.
 
 ## Repository layout
 
-- `acsp/taxon_patches.py` — simple species + extent input adapter.
+- `acsp/taxon_patches.py` — species-only fixed-Japan and optional custom-region adapters.
 - `acsp/validated_robust.py` — promoted validated candidate-patch API.
 - `acsp/robust_cli.py` — `acsp-patches` command.
 - `acsp/robust_patches.py` — lower-level robust support and patch utilities.
 - `validation/` — frozen protocols and confirmation contracts.
 - `research/` — development, diagnostics, confirmation runners, and historical analyses.
 - `legacy/` — retained historical benchmark code/results.
-- `r-acsp/` — earlier R compatibility package.
 
 ## Status
 
