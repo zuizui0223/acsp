@@ -60,6 +60,7 @@ jobs:
           research/campanula_robust_support_patch_export.py
           research/evaluate_robust_candidate_tiers.py
           research/evaluate_robust_patches_on_comparator_exports.py
+          research/evaluate_robust_patches_on_dense_surface.py
           research/export_robust_candidate_patches.py
           research/execute_sdm_topk_pair.py
           research/export_standard_baseline_folds.py
