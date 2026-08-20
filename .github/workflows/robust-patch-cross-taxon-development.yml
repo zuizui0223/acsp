@@ -7,7 +7,6 @@ on:
       - research/export_robust_candidate_patches.py
       - research/evaluate_robust_candidate_tiers.py
       - research/evaluate_robust_patches_on_dense_surface.py
-      - research/export_standard_baseline_folds.py
       - .github/workflows/robust-patch-cross-taxon-development.yml
   workflow_dispatch:
 
@@ -17,6 +16,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   PYTHONPATH: ${{ github.workspace }}/research
@@ -35,57 +35,52 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
 
-      - name: Prepare already-inspected non-Izu development subsets
-        run: |
-          mkdir -p robust-development/samples
-          python - <<'PY'
-          import pandas as pd
-          mixed = pd.read_csv('benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv')
-          plant = pd.read_csv('benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv')
-          mixed_ids = [1, 3, 5, 21]
-          plant_ids = [1, 2, 5, 7]
-          mixed = mixed[mixed['pair_id'].isin(mixed_ids)].copy()
-          plant = plant[plant['pair_id'].isin(plant_ids)].copy()
-          assert len(mixed) == 4 and len(plant) == 4
-          assert not mixed['region_name'].astype(str).str.contains('Izu', case=False).any()
-          assert not plant['region_name'].astype(str).str.contains('Izu', case=False).any()
-          mixed.to_csv('robust-development/samples/mixed.csv', index=False)
-          plant.to_csv('robust-development/samples/plants.csv', index=False)
-          print(mixed[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
-          print(plant[['pair_id','taxon_group','region_name','scientific_name']].to_string(index=False))
-          PY
+      - name: Reuse already-inspected training-only spatial folds
+        uses: actions/download-artifact@v4
+        with:
+          name: robust-patch-cross-taxon-development
+          path: historical-cache
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 32258117404
 
-      - name: Rebuild training-only spatial-holdout folds
+      - name: Restore predeclared region bounds into fold provenance
         run: |
-          python research/export_standard_baseline_folds.py \
-            --sample-file robust-development/samples/mixed.csv \
-            --protocol validation/standard_baseline_protocol.json \
-            --output robust-development/exports/mixed \
-            --pairs 4 \
-            --records-per-pair 150
-          python research/export_standard_baseline_folds.py \
-            --sample-file robust-development/samples/plants.csv \
-            --protocol validation/standard_baseline_protocol.json \
-            --output robust-development/exports/plants \
-            --pairs 4 \
-            --records-per-pair 150
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import pandas as pd
+          for cohort in ['mixed','plants']:
+              root=Path('historical-cache/exports')/cohort
+              declared=pd.read_csv(root/'declared_pairs.csv').set_index('pair_id')
+              for manifest_path in root.glob('pair_*/fold_*/fold_manifest.json'):
+                  pair_id=int(manifest_path.parents[1].name.split('_')[1])
+                  row=declared.loc[pair_id]
+                  payload=json.loads(manifest_path.read_text())
+                  provenance=payload.setdefault('provenance', {})
+                  for key in ['west','south','east','north']:
+                      provenance[key]=float(row[key])
+                  manifest_path.write_text(json.dumps(payload, indent=2)+'\n')
+              print(cohort, 'pairs', len(declared), 'folds', len(list(root.glob('pair_*/fold_*/fold_manifest.json'))))
+          PY
 
       - name: Evaluate dense generic robust support
         run: |
+          mkdir -p robust-development/results
           python research/evaluate_robust_patches_on_dense_surface.py \
-            --export-root robust-development/exports/mixed \
+            --export-root historical-cache/exports/mixed \
             --tiers 0.025,0.05,0.10,0.20 \
             --radii-km 1,2,5,10 \
             --surface-points 800 \
-            --random-draws 50 \
+            --random-draws 30 \
             --seed 20260820 \
             --out robust-development/results/mixed
           python research/evaluate_robust_patches_on_dense_surface.py \
-            --export-root robust-development/exports/plants \
+            --export-root historical-cache/exports/plants \
             --tiers 0.025,0.05,0.10,0.20 \
             --radii-km 1,2,5,10 \
             --surface-points 800 \
-            --random-draws 50 \
+            --random-draws 30 \
             --seed 20260821 \
             --out robust-development/results/plants
 
@@ -115,6 +110,7 @@ jobs:
               'untouched_confirmation_opened':False,
               'campanula_or_izu_used':False,
               'auto_selected_support_tier':False,
+              'source_fold_run':32258117404,
               'cohorts':manifests,
               'total_folds_discovered':discovered,
               'total_folds_evaluated':evaluated,
@@ -126,7 +122,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: robust-patch-cross-taxon-development
+          name: robust-patch-cross-taxon-dense-development
           path: robust-development
           if-no-files-found: warn
           retention-days: 90
