@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "acsp-survey"
 version = "0.1.0"
-description = "Adaptive candidate prioritization helpers for field-survey planning"
+description = "Occurrence-conditioned robust candidate-patch generation for field surveys"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -30,6 +30,7 @@ dependencies = [
 [project.scripts]
 acsp-fieldmap = "acsp.app:main"
 acsp-recommend = "acsp.cli:main"
+acsp-patches = "acsp.robust_cli:main"
 
 [project.license]
 text = "MIT"

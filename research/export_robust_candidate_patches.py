@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Export taxon-agnostic robust candidate patches from precomputed environmental features.
+"""Audit/development exporter for taxon-agnostic robust support tiers.
+
+This script intentionally exposes multiple thresholds for method development and
+audit. It is not the validated production product. Use ``acsp-patches`` or
+``acsp.validated_robust.validated_robust_candidate_patches`` for the frozen
+2.5% candidate-patch rule confirmed on the untouched cross-taxon cohort.
 
 Inputs contain only a candidate universe, training occurrence prototypes, and the
 environmental feature columns shared by both tables. No field outcomes are read.
-The exporter writes one leave-one-prototype-out consensus support surface and a
-small set of nested descriptive patch tiers. The tiers are audit products, not a
-claim that any one support fraction is universally optimal.
 """
 from __future__ import annotations
 
@@ -13,7 +15,6 @@ import argparse
 import json
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from acsp.robust_patches import leave_one_out_consensus_support, support_cells_to_patches
@@ -95,11 +96,12 @@ def main() -> None:
         )
 
     manifest = {
-        "status": "development_generalization_interface",
+        "status": "research_audit_only",
+        "validated_product": "acsp-patches",
         "scientific_object": "occurrence-conditioned leave-one-prototype-out robust environmental support",
         "field_outcomes_read": False,
         "threshold_selection_claim": "none",
-        "tier_role": "nested descriptive candidate outputs; no tier is promoted as universally optimal",
+        "tier_role": "nested descriptive research outputs; production uses the separately validated frozen 2.5% rule",
         "feature_columns": list(args.feature_columns),
         "support_audit": audit.as_dict(),
         "merge_distance_m": float(args.merge_distance_m),
