@@ -1,20 +1,14 @@
 """Command-line interface for reproducible ACSP candidate selection."""
-
 from __future__ import annotations
 
 import argparse
-from functools import partial
 import json
 from pathlib import Path
 from typing import Sequence
 
 import pandas as pd
 
-from .coverage import select_maximum_coverage_sites
-from .operational_budget import select_largest_feasible_prefix
 from .planning import recommend_candidates, recommend_survey_zones
-from .travel_matrix import estimate_matrix_trip, read_travel_time_matrix
-from .trip_proxy import estimate_operational_trip
 
 
 def _positive_int(value: str) -> int:
@@ -27,54 +21,29 @@ def _positive_int(value: str) -> int:
     return number
 
 
-def _positive_float(value: str) -> float:
-    try:
-        number = float(value)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError(f"Expected a number, got {value!r}.") from exc
-    if number <= 0:
-        raise argparse.ArgumentTypeError("Value must be greater than 0.")
-    return number
-
-
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="acsp-recommend",
-        description="Select transparent ACSP field-survey candidates from a CSV file.",
+        description="Export ranked survey candidates or bounded survey zones.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    recommend = subparsers.add_parser(
-        "recommend",
-        help="Rank candidate rows and apply an equal per-area quota when multiple survey areas exist.",
-    )
-    recommend.add_argument("--input", required=True, help="Input candidate CSV path.")
-    recommend.add_argument("--output", required=True, help="Output CSV path for selected candidates.")
-    recommend.add_argument(
-        "--summary-json",
-        default="acsp-summary.json",
-        help="Output JSON path for run metadata and selected-row counts (default: acsp-summary.json).",
-    )
-    recommend.add_argument("--per-area", type=_positive_int, default=3, help="Top rows retained per survey area (default: 3).")
-    recommend.add_argument(
-        "--default-total",
-        type=_positive_int,
-        default=8,
-        help="Top rows retained when one or no survey area is supplied (default: 8).",
-    )
-    recommend.add_argument("--area-column", default="survey_area_id", help="Survey-area column name (default: survey_area_id).")
-    recommend.add_argument("--score-column", default="priority_score", help="Priority-score column name (default: priority_score).")
-    recommend.add_argument("--site-column", default="site_id", help="Stable candidate-ID column name (default: site_id).")
-    recommend.add_argument("--extent", nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH"), help="Optional rectangular candidate extent.")
-    recommend.add_argument("--latitude-column", default="latitude", help="Latitude column used with --extent.")
-    recommend.add_argument("--longitude-column", default="longitude", help="Longitude column used with --extent.")
+    recommend = subparsers.add_parser("recommend")
+    recommend.add_argument("--input", required=True)
+    recommend.add_argument("--output", required=True)
+    recommend.add_argument("--summary-json", default="acsp-summary.json")
+    recommend.add_argument("--per-area", type=_positive_int, default=3)
+    recommend.add_argument("--default-total", type=_positive_int, default=8)
+    recommend.add_argument("--area-column", default="survey_area_id")
+    recommend.add_argument("--score-column", default="priority_score")
+    recommend.add_argument("--site-column", default="site_id")
+    recommend.add_argument("--extent", nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH"))
+    recommend.add_argument("--latitude-column", default="latitude")
+    recommend.add_argument("--longitude-column", default="longitude")
 
-    zones = subparsers.add_parser(
-        "zones",
-        help="Consolidate nearby candidate points and rank practical survey zones.",
-    )
-    zones.add_argument("--input", required=True, help="Input candidate CSV path.")
-    zones.add_argument("--output", required=True, help="Output CSV path for recommended zones.")
+    zones = subparsers.add_parser("zones")
+    zones.add_argument("--input", required=True)
+    zones.add_argument("--output", required=True)
     zones.add_argument("--summary-json", default="acsp-summary.json")
     zones.add_argument("--per-area", type=_positive_int, default=3)
     zones.add_argument("--default-total", type=_positive_int, default=8)
@@ -85,97 +54,15 @@ def _build_parser() -> argparse.ArgumentParser:
     zones.add_argument("--latitude-column", default="latitude")
     zones.add_argument("--longitude-column", default="longitude")
     zones.add_argument("--merge-distance-m", type=float, default=None)
-
-    budget = subparsers.add_parser(
-        "budget",
-        help="Select a geometry-coverage sequence, then truncate it to an explicit hub + field-day budget.",
-    )
-    budget.add_argument("--input", required=True, help="Prefiltered candidate CSV.")
-    budget.add_argument("--output", required=True, help="Output CSV path for the feasible ordered survey set.")
-    budget.add_argument("--summary-json", default="acsp-budget-summary.json")
-    budget.add_argument("--prefix-audit", default="acsp-budget-prefix-audit.csv")
-    budget.add_argument("--hub-latitude", type=float, required=True, help="Actual field base / start-end hub latitude.")
-    budget.add_argument("--hub-longitude", type=float, required=True, help="Actual field base / start-end hub longitude.")
-    budget.add_argument("--hub-id", default="__hub__", help="Hub endpoint ID used by --travel-matrix (default: __hub__).")
-    budget.add_argument("--days", type=_positive_int, required=True, help="Available field days.")
-    budget.add_argument("--coverage-radius-km", type=_positive_float, default=1.0, help="Geometry coverage radius in km (default: 1).")
-    budget.add_argument("--max-sites", type=_positive_int, default=40, help="Maximum geometry-order sites evaluated (default: 40).")
-    budget.add_argument("--latitude-column", default="latitude")
-    budget.add_argument("--longitude-column", default="longitude")
-    budget.add_argument("--area-column", default="survey_area_id")
-    budget.add_argument("--site-column", default="site_id", help="Candidate ID column matched to travel-matrix endpoint IDs.")
-    budget.add_argument(
-        "--travel-matrix",
-        help=(
-            "Optional long-form CSV with from_id,to_id,travel_minutes and optional "
-            "distance_km,mode,available columns. Missing directed pairs are unreachable."
-        ),
-    )
-    budget.add_argument(
-        "--undirected-travel-matrix",
-        action="store_true",
-        help="Mirror supplied travel-matrix rows; use only when both directions truly have equal cost.",
-    )
-    budget.add_argument(
-        "--taxon-profile",
-        required=True,
-        choices=["plant", "bird", "amphibian", "reptile", "arthropod", "mammal", "fish", "unknown"],
-        help="Operational effort profile; required so field effort is not silently guessed.",
-    )
     return parser
-
-
-def _protocol_for_profile(profile: str) -> dict[str, object]:
-    from acsp_discover import infer_survey_protocol
-
-    metadata_by_profile = {
-        "plant": {"kingdom": "Plantae"},
-        "bird": {"kingdom": "Animalia", "class": "Aves"},
-        "amphibian": {"kingdom": "Animalia", "class": "Amphibia"},
-        "reptile": {"kingdom": "Animalia", "class": "Reptilia"},
-        "arthropod": {"kingdom": "Animalia", "class": "Insecta"},
-        "mammal": {"kingdom": "Animalia", "class": "Mammalia"},
-        "fish": {"kingdom": "Animalia", "class": "Actinopterygii"},
-        "unknown": {},
-    }
-    protocol = infer_survey_protocol(metadata_by_profile[str(profile)]).as_dict()
-    protocol["surface_domain"] = "inland_aquatic" if profile == "fish" else "terrestrial"
-    return protocol
-
-
-def _rename_budget_columns(
-    ordered: pd.DataFrame,
-    *,
-    latitude_column: str,
-    longitude_column: str,
-    site_column: str,
-    area_column: str,
-) -> pd.DataFrame:
-    rename_map: dict[str, str] = {}
-    for source, target in (
-        (latitude_column, "latitude"),
-        (longitude_column, "longitude"),
-        (site_column, "site_id"),
-        (area_column, "survey_area_id"),
-    ):
-        if source == target or source not in ordered.columns:
-            continue
-        if target in ordered.columns:
-            raise ValueError(
-                f"Cannot rename {source!r} to {target!r}: both columns are present."
-            )
-        rename_map[source] = target
-    return ordered.rename(columns=rename_map)
 
 
 def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
     input_path = Path(args.input)
     output_path = Path(args.output)
     summary_path = Path(args.summary_json)
-
     if not input_path.is_file():
         raise FileNotFoundError(f"Candidate CSV was not found: {input_path}")
-
     candidates = pd.read_csv(input_path)
     if args.extent is not None:
         from .planning import filter_candidates_to_extent
@@ -184,6 +71,7 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
         )
     else:
         candidates_for_selection = candidates
+
     if args.command == "zones":
         selected = recommend_survey_zones(
             candidates_for_selection,
@@ -208,14 +96,12 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     selected.to_csv(output_path, index=False)
-
     area_counts: dict[str, int] = {}
     if args.area_column in selected.columns:
         area_counts = {
             str(area): int(count)
             for area, count in selected.groupby(args.area_column, dropna=False).size().items()
         }
-
     summary: dict[str, object] = {
         "input_csv": str(input_path),
         "output_csv": str(output_path),
@@ -236,143 +122,12 @@ def run_recommendation(args: argparse.Namespace) -> dict[str, object]:
     return summary
 
 
-def run_budget(args: argparse.Namespace) -> dict[str, object]:
-    input_path = Path(args.input)
-    output_path = Path(args.output)
-    summary_path = Path(args.summary_json)
-    audit_path = Path(args.prefix_audit)
-    matrix_path = Path(args.travel_matrix) if args.travel_matrix else None
-    if not input_path.is_file():
-        raise FileNotFoundError(f"Candidate CSV was not found: {input_path}")
-
-    candidate_dtypes = {args.site_column: "string"} if matrix_path is not None else None
-    candidates = pd.read_csv(input_path, dtype=candidate_dtypes)
-    if candidates.empty:
-        raise ValueError("Candidate CSV is empty.")
-    if matrix_path is not None and args.site_column not in candidates.columns:
-        raise ValueError(
-            f"Candidate CSV lacks site column {args.site_column!r} required by --travel-matrix."
-        )
-
-    areas: list[str] = []
-    if args.area_column in candidates.columns:
-        areas = candidates[args.area_column].dropna().astype(str).unique().tolist()
-        if len(areas) > 1 and matrix_path is None:
-            raise ValueError(
-                "Multiple survey areas require --travel-matrix with explicit inter-area costs. "
-                "The straight-line proxy supports one survey area at a time."
-            )
-    coverage_group_col = args.area_column if args.area_column in candidates.columns else None
-
-    ordered, coverage_audit = select_maximum_coverage_sites(
-        candidates,
-        radius_km=float(args.coverage_radius_km),
-        max_sites=int(args.max_sites),
-        latitude_col=args.latitude_column,
-        longitude_col=args.longitude_column,
-        group_col=coverage_group_col,
-    )
-    ordered = _rename_budget_columns(
-        ordered,
-        latitude_column=args.latitude_column,
-        longitude_column=args.longitude_column,
-        site_column=args.site_column,
-        area_column=args.area_column,
-    )
-    if "site_id" not in ordered.columns:
-        ordered["site_id"] = range(1, len(ordered) + 1)
-    elif ordered["site_id"].isna().any():
-        raise ValueError("Selected candidate site IDs must be non-missing.")
-    elif ordered["site_id"].astype(str).duplicated().any():
-        raise ValueError("Selected candidate site IDs must be unique.")
-
-    protocol = _protocol_for_profile(args.taxon_profile)
-    travel_matrix = None
-    if matrix_path is not None:
-        travel_matrix = read_travel_time_matrix(
-            matrix_path,
-            undirected=bool(args.undirected_travel_matrix),
-        )
-        trip_estimator = partial(
-            estimate_matrix_trip,
-            travel_matrix=travel_matrix,
-            hub_id=args.hub_id,
-        )
-        routing_mode = "external_travel_time_matrix"
-        routing_claim = (
-            "user-supplied pairwise travel costs are used without straight-line fallback; "
-            "ACSP does not verify matrix source accuracy, schedules, closures, permissions, "
-            "traffic, weather, or safety"
-        )
-    else:
-        trip_estimator = estimate_operational_trip
-        routing_mode = "straight_line_distance_factor_proxy"
-        routing_claim = (
-            "proxy only; road/trail/ferry topology, traffic, access permission, safety and "
-            "detection are not validated"
-        )
-
-    selected, budget_audit, prefix_audit = select_largest_feasible_prefix(
-        ordered,
-        hub_latitude=float(args.hub_latitude),
-        hub_longitude=float(args.hub_longitude),
-        target_days=int(args.days),
-        trip_estimator=trip_estimator,
-        survey_protocol=protocol,
-        max_sites=int(args.max_sites),
-    )
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    selected.to_csv(output_path, index=False)
-    audit_path.parent.mkdir(parents=True, exist_ok=True)
-    prefix_audit.to_csv(audit_path, index=False)
-
-    summary: dict[str, object] = {
-        "input_csv": str(input_path),
-        "output_csv": str(output_path),
-        "prefix_audit_csv": str(audit_path),
-        "input_candidate_count": int(len(candidates)),
-        "geometry_order_count": int(len(ordered)),
-        "selected_count": int(len(selected)),
-        "survey_area_count": int(len(areas)) if areas else 1,
-        "hub_latitude": float(args.hub_latitude),
-        "hub_longitude": float(args.hub_longitude),
-        "hub_id": str(args.hub_id),
-        "target_days": int(args.days),
-        "taxon_profile": str(args.taxon_profile),
-        "survey_protocol": protocol,
-        "coverage_selection": coverage_audit.as_dict(),
-        "operational_budget": budget_audit.as_dict(),
-        "routing_mode": routing_mode,
-        "travel_matrix_csv": str(matrix_path) if matrix_path is not None else None,
-        "travel_matrix_row_count": int(len(travel_matrix)) if travel_matrix is not None else None,
-        "travel_matrix_undirected": (
-            bool(args.undirected_travel_matrix) if matrix_path is not None else None
-        ),
-        "selection_rule": (
-            "geometry-only maximum candidate coverage within survey-area boundaries followed "
-            "by order-preserving field-day truncation"
-        ),
-        "routing_claim": routing_claim,
-    }
-    summary_path.parent.mkdir(parents=True, exist_ok=True)
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return summary
-
-
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
-    if args.command in {"recommend", "zones"}:
-        summary = run_recommendation(args)
-        print(json.dumps(summary, ensure_ascii=False))
-        return 0
-    if args.command == "budget":
-        summary = run_budget(args)
-        print(json.dumps(summary, ensure_ascii=False))
-        return 0
-    parser.error(f"Unsupported command: {args.command}")
-    return 2
+    summary = run_recommendation(args)
+    print(json.dumps(summary, ensure_ascii=False))
+    return 0
 
 
 if __name__ == "__main__":

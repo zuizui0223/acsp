@@ -1,94 +1,104 @@
-# Campanula discovery-algorithm development contract
+# Campanula development contract: frozen ecological support -> candidate patches
 
 ## Status
 
-`Campanula microdonta` is **development data**, not an independent validation cohort.
-The 2026 field outcomes have already been inspected and previously motivated changes to ACSP.
-They may therefore be used freely to diagnose failures, tune candidate generation, and compare
-experimental strategies. They must not be presented as untouched evidence of generalization.
+`Campanula microdonta` is **development data, not an independent validation cohort**. The 2026 field outcomes have already been inspected and may be used only for diagnosis and freeze-reproduction checks. The frozen cross-taxon Practical Core / retrospective evidence remains separate and unchanged.
 
-The frozen cross-taxon Practical Core and the frozen 192-pair confirmation artifacts remain
-separate. Nothing in this development track changes their fingerprints, taxa, splits, or claims.
+The active Campanula line is intentionally simple: reproduce the frozen occurrence-conditioned support envelope and export bounded survey-candidate patches. ACSP does **not** infer route, movement mode, field days, site count, or budget in this line.
 
-## Inputs already present in the repository
+## Frozen ecological object
 
-- training occurrences: `field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv`
-- field detections: `field_validation/campanula_microdonta/locations_2026.csv`
-- 500 m field clusters: `field_validation/campanula_microdonta/development_data/detection_clusters.csv`
-- leakage-controlled validation candidate pool: `candidate_pool.csv`
-- real-use survey pool may be explored separately, but can never be used to claim independent validation.
+Inputs fixed before 2026 outcomes are opened:
 
-Current development target contains 19 field-detection clusters across Oshima, Toshima, Niijima,
-Shikinejima, and Kozushima.
+- pre-2026 GBIF occurrence cache through 2025;
+- 500 m occurrence thinning;
+- 18 occurrence prototypes;
+- full-island 22,784-cell candidate universe from frozen GSI DEM coverage;
+- pinned ESA WorldCover 2021 NDVI composite;
+- NDVI-state support ranking;
+- internal leave-one-prototype-out consensus.
 
-## Primary development objective
+Frozen primary 1-km support rule:
 
-The first objective is **candidate-generation completeness**, not Top-5 superiority.
+- support threshold: `0.09945575892925262`;
+- each LOO support-rank vector cast to `float32` before the consensus median;
+- inclusion: `rank <= threshold + 1e-12`;
+- reproduction runtime: **Python 3.12**, matching original freeze run `31892691452`;
+- frozen development artifact run `31856717236`, digest `sha256:d05de653400abc76537aeeb3554506fbf8fd0e197f381401cb3a03e69b058ce8`;
+- canonical support cells: **2,367**;
+- archived development recovery: **19/19**;
+- archived maximum nearest distance: **0.8687897057613438 km**.
 
-A candidate generator passes the development coverage gate only when every one of the 19 field
-clusters has at least one generated candidate within 1 km:
+Python 3.11 retained the 19/19 endpoint but moved five threshold-boundary cells (`2367 -> 2362`), so Python 3.12 is part of the numerical reproduction contract.
 
-`candidate_generation_recall_1km = 19 / 19`.
+This object is an occurrence-conditioned robust survey-support envelope. It is **not** occupancy probability, calibrated suitability probability, or a validated finite Top-k policy.
 
-This gate deliberately ignores the final candidate ranking. A ranking method cannot recover a
-field cluster if candidate generation never placed any candidate near it.
+## Active output
 
-The current cached pools fail this gate: only 13 of the 19 clusters are reachable within 1 km.
-Therefore candidate generation is the active development bottleneck.
+```text
+pre-2026 occurrences
+        ↓
+full-island candidate universe
+        ↓
+LOO consensus support
+        ↓
+frozen support threshold
+        ↓
+bounded same-island patches
+        ↓
+candidate patch CSV
+```
 
-## Development order
+The exact reproduction exports **2,367 eligible cells as 134 bounded patches**:
 
-1. **Generation gate** — make the candidate universe reach all 19 clusters at 1 km using only
-   pre-2026 GBIF occurrences plus environmental / terrain / landscape inputs available at decision time.
-2. **Compression gate** — after 19/19 is reachable, reduce the candidate universe into stable,
-   interpretable patches or representative survey sites without losing that coverage.
-3. **Budget curve** — measure recall at equal budgets (Top-5, Top-10, route/time budget) rather than
-   forcing 19 dispersed clusters to be recoverable by exactly five points.
-4. **Ablation** — identify which structural components are necessary: full-island terrain search,
-   occurrence-conditioned analogue, multi-scale support, patch persistence, connectivity, etc.
-5. **Only after the algorithm is frozen** — move to random cross-taxon / cross-region validation.
+- Oshima: 96
+- Niijima: 20
+- Kozushima: 13
+- Toshima: 4
+- Shikinejima: 1
 
-## Guardrails against a trivial 19/19 solution
+These 134 patches are the candidate output. They are not a requirement to visit 134 sites and are not subsequently reduced by a hidden field-outcome rule.
 
-Field coordinates are labels for development diagnostics only. They may be used to decide whether
-an experiment worked, but must not be read by the candidate generator or scoring function.
+## Why finite patch compression is not the target
 
-Disallowed inference-time inputs include:
+The historical finite-patch experiments are diagnostics only:
+
+- old restricted candidate pools reached only 13/19; full-island generation removed that upstream ceiling;
+- a historical 32-patch diagnostic reached 19/19 but failed prototype-deletion robustness and was rejected for freeze;
+- an 11-patch field-outcome minimum cover is only a diagnostic lower bound;
+- pointwise inverse classification required 82 patches cross-fit / 86 full-fit for complete recovery;
+- prototype-coverage knee: 19 patches, 11/19;
+- support-envelope mass knee: 20 patches, 13/19; complete prefix 38;
+- equal-fragment representation: 22 patches, 13/19; complete prefix 87;
+- pure within-island k-center: 13 patches, 9/19; complete prefix 87.
+
+The conclusion is not to search for another stopping rule on Campanula. The retained scientific object is the robust support envelope and its bounded patch representation.
+
+## Active runnable path
+
+- `research/campanula_robust_support_patch_export.py`
+- `.github/workflows/campanula-inverse-development.yml` (display name: `Campanula robust support export`)
+
+The workflow must reproduce the 2,367-cell / 19-of-19 freeze before exporting patches.
+
+## Guardrails
+
+Inference-time support cells and patch boundaries must not use:
 
 - 2026 field latitude / longitude;
-- distance to a 2026 field detection;
+- distance to 2026 detections;
 - field cluster identifiers;
-- whether a candidate recovered a field cluster.
+- whether a candidate recovered a field cluster;
+- any extension rule that adds patches until field detections are recovered.
 
-The generator may use the field outcomes only after generation to compute development loss and to
-choose the next experiment.
-
-## Working hypothesis
-
-The present hierarchy refines only selected parent regions. That creates an artificial ceiling:
-large parts of an island never enter the candidate universe even when they contain terrain states
-similar to known occurrences.
-
-The next line of development therefore tests **full-island structural search** rather than merely
-changing final ranking weights:
-
-- scan the full island at a computationally tractable terrain resolution;
-- characterize occurrence-conditioned local terrain states from pre-2026 occurrences;
-- find repeated / connected occurrences of those states anywhere on the island;
-- retain candidates or patches that remain supported across reasonable scales / thresholds;
-- then optimize the finite survey set.
-
-This is intentionally different from fitting a coarse climate SDM and taking its highest cells.
-The development question is whether occurrence-supported local structures can be rediscovered
-throughout an island strongly enough to include all observed field clusters.
+Field outcomes are allowed only for post-freeze reproduction checks and development diagnosis.
 
 ## Promotion rule
 
-Campanula can establish an algorithmic design, but cannot establish generality.
+A generalized candidate-patch method derived from this development line requires:
 
-A method leaves this development sandbox only after:
-
-- 19/19 candidate-generation coverage at 1 km is reached without field-label leakage;
-- the rule is frozen before new taxa are evaluated;
-- random taxon-region validation uses no Campanula-tuned outcomes;
-- negative random-validation results are retained and the final test set is not used for retuning.
+1. exact reproduction of the archived ecological freeze;
+2. outcome-blind candidate and patch generation;
+3. no field-tuned finite Top-k or stopping threshold;
+4. untouched taxon-region evaluation after freeze;
+5. no retuning on the final untouched cohort.
