@@ -34,8 +34,9 @@ def _parser() -> argparse.ArgumentParser:
         prog="acsp-patches",
         description=(
             "Export the validated ACSP robust candidate-patch set. "
-            "Use --taxon plus --extent for the simple GBIF-to-patches path, or provide precomputed CSV inputs. "
-            "The 2.5% support fraction and 1 km patch aggregation are fixed by untouched confirmation."
+            "With --taxon alone, ACSP scans the same 12 Japanese regions used in cross-taxon confirmation. "
+            "Add --extent for one custom region, or provide precomputed CSV inputs. "
+            "The 2.5% support fraction and 1 km patch aggregation are fixed."
         ),
     )
     parser.add_argument("--taxon", help="Scientific species name for the simple discovery path")
@@ -73,17 +74,21 @@ def _validated_summary_base() -> dict[str, object]:
 
 
 def _run_taxon_mode(args: argparse.Namespace) -> tuple[pd.DataFrame, dict[str, object]]:
-    if args.extent is None:
-        raise ValueError("--taxon requires --extent WEST SOUTH EAST NORTH")
     if any(value is not None for value in (args.universe, args.prototypes, args.feature_columns)):
         raise ValueError("--taxon mode cannot be combined with --universe, --prototypes, or --feature-columns")
-    from .taxon_patches import discover_validated_candidate_patches
 
-    patches, discovery = discover_validated_candidate_patches(
-        args.taxon,
-        tuple(args.extent),
-        area_id=args.area_id,
-    )
+    if args.extent is None:
+        from .taxon_patches import discover_validated_candidate_patches_japan
+
+        patches, discovery = discover_validated_candidate_patches_japan(args.taxon)
+    else:
+        from .taxon_patches import discover_validated_candidate_patches
+
+        patches, discovery = discover_validated_candidate_patches(
+            args.taxon,
+            tuple(args.extent),
+            area_id=args.area_id,
+        )
     summary = {
         **_validated_summary_base(),
         **discovery,
@@ -104,7 +109,7 @@ def _run_csv_mode(args: argparse.Namespace) -> tuple[pd.DataFrame, dict[str, obj
     ]
     if missing:
         raise ValueError(
-            "CSV mode requires " + ", ".join(missing) + "; alternatively use --taxon with --extent"
+            "CSV mode requires " + ", ".join(missing) + "; alternatively use --taxon"
         )
     if args.extent is not None:
         raise ValueError("--extent is only used with --taxon mode")
