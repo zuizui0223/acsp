@@ -3,10 +3,10 @@
 
 This is a development-only bridge for already-inspected historical cohorts. The
 predeclared taxon-region bounds are fixed before spatial holdout outcomes are
-opened. For each fold we create a deterministic land-point surface inside those
-bounds, extract the same terrain variables for the surface and training
-occurrences, reconstruct leave-one-prototype-out support, then open held-out
-coordinates only for recovery measurement.
+opened. Each predeclared region receives one deterministic land-point surface
+shared by all folds in that region. Training prototypes vary by fold; the
+candidate universe does not. Held-out coordinates are opened only for recovery
+measurement.
 
 The script intentionally does not use the compressed ``potential_candidates``
 pool: that object is designed for Top-k field decisions and is too sparse to be
@@ -15,6 +15,7 @@ the universe of a percentile support envelope.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -30,6 +31,7 @@ ROBUST_FEATURES = ("elevation", "slope", "aspect_sin", "aspect_cos", "roughness"
 DEFAULT_TIERS = (0.025, 0.05, 0.10, 0.20)
 DEFAULT_RADII_KM = (1.0, 2.0, 5.0, 10.0)
 MAX_PROTOTYPES = 32
+_SURFACE_CACHE: dict[tuple[tuple[float, float, float, float], int, int], pd.DataFrame] = {}
 
 
 def _csv_floats(value: str) -> tuple[float, ...]:
@@ -59,12 +61,21 @@ def _bounds_from_manifest(path: Path) -> tuple[float, float, float, float]:
     return values
 
 
+def _stable_surface_seed(bounds: tuple[float, float, float, float], base_seed: int) -> int:
+    token = ",".join(f"{value:.6f}" for value in bounds)
+    offset = int(hashlib.sha1(token.encode("utf-8")).hexdigest()[:8], 16)
+    return int((int(base_seed) + offset) % (2**31 - 1))
+
+
 def _dense_land_surface(
     bounds: tuple[float, float, float, float],
     *,
     n_points: int,
     seed: int,
 ) -> pd.DataFrame:
+    key = (tuple(float(value) for value in bounds), int(n_points), int(seed))
+    if key in _SURFACE_CACHE:
+        return _SURFACE_CACHE[key].copy()
     west, south, east, north = bounds
     corners = pd.DataFrame(
         {
@@ -92,6 +103,7 @@ def _dense_land_surface(
     surface = _with_robust_features(surface)
     surface = surface.loc[surface[list(ROBUST_FEATURES)].notna().all(axis=1)].copy().reset_index(drop=True)
     surface["survey_area_id"] = "region"
+    _SURFACE_CACHE[key] = surface.copy()
     return surface
 
 
@@ -102,9 +114,6 @@ def _prototype_coordinates(training: pd.DataFrame) -> pd.DataFrame:
     work = work.dropna(subset=["_latitude", "_longitude"]).reset_index(drop=True)
     if len(work) < 5:
         raise ValueError("fewer than five training coordinates")
-    # Reuse the package's existing deterministic spatial-thinning primitive.
-    # Increase spacing only as needed to keep the LOO prototype family compact;
-    # no held-out coordinate or outcome is visible here.
     chosen = work
     for thinning_m in (5_000.0, 10_000.0, 20_000.0, 40_000.0, 80_000.0):
         candidate = spatial_thin(work, thinning_m)
@@ -144,14 +153,16 @@ def _evaluate_fold(
     radii_km: tuple[float, ...],
     surface_points: int,
     random_draws: int,
-    seed: int,
+    surface_seed_base: int,
+    random_seed: int,
 ) -> list[dict[str, object]]:
     training = pd.read_csv(fold_dir / "training_occurrences.csv")
     heldout = pd.read_csv(fold_dir / "held_out_occurrences.csv")
     if training.empty or heldout.empty:
         return []
     bounds = _bounds_from_manifest(fold_dir / "fold_manifest.json")
-    surface = _dense_land_surface(bounds, n_points=surface_points, seed=seed)
+    surface_seed = _stable_surface_seed(bounds, surface_seed_base)
+    surface = _dense_land_surface(bounds, n_points=surface_points, seed=surface_seed)
     prototypes = _training_prototypes(training)
     consensus, uncertainty, audit = leave_one_out_consensus_support(
         surface,
@@ -166,7 +177,7 @@ def _evaluate_fold(
     if held.empty:
         return []
 
-    rng = np.random.default_rng(int(seed) + 991)
+    rng = np.random.default_rng(int(random_seed) + 991)
     rows: list[dict[str, object]] = []
     for tier in tiers:
         selected, patches = support_cells_to_patches(
@@ -214,6 +225,7 @@ def _evaluate_fold(
                     "support_fraction": float(tier),
                     "radius_km": float(record.radius_km),
                     "surface_points": int(len(surface)),
+                    "surface_seed": int(surface_seed),
                     "prototype_count": int(audit.prototype_count),
                     "selected_cells": int(len(selected)),
                     "patch_count": int(len(patches)),
@@ -250,7 +262,8 @@ def main() -> None:
                 radii_km=args.radii_km,
                 surface_points=int(args.surface_points),
                 random_draws=int(args.random_draws),
-                seed=int(args.seed) + index * 1009,
+                surface_seed_base=int(args.seed),
+                random_seed=int(args.seed) + index * 1009,
             )
             if result:
                 rows.extend(result)
@@ -281,7 +294,7 @@ def main() -> None:
     manifest = {
         "status": "historical_development_only",
         "untouched_confirmation_opened": False,
-        "universe_rule": "deterministic land surface inside predeclared region bounds; WorldClim 2.5m terrain extracted independently of held-out outcomes",
+        "universe_rule": "one deterministic land surface per predeclared region, shared across folds; WorldClim 2.5m terrain extracted independently of held-out outcomes",
         "prototype_rule": "training occurrences deterministically spatially thinned to at most 32 prototypes; terrain extracted directly at retained training coordinates",
         "terrain_features": list(ROBUST_FEATURES),
         "folds_discovered": int(len(fold_dirs)),
