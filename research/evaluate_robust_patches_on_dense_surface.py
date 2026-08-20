@@ -23,12 +23,13 @@ import pandas as pd
 
 from acsp.field_validation import detection_recovery_table, recovery_summary
 from acsp.robust_patches import leave_one_out_consensus_support, support_cells_to_patches
-from gbif_fieldmap_builder_app import extract_environment, generate_land_points
+from gbif_fieldmap_builder_app import extract_environment, generate_land_points, spatial_thin
 
 RAW_FEATURES = ("elevation", "slope", "aspect", "roughness", "tpi")
 ROBUST_FEATURES = ("elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi")
 DEFAULT_TIERS = (0.025, 0.05, 0.10, 0.20)
 DEFAULT_RADII_KM = (1.0, 2.0, 5.0, 10.0)
+MAX_PROTOTYPES = 32
 
 
 def _csv_floats(value: str) -> tuple[float, ...]:
@@ -94,10 +95,33 @@ def _dense_land_surface(
     return surface
 
 
-def _training_prototypes(training: pd.DataFrame) -> pd.DataFrame:
-    points = training[["latitude", "longitude"]].apply(pd.to_numeric, errors="coerce").dropna().copy()
-    if len(points) < 5:
+def _prototype_coordinates(training: pd.DataFrame) -> pd.DataFrame:
+    work = training.copy()
+    work["_latitude"] = pd.to_numeric(work["latitude"], errors="coerce")
+    work["_longitude"] = pd.to_numeric(work["longitude"], errors="coerce")
+    work = work.dropna(subset=["_latitude", "_longitude"]).reset_index(drop=True)
+    if len(work) < 5:
         raise ValueError("fewer than five training coordinates")
+    # Reuse the package's existing deterministic spatial-thinning primitive.
+    # Increase spacing only as needed to keep the LOO prototype family compact;
+    # no held-out coordinate or outcome is visible here.
+    chosen = work
+    for thinning_m in (5_000.0, 10_000.0, 20_000.0, 40_000.0, 80_000.0):
+        candidate = spatial_thin(work, thinning_m)
+        if len(candidate) >= 5:
+            chosen = candidate
+        if 5 <= len(candidate) <= MAX_PROTOTYPES:
+            chosen = candidate
+            break
+    if len(chosen) > MAX_PROTOTYPES:
+        chosen = chosen.iloc[:MAX_PROTOTYPES].copy()
+    return chosen[["_latitude", "_longitude"]].rename(
+        columns={"_latitude": "latitude", "_longitude": "longitude"}
+    ).reset_index(drop=True)
+
+
+def _training_prototypes(training: pd.DataFrame) -> pd.DataFrame:
+    points = _prototype_coordinates(training)
     enriched = extract_environment(
         points,
         list(RAW_FEATURES),
@@ -107,7 +131,6 @@ def _training_prototypes(training: pd.DataFrame) -> pd.DataFrame:
     )
     enriched = _with_robust_features(enriched)
     enriched = enriched.loc[enriched[list(ROBUST_FEATURES)].notna().all(axis=1)].copy().reset_index(drop=True)
-    # Duplicate environment vectors do not add LOO information.
     enriched = enriched.drop_duplicates(list(ROBUST_FEATURES)).reset_index(drop=True)
     if len(enriched) < 5:
         raise ValueError("fewer than five unique complete training environment prototypes")
@@ -259,12 +282,13 @@ def main() -> None:
         "status": "historical_development_only",
         "untouched_confirmation_opened": False,
         "universe_rule": "deterministic land surface inside predeclared region bounds; WorldClim 2.5m terrain extracted independently of held-out outcomes",
-        "prototype_rule": "terrain extracted directly at training occurrence coordinates",
+        "prototype_rule": "training occurrences deterministically spatially thinned to at most 32 prototypes; terrain extracted directly at retained training coordinates",
         "terrain_features": list(ROBUST_FEATURES),
         "folds_discovered": int(len(fold_dirs)),
         "folds_evaluated": int(results["fold"].nunique()) if not results.empty else 0,
         "folds_skipped": int(len(skipped)),
         "surface_points_requested": int(args.surface_points),
+        "max_prototypes": MAX_PROTOTYPES,
         "tiers": list(args.tiers),
         "radii_km": list(args.radii_km),
         "tier_auto_selection": False,
