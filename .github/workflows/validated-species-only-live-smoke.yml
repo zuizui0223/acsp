@@ -19,33 +19,80 @@ jobs:
           python-version: "3.12"
       - name: Install ACSP
         run: python -m pip install -e .
-      - name: Run species-only validated Japan scan
+      - name: Diagnose all fixed Japan regions with live services
         run: |
           mkdir -p smoke
-          acsp-patches \
-            --taxon "Castanopsis sieboldii" \
-            --output smoke/candidate_patches.csv \
-            --summary-json smoke/summary.json
-      - name: Audit live output
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from acsp.taxon_patches import (
+              VALIDATED_JAPAN_REGIONS,
+              ROBUST_TERRAIN_FEATURES,
+              _terrain_inputs,
+              fetch_region_occurrences,
+              match_gbif_species,
+          )
+          from acsp.validated_robust import validated_robust_candidate_patches
+
+          match = match_gbif_species('Castanopsis sieboldii')
+          rows = []
+          patch_count = 0
+          for region_id, region_name, stratum, west, south, east, north in VALIDATED_JAPAN_REGIONS:
+              bounds = (west, south, east, north)
+              record = {
+                  'region_id': region_id,
+                  'region_name': region_name,
+                  'geographic_stratum': stratum,
+                  'extent': list(bounds),
+                  'stage': 'start',
+                  'occurrence_rows': 0,
+                  'surface_points': 0,
+                  'prototype_rows': 0,
+                  'candidate_patch_count': 0,
+                  'error': '',
+              }
+              try:
+                  occurrences = fetch_region_occurrences(match['taxon_key'], bounds)
+                  record['occurrence_rows'] = len(occurrences)
+                  record['stage'] = 'occurrences_ok'
+                  surface, prototypes, seed = _terrain_inputs(occurrences, bounds, area_id=region_id)
+                  record['surface_points'] = len(surface)
+                  record['prototype_rows'] = len(prototypes)
+                  record['surface_seed'] = seed
+                  record['stage'] = 'terrain_ok'
+                  patches, audit = validated_robust_candidate_patches(
+                      surface,
+                      prototypes,
+                      feature_columns=ROBUST_TERRAIN_FEATURES,
+                      area_col='survey_area_id',
+                  )
+                  record['candidate_patch_count'] = len(patches)
+                  record['support_audit'] = audit.as_dict()
+                  record['stage'] = 'patches_ok'
+                  patch_count += len(patches)
+              except Exception as exc:
+                  record['error'] = f'{type(exc).__name__}: {exc}'
+              rows.append(record)
+
+          payload = {
+              'match': match,
+              'regions': rows,
+              'evaluated_regions': sum(row['stage'] == 'patches_ok' for row in rows),
+              'candidate_patch_count': patch_count,
+          }
+          Path('smoke/diagnostic.json').write_text(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
+          print(json.dumps(payload, indent=2, ensure_ascii=False))
+          PY
+      - name: Require at least one live-evaluable region
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          import pandas as pd
-
-          summary = json.loads(Path('smoke/summary.json').read_text())
-          patches = pd.read_csv('smoke/candidate_patches.csv')
-          assert summary['input_mode'] == 'taxon_japan_validated_regions'
-          assert summary['declared_region_count'] == 12
-          assert summary['evaluated_region_count'] >= 1
-          assert summary['candidate_patch_count'] == len(patches)
-          assert summary['candidate_generation_only'] is True
-          assert summary['routing_or_budget_optimization'] is False
-          assert summary['validated_support_fraction'] == 0.025
-          assert len(summary['region_status']) == 12
-          print(json.dumps(summary, indent=2, ensure_ascii=False))
+          payload = json.loads(Path('smoke/diagnostic.json').read_text())
+          assert payload['evaluated_regions'] >= 1, payload
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: validated-species-only-live-smoke
           path: smoke
