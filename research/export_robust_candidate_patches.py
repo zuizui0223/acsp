@@ -107,7 +107,8 @@ def main() -> None:
         "longitude_column": args.longitude_column,
         "area_column": args.area_column,
         "universe_rows": int(len(universe)),
-        "prototype_rows": int(len(prototypes)),
+        "prototype_rows_input": int(len(prototypes)),
+        "prototype_rows_complete": int(audit.prototype_count),
         "tiers": tier_rows,
     }
     (args.out / "robust_candidate_patch_manifest.json").write_text(
