@@ -2,9 +2,25 @@
 
 **ACSP returns candidate survey patches.**
 
-The validated product reconstructs a robust, occurrence-conditioned environmental support envelope from training occurrences and converts the narrowest confirmed support tier into bounded candidate patches.
+The validated product reconstructs a robust, occurrence-conditioned environmental support envelope from occurrence prototypes and converts the narrowest confirmed support tier into bounded candidate patches.
 
 It does **not** ask the user to choose a survey budget, number of sites, route, travel mode, or field days. It does **not** claim occupancy probability or an exact occupied location.
+
+## Simplest use
+
+For a species and a declared rectangular survey region, ACSP can build the validated inputs itself and return candidate patches directly:
+
+```bash
+acsp-patches \
+  --taxon "Castanopsis sieboldii" \
+  --extent 139.20 34.60 139.50 34.85 \
+  --output candidate_patches.csv \
+  --summary-json candidate_patches_summary.json
+```
+
+This path resolves the species with the GBIF backbone, retrieves occurrence records inside the declared rectangle, uses the same deterministic spatial-thinning and 800-point terrain-surface conventions used in the untouched confirmation, extracts the confirmed terrain features, and applies the fixed validated robust-support rule.
+
+The user supplies the **taxon and survey extent only**. The validated path has no budget, day, route, site-count, support-threshold, or travel-mode parameter.
 
 ## Validated product
 
@@ -42,30 +58,23 @@ python -m pip install .
 
 The installable distribution is `acsp-survey`; the import package is `acsp`.
 
-## Validated CLI
-
-Use `acsp-patches` with:
-
-1. a candidate-universe CSV containing coordinates, survey-area ID, and environmental features;
-2. a training-occurrence prototype CSV containing the same environmental feature columns.
-
-Example:
-
-```bash
-acsp-patches \
-  --universe candidate_universe.csv \
-  --prototypes occurrence_prototypes.csv \
-  --feature-columns elevation,slope,aspect_sin,aspect_cos,roughness,tpi \
-  --output candidate_patches.csv \
-  --summary-json candidate_patches_summary.json
-```
-
-The command writes one validated candidate-patch CSV. There is no `--budget`, `--days`, `--top-k`, support-threshold, or route option.
-
 ## Python API
 
+The same simple taxon-to-patch path is available from Python:
+
 ```python
-from acsp.validated_robust import validated_robust_candidate_patches
+from acsp import discover_validated_candidate_patches
+
+patches, audit = discover_validated_candidate_patches(
+    "Castanopsis sieboldii",
+    (139.20, 34.60, 139.50, 34.85),  # west, south, east, north
+)
+```
+
+For precomputed environmental tables, the lower-level validated API remains available:
+
+```python
+from acsp import validated_robust_candidate_patches
 
 patches, audit = validated_robust_candidate_patches(
     candidate_universe,
@@ -81,7 +90,29 @@ patches, audit = validated_robust_candidate_patches(
 )
 ```
 
-The output is a bounded patch table with the frozen validation metadata attached to every patch.
+The equivalent CSV mode is retained for reproducible batch workflows:
+
+```bash
+acsp-patches \
+  --universe candidate_universe.csv \
+  --prototypes occurrence_prototypes.csv \
+  --feature-columns elevation,slope,aspect_sin,aspect_cos,roughness,tpi \
+  --output candidate_patches.csv
+```
+
+## Input interpretation
+
+The candidate universe is an environmental surface, not a probability raster. Environmental features are centered and robustly scaled against occurrence prototypes. Candidate support is based on environmental distance to those prototypes across leave-one-prototype-out worlds.
+
+The confirmed terrain features are:
+
+- elevation;
+- slope;
+- aspect represented as sine and cosine;
+- roughness;
+- topographic position index.
+
+The generic package core can accept other shared numeric environmental feature columns for research, but changing the feature set is outside the frozen validated product claim.
 
 Lower-level research/audit utilities remain available in `acsp.robust_patches`:
 
@@ -91,20 +122,6 @@ Lower-level research/audit utilities remain available in `acsp.robust_patches`:
 
 Those functions expose thresholds and other parameters for method development and audit. They are not the validated no-retuning product API.
 
-## Input interpretation
-
-The candidate universe is an environmental surface, not a probability raster. Environmental features are centered and robustly scaled against training-occurrence prototypes. Candidate support is based on environmental distance to those prototypes across leave-one-prototype-out worlds.
-
-The current cross-taxon confirmation used terrain features:
-
-- elevation;
-- slope;
-- aspect represented as sine and cosine;
-- roughness;
-- topographic position index.
-
-The package core itself accepts arbitrary shared numeric environmental feature columns, but changing the feature set is outside the frozen validated product claim.
-
 ## Campanula development role
 
 The 2026 *Campanula punctata* / microdonta field material was used as **development data**, not as independent confirmation. It helped identify the robust support-envelope design and is retained as a regression fixture. Independent generalization was established only with the later taxonomy-safe untouched 96-pair cohort.
@@ -112,6 +129,8 @@ The 2026 *Campanula punctata* / microdonta field material was used as **developm
 ## Failure handling
 
 The untouched confirmation used intention-to-evaluate accounting. Folds with too few spatial blocks, too few complete environmental prototypes, or an empty 2.5% support tier were retained as zero. In the final confirmation, 23 of 96 pairs had at least one failed fold; the overall result still passed the frozen gate. This makes the reported cross-taxon lift conservative with respect to those operational failures.
+
+In normal use, ACSP reports an explicit error if there are too few usable occurrence/environment prototypes to reconstruct the validated support surface. A valid 2.5% tier may also contain zero patches; this is a legitimate candidate-generation result rather than a signal to widen the threshold automatically.
 
 ## Legacy compatibility
 
@@ -121,6 +140,7 @@ No new route, field-day, travel-mode, or budget optimizer should be added to the
 
 ## Repository layout
 
+- `acsp/taxon_patches.py` — simple species + extent input adapter.
 - `acsp/validated_robust.py` — promoted validated candidate-patch API.
 - `acsp/robust_cli.py` — `acsp-patches` command.
 - `acsp/robust_patches.py` — lower-level robust support and patch utilities.
