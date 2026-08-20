@@ -11,7 +11,7 @@ permissions:
 jobs:
   live-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,82 +19,14 @@ jobs:
           python-version: "3.12"
       - name: Install ACSP
         run: python -m pip install -e .
-      - name: Diagnose all fixed Japan regions with live services
+      - name: Reproduce Izu terrain failure with full traceback
         run: |
-          mkdir -p smoke
           python - <<'PY'
-          import json
-          from pathlib import Path
-          from acsp.taxon_patches import (
-              VALIDATED_JAPAN_REGIONS,
-              ROBUST_TERRAIN_FEATURES,
-              _terrain_inputs,
-              fetch_region_occurrences,
-              match_gbif_species,
-          )
-          from acsp.validated_robust import validated_robust_candidate_patches
-
+          from acsp.taxon_patches import _terrain_inputs, fetch_region_occurrences, match_gbif_species
           match = match_gbif_species('Castanopsis sieboldii')
-          rows = []
-          patch_count = 0
-          for region_id, region_name, stratum, west, south, east, north in VALIDATED_JAPAN_REGIONS:
-              bounds = (west, south, east, north)
-              record = {
-                  'region_id': region_id,
-                  'region_name': region_name,
-                  'geographic_stratum': stratum,
-                  'extent': list(bounds),
-                  'stage': 'start',
-                  'occurrence_rows': 0,
-                  'surface_points': 0,
-                  'prototype_rows': 0,
-                  'candidate_patch_count': 0,
-                  'error': '',
-              }
-              try:
-                  occurrences = fetch_region_occurrences(match['taxon_key'], bounds)
-                  record['occurrence_rows'] = len(occurrences)
-                  record['stage'] = 'occurrences_ok'
-                  surface, prototypes, seed = _terrain_inputs(occurrences, bounds, area_id=region_id)
-                  record['surface_points'] = len(surface)
-                  record['prototype_rows'] = len(prototypes)
-                  record['surface_seed'] = seed
-                  record['stage'] = 'terrain_ok'
-                  patches, audit = validated_robust_candidate_patches(
-                      surface,
-                      prototypes,
-                      feature_columns=ROBUST_TERRAIN_FEATURES,
-                      area_col='survey_area_id',
-                  )
-                  record['candidate_patch_count'] = len(patches)
-                  record['support_audit'] = audit.as_dict()
-                  record['stage'] = 'patches_ok'
-                  patch_count += len(patches)
-              except Exception as exc:
-                  record['error'] = f'{type(exc).__name__}: {exc}'
-              rows.append(record)
-
-          payload = {
-              'match': match,
-              'regions': rows,
-              'evaluated_regions': sum(row['stage'] == 'patches_ok' for row in rows),
-              'candidate_patch_count': patch_count,
-          }
-          Path('smoke/diagnostic.json').write_text(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
-          print(json.dumps(payload, indent=2, ensure_ascii=False))
+          bounds = (138.8, 34.0, 139.8, 35.0)
+          occurrences = fetch_region_occurrences(match['taxon_key'], bounds)
+          print('occurrence_rows', len(occurrences))
+          surface, prototypes, seed = _terrain_inputs(occurrences, bounds, area_id='izu')
+          print('surface', len(surface), 'prototypes', len(prototypes), 'seed', seed)
           PY
-      - name: Require at least one live-evaluable region
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          payload = json.loads(Path('smoke/diagnostic.json').read_text())
-          assert payload['evaluated_regions'] >= 1, payload
-          PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: validated-species-only-live-smoke
-          path: smoke
-          if-no-files-found: error
-          retention-days: 30
