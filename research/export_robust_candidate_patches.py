@@ -109,6 +109,7 @@ def main() -> None:
         "universe_rows": int(len(universe)),
         "prototype_rows_input": int(len(prototypes)),
         "prototype_rows_complete": int(audit.prototype_count),
+        "prototype_rows_excluded_incomplete": int(len(prototypes) - audit.prototype_count),
         "tiers": tier_rows,
     }
     (args.out / "robust_candidate_patch_manifest.json").write_text(
