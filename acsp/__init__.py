@@ -60,6 +60,12 @@ from .practical_core import (
     PracticalCorePolicy,
     select_practical_core,
 )
+from .robust_patches import (
+    RobustSupportAudit,
+    leave_one_out_consensus_support,
+    robust_environment_geometry,
+    support_cells_to_patches,
+)
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
@@ -77,7 +83,7 @@ __all__ = [
     "ALL_METHODS", "AUTO_SDM_VARIABLES", "AutomaticSdmCoreConfig", "CLAIM_MATRIX",
     "ComparatorFold", "CoverageSelectionAudit", "DecisionBaselineConfig", "ENVIRONMENTAL_METHODS",
     "PRACTICAL_CORE_FINGERPRINT", "PRACTICAL_CORE_PROTOCOL_ID", "PracticalCorePolicy",
-    "StandardBaselineProtocol", "UNIVERSAL_METHODS", "ValidatedCorePolicy",
+    "RobustSupportAudit", "StandardBaselineProtocol", "UNIVERSAL_METHODS", "ValidatedCorePolicy",
     "choose_spatial_partition", "claim_status_table", "comparator_inference",
     "compare_decision_baselines", "DEFAULT_INTEGRATED_WEIGHTS", "DEFAULT_ENSEMBLE_ALGORITHMS",
     "DEFAULT_RECOVERY_RADII_KM", "derive_power_bioclim", "evaluate_candidate_fold",
@@ -85,7 +91,8 @@ __all__ = [
     "model_performance_table", "filter_candidates_to_extent", "integrated_candidate_scores",
     "aggregate_candidates_to_zones", "compare_zone_rankings", "normalize_extent",
     "pair_level_intention_to_evaluate", "random_same_pool_sets", "recommend_candidates",
-    "recommend_survey_zones", "recovered_fraction", "score_automatic_sdm_candidates",
+    "recommend_survey_zones", "recovered_fraction", "robust_environment_geometry",
+    "leave_one_out_consensus_support", "support_cells_to_patches", "score_automatic_sdm_candidates",
     "select_complementary_candidates", "select_dual_space_farthest", "select_environmental_farthest",
     "select_geographic_farthest", "select_heldout_greedy_oracle", "select_maximum_coverage_sites",
     "select_practical_core", "select_score_top_k", "select_sdm_top_k", "select_validated_core",

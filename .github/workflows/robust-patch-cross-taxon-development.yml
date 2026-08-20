@@ -1,0 +1,128 @@
+name: Robust patch cross-taxon development
+
+on:
+  pull_request:
+    paths:
+      - acsp/robust_patches.py
+      - research/export_robust_candidate_patches.py
+      - research/evaluate_robust_candidate_tiers.py
+      - research/evaluate_robust_patches_on_dense_surface.py
+      - .github/workflows/robust-patch-cross-taxon-development.yml
+  workflow_dispatch:
+
+concurrency:
+  group: robust-patch-development-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  historical-development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Reuse already-inspected training-only spatial folds
+        uses: actions/download-artifact@v4
+        with:
+          name: robust-patch-cross-taxon-development
+          path: historical-cache
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 32258117404
+
+      - name: Restore predeclared region bounds into fold provenance
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import pandas as pd
+          for cohort in ['mixed','plants']:
+              root=Path('historical-cache/exports')/cohort
+              declared=pd.read_csv(root/'declared_pairs.csv').set_index('pair_id')
+              for manifest_path in root.glob('pair_*/fold_*/fold_manifest.json'):
+                  pair_id=int(manifest_path.parents[1].name.split('_')[1])
+                  row=declared.loc[pair_id]
+                  payload=json.loads(manifest_path.read_text())
+                  provenance=payload.setdefault('provenance', {})
+                  for key in ['west','south','east','north']:
+                      provenance[key]=float(row[key])
+                  manifest_path.write_text(json.dumps(payload, indent=2)+'\n')
+              print(cohort, 'pairs', len(declared), 'folds', len(list(root.glob('pair_*/fold_*/fold_manifest.json'))))
+          PY
+
+      - name: Evaluate dense generic robust support
+        run: |
+          mkdir -p robust-development/results
+          python research/evaluate_robust_patches_on_dense_surface.py \
+            --export-root historical-cache/exports/mixed \
+            --tiers 0.025,0.05,0.10,0.20 \
+            --radii-km 1,2,5,10 \
+            --surface-points 800 \
+            --random-draws 30 \
+            --seed 20260820 \
+            --out robust-development/results/mixed
+          python research/evaluate_robust_patches_on_dense_surface.py \
+            --export-root historical-cache/exports/plants \
+            --tiers 0.025,0.05,0.10,0.20 \
+            --radii-km 1,2,5,10 \
+            --surface-points 800 \
+            --random-draws 30 \
+            --seed 20260821 \
+            --out robust-development/results/plants
+
+      - name: Aggregate development evidence without selecting a tier
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import pandas as pd
+          frames=[]
+          manifests={}
+          for cohort in ['mixed','plants']:
+              root=Path('robust-development/results')/cohort
+              table=pd.read_csv(root/'dense_robust_patch_summary.csv')
+              table['cohort']=cohort
+              frames.append(table)
+              manifests[cohort]=json.loads((root/'dense_robust_patch_manifest.json').read_text())
+          combined=pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+          combined.to_csv('robust-development/combined_summary.csv', index=False)
+          print(combined.to_string(index=False))
+          evaluated=sum(int(value['folds_evaluated']) for value in manifests.values())
+          discovered=sum(int(value['folds_discovered']) for value in manifests.values())
+          if discovered == 0 or evaluated < int(0.75 * discovered):
+              raise SystemExit(f'Insufficient dense-surface fold coverage: {evaluated}/{discovered}')
+          report={
+              'status':'historical_development_only',
+              'untouched_confirmation_opened':False,
+              'campanula_or_izu_used':False,
+              'auto_selected_support_tier':False,
+              'source_fold_run':32258117404,
+              'cohorts':manifests,
+              'total_folds_discovered':discovered,
+              'total_folds_evaluated':evaluated,
+          }
+          Path('robust-development/combined_manifest.json').write_text(json.dumps(report, indent=2)+'\n')
+          print(json.dumps(report, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robust-patch-cross-taxon-dense-development
+          path: robust-development
+          if-no-files-found: warn
+          retention-days: 90

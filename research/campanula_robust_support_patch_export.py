@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
-"""Reproduce the frozen Campanula robust support envelope and export survey patches.
+"""Reproduce the frozen Campanula robust support envelope and export candidate patches.
 
-This is the active bridge between the ecological and operational ACSP layers.
-The ecological object is the already-frozen leave-one-prototype-out consensus
-support envelope. It is not compressed to a field-tuned finite Top-k set.
-Instead, every cell passing the frozen 1-km support threshold is aggregated into
-bounded same-island survey patches. Those patches are then suitable inputs for
-the separate reachability-first operational planner, where explicit movement
-edges determine which patches can actually be visited and survey effort is an
-output.
+Campanula is now a regression fixture for the taxon-agnostic robust-support core.
+The species-specific adapter only samples the frozen NDVI feature stack and
+retains the archived patch aggregation needed for exact freeze reproduction.
+The robust environmental geometry and leave-one-prototype-out consensus are
+computed by :mod:`acsp.robust_patches`.
 
-The frozen threshold and expected canonical cell count come from
-``campanula_development_freeze_v1.json``. The archived freeze was computed with
-per-world support ranks explicitly cast to float32 before taking the consensus
-median, and threshold inclusion used a 1e-12 numerical tolerance. Those are part
-of the frozen numerical contract and are reproduced here exactly. 2026 field
-detections are opened only after the consensus surface, thresholded cells, and
-patch universe are frozen, solely to verify that the archived ecological object
-still reproduces its recorded Campanula development recovery.
+The output stops at bounded same-island candidate patches. No route, movement
+mode, field-day, site-count, or monetary-budget optimization is performed.
 """
 from __future__ import annotations
 
@@ -28,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from acsp.robust_patches import leave_one_out_consensus_support
 import campanula_patch_policy as base
 from campanula_worldcover_discovery import evaluate
 
@@ -52,22 +44,18 @@ def consensus_support(
     universe: pd.DataFrame,
     prototypes: pd.DataFrame,
 ) -> tuple[np.ndarray, np.ndarray, list[float]]:
-    """Return the archived float32 LOO-consensus support and uncertainty."""
-    ranks: list[np.ndarray] = []
-    kernel_scales: list[float] = []
-    for removed in range(len(prototypes)):
-        subset = prototypes.loc[prototypes.index != removed].reset_index(drop=True)
-        _, support_rank, _, kernel_scale = base.environmental_geometry(universe, subset)
-        # Freeze v1 used float32 support worlds before the consensus median.
-        # Preserve that numerical representation rather than silently upgrading
-        # to float64, which moves a handful of boundary cells across the frozen
-        # threshold even though the ecological recovery result is unchanged.
-        ranks.append(np.asarray(support_rank).astype("float32", copy=False))
-        kernel_scales.append(float(kernel_scale))
-    if not ranks:
-        raise RuntimeError("no leave-one-prototype-out support worlds were generated")
-    stack = np.vstack(ranks)
-    return np.median(stack, axis=0), np.std(stack, axis=0), kernel_scales
+    """Return the archived float32 LOO consensus through the generic core."""
+    consensus, uncertainty, audit = leave_one_out_consensus_support(
+        universe,
+        prototypes,
+        feature_columns=base.FULL_NDVI,
+        support_world_dtype="float32",
+        min_kernel_scale=0.25,
+        chunk_size=3000,
+    )
+    # Keep the legacy return shape while the exporter remains a freeze fixture.
+    kernel_scales = [audit.kernel_scale_min, audit.kernel_scale_max]
+    return consensus, uncertainty, kernel_scales
 
 
 def annotate_zones(
@@ -112,8 +100,9 @@ def main() -> None:
     selected_mask = consensus_rank <= frozen_cutoff
     selected_indices = np.flatnonzero(selected_mask)
     selected_cells = universe.iloc[selected_indices].copy()
-    # make_zones uses the same rank<=fraction interface. The tolerance is part of
-    # the archived freeze, so pass the identical effective cutoff here as well.
+
+    # Keep the archived complete-link implementation for exact Campanula patch
+    # identity. The generic package API has its own bounded patch converter.
     _, zones = base.make_zones(universe, consensus_rank, frozen_cutoff)
     zones = annotate_zones(zones, consensus_rank, uncertainty)
 
@@ -131,12 +120,14 @@ def main() -> None:
     report = {
         "status": "frozen_robust_support_patch_export",
         "species": "Campanula microdonta",
-        "scientific_role": "reproduce frozen ecological support object and expose operational patch universe",
+        "scientific_role": "regression fixture for taxon-agnostic robust candidate-patch generation",
+        "generic_core": "acsp.robust_patches.leave_one_out_consensus_support",
         "field_coordinates_used_to_build_consensus_support": False,
         "field_coordinates_used_to_choose_threshold": False,
         "field_coordinates_used_to_define_patches": False,
         "prototype_count": int(len(prototypes)),
-        "leave_one_out_worlds": int(len(kernel_scales)),
+        "leave_one_out_worlds": int(len(prototypes)),
+        "feature_columns": list(base.FULL_NDVI),
         "support_threshold": FROZEN_SUPPORT_THRESHOLD,
         "threshold_tolerance": FROZEN_THRESHOLD_TOLERANCE,
         "support_world_dtype": "float32",
@@ -153,11 +144,11 @@ def main() -> None:
         "kernel_scale_min": float(np.min(kernel_scales)),
         "kernel_scale_max": float(np.max(kernel_scales)),
         "field_development_verification": field_result,
-        "operational_contract": {
+        "candidate_output_contract": {
             "all_exported_patches_remain_ecologically_eligible": True,
             "patch_count_is_not_a_user_budget": True,
-            "next_layer": "explicit movement graph -> directed round-trip reachability -> set-level coverage -> automatic effort knee",
-            "straight_line_movement_fallback": False,
+            "output_stops_at_candidate_patches": True,
+            "route_or_effort_optimization": False,
         },
     }
 
@@ -189,7 +180,7 @@ def main() -> None:
 
     if not report["freeze_reproduction"]["pass"]:
         raise RuntimeError(
-            "frozen robust support envelope no longer reproduces its archived cell-count/recovery contract"
+            "generic robust-support core no longer reproduces the archived Campanula freeze"
         )
 
 

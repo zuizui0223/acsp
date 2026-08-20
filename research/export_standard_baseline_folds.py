@@ -55,6 +55,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     for _, row in sample.iterrows():
         pair_id = int(row.pair_id)
         pair_dir = root / f"pair_{pair_id:03d}"
+        bounds = (float(row.west), float(row.south), float(row.east), float(row.north))
         provenance = {
             "pair_id": pair_id,
             "scientific_name": str(row.scientific_name),
@@ -62,12 +63,15 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             "taxon_group": str(row.taxon_group),
             "geographic_stratum": str(row.geographic_stratum),
             "species_key": int(row.speciesKey),
+            "west": bounds[0],
+            "south": bounds[1],
+            "east": bounds[2],
+            "north": bounds[3],
             "source_sample": str(Path(args.sample_file).resolve()),
             "candidate_builder": "build_automatic_discover_bundle(candidate_generation_only=True)",
         }
         try:
             occurrences = fetch_occurrences(row, args.records_per_pair)
-            bounds = (float(row.west), float(row.south), float(row.east), float(row.north))
             status = write_comparator_pair_export(
                 occurrences,
                 candidate_builder_for(row, bounds),

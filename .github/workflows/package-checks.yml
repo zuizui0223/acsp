@@ -51,12 +51,16 @@ jobs:
           acsp/planning.py
           acsp/modeling.py
           acsp/practical_core.py
+          acsp/robust_patches.py
           acsp/sdm.py
           acsp/validated_core.py
           acsp_discover.py
           research/aggregate_sdm_topk_benchmark.py
           research/audit_random_validation_stability.py
           research/campanula_robust_support_patch_export.py
+          research/evaluate_robust_candidate_tiers.py
+          research/evaluate_robust_patches_on_dense_surface.py
+          research/export_robust_candidate_patches.py
           research/execute_sdm_topk_pair.py
           research/export_standard_baseline_folds.py
           research/predeclare_sdm_topk_cohort.py
@@ -75,7 +79,7 @@ jobs:
           .wheel-venv/bin/python -m pip install --upgrade pip
           .wheel-venv/bin/python -m pip install dist/*.whl
           pushd /tmp
-          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp.cli; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
+          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp.robust_patches; import acsp.cli; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
           popd
       - name: Verify packaged app and recommendation commands
         run: |
