@@ -34,7 +34,7 @@
     "primary_radius_km": 10.0,
     "secondary_radii_km": [1.0, 2.0, 5.0],
     "random_draws_per_fold": 200,
-    "random_seed_rule": "pass random_seed_base + pair_id*10000 + repeat*1009 to the frozen dense evaluator; its pre-existing draw RNG adds 991 internally",
+    "random_seed_rule": "random_seed_base + pair_id*10000 + repeat*1009",
     "random_seed_base": 20260823,
     "failure_rule": "any declared fold that cannot be exported or evaluated contributes recall=0, random_mean_recall=0, lift=0"
   },
