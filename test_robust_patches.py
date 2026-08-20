@@ -59,6 +59,31 @@ class RobustPatchTests(unittest.TestCase):
         self.assertEqual(audit.leave_one_out_worlds, 4)
         self.assertEqual(audit.feature_columns, ("f1", "f2"))
 
+    def test_incomplete_prototypes_are_removed_before_loo(self):
+        prototypes = pd.concat(
+            [
+                self.prototypes,
+                pd.DataFrame({"f1": [2.0], "f2": [np.nan]}),
+            ],
+            ignore_index=True,
+        )
+        consensus, uncertainty, audit = leave_one_out_consensus_support(
+            self.universe,
+            prototypes,
+            feature_columns=["f1", "f2"],
+            support_world_dtype="float32",
+        )
+        baseline, baseline_uncertainty, _ = leave_one_out_consensus_support(
+            self.universe,
+            self.prototypes,
+            feature_columns=["f1", "f2"],
+            support_world_dtype="float32",
+        )
+        np.testing.assert_array_equal(consensus, baseline)
+        np.testing.assert_array_equal(uncertainty, baseline_uncertainty)
+        self.assertEqual(audit.prototype_count, 4)
+        self.assertEqual(audit.leave_one_out_worlds, 4)
+
     def test_support_cells_become_same_area_bounded_patches(self):
         rank = np.array([0.01, 0.02, 0.03, 0.04, 0.9])
         cells, patches = support_cells_to_patches(
