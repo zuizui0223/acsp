@@ -52,6 +52,24 @@ class ValidatedRobustPatchTests(unittest.TestCase):
         self.assertTrue(patches["validation_confirmation_folds"].eq(VALIDATED_ROBUST_CONFIRMATION_FOLDS).all())
         self.assertEqual(VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M, 1000.0)
 
+    def test_empty_validated_tier_keeps_a_readable_patch_schema(self):
+        patches, audit = validated_robust_candidate_patches(
+            self.universe.iloc[:5].copy(),
+            self.prototypes,
+            feature_columns=["f1", "f2"],
+        )
+        self.assertEqual(len(patches), 0)
+        self.assertEqual(audit.prototype_count, 5)
+        required = {
+            "zone_id",
+            "survey_area_id",
+            "latitude",
+            "longitude",
+            "ecological_support_threshold",
+            "validation_status",
+        }
+        self.assertTrue(required.issubset(patches.columns))
+
     def test_cli_exports_candidate_patches_only(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
