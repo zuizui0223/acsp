@@ -1,12 +1,14 @@
-"""Thin species-name adapter for the validated ACSP candidate-patch product.
+"""Species-name adapters for the validated ACSP candidate-patch product.
 
-This module reproduces the input-generation conventions used by the untouched
-cross-taxon confirmation: GBIF occurrence retrieval inside a declared rectangle,
-deterministic spatial thinning to at most 32 occurrence prototypes, one fixed
-800-point land surface for the rectangle, the confirmed terrain feature set,
-and the validated 2.5% robust-support candidate-patch rule.
+The input-generation path mirrors the untouched cross-taxon confirmation:
+GBIF occurrence retrieval inside a fixed region, deterministic spatial thinning
+to at most 32 occurrence prototypes, one fixed 800-point land surface per
+region, the confirmed terrain feature set, and the validated 2.5% robust-support
+candidate-patch rule.
 
-It adds no route, budget, day, movement-mode, top-k, or threshold optimization.
+The simplest product path uses the same 12 Japanese region rectangles that
+structured the untouched confirmation. It adds no route, budget, day,
+movement-mode, top-k, or threshold optimization.
 """
 from __future__ import annotations
 
@@ -34,6 +36,24 @@ VALIDATED_SURFACE_POINTS = 800
 VALIDATED_OCCURRENCE_CAP = 150
 VALIDATED_MAX_PROTOTYPES = 32
 VALIDATED_SURFACE_SEED_BASE = 20260823
+
+# Exact regional rectangles used by the cross-taxon Japan confirmation design.
+# They intentionally remain separate evaluation units; overlapping units such as
+# Kanto and Izu are not merged after candidate generation.
+VALIDATED_JAPAN_REGIONS = (
+    ("hokkaido-west", "Hokkaido west", "north", 140.0, 42.5, 142.0, 44.5),
+    ("hokkaido-east", "Hokkaido east", "north", 143.0, 42.5, 145.5, 44.5),
+    ("tohoku", "Tohoku", "north", 139.5, 38.0, 141.5, 40.5),
+    ("kanto", "Kanto", "east", 138.5, 35.0, 140.5, 36.5),
+    ("izu", "Izu", "east", 138.8, 34.0, 139.8, 35.0),
+    ("chubu-mountains", "Chubu mountains", "east", 136.5, 35.0, 138.5, 37.0),
+    ("kinki", "Kinki", "west", 134.5, 33.5, 136.5, 35.5),
+    ("chugoku", "Chugoku", "west", 131.5, 34.0, 134.0, 35.5),
+    ("shikoku", "Shikoku", "west", 132.5, 32.7, 134.5, 34.5),
+    ("northern-kyushu", "Northern Kyushu", "south", 129.5, 32.5, 131.5, 34.0),
+    ("southern-kyushu", "Southern Kyushu", "south", 130.0, 30.8, 131.8, 32.5),
+    ("ryukyu", "Ryukyu", "south", 126.0, 24.0, 130.0, 28.5),
+)
 
 
 def _validate_bounds(bounds: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
@@ -226,7 +246,7 @@ def discover_validated_candidate_patches(
     *,
     area_id: str = "survey",
 ) -> tuple[pd.DataFrame, dict[str, object]]:
-    """Resolve a species and return only the validated candidate patches."""
+    """Resolve a species and return validated candidate patches for one region."""
     bounds = _validate_bounds(bounds)
     match = match_gbif_species(taxon_name)
     occurrences = fetch_region_occurrences(int(match["taxon_key"]), bounds)
@@ -257,3 +277,93 @@ def discover_validated_candidate_patches(
         "routing_or_budget_optimization": False,
     }
     return patches, audit
+
+
+def discover_validated_candidate_patches_japan(
+    taxon_name: str,
+) -> tuple[pd.DataFrame, dict[str, object]]:
+    """Return candidate patches across the 12 fixed Japanese validation regions.
+
+    Each region is evaluated independently with the same occurrence cap,
+    prototype rule, 800-point surface, feature set, and frozen 2.5% support
+    rule used in confirmation. Regions with insufficient data are retained in
+    the audit as skipped and do not trigger threshold widening or replacement.
+    """
+    match = match_gbif_species(taxon_name)
+    patch_frames: list[pd.DataFrame] = []
+    region_status: list[dict[str, object]] = []
+    evaluated_regions = 0
+
+    for region_id, region_name, geographic_stratum, west, south, east, north in VALIDATED_JAPAN_REGIONS:
+        bounds = (float(west), float(south), float(east), float(north))
+        try:
+            occurrences = fetch_region_occurrences(int(match["taxon_key"]), bounds)
+            surface, prototypes, surface_seed = _terrain_inputs(
+                occurrences,
+                bounds,
+                area_id=region_id,
+            )
+            patches, support_audit = validated_robust_candidate_patches(
+                surface,
+                prototypes,
+                feature_columns=ROBUST_TERRAIN_FEATURES,
+                area_col="survey_area_id",
+            )
+            evaluated_regions += 1
+            patches = patches.copy()
+            patches["validation_region_id"] = str(region_id)
+            patches["validation_region_name"] = str(region_name)
+            patches["validation_geographic_stratum"] = str(geographic_stratum)
+            patch_frames.append(patches)
+            region_status.append(
+                {
+                    "region_id": str(region_id),
+                    "region_name": str(region_name),
+                    "geographic_stratum": str(geographic_stratum),
+                    "extent": list(bounds),
+                    "status": "evaluated",
+                    "occurrence_rows": int(len(occurrences)),
+                    "surface_points": int(len(surface)),
+                    "surface_seed": int(surface_seed),
+                    "prototype_rows": int(len(prototypes)),
+                    "candidate_patch_count": int(len(patches)),
+                    "support_audit": support_audit.as_dict(),
+                    "failure_reason": "",
+                }
+            )
+        except Exception as exc:
+            region_status.append(
+                {
+                    "region_id": str(region_id),
+                    "region_name": str(region_name),
+                    "geographic_stratum": str(geographic_stratum),
+                    "extent": list(bounds),
+                    "status": "skipped_insufficient_or_unavailable",
+                    "occurrence_rows": 0,
+                    "surface_points": 0,
+                    "prototype_rows": 0,
+                    "candidate_patch_count": 0,
+                    "failure_reason": f"{type(exc).__name__}: {exc}",
+                }
+            )
+
+    if evaluated_regions == 0:
+        raise ValueError(
+            "no fixed Japanese validation region had enough usable occurrence/environment data"
+        )
+
+    patches = pd.concat(patch_frames, ignore_index=True, sort=False) if patch_frames else pd.DataFrame()
+    audit: dict[str, object] = {
+        "input_mode": "taxon_japan_validated_regions",
+        **match,
+        "region_rule": "the 12 fixed Japanese rectangles used by the cross-taxon confirmation design",
+        "declared_region_count": int(len(VALIDATED_JAPAN_REGIONS)),
+        "evaluated_region_count": int(evaluated_regions),
+        "skipped_region_count": int(len(VALIDATED_JAPAN_REGIONS) - evaluated_regions),
+        "candidate_patch_count": int(len(patches)),
+        "feature_columns": list(ROBUST_TERRAIN_FEATURES),
+        "candidate_generation_only": True,
+        "routing_or_budget_optimization": False,
+        "region_status": region_status,
+    }
+    return patches.reset_index(drop=True), audit
