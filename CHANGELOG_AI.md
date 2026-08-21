@@ -1,5 +1,26 @@
 # AI Change Log
 
+## 2026-08-21 - ChatGPT (OpenAI) - Planner-free package import boundary
+
+Changed files:
+- acsp/__init__.py
+- acsp/validated_robust.py
+- test_package_import_boundary.py
+- docs/planner_free_import_boundary.md
+- CHANGELOG_AI.md
+
+Summary:
+- Converted package-root public exports to lazy resolution so importing `acsp` or the validated candidate-patch APIs no longer imports `acsp.planning`.
+- Preserved every existing package-root compatibility export; historical planner, model, and validation modules load only when explicitly requested.
+- Added clean-interpreter regressions covering planner-free validated imports and on-demand historical planner loading.
+- Updated validated-patch comments to reflect the planner-free aggregation introduced by PR #93.
+
+Features preserved:
+- The frozen 2.5% leave-one-prototype-out robust-support rule, float32 support worlds, 1 km same-area patch aggregation, candidate membership, 96-pair/480-fold confirmation statistics, historical planner APIs, app/CLI, optional SDM/SSDM, maps, exports, and field-validation workflows are unchanged.
+
+Known risks / TODO:
+- Lazy package-root resolution changes import timing only; package/research suites and isolated wheel imports remain the compatibility gate.
+
 ## 2026-08-21 - Codex (OpenAI) - Planner-free robust patch aggregation
 
 Changed files:
@@ -454,7 +475,7 @@ Summary:
 Validation:
 - Reproducible random seed `20260630` selected species `Lilium auratum` and genus `Viola`.
 - Random species extent `(138.73423, 36.92800, 140.13423, 38.32800)` retained 17 records and produced 13 candidates / 3 recommendations without SDM.
-- Random genus extent `(139.12806, 35.43241, 139.42806, 35.73241)` retained 94 records and produced 16 observed-richness candidates / 3 recommendations without SSDM.
+- Random genus extent `(139.12806, 35.43241, 139.42806, 35.73241)` retained 94 records and produced 16 observed-richness cells / 3 recommendations without SSDM.
 - Unit coverage verifies agreement re-ranking, idempotent re-ranking, model-only quota retention, spatially separated SDM/SSDM exploration, completed-grid candidate support, and separated map layers.
 - End-to-end remote SDM attempts did not finish within eight minutes. Inspection found the current CHELSA GeoTIFF endpoint exposes full-width strips and no internal overviews, so remote regional reads remain an external performance risk. No successful AUC claim is made for this validation run.
 
@@ -1806,7 +1827,7 @@ Changed files:
 Summary:
 - Read `AGENTS.md`, `CHANGELOG_AI.md`, and `SURVEY_PLANNING_POLICY.md`, then used the latest GitHub `main` as the baseline.
 - Removed the main species/genus `Survey planning mode` selectors and fixed the default working policy to species fetch 1,000, genus fetch 3,000, map 500, candidate input 800, SDM 300, and SSDM 150 per species.
-- Restored compact country-code filters (`JP`, `US`, etc.) for species and genus GBIF searches, with optional custom two-letter code fields under Advanced.
+- Restored compact country-code filters (`JP`, `US`, etc.) for species and genus workflows, with optional custom two-letter code fields under Advanced.
 - Replaced SDM/SSDM environmental preset selectors with editable multiselects prefilled by the balanced ecology variables.
 - Made VIF stepwise with threshold 10 the default SDM/SSDM variable-selection behavior while keeping threshold/alternative strategies inside Advanced.
 - Restored the single-species validation method selector to the original partition methods, defaulting to `block`; k-fold and checkerboard inputs now appear only when relevant.
@@ -1879,7 +1900,7 @@ Summary:
 - Based the edit on the latest GitHub `main` after fast-forwarding to `9193bb4`.
 - Read `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, and `CHANGELOG_AI.md` before editing.
 - Added explicit survey-planning mode controls for species and genus workflows: Fast survey planning (recommended), Detailed analysis, and Custom.
-- Set Fast survey planning defaults to spatially representative working subsets: map display about 500 records, candidate input about 800 records, SDM presence about 300 records, and SSDM about 150 records per species.
+- Set Fast survey planning defaults to spatially representative working subsets: map display about 500 records, candidate input about 800 records, SDM presence about 300 records, and SSDM about 150 per species.
 - Kept Detailed analysis higher but still bounded: map about 1000, candidate input about 1500, SDM about 500, and SSDM about 300 per species.
 - Custom mode exposes manual caps without making all-record map/model/candidate processing the default.
 - Updated `prepare_large_dataset_inputs` so candidate generation and SDM presence inputs are capped spatially representative subsets by default, not only when large dataset mode is active.
@@ -2040,7 +2061,7 @@ Changed files:
 Summary:
 - Automatically enables effective large dataset handling when more than 1,000 valid occurrence records are loaded, even if the sidebar checkbox was left off.
 - Keeps `occ_raw` as the full coordinate-cleaned record set, while using capped/thinned `occ_map_display`, `occ_candidate_input`, and `occ_sdm_train` datasets for interactive maps, candidate clustering, and SDM.
-- Caps interactive occurrence maps to at most 1,000 points in large dataset mode and disables occurrence image popups by default for large datasets.
+- Caps interactive occurrence maps to at most 1,000 points in large dataset mode and disables occurrence image popups by default when raw valid records exceed 500.
 - Uses spatially balanced capping so candidate generation is limited to about 1,000 records and SDM training is limited to about 500 records in large dataset mode.
 - Shows a large dataset summary and performance metrics so users can see which record set is used for raw data, map display, candidate generation, and SDM.
 - Updated optional SDM presence caps so raw GBIF records are not accidentally forced into SDM when large datasets would freeze the app.
