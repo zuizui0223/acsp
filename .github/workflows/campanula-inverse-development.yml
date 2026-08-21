@@ -104,6 +104,82 @@ jobs:
           }, indent=2))
           PY
 
+      - name: Smoke-test movement-only downstream selector on frozen patches
+        run: |
+          set -euo pipefail
+          # 5 km is a deterministic CI fixture only. It is not a production
+          # default, a field-efficiency estimate, or a tuned scientific value.
+          acsp-operate \
+            --patches campanula-robust-support/robust_support_patches.csv \
+            --max-transition-km 5 \
+            --output campanula-robust-support/operational_visits_fixture_5km.csv \
+            --summary-json campanula-robust-support/operational_summary_fixture_5km.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('campanula-robust-support')
+          patches = pd.read_csv(root / 'robust_support_patches.csv')
+          visits = pd.read_csv(root / 'operational_visits_fixture_5km.csv')
+          report = json.loads((root / 'robust_support_patch_report.json').read_text())
+          summary = json.loads((root / 'operational_summary_fixture_5km.json').read_text())
+
+          assert len(patches) == report['patch_count']
+          assert 0 < len(visits) <= len(patches)
+          assert summary['automatic_selected_count'] == len(visits)
+          assert summary['candidate_patch_count'] == len(patches)
+          assert summary['movement_constraint_only'] is True
+          assert summary['user_site_count_required'] is False
+          assert summary['user_coverage_target_required'] is False
+          assert summary['survey_days_input'] is False
+          assert summary['monetary_budget_input'] is False
+          assert summary['route_feasibility_claim'] is False
+          assert summary['field_efficiency_claim'] is False
+          assert summary['validated_candidate_generation_changed'] is False
+          assert summary['audit']['max_transition_km'] == 5.0
+          assert 'survey_area_id' in visits.columns
+          assert set(visits['zone_id'].astype(str)).issubset(set(patches['zone_id'].astype(str)))
+
+          # The frozen Campanula adapter still carries historical ranking fields.
+          # Remove them and require identical downstream selection, proving that
+          # the new operational selector does not consume the legacy ranking.
+          rank_free = patches.drop(columns=['zone_score', 'zone_rank'], errors='ignore')
+          rank_free.to_csv(root / 'robust_support_patches_rank_free.csv', index=False)
+          PY
+
+          acsp-operate \
+            --patches campanula-robust-support/robust_support_patches_rank_free.csv \
+            --max-transition-km 5 \
+            --output campanula-robust-support/operational_visits_rank_free_fixture_5km.csv \
+            --summary-json campanula-robust-support/operational_summary_rank_free_fixture_5km.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('campanula-robust-support')
+          original = pd.read_csv(root / 'operational_visits_fixture_5km.csv')
+          rank_free = pd.read_csv(root / 'operational_visits_rank_free_fixture_5km.csv')
+          rank_free_summary = json.loads(
+              (root / 'operational_summary_rank_free_fixture_5km.json').read_text()
+          )
+          assert original['zone_id'].astype(str).tolist() == rank_free['zone_id'].astype(str).tolist()
+          assert original['survey_area_id'].astype(str).tolist() == rank_free['survey_area_id'].astype(str).tolist()
+          assert rank_free_summary['automatic_selected_count'] == len(rank_free)
+          assert rank_free_summary['route_feasibility_claim'] is False
+          assert rank_free_summary['field_efficiency_claim'] is False
+          print(json.dumps({
+              'fixture_transition_km': 5.0,
+              'input_patch_count': int(rank_free_summary['candidate_patch_count']),
+              'automatic_selected_count': int(rank_free_summary['automatic_selected_count']),
+              'movement_components': int(rank_free_summary['audit']['movement_component_count']),
+              'legacy_rank_invariant': True,
+          }, indent=2))
+          PY
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
