@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
+from acsp.planning import aggregate_candidates_to_zones
 from acsp.robust_patches import (
     leave_one_out_consensus_support,
     robust_environment_geometry,
@@ -97,6 +98,51 @@ class RobustPatchTests(unittest.TestCase):
         self.assertTrue(patches["ecological_status"].eq("robust_support_patch").all())
         self.assertTrue(patches["site_id"].eq(patches["zone_id"].astype(str)).all())
         self.assertTrue((patches["zone_radius_m"] <= 1000.0).all())
+        forbidden = {
+            "zone_score",
+            "zone_rank",
+            "observed_support_score",
+            "local_habitat_support_score",
+            "model_support_score",
+            "access_support_score",
+            "zone_agreement_support_score",
+            "zone_divergence_score",
+            "zone_evidence_summary",
+            "zone_score_method",
+        }
+        self.assertTrue(forbidden.isdisjoint(patches.columns))
+
+    def test_planner_free_patch_geometry_matches_legacy_complete_link(self):
+        rank = np.array([0.01, 0.02, 0.03, 0.04, 0.9])
+        cells, patches = support_cells_to_patches(
+            self.universe,
+            rank,
+            threshold=0.05,
+            merge_distance_m=1000.0,
+        )
+        legacy = aggregate_candidates_to_zones(
+            cells,
+            merge_distance_m=1000.0,
+            area_col="survey_area_id",
+            latitude_col="latitude",
+            longitude_col="longitude",
+            id_col="site_id",
+            score_col="priority_score",
+        )
+        legacy = legacy.set_index("zone_id").sort_index()
+        current = patches.set_index("zone_id").sort_index()
+        self.assertEqual(current.index.tolist(), legacy.index.tolist())
+        self.assertEqual(
+            current["zone_member_count"].astype(int).to_dict(),
+            legacy["zone_member_count"].astype(int).to_dict(),
+        )
+        self.assertEqual(
+            current["representative_site_id"].astype(str).to_dict(),
+            legacy["representative_site_id"].astype(str).to_dict(),
+        )
+        np.testing.assert_allclose(current["latitude"], legacy["latitude"], rtol=0, atol=0)
+        np.testing.assert_allclose(current["longitude"], legacy["longitude"], rtol=0, atol=0)
+        np.testing.assert_allclose(current["zone_radius_m"], legacy["zone_radius_m"], rtol=0, atol=0)
 
     def test_missing_feature_is_explicit_error(self):
         with self.assertRaisesRegex(ValueError, "missing environmental features"):
