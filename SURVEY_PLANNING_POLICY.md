@@ -1,5 +1,13 @@
 # Survey planning policy for AI coding agents
 
+## Status relative to the validated product
+
+This document describes broader **application and operational planning behavior**. It does not define the independently validated ACSP scientific product.
+
+`VALIDATED_PRODUCT_CONTRACT.md` is authoritative for the current validated candidate-patch path. Where this document discusses integrated scores, ranked zones, SDM/SSDM re-ranking, access, route planning, field days, or other operational decisions, those statements apply only downstream or outside the validated core unless separately validated.
+
+In particular, the frozen validated path must produce non-ranked robust candidate patches without SDM/SSDM, historical integrated scoring, route optimization, day-count targets, or budget targets in the loop. Operational features described below may remain available, but must not alter validated patch membership.
+
 This app is a field-survey planning tool, not a full all-record SDM analysis platform.
 
 ## Core principle
@@ -12,17 +20,19 @@ The goal is to identify realistic, field-ready survey candidates quickly, reprod
 
 ## Required top-level workflow
 
-The main species-mode workflow is:
+The broader application workflow is:
 
 1. Get occurrence data.
-2. Choose the survey area for observed-data candidate generation.
-3. Generate survey candidates from observed occurrence data.
+2. Generate the validated robust candidate-patch product where that path is applicable.
+3. Optionally inspect or select downstream operational survey sites from those patches or other explicitly labeled candidate sources.
 4. Optional: build an SDM using its own independent QC and prediction-extent workflow.
-5. Add SDM predicted probability as weighted model support to re-rank the observed-data candidates.
+5. Optional: use SDM output as an operational evidence layer outside the validated patch-membership calculation.
+
+Older observed-candidate ranking and SDM re-ranking behavior remains supported as operational/compatibility functionality, not as the independently validated candidate-patch claim.
 
 The Step 2 survey area must not automatically flow into SDM.
 
-The optional SDM workflow is independent. It should start from the fetched occurrence records, apply SDM-specific coordinate QC, apply SDM bias-reduction preprocessing, define an SDM-specific prediction extent, build the model, and then add model support back to the observed-data candidates.
+The optional SDM workflow is independent. It should start from the fetched occurrence records, apply SDM-specific coordinate QC, apply SDM bias-reduction preprocessing, define an SDM-specific prediction extent, build the model, and then expose model support separately from the validated candidate-patch calculation.
 
 ## GBIF fetch and performance policy
 
@@ -125,17 +135,17 @@ Do not make Step 2 survey-area selection control the SDM training set or SDM pre
 
 ## Observed-data candidate generation
 
-Observed occurrence data must generate base survey candidates before any model is run.
+Observed occurrence data may continue to generate operational candidate tables for the application. The independently validated scientific object is instead the robust candidate-patch product defined in `VALIDATED_PRODUCT_CONTRACT.md`.
 
-The Step 2 selected survey-area records should be converted into a spatially representative candidate-input subset and used to generate observed-data survey candidates.
+The Step 2 selected survey-area records should be converted into a spatially representative candidate-input subset and used to generate observed-data survey candidates when that operational workflow is used.
 
 The map for this step should display all candidate-input points used in the clustering / candidate-generation analysis.
 
-These candidates are the core output of the app.
+Operational candidate tables must not be confused with the validated robust candidate-patch set.
 
 ## Optional SDM workflow
 
-SDM is optional. It should not replace observed-data candidates and should not be required to proceed.
+SDM is optional. It should not replace validated robust candidate patches and should not be required to produce them.
 
 The SDM workflow should be independent from Step 2 and should contain, in this order:
 
@@ -145,7 +155,7 @@ The SDM workflow should be independent from Step 2 and should contain, in this o
 4. Environmental variable selection and collinearity handling.
 5. Spatial validation / partitioning.
 6. SDM fitting and prediction.
-7. Add SDM predicted probability to observed-data candidates as model support.
+7. Expose SDM output as an explicitly optional operational or exploratory evidence layer.
 
 ### Simplify SDM maps
 
@@ -232,34 +242,35 @@ Hide or automatically calculate technical parameters unless they are relevant:
 - `Checkerboard cell size (degrees)` should only appear for checkerboard methods, or be automatically set.
 - `Maximum predict-map pixels` should not appear in the main UI. Use a fixed sensible automatic value or move it to Advanced settings.
 
-## Candidate scoring
+## Operational candidate scoring
 
-Use one integrated candidate score for the production workflow. Do not create separate user-facing `with SDM` and `without SDM` products.
+Integrated candidate scoring is a historical/operational application layer, not part of the independently validated robust candidate-patch core.
 
-The integrated evidence families are observed occurrence support, local high-resolution habitat similarity, optional macro SDM/SSDM support, survey gap, access, and field-validation learning. Recommended configured weights are 0.35, 0.25, 0.15, 0.10, 0.10, and 0.05 respectively.
+Where the production UI still uses an integrated candidate score, do not create separate user-facing `with SDM` and `without SDM` products.
 
-These configured weights are transparent starting priors, not empirically established universal constants. Weight studies must use spatial holdout within taxa and taxon-level holdout between calibration and evaluation. Do not optimize and report performance on the same taxa. Compare against same-candidate-pool random Top-k and component ablations, retain failed sampled taxa in the audit, and do not automatically change production defaults from a small or unfavorable benchmark. GBIF retrospective recovery may inform local-environment and macro-model evidence, but access and detectability require prospective field validation.
+The historical integrated evidence families are observed occurrence support, local high-resolution habitat similarity, optional macro SDM/SSDM support, survey gap, access, and field-validation learning. Configured weights of 0.35, 0.25, 0.15, 0.10, 0.10, and 0.05 are transparent operational starting priors, not validated universal constants.
+
+These weights must not alter the membership of the frozen validated candidate-patch product. Weight studies must use spatial holdout within taxa and taxon-level holdout between calibration and evaluation. Do not optimize and report performance on the same taxa. Compare against same-candidate-pool random Top-k and component ablations, retain failed sampled taxa in the audit, and do not automatically change production defaults from a small or unfavorable benchmark. GBIF retrospective recovery may inform local-environment and macro-model evidence, but access and detectability require prospective field validation.
 
 Missing evidence is unavailable rather than zero. Renormalize available weights per candidate so a missing or failed SDM does not penalize occurrence/local evidence. Report evidence agreement and divergence separately. Consensus may receive a modest bonus; divergence should remain visible for exploratory field validation rather than being silently averaged away.
 
-Zone ranking must not reward generated candidate density. Candidate count is metadata. Rank a zone primarily by its strongest integrated candidate and agreement support, while retaining all member points for navigation, alternatives, and audit.
+Historical zone ranking must not reward generated candidate density. Candidate count is metadata. Any ranked zone product is operational and downstream of the validated patch set.
 
 ## Validation for publication
 
-The planned paper should test whether representative subsets are sufficient for field-survey planning.
+The current independently supported claim is the robust candidate-patch recovery claim frozen in `VALIDATED_PRODUCT_CONTRACT.md`.
 
-Recommended validation comparisons:
+Older proposed comparisons involving representative subsets, candidate ranks, field detection, SDM re-ranking, or survey efficiency remain useful secondary or future analyses, but they do not supersede that validated claim without a new predeclared validation cycle.
+
+Recommended operational/future comparisons include:
 
 - All records versus representative fetched/working subsets, such as 3000, 1500, 1000, 800, 500, and 300 retained records.
-- Top-10 or Top-20 candidate overlap.
-- Rank correlation between candidate lists.
+- Candidate or patch overlap under clearly specified endpoints.
 - Spatial coverage or environmental-space coverage.
 - Runtime and map responsiveness.
-- Field detection success at ranked candidate sites.
+- Prospective field detection under standardized effort.
 
-The expected claim is:
-
-Spatially representative occurrence subsets can preserve field-survey-relevant candidate rankings while greatly reducing computational cost and reducing observer/access-bias effects.
+Do not describe rank preservation, route efficiency, access, detectability, or discoveries per field day as independently validated unless separately tested.
 
 ## Anti-rollback rule
 
@@ -276,3 +287,5 @@ Do not automatically send the Step 2 survey-area selection into SDM.
 Do not show multiple redundant SDM setup maps.
 
 Do not make the app depend on downloading, rendering, or modeling all available GBIF records before the user can access occurrence-based survey candidates.
+
+Do not re-couple the validated robust candidate-patch path to integrated scoring, ranking, SDM/SSDM, routing, days, budgets, or access layers without a newly frozen and passed validation protocol.
