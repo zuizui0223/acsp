@@ -1,5 +1,25 @@
 # AI Change Log
 
+## 2026-08-21 - Codex (OpenAI) - Planner-free robust patch aggregation
+
+Changed files:
+- acsp/robust_patches.py
+- test_robust_patches.py
+- CHANGELOG_AI.md
+
+Summary:
+- Replaced the robust candidate-patch core's call into the historical ranked-planner aggregator with a small deterministic complete-link implementation local to `acsp.robust_patches`.
+- Preserved same-area patch membership, deterministic patch IDs, representative support cells, representative coordinates, patch radii, and the fixed merge distance while removing planner score, rank, model, access, agreement, and evidence-summary fields from the raw robust patch table.
+- Added direct legacy-parity coverage for patch geometry and an explicit regression that forbids planner diagnostics in robust patch output.
+
+Features preserved:
+- The frozen 2.5% leave-one-prototype-out robust-support rule, 1 km patch merge, environmental features, candidate membership, and validation claim ceiling are unchanged.
+- The historical planner remains available for its existing ranked-planning workflows; only the validated robust-patch core is decoupled from it.
+- GBIF and CSV inputs, optional SDM/SSDM, maps, exports, and field-validation workflows are unchanged.
+
+Known risks / TODO:
+- The compatibility test intentionally imports the historical planner as a regression oracle; production robust-patch code no longer imports or calls it.
+
 ## 2026-08-16 - ChatGPT (OpenAI) - Adaptive survey architecture convergence
 
 Changed files:
