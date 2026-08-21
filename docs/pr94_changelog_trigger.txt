@@ -1,0 +1,1 @@
+Temporary trigger for PR #94 changelog automation. This file is never intended for main.
