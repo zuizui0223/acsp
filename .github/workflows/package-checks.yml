@@ -18,7 +18,7 @@ env:
 jobs:
   pr94-changelog:
     name: PR94 changelog helper
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/planner-free-package-import'
+    if: github.event_name == 'pull_request' && github.base_ref == 'agent/planner-free-package-import'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
