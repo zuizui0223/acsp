@@ -14,6 +14,7 @@ from acsp.validated_robust import (
     VALIDATED_ROBUST_PRIMARY_RADIUS_KM,
     VALIDATED_ROBUST_STATUS,
     VALIDATED_ROBUST_SUPPORT_FRACTION,
+    _project_validated_patch_table,
     validated_patch_columns,
     validated_robust_candidate_patches,
 )
@@ -77,6 +78,27 @@ class ValidatedRobustPatchTests(unittest.TestCase):
             "site_id",
         }
         self.assertTrue(forbidden.isdisjoint(patches.columns))
+
+    def test_projection_discards_legacy_score_order(self):
+        raw = pd.DataFrame(
+            {
+                "zone_id": ["b-Z002", "a-Z002", "a-Z001", "b-Z001"],
+                "survey_area_id": ["b", "a", "a", "b"],
+                "latitude": [36.2, 35.2, 35.1, 36.1],
+                "longitude": [140.2, 139.2, 139.1, 140.1],
+                "zone_member_count": [2, 2, 1, 1],
+                "zone_radius_m": [200.0, 200.0, 100.0, 100.0],
+                "zone_score": [0.99, 0.98, 0.10, 0.09],
+                "zone_rank": [1, 2, 3, 4],
+            }
+        )
+        patches = _project_validated_patch_table(raw, area_col="survey_area_id")
+        self.assertEqual(
+            patches["candidate_patch_id"].tolist(),
+            ["a-Z001", "a-Z002", "b-Z001", "b-Z002"],
+        )
+        self.assertNotIn("zone_score", patches.columns)
+        self.assertNotIn("zone_rank", patches.columns)
 
     def test_empty_validated_tier_keeps_same_readable_patch_schema(self):
         patches, audit = validated_robust_candidate_patches(
