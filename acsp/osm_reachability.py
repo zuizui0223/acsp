@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from .osm_ferry import fetch_osm_ferry_edges_for_patches
 from .osm_transport import fetch_osm_transport_network_for_patches
 from .transport_reachability import build_patch_reachability_edges_from_transport_network
 
@@ -22,13 +23,16 @@ def build_osm_patch_reachability_edges(
     pd.DataFrame,
     dict[str, object],
 ]:
-    """Fetch OSM road/trail topology and derive explicit patch reachability.
+    """Fetch OSM road/trail/ferry topology and derive patch reachability.
 
     The sole movement tuning input is ``max_network_transition_km``. The same
-    distance is used as the automatic per-area OSM query margin, so callers do
-    not choose a separate fetch radius. Provider failures remain explicit: an
-    area with no returned network leaves its candidates unattached and does not
-    trigger a geometric candidate-to-candidate fallback.
+    distance controls the automatic OSM query margins and the weighted network
+    transition limit. Road/trail provider failures and ferry-provider failures
+    remain explicit; neither triggers candidate straight-line connectivity.
+
+    Direct ferry ways are connected only through exact shared OSM endpoint node
+    IDs already present in the land highway network. Relation-only ferries and
+    proximity-based terminal snapping are not supported by this conservative v1.
 
     Returns ``(patch_edges, attachments, network_nodes, network_edges,
     area_provider_audit, audit)``.
@@ -36,13 +40,34 @@ def build_osm_patch_reachability_edges(
     if float(max_network_transition_km) <= 0.0:
         raise ValueError("max_network_transition_km must be positive")
 
-    nodes, network_edges, area_audit, provider_audit = fetch_osm_transport_network_for_patches(
+    nodes, road_edges, area_audit, provider_audit = fetch_osm_transport_network_for_patches(
         candidates,
         query_margin_km=float(max_network_transition_km),
         area_col=area_col,
         latitude_col=latitude_col,
         longitude_col=longitude_col,
     )
+    ferry_edges, _ferry_pair_audit, ferry_audit = fetch_osm_ferry_edges_for_patches(
+        candidates,
+        nodes,
+        max_network_transition_km=float(max_network_transition_km),
+        area_col=area_col,
+        latitude_col=latitude_col,
+        longitude_col=longitude_col,
+    )
+
+    if road_edges.empty and ferry_edges.empty:
+        network_edges = road_edges.copy()
+    elif ferry_edges.empty:
+        network_edges = road_edges.copy()
+    elif road_edges.empty:
+        network_edges = ferry_edges.copy()
+    else:
+        network_edges = pd.concat([road_edges, ferry_edges], ignore_index=True, sort=False)
+        network_edges = network_edges.sort_values("distance_m").drop_duplicates(
+            subset=["from_node_id", "to_node_id"], keep="first"
+        ).reset_index(drop=True)
+
     patch_edges, attachments, reachability_audit = build_patch_reachability_edges_from_transport_network(
         candidates,
         nodes,
@@ -59,12 +84,17 @@ def build_osm_patch_reachability_edges(
         "query_margin_derived_from_movement_limit": True,
         "candidate_pair_straight_line_used": False,
         "straight_line_candidate_fallback": False,
-        "ferry_edges_included": False,
+        "ferry_edges_included": bool(len(ferry_edges)),
+        "ferry_relation_only_support": False,
+        "ferry_proximity_terminal_fallback": False,
+        "ferry_access_restrictions_enforced": False,
         "route_time_claim": False,
+        "timetable_claim": False,
         "legal_access_claim": False,
         "safety_claim": False,
         "field_efficiency_claim": False,
         "provider": provider_audit.as_dict(),
+        "ferry_provider": ferry_audit.as_dict(),
         "reachability": reachability_audit.as_dict(),
     }
     return patch_edges, attachments, nodes, network_edges, area_audit, audit
