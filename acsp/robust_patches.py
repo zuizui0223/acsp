@@ -9,12 +9,15 @@ survey patches.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
+import re
 from typing import Sequence
 
 import numpy as np
 import pandas as pd
 
-from .planning import aggregate_candidates_to_zones
+
+EARTH_RADIUS_M = 6_371_008.8
 
 
 @dataclass(frozen=True)
@@ -152,6 +155,130 @@ def leave_one_out_consensus_support(
     return consensus, uncertainty, audit
 
 
+def _haversine_m(
+    latitude: float,
+    longitude: float,
+    latitudes: np.ndarray,
+    longitudes: np.ndarray,
+) -> np.ndarray:
+    """Vectorised great-circle distances from one point in metres."""
+    lat1 = math.radians(float(latitude))
+    lon1 = math.radians(float(longitude))
+    lat2 = np.radians(np.asarray(latitudes, dtype=float))
+    lon2 = np.radians(np.asarray(longitudes, dtype=float))
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = np.sin(dlat / 2.0) ** 2 + math.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
+    return 2.0 * EARTH_RADIUS_M * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+
+
+def _safe_area_token(area: object) -> str:
+    token = re.sub(r"[^A-Za-z0-9_-]+", "-", str(area)).strip("-")
+    return token or "1"
+
+
+def _complete_link_support_patches(
+    selected: pd.DataFrame,
+    *,
+    merge_distance_m: float,
+    latitude_col: str,
+    longitude_col: str,
+    area_col: str,
+) -> pd.DataFrame:
+    """Aggregate support cells without invoking the historical planner stack.
+
+    Group membership reproduces the earlier deterministic complete-link rule:
+    cells are processed in universe-index order and join the compatible patch
+    with the smallest resulting maximum pairwise distance. The representative
+    point is the member with the strongest ecological support (lowest support
+    rank), with site id as deterministic tie-breaker.
+    """
+    if selected.empty:
+        return pd.DataFrame()
+    threshold = float(merge_distance_m)
+    if threshold <= 0:
+        raise ValueError("merge_distance_m must be positive")
+
+    work = selected.copy().reset_index(drop=True)
+    work[latitude_col] = pd.to_numeric(work[latitude_col], errors="coerce")
+    work[longitude_col] = pd.to_numeric(work[longitude_col], errors="coerce")
+    work = work.dropna(subset=[latitude_col, longitude_col]).reset_index(drop=True)
+    if work.empty:
+        return pd.DataFrame()
+
+    patch_members: list[tuple[object, int, list[int]]] = []
+    for area, group in work.groupby(area_col, sort=True, dropna=False):
+        ordered = group.assign(
+            _stable_numeric=pd.to_numeric(group["site_id"], errors="coerce"),
+            _stable_id=group["site_id"].astype(str),
+        ).sort_values(
+            ["_stable_numeric", "_stable_id", latitude_col, longitude_col],
+            kind="mergesort",
+            na_position="last",
+        )
+        area_patches: list[list[int]] = []
+        for index in ordered.index:
+            compatible: list[tuple[float, int]] = []
+            for patch_index, member_indices in enumerate(area_patches):
+                members = work.loc[member_indices]
+                distances = _haversine_m(
+                    work.at[index, latitude_col],
+                    work.at[index, longitude_col],
+                    members[latitude_col].to_numpy(float),
+                    members[longitude_col].to_numpy(float),
+                )
+                maximum = float(distances.max()) if len(distances) else 0.0
+                if maximum <= threshold:
+                    compatible.append((maximum, patch_index))
+            if compatible:
+                patch_index = min(compatible)[1]
+                area_patches[patch_index].append(index)
+            else:
+                area_patches.append([index])
+        for patch_number, indices in enumerate(area_patches, start=1):
+            patch_members.append((area, patch_number, indices))
+
+    rows: list[dict[str, object]] = []
+    for area, patch_number, indices in patch_members:
+        members = work.loc[indices].copy()
+        representative = members.assign(
+            _support_rank=pd.to_numeric(members["ecological_support_rank"], errors="coerce"),
+            _stable_id=members["site_id"].astype(str),
+        ).sort_values(
+            ["_support_rank", "_stable_id", latitude_col, longitude_col],
+            kind="mergesort",
+            na_position="last",
+        ).iloc[0]
+        distances = _haversine_m(
+            representative[latitude_col],
+            representative[longitude_col],
+            members[latitude_col].to_numpy(float),
+            members[longitude_col].to_numpy(float),
+        )
+        zone_id = f"{_safe_area_token(area)}-Z{patch_number:03d}"
+        rows.append(
+            {
+                "zone_id": zone_id,
+                area_col: area,
+                "zone_member_count": int(len(members)),
+                "zone_radius_m": round(float(distances.max()) if len(distances) else 0.0, 1),
+                "zone_merge_threshold_m": round(threshold, 1),
+                "representative_site_id": str(representative["site_id"]),
+                "latitude": float(representative[latitude_col]),
+                "longitude": float(representative[longitude_col]),
+                "zone_member_site_ids": ";".join(members["site_id"].astype(str).tolist()),
+            }
+        )
+    zones = pd.DataFrame(rows)
+    if zones.empty:
+        return zones
+    zones["_neutral_area_sort"] = zones[area_col].astype(str)
+    return zones.sort_values(
+        ["_neutral_area_sort", "zone_id"],
+        kind="mergesort",
+    ).drop(columns="_neutral_area_sort").reset_index(drop=True)
+
+
 def support_cells_to_patches(
     universe: pd.DataFrame,
     support_rank: np.ndarray,
@@ -179,20 +306,16 @@ def support_cells_to_patches(
     selected["site_id"] = selected["universe_index"].astype(str)
     selected["priority_score"] = 1.0 - ranks[keep]
     selected["candidate_type"] = "robust ecological support cell"
-    selected["access_score"] = 0.5
-    selected["evidence_agreement_score"] = 0.0
     selected["ecological_support_rank"] = ranks[keep]
     if selected.empty:
         return selected.reset_index(drop=True), pd.DataFrame()
 
-    zones = aggregate_candidates_to_zones(
+    zones = _complete_link_support_patches(
         selected,
         merge_distance_m=float(merge_distance_m),
         area_col=area_col,
         latitude_col=latitude_col,
         longitude_col=longitude_col,
-        id_col="site_id",
-        score_col="priority_score",
     )
     zones = zones.copy()
     zones["ecological_support_threshold"] = float(threshold)
