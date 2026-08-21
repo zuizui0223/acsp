@@ -36,6 +36,23 @@ acsp-patches \
 
 The fixed Japan-region path is the closest match to the spatial domain used in the untouched confirmation. A custom extent changes that spatial domain and should be interpreted as a convenience application of the same candidate-generation rule, not a new independent validation result.
 
+## Candidate CSV schema
+
+The validated CSV is deliberately narrow. Each row is one candidate patch and contains only:
+
+- `candidate_patch_id`;
+- `survey_area_id`;
+- representative `latitude` / `longitude`;
+- `support_cell_count`;
+- `candidate_patch_radius_m`;
+- fixed `patch_merge_distance_m`;
+- fixed `support_fraction`;
+- `validation_status`.
+
+The species-only Japan path additionally records `validation_region_id`, `validation_region_name`, and `validation_geographic_stratum`.
+
+Legacy planner fields such as `zone_score`, model/access support, agreement scores, and ranks are excluded from the validated product. Confirmation statistics such as pair count, fold count, lift, confidence interval, and p-value remain in the summary JSON instead of being duplicated on every candidate row.
+
 ## Validated product
 
 The promoted cross-taxon rule is fixed at:
@@ -135,7 +152,7 @@ No route, field-day, travel-mode, or budget optimizer belongs in the validated c
 ## Repository layout
 
 - `acsp/taxon_patches.py` — species-only fixed-Japan and optional custom-region adapters.
-- `acsp/validated_robust.py` — promoted validated candidate-patch API.
+- `acsp/validated_robust.py` — promoted validated candidate-patch API and minimal output schema.
 - `acsp/robust_cli.py` — `acsp-patches` command.
 - `acsp/robust_patches.py` — lower-level robust support and patch utilities.
 - `validation/` — frozen protocols and confirmation contracts.

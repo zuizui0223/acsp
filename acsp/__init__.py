@@ -71,7 +71,7 @@ from .taxon_patches import (
     discover_validated_candidate_patches,
     discover_validated_candidate_patches_japan,
 )
-from .validated_robust import validated_robust_candidate_patches
+from .validated_robust import validated_patch_columns, validated_robust_candidate_patches
 from .sdm import choose_spatial_partition, model_performance_table, sdm_method_record
 from .validated_core import ValidatedCorePolicy, select_validated_core
 from .validation import (
@@ -102,11 +102,12 @@ __all__ = [
     "select_complementary_candidates", "select_dual_space_farthest", "select_environmental_farthest",
     "select_geographic_farthest", "select_heldout_greedy_oracle", "select_maximum_coverage_sites",
     "select_practical_core", "select_score_top_k", "select_sdm_top_k", "select_validated_core",
-    "validated_robust_candidate_patches", "write_comparator_pair_export", "predict_equal_weight_ensemble",
-    "sdm_method_record", "calibrate_candidate_weights", "clustered_recovery_inference",
-    "calibrate_model_ensemble_weights", "multi_taxon_weight_benchmark", "spatial_block_candidate_benchmark",
-    "spatial_block_recovery_validation", "spatial_model_accuracy_benchmark", "stratified_random_taxa",
-    "zone_agreement_summary", "haversine_distance_m", "normalize_field_locations", "cluster_field_detections",
+    "validated_patch_columns", "validated_robust_candidate_patches", "write_comparator_pair_export",
+    "predict_equal_weight_ensemble", "sdm_method_record", "calibrate_candidate_weights",
+    "clustered_recovery_inference", "calibrate_model_ensemble_weights", "multi_taxon_weight_benchmark",
+    "spatial_block_candidate_benchmark", "spatial_block_recovery_validation",
+    "spatial_model_accuracy_benchmark", "stratified_random_taxa", "zone_agreement_summary",
+    "haversine_distance_m", "normalize_field_locations", "cluster_field_detections",
     "detection_recovery_table", "recovery_summary", "stratified_random_recovery_benchmark",
 ]
 

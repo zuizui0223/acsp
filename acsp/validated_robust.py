@@ -26,31 +26,57 @@ VALIDATED_ROBUST_PLANT_MEAN_LIFT = 0.057023839246432256
 VALIDATED_ROBUST_STATUS = "untouched_confirmation_passed"
 
 
+def validated_patch_columns(area_col: str = "survey_area_id") -> tuple[str, ...]:
+    """Return the stable user-facing validated candidate-patch schema."""
+    return (
+        "candidate_patch_id",
+        str(area_col),
+        "latitude",
+        "longitude",
+        "support_cell_count",
+        "candidate_patch_radius_m",
+        "patch_merge_distance_m",
+        "support_fraction",
+        "validation_status",
+    )
+
+
 def _empty_patch_table(area_col: str) -> pd.DataFrame:
     """Return a readable zero-row product table when the frozen tier is empty."""
-    return pd.DataFrame(
-        columns=[
-            "zone_id",
-            area_col,
-            "zone_score",
-            "zone_rank",
-            "zone_member_count",
-            "zone_radius_m",
-            "zone_merge_threshold_m",
-            "representative_site_id",
-            "latitude",
-            "longitude",
-            "site_id",
-            "ecological_support_threshold",
-            "ecological_status",
-            "validation_status",
-            "validation_support_fraction",
-            "validation_primary_radius_km",
-            "validation_confirmation_pairs",
-            "validation_confirmation_folds",
-            "validation_mean_lift_over_random",
-        ]
+    return pd.DataFrame(columns=list(validated_patch_columns(area_col)))
+
+
+def _project_validated_patch_table(patches: pd.DataFrame, *, area_col: str) -> pd.DataFrame:
+    """Drop legacy planner diagnostics and expose only candidate-patch fields."""
+    if patches.empty:
+        return _empty_patch_table(area_col)
+
+    required = {
+        "zone_id",
+        area_col,
+        "latitude",
+        "longitude",
+        "zone_member_count",
+        "zone_radius_m",
+    }
+    missing = sorted(required.difference(patches.columns))
+    if missing:
+        raise ValueError(f"candidate-patch aggregation is missing required columns: {missing}")
+
+    out = pd.DataFrame(
+        {
+            "candidate_patch_id": patches["zone_id"].astype(str),
+            area_col: patches[area_col],
+            "latitude": pd.to_numeric(patches["latitude"], errors="coerce"),
+            "longitude": pd.to_numeric(patches["longitude"], errors="coerce"),
+            "support_cell_count": pd.to_numeric(patches["zone_member_count"], errors="coerce").astype("Int64"),
+            "candidate_patch_radius_m": pd.to_numeric(patches["zone_radius_m"], errors="coerce"),
+            "patch_merge_distance_m": float(VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M),
+            "support_fraction": float(VALIDATED_ROBUST_SUPPORT_FRACTION),
+            "validation_status": VALIDATED_ROBUST_STATUS,
+        }
     )
+    return out.loc[:, list(validated_patch_columns(area_col))].reset_index(drop=True)
 
 
 def validated_robust_candidate_patches(
@@ -69,7 +95,8 @@ def validated_robust_candidate_patches(
     float32 support worlds, and 1 km same-area patch aggregation.
 
     The returned rows are candidate patches, not occupancy probabilities,
-    exact occupied sites, route plans, or budget-optimal itineraries.
+    exact occupied sites, route plans, or budget-optimal itineraries. Legacy
+    planner scores/ranks are deliberately removed from the validated output.
     """
     consensus, _, audit = leave_one_out_consensus_support(
         universe,
@@ -77,7 +104,7 @@ def validated_robust_candidate_patches(
         feature_columns=feature_columns,
         support_world_dtype="float32",
     )
-    _, patches = support_cells_to_patches(
+    _, raw_patches = support_cells_to_patches(
         universe,
         consensus,
         threshold=VALIDATED_ROBUST_SUPPORT_FRACTION,
@@ -87,14 +114,5 @@ def validated_robust_candidate_patches(
         area_col=area_col,
         ecological_status="validated_cross_taxon_robust_support_patch",
     )
-    if patches.empty:
-        patches = _empty_patch_table(area_col)
-    else:
-        patches = patches.copy()
-        patches["validation_status"] = VALIDATED_ROBUST_STATUS
-        patches["validation_support_fraction"] = VALIDATED_ROBUST_SUPPORT_FRACTION
-        patches["validation_primary_radius_km"] = VALIDATED_ROBUST_PRIMARY_RADIUS_KM
-        patches["validation_confirmation_pairs"] = VALIDATED_ROBUST_CONFIRMATION_PAIRS
-        patches["validation_confirmation_folds"] = VALIDATED_ROBUST_CONFIRMATION_FOLDS
-        patches["validation_mean_lift_over_random"] = VALIDATED_ROBUST_MEAN_LIFT_OVER_RANDOM
-    return patches.reset_index(drop=True), audit
+    patches = _project_validated_patch_table(raw_patches, area_col=area_col)
+    return patches, audit
