@@ -1,14 +1,12 @@
 """Downstream movement-constrained selection for validated candidate patches.
 
-This module is deliberately outside the validated ACSP candidate-generation
-core. It consumes an already generated candidate-patch table and chooses a
-connected operational subset without changing patch membership, scientific
-support, or validation claims.
+This module consumes an already generated candidate-patch table. It never
+changes validated patch membership or the validated scientific claim.
 
-The only user-facing tuning quantity is a maximum geometric transition distance.
-Site count, coverage target, survey days, and monetary budget are outputs or are
-absent. Straight-line connectivity is a geometric operational constraint, not a
-road, trail, ferry, access, safety, or field-efficiency claim.
+The only user tuning quantity is a maximum geometric transition distance. Site
+count, target coverage, survey days, and monetary budget are not inputs.
+Straight-line connectivity is an operational geometry constraint, not a road,
+trail, ferry, access, safety, travel-time, or field-efficiency claim.
 """
 from __future__ import annotations
 
@@ -59,20 +57,15 @@ class OperationalSelectionAudit:
         }
 
 
-def _derive_coverage_scale_km(
-    candidates: pd.DataFrame,
-    *,
-    radius_col: str,
-) -> float:
-    """Derive an internal geometric redundancy scale from patch footprints."""
+def _derive_coverage_scale_km(candidates: pd.DataFrame, *, radius_col: str) -> float:
+    """Derive a non-user-tuned redundancy scale from patch footprints."""
     if radius_col not in candidates.columns:
         return float(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM)
     radii_m = pd.to_numeric(candidates[radius_col], errors="coerce").to_numpy(float)
     radii_m = radii_m[np.isfinite(radii_m) & (radii_m >= 0.0)]
     if radii_m.size == 0:
         return float(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM)
-    median_radius_km = float(np.median(radii_m)) / 1000.0
-    return float(max(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM, median_radius_km))
+    return float(max(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM, np.median(radii_m) / 1000.0))
 
 
 def _movement_adjacency(
@@ -83,7 +76,7 @@ def _movement_adjacency(
     longitude_col: str,
     group_col: str | None,
 ) -> list[np.ndarray]:
-    """Return same-group geometric movement neighbours for each candidate."""
+    """Return same-group geometric movement neighbours for each row."""
     if float(max_transition_km) <= 0.0:
         raise ValueError("max_transition_km must be positive")
     if latitude_col not in candidates.columns or longitude_col not in candidates.columns:
@@ -117,11 +110,10 @@ def _movement_adjacency(
 
 
 def _connected_components(neighbours: list[np.ndarray]) -> list[np.ndarray]:
-    """Return deterministic connected components in input-row order."""
-    n = len(neighbours)
-    seen = np.zeros(n, dtype=bool)
+    """Return deterministic connected components in original row order."""
+    seen = np.zeros(len(neighbours), dtype=bool)
     components: list[np.ndarray] = []
-    for start in range(n):
+    for start in range(len(neighbours)):
         if seen[start]:
             continue
         stack = [start]
@@ -140,12 +132,7 @@ def _connected_components(neighbours: list[np.ndarray]) -> list[np.ndarray]:
 
 
 def _knee_prefix_length(cumulative_fraction: list[float]) -> int:
-    """Choose a conservative automatic prefix from a cumulative coverage curve.
-
-    The knee is the largest positive deviation above the straight line from
-    (0, 0) to (n, 1). If there is no positive curvature, every visit contributes
-    proportionally and the conservative choice is to retain the full prefix.
-    """
+    """Choose the coverage knee, retaining all rows if the curve is linear."""
     n = len(cumulative_fraction)
     if n <= 1:
         return n
@@ -158,13 +145,21 @@ def _knee_prefix_length(cumulative_fraction: list[float]) -> int:
     return int(np.flatnonzero(np.isclose(deviation, maximum, rtol=0.0, atol=_AUTO_STOP_EPS))[0] + 1)
 
 
+def _component_coverage_columns(coverage, row: int, component_mask: np.ndarray) -> np.ndarray:
+    start, stop = coverage.indptr[row], coverage.indptr[row + 1]
+    cols = coverage.indices[start:stop]
+    return cols[component_mask[cols]]
+
+
 def _connected_greedy_prefix(
     coverage,
     component: np.ndarray,
     movement_neighbours: list[np.ndarray],
 ) -> tuple[list[int], list[int], list[float], list[int | None]]:
-    """Build a deterministic coverage-greedy prefix whose selected set stays connected."""
+    """Build a coverage-greedy prefix whose selected subgraph stays connected."""
     component_set = set(int(x) for x in component)
+    component_mask = np.zeros(coverage.shape[1], dtype=bool)
+    component_mask[component] = True
     covered = np.zeros(coverage.shape[1], dtype=bool)
     selected: list[int] = []
     marginal: list[int] = []
@@ -183,36 +178,29 @@ def _connected_greedy_prefix(
             if not eligible:
                 break
 
-        best = None
+        best = eligible[0]
         best_gain = -1
         for row in eligible:
-            start, stop = coverage.indptr[row], coverage.indptr[row + 1]
-            cols = coverage.indices[start:stop]
+            cols = _component_coverage_columns(coverage, row, component_mask)
             gain = int((~covered[cols]).sum())
             if gain > best_gain:
-                best = row
-                best_gain = gain
-        assert best is not None
+                best, best_gain = row, gain
 
         parent: int | None = None
         if selected:
-            possible_parents = [
-                chosen for chosen in selected if best in set(int(x) for x in movement_neighbours[chosen])
-            ]
-            if possible_parents:
-                parent = int(possible_parents[0])
+            possible = [chosen for chosen in selected if best in movement_neighbours[chosen]]
+            if possible:
+                parent = int(possible[0])
 
-        start, stop = coverage.indptr[best], coverage.indptr[best + 1]
-        cols = coverage.indices[start:stop]
+        cols = _component_coverage_columns(coverage, best, component_mask)
         newly = cols[~covered[cols]]
         covered[newly] = True
         selected.append(int(best))
         remaining.remove(int(best))
         marginal.append(int(len(newly)))
-        cumulative.append(float(covered[list(component_set)].mean()))
+        cumulative.append(float(covered[component].mean()))
         parents.append(parent)
-
-        if bool(covered[list(component_set)].all()):
+        if bool(covered[component].all()):
             break
 
     return selected, marginal, cumulative, parents
@@ -229,13 +217,10 @@ def select_movement_constrained_patches(
 ) -> tuple[pd.DataFrame, OperationalSelectionAudit]:
     """Select an automatically sized connected operational subset of patches.
 
-    ``max_transition_km`` is the only user tuning quantity. Candidate count and
-    a target coverage fraction are not inputs. Each movement-connected component
-    is treated as a separate operational segment; the selected prefix within a
-    component is stopped automatically at the geometric coverage knee.
-
-    Connectivity is straight-line geometry constrained by ``group_col``. It is
-    not a road, trail, ferry, legal-access, safety, or travel-time model.
+    ``max_transition_km`` is the only user tuning quantity. Each movement-
+    connected component is a separate operational segment. A deterministic
+    connected greedy coverage prefix is generated and stopped at its internal
+    coverage knee. A linear curve has no defensible knee, so all rows are kept.
     """
     if float(max_transition_km) <= 0.0:
         raise ValueError("max_transition_km must be positive")
@@ -253,16 +238,9 @@ def select_movement_constrained_patches(
             ("movement_parent_input_index", "Int64"),
         ):
             empty[column] = pd.Series(dtype=dtype)
-        audit = OperationalSelectionAudit(
-            candidate_count=0,
-            selected_count=0,
-            movement_component_count=0,
-            max_transition_km=float(max_transition_km),
-            coverage_scale_km=coverage_scale_km,
-            final_coverage_fraction=0.0,
-            movement_group_column=group_col,
+        return empty, OperationalSelectionAudit(
+            0, 0, 0, float(max_transition_km), coverage_scale_km, 0.0, group_col
         )
-        return empty, audit
 
     coverage = _coverage_adjacency(
         work,
@@ -283,6 +261,8 @@ def select_movement_constrained_patches(
     rows: list[pd.DataFrame] = []
     globally_covered = np.zeros(n, dtype=bool)
     for segment_id, component in enumerate(components, start=1):
+        component_mask = np.zeros(n, dtype=bool)
+        component_mask[component] = True
         prefix, marginal, cumulative, parents = _connected_greedy_prefix(
             coverage, component, movement
         )
@@ -295,25 +275,18 @@ def select_movement_constrained_patches(
         segment["operational_selection_step"] = np.arange(1, len(segment) + 1, dtype=int)
         segment["marginal_covered_patches"] = marginal[:keep]
         segment["segment_coverage_fraction"] = cumulative[:keep]
-        parent_input = [
-            pd.NA if parent is None else int(work.iloc[parent]["_input_index"])
-            for parent in parents[:keep]
-        ]
-        segment["movement_parent_input_index"] = pd.array(parent_input, dtype="Int64")
+        segment["movement_parent_input_index"] = pd.array(
+            [pd.NA if p is None else int(work.iloc[p]["_input_index"]) for p in parents[:keep]],
+            dtype="Int64",
+        )
         rows.append(segment)
-
         for row in chosen:
-            start, stop = coverage.indptr[row], coverage.indptr[row + 1]
-            globally_covered[coverage.indices[start:stop]] = True
+            globally_covered[_component_coverage_columns(coverage, row, component_mask)] = True
 
-    if rows:
-        out = pd.concat(rows, ignore_index=True)
-    else:
-        out = work.iloc[0:0].copy()
+    out = pd.concat(rows, ignore_index=True) if rows else work.iloc[0:0].copy()
     out["operational_selector_status"] = "downstream_geometry_not_validated_efficiency"
     out["max_transition_km"] = float(max_transition_km)
     out["operational_coverage_scale_km"] = float(coverage_scale_km)
-
     audit = OperationalSelectionAudit(
         candidate_count=n,
         selected_count=int(len(out)),
