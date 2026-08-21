@@ -2,6 +2,14 @@
 
 This repository contains a Streamlit app for GBIF-based field-survey planning.
 
+## Authoritative validated-product boundary
+
+Before changing candidate generation, scientific claims, validation logic, ranking, routing, SDM/SSDM integration, or field-planning behavior, read `VALIDATED_PRODUCT_CONTRACT.md`.
+
+`VALIDATED_PRODUCT_CONTRACT.md` is authoritative for the independently validated ACSP product. If older planning, positioning, README, legacy, or research prose conflicts with that contract, the contract takes precedence for the current validated path.
+
+The validated core produces **non-ranked robust candidate patches**. Historical ranking, zone scoring, routing, day/budget estimation, SDM/SSDM re-ranking, access weighting, and adaptive field-learning code may remain available as operational, compatibility, exploratory, or research layers, but must not be silently reintroduced into the validated candidate-patch path.
+
 ## Source of truth
 
 GitHub is the only source of truth for this project.
@@ -18,12 +26,15 @@ If there is any uncertainty about whether a feature already exists or has change
 
 Before changing workflow, sampling, candidate generation, SDM, SSDM, large-dataset behavior, map selection, exports, or field-validation behavior, read:
 
+- `VALIDATED_PRODUCT_CONTRACT.md`
 - `SURVEY_PLANNING_POLICY.md`
 - `RESEARCH_POSITIONING.md`
 
-`SURVEY_PLANNING_POLICY.md` defines the intended application workflow and implementation constraints.
+`VALIDATED_PRODUCT_CONTRACT.md` defines the current independently validated scientific product and claim ceiling.
 
-`RESEARCH_POSITIONING.md` defines the scientific purpose, publication novelty, intended users, hypotheses, and field-validation goals.
+`SURVEY_PLANNING_POLICY.md` defines broader application and operational workflow constraints outside that validated core.
+
+`RESEARCH_POSITIONING.md` defines broader scientific purpose, publication history, intended users, hypotheses, and field-validation goals; statements there do not broaden the validated claim beyond `VALIDATED_PRODUCT_CONTRACT.md`.
 
 This app is a field-survey planning tool, not a general all-record SDM analysis platform.
 
@@ -37,11 +48,13 @@ Validation, benchmark, comparator, and cohort-sampling code belongs in `research
 
 Research scripts resolve data paths relative to the repository root and are run from there. CI sets `PYTHONPATH` for workflows that reach into `research/`.
 
-## The tool must work without a model
+## The validated core must work without a model or planner
 
-ACSP's decision pathway must reach a complete ranked survey-zone proposal with no SDM, SSDM, or any other fitted classifier in the loop. SDM/SSDM are optional extra evidence layers.
+The independently validated ACSP path must reach a complete candidate-patch set with no SDM, SSDM, historical integrated score, priority ranking, route optimizer, day-count target, or monetary budget in the loop.
 
-Do not make a model a precondition for any survey decision, do not present model support as the primary next action in the UI, and do not let a model failure block or degrade the non-model proposal.
+Operational planning features may consume those patches downstream, but they must not alter validated patch membership unless a new scientific method is explicitly frozen and revalidated.
+
+Do not make a model a precondition for candidate-patch generation, do not present model support as part of the validated patch claim, and do not let a model failure block or degrade the validated non-model product.
 
 ## Core rule
 
@@ -64,6 +77,8 @@ Existing features that must be preserved:
 - SSDM mode when implemented
 - HTML/CSV downloads
 
+Preserving these software features does not make them part of the validated candidate-patch scientific claim.
+
 ## Anti-rollback rules
 
 AI agents must not roll back recent work.
@@ -83,6 +98,7 @@ Do not reintroduce UI elements or older workflows that were intentionally remove
 
 Do not weaken these scientific design concepts:
 
+- validated robust candidate patches remain planner-free and non-ranked;
 - occurrence-supported candidates must remain available without SDM;
 - SDM must remain optional and especially useful for sparse occurrence data;
 - SDM-high exploration candidates must remain clearly labeled exploratory;
@@ -97,7 +113,7 @@ If a requested change conflicts with an existing feature, make the smallest safe
 ## Collaboration rules for AI coding agents
 
 1. Read this file before editing.
-2. Read `SURVEY_PLANNING_POLICY.md` and `RESEARCH_POSITIONING.md` before changing workflow, sampling, candidate generation, SDM, SSDM, selection, exports, or field-validation behavior.
+2. Read `VALIDATED_PRODUCT_CONTRACT.md`, `SURVEY_PLANNING_POLICY.md`, and `RESEARCH_POSITIONING.md` before changing workflow, sampling, candidate generation, SDM, SSDM, selection, exports, or field-validation behavior.
 3. Read the latest relevant files from GitHub before editing.
 4. Prefer small diffs over full-file rewrites.
 5. Do not push directly to `main` unless the user explicitly asks.
@@ -137,12 +153,15 @@ The app should not pretend to solve real road routing.
 
 Straight-line routing does not account for roads, ferries, mountains, cliffs, restricted access, or island barriers. Field routes should be verified in Google Maps before fieldwork.
 
-The preferred workflow is:
+The preferred operational workflow is:
 
-- select candidate survey sites;
+- start from the validated candidate-patch product or other explicitly labeled candidate sources;
+- select candidate survey sites downstream;
 - show one unified selected survey site list;
 - open selected sites in Google Maps or export CSV/HTML;
 - keep any day-splitting or route optimization as optional or hidden unless explicitly requested.
+
+Route choices are operational outputs and are not part of the validated candidate-patch claim.
 
 ## Genus / SSDM note
 
@@ -155,7 +174,7 @@ Occurrence richness maps and SSDM predicted richness maps must be clearly distin
 - Occurrence richness = observed species richness from occurrence records.
 - SSDM richness = predicted richness from stacked species-level SDMs.
 
-Genus / SSDM outputs should support biodiversity, taxonomic, phylogeographic, and evolutionary sampling decisions rather than prediction maps alone.
+Genus / SSDM outputs should support biodiversity, taxonomic, phylogeographic, and evolutionary sampling decisions rather than prediction maps alone. They remain outside the independently validated single-species robust candidate-patch claim unless separately validated.
 
 ## Changelog requirement
 
