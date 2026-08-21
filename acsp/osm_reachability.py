@@ -30,9 +30,11 @@ def build_osm_patch_reachability_edges(
     transition limit. Road/trail provider failures and ferry-provider failures
     remain explicit; neither triggers candidate straight-line connectivity.
 
-    Direct ferry ways are connected only through exact shared OSM endpoint node
-    IDs already present in the land highway network. Relation-only ferries and
-    proximity-based terminal snapping are not supported by this conservative v1.
+    Direct ferry ways use exact shared OSM endpoint node IDs already present in
+    the land highway network. Relation-only ferry routes are reconstructed from
+    their member-way raw-node graph and can connect only through raw OSM nodes
+    that also exist in the land network. Proximity-based terminal snapping is
+    never used.
 
     Returns ``(patch_edges, attachments, network_nodes, network_edges,
     area_provider_audit, audit)``.
@@ -85,7 +87,7 @@ def build_osm_patch_reachability_edges(
         "candidate_pair_straight_line_used": False,
         "straight_line_candidate_fallback": False,
         "ferry_edges_included": bool(len(ferry_edges)),
-        "ferry_relation_only_support": False,
+        "ferry_relation_only_support": True,
         "ferry_proximity_terminal_fallback": False,
         "ferry_access_restrictions_enforced": False,
         "route_time_claim": False,
