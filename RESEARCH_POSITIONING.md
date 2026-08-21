@@ -1,43 +1,81 @@
 # Research positioning and publication goals
 
-This document defines the scientific purpose, novelty, intended users, and validation strategy of GBIF FieldMap Builder.
+## Current claim status
+
+`VALIDATED_PRODUCT_CONTRACT.md` is authoritative for the independently validated ACSP product. The current supported scientific product is the **non-ranked robust candidate-patch set**, not a ranked-zone, SDM-re-ranking, route, day-budget, access-efficiency, or integrated-score product.
+
+The broader research ideas and operational workflows below remain useful as software capabilities, historical hypotheses, secondary analyses, and future prospective validation targets. They must not be used to broaden the current validated claim unless separately frozen and validated.
+
+The current validated core is:
+
+- occurrence-conditioned environmental support;
+- leave-one-prototype-out robust support;
+- frozen 2.5% consensus tier;
+- float32 support worlds;
+- 1 km same-area deterministic complete-link aggregation;
+- bounded candidate patches with no priority ranking;
+- 96 taxon-region pairs / 480 folds as the independently confirmed frame.
+
+`Campanula microdonta` remains development and freeze-regression evidence, not an untouched cross-taxon confirmation cohort.
+
+This document defines the broader scientific purpose, novelty, intended users, historical hypotheses, and future validation strategy of ACSP.
 
 It is a design guide for AI coding agents and collaborators. It is not a final literature review or manuscript draft.
 
 ## Core scientific purpose
 
-GBIF FieldMap Builder is a field-survey planning tool.
+ACSP is a field-survey planning tool whose validated core converts occurrence information into robust bounded candidate patches while keeping operational planning layers separate.
 
-Its main purpose is to convert existing occurrence records into practical, ranked survey-site candidates that researchers can inspect, select, export, visit, and validate in the field.
+Its broader application purpose is to help researchers inspect, select, export, visit, and validate candidate survey locations without requiring an SDM.
 
 The app is not primarily a general SDM teaching tool, a full-featured all-record modeling platform, or a replacement for specialist ecological modeling software.
 
-The central question is:
+The current validated scientific question is:
 
-> How can existing occurrence records be converted into the next set of field survey sites, and how can SDM or SSDM help when known records are sparse or incomplete?
+> Can occurrence-conditioned environmental support be reconstructed robustly into bounded candidate patches that recover held-out regional occurrences better than matched random candidate sets under a frozen cross-taxon protocol?
+
+A broader operational question remains:
+
+> How should researchers use those candidate patches, optional SDM/SSDM evidence, maps, and field observations to decide what to visit next?
+
+The second question is downstream of the validated candidate-patch product and contains components that still require separate prospective validation.
 
 ## Main workflow
 
-### Single-species workflow
+### Validated single-species core
 
-1. Load occurrence records from GBIF or upload a researcher-owned coordinate CSV.
-2. Show the known distribution overview.
-3. Let the user choose a realistic or hypothesis-driven fieldwork survey area.
-4. Generate occurrence-supported survey candidates from known records in that area.
-5. Optionally build an SDM using an independent SDM input, QC, bias-reduction, and prediction extent.
-6. Use SDM suitability to:
-   - re-rank occurrence-supported candidates; and
-   - identify exploratory potential sites away from known records when appropriate.
-7. Export selected sites and validate them through field survey.
+1. Load occurrence records from GBIF or a researcher-owned coordinate CSV.
+2. Build occurrence-conditioned environmental support using the frozen validated method.
+3. Reconstruct leave-one-prototype-out robust support.
+4. Retain the frozen 2.5% consensus tier.
+5. Aggregate support into 1 km same-area deterministic complete-link candidate patches.
+6. Export or inspect the non-ranked candidate-patch set.
+
+No SDM, integrated candidate score, route, day count, or monetary budget is required inside this validated path.
+
+### Optional operational single-species workflow
+
+After the validated patch set exists, the application may additionally support:
+
+- map-based inspection and manual selection;
+- historical occurrence-supported candidate tables;
+- optional SDM using independent QC, bias reduction, and prediction extent;
+- clearly labeled model-only exploration;
+- selected-site lists, Google Maps links, CSV/KML/HTML outputs;
+- prospective field-validation records.
+
+These features are useful but are not automatically part of the independently validated candidate-patch claim.
 
 ### Genus / multi-species workflow
 
-1. Load genus-level occurrence records from GBIF or a researcher-owned CSV.
-2. Show observed species-richness patterns.
-3. Generate observed richness hotspot candidates.
-4. Optionally run SSDM to estimate predicted richness patterns.
-5. Use SSDM predicted richness to re-rank observed hotspot candidates and identify exploratory areas for multi-species sampling.
-6. Export sites for biodiversity, taxonomic, phylogeographic, or evolutionary sampling.
+Genus mode remains an operational and research extension rather than part of the current single-species robust-patch confirmation claim. It can support:
+
+1. genus-level occurrence retrieval or uploaded researcher data;
+2. observed species-richness summaries;
+3. observed richness hotspot candidates;
+4. optional SSDM predicted richness;
+5. exploratory multi-species sampling decisions;
+6. exports for biodiversity, taxonomic, phylogeographic, or evolutionary sampling.
 
 ## Intended users
 
@@ -52,67 +90,42 @@ The app should support:
 
 ## Scientific novelty
 
-### 1. The final output is a field decision, not only a prediction map
+### 1. A robust finite candidate-patch object rather than only a pointwise prediction surface
 
-Many occurrence-data and SDM workflows end with a distribution or suitability map.
+Many occurrence-data and SDM workflows end with a distribution or suitability map. The validated ACSP core instead returns a finite set of bounded candidate patches derived from occurrence-conditioned support under a frozen robustness rule.
 
-GBIF FieldMap Builder is designed to continue one step further and produce:
+The candidate patches are deliberately not presented as calibrated occupancy probabilities, exact occupied sites, or priority ranks.
 
-- ranked survey-site candidates;
-- map-based candidate selection;
+### 2. Candidate generation is separated from downstream operational optimization
+
+The validated core answers where robust ecological support persists under leave-one-prototype-out reconstruction. It does not claim to solve route optimization, budget allocation, field-day scheduling, access, or detectability.
+
+This separation prevents operational heuristics from being mistaken for independently supported ecological inference.
+
+### 3. SDM/SSDM are optional evidence layers, not prerequisites for the validated core
+
+SDM should not be mandatory for candidate-patch generation.
+
+When used operationally, SDM/SSDM output should remain clearly distinguished from the robust candidate-patch object and must not silently alter validated patch membership.
+
+### 4. The app can continue beyond the validated core without broadening the claim
+
+The application can still provide:
+
+- map-based patch or candidate inspection;
 - selected-site lists;
 - Google Maps links;
 - CSV, KML, and HTML outputs;
+- optional SDM/SSDM analyses;
 - field-validation templates.
 
-The app therefore emphasizes fieldwork-oriented decision support rather than prediction alone.
-
-### 2. SDM has different roles depending on occurrence-data availability
-
-SDM should not be mandatory for every species.
-
-When known occurrence records are abundant:
-
-- occurrence-supported candidates may already be sufficient for survey planning;
-- SDM is optional model support;
-- SDM should use a capped, spatially representative subset rather than all records.
-
-When known occurrence records are sparse or incomplete:
-
-- SDM becomes especially valuable for identifying potential unsampled suitable areas;
-- small-sample validation methods such as jackknife may be useful;
-- model-only candidates must be clearly labeled exploratory and require field validation.
-
-This adaptive use of SDM is a core feature of the app.
-
-### 3. Known-record candidates and model-only candidates are explicitly separated
-
-The app should distinguish:
-
-- **Occurrence-supported candidates**: based on known records and optionally re-ranked by SDM suitability.
-- **SDM-high exploration candidates**: model-only potential sites away from known records, intended for field validation.
-
-This distinction improves scientific transparency and prevents users from treating predicted suitability as confirmed occurrence.
-
-### 4. Single-species and genus-level survey planning share one design logic
-
-Species mode supports focal-species survey planning with optional SDM.
-
-Genus mode supports observed richness hotspots with optional SSDM predicted richness.
-
-This makes the app useful not only for species surveys, but also for:
-
-- multi-species inventory;
-- taxonomic revision;
-- genus-level diversity surveys;
-- phylogeographic sampling;
-- evolutionary and phylogenetic studies that require broad spatial representation.
+These features make the software useful for real fieldwork while the scientific claim remains bounded by `VALIDATED_PRODUCT_CONTRACT.md`.
 
 ### 5. The app is not limited to GBIF
 
 Researchers can upload their own coordinate CSV files.
 
-This allows the same workflow to be applied to:
+This allows the same occurrence-record-to-candidate-patch logic or downstream operational workflows to be applied to:
 
 - unpublished sampling records;
 - herbarium or museum coordinates;
@@ -121,21 +134,20 @@ This allows the same workflow to be applied to:
 - citizen-science exports;
 - previous field campaigns.
 
-The app should therefore be described as an occurrence-record-to-fieldwork tool, not only as a GBIF viewer.
+### 6. Field validation remains the next route to claims about effort and detection
 
-### 6. Field validation is part of the research contribution
-
-The app should be tested through real field surveys.
-
-The scientific contribution is stronger when candidate sites are evaluated for:
+Prospective field data are required before ACSP can support claims about:
 
 - accessibility;
-- target-species presence or absence;
-- abundance or number of flowering individuals;
-- number of species detected in genus-level surveys;
-- whether the site represents a newly confirmed population;
-- time and effort required for detection;
-- whether occurrence-supported and model-only candidates differ in success rate.
+- detection probability;
+- abundance;
+- flowering or phenology;
+- newly confirmed populations;
+- discoveries per field day;
+- route efficiency;
+- benefit from SDM/SSDM re-ranking.
+
+The robust candidate-patch confirmation does not establish those quantities.
 
 ## Literature gap to address
 
@@ -147,42 +159,61 @@ Existing research and software commonly address one or more of the following:
 - environmental-variable selection;
 - spatial validation;
 - biodiversity or richness prediction;
+- reserve/survey optimization;
 - phylogenetic or phylogeographic analysis after samples are collected.
 
-The practical step between prediction and fieldwork is often less integrated:
+The current ACSP contribution should be framed narrowly around a reproducible bridge from occurrence information to a **robust finite candidate-patch set**, with operational site selection handled as a downstream layer rather than folded into the validated ecological core.
 
-> Which sites should a researcher visit next, how should those sites be ranked, and how should known-record evidence be distinguished from model-only exploration?
+## Current supported claim
 
-GBIF FieldMap Builder aims to fill this gap by connecting occurrence records, optional SDM/SSDM predictions, map-based site selection, export, and field validation in one workflow.
+The supported claim is the frozen cross-taxon robust candidate-patch recovery result encoded in `acsp.validated_robust` and summarized in `VALIDATED_PRODUCT_CONTRACT.md`.
 
-## Research hypotheses for publication
+Permitted interpretation:
 
-### H1. Occurrence-supported candidate ranking
+- ACSP produces occurrence-conditioned robust regional candidate patches under a fixed reconstruction and aggregation rule;
+- those patches have passed the frozen cross-taxon retrospective confirmation used by the repository;
+- the result supports candidate-patch recovery, not exact-site occupancy or universal operational superiority.
 
-Higher-priority occurrence-supported sites will have a higher probability of successful field detection than lower-priority sites.
+Do not infer from that result that:
+
+- candidate patches are ordered by priority;
+- integrated score weights are validated constants;
+- SDM/SSDM improves patch selection;
+- routes or budgets are optimized;
+- access or detectability is known;
+- field efficiency has been demonstrated.
+
+## Historical / future research hypotheses
+
+The following remain legitimate research questions but are not current validated conclusions.
+
+### H1. Downstream site ranking
+
+Do downstream site-ranking rules applied to validated patches improve prospective field detection relative to matched controls?
 
 ### H2. SDM value for sparse records
 
-For species with sparse or incomplete occurrence records, SDM-high exploration candidates can identify potential populations that would not be selected from known records alone.
+Can optional SDM evidence identify useful exploratory populations that the robust occurrence-conditioned patch core does not capture?
 
-### H3. Integrated scoring
+### H3. Evidence integration
 
-Occurrence-supported candidates with both strong observed support and high SDM suitability will have higher field-detection success than candidates supported by only one source of evidence.
+When prospective field data exist, do combinations of robust patch membership, local habitat evidence, and model evidence improve decisions compared with each evidence source alone?
 
 ### H4. Genus / SSDM value
 
-Observed richness hotspots re-ranked by SSDM predicted richness will improve multi-species sampling efficiency and may support taxonomic, phylogeographic, and phylogenetic sampling design.
+Can observed richness and SSDM extensions improve multi-species sampling efficiency for taxonomic, phylogeographic, or phylogenetic work?
+
+### H5. Operational effort
+
+Can access, route, day-budget, phenology, and non-detection data be learned prospectively to improve survey yield without contaminating the ecological candidate-generation claim?
 
 ## Recommended field-validation data
 
 Field-validation exports should support recording:
 
-- site ID;
-- candidate type;
-- priority rank;
-- priority score;
-- occurrence-support score;
-- SDM suitability or SSDM predicted richness;
+- candidate patch ID and downstream site ID where applicable;
+- candidate source / operational selection rule;
+- SDM suitability or SSDM predicted richness when used;
 - accessibility and access mode;
 - survey date and observer;
 - target-species presence or absence;
@@ -194,44 +225,52 @@ Field-validation exports should support recording:
 - photographs, specimens, or DNA samples collected;
 - survey effort and comments.
 
-## Retrospective distance-excluded validation
+Priority rank or priority score may be recorded for operational experiments, but their presence in a field template does not make them part of the validated core.
 
-To test whether ACSP adds value beyond proximity to known records, hold out complete spatial blocks, islands, or occurrence clusters. Rebuild candidate generation and all environment/SDM profiles from training records only. Exclude known-location candidates, occurrence-support scores, survey-gap scores, environmental novelty, and distance-to-known evidence before ranking. Compare Top-k recovery of held-out occurrences against random Top-k draws from the same candidate pool, as well as distance-only, local-environment-only, SDM-only, and full integrated ablations.
+## Retrospective validation boundary
 
-Random point-level train/test splits are not sufficient because duplicated and nearby occurrence records leak spatial information. Report held-out recall within a predeclared radius, nearest-candidate distance, rank-weighted recovery, environmental coverage, and lift over matched random controls.
+Retrospective validation of the current core must preserve the frozen candidate-patch method and avoid leakage from held-out occurrence coordinates.
 
-For weight calibration, predeclare and seed the taxon sample, preferably stratified across occurrence-record abundance. Use nested evaluation: spatial blocks test recovery within each taxon, while entire taxa are held out from weight selection. Report the sampling frame, failed taxa, all searched weight vectors, unchanged-default performance, local-only and SDM-only ablations, and random Top-k from the same candidate pool. Retrospective occurrence recovery must not be presented as validation of access, detection probability, flowering phenology, or field effort; those terms require prospective surveys.
+The confirmed candidate-patch product should be distinguished from older distance-excluded Top-k, integrated-score, comparator, and ranking analyses retained in the repository. Those older experiments are important provenance and negative/secondary evidence, but they do not redefine the current validated product.
 
-Keep model-accuracy validation separate from candidate-set validation. Model accuracy should use seeded random taxa, repeated spatial-block holdout, probabilistic discrimination and calibration metrics, and taxon-level uncertainty. Candidate-set validation should compare recovery at a fixed candidate budget against matched random and component baselines. Prospective field validation should freeze ACSP and matched-control sites before survey and use equal effort. The superseded four-island protocol is retained in [`legacy/docs/FIELD_VALIDATION_IZU.md`](legacy/docs/FIELD_VALIDATION_IZU.md) for provenance.
+Random point-level train/test splits are not sufficient because duplicated and nearby occurrence records leak spatial information.
+
+Any new candidate-generation method that changes support representation, the 2.5% tier, support-world precision, patch merge distance, or patch membership requires a new predeclared development and confirmation cycle.
+
+Model-accuracy validation should remain separate from candidate-patch validation. Prospective field validation should remain separate again, because access, effort, detectability, and non-detection are not recoverable from retrospective GBIF proximity alone.
+
+The superseded four-island protocol remains under `legacy/` for provenance.
 
 ## Design implications for AI coding agents
 
 When making implementation decisions, prioritize:
 
-1. clear survey-area selection from the known distribution overview;
-2. occurrence-supported candidates that work without SDM;
-3. optional SDM that is especially helpful for sparse records;
-4. transparent separation of occurrence-supported and model-only candidates;
-5. genus / SSDM workflows that support multi-species and evolutionary sampling;
-6. CSV upload parity with GBIF workflows;
-7. map-first, intuitive candidate selection;
-8. field-validation outputs;
-9. lightweight SDM/SSDM defaults and representative subsets;
+1. preservation of the frozen validated candidate-patch path;
+2. explicit separation between candidate generation and downstream ranking/routing;
+3. occurrence-based operation without requiring SDM;
+4. optional SDM/SSDM with clear exploratory labeling;
+5. CSV upload parity with GBIF workflows;
+6. map-first inspection and export;
+7. field-validation outputs for future prospective learning;
+8. preservation of negative experiments and historical artifacts;
+9. no reuse of inspected development taxa as untouched confirmation;
 10. scientific transparency over feature quantity.
 
-Do not add complexity merely because a modeling option exists.
+Do not add complexity merely because a modeling or optimization option exists.
 
-A feature should remain prominent only when it helps users decide where to survey, understand why a site is prioritized, or validate the decision in the field.
+A feature should be described as validated only when its own endpoint was frozen and passed independently.
 
 ## Anti-rollback rules
 
 Do not remove or weaken these core concepts:
 
-- occurrence-supported candidates must be available without SDM;
-- SDM is optional and especially useful for sparse occurrence data;
-- SDM-high exploration candidates must remain available and clearly labeled exploratory;
-- Step 2 survey-area selection must not automatically become the SDM extent;
-- genus mode and SSDM should support multi-species, taxonomic, phylogeographic, and evolutionary sampling;
+- `VALIDATED_PRODUCT_CONTRACT.md` governs the current validated product;
+- validated robust candidate patches are non-ranked and planner-free;
+- historical ranking/routing/SDM layers remain downstream unless separately validated;
+- occurrence-supported operation must remain available without SDM;
+- SDM-high exploration candidates must remain clearly labeled exploratory;
 - researcher-owned CSV uploads must remain a first-class input;
-- field validation must remain part of the intended workflow;
+- genus mode and SSDM remain available as broader research/operational extensions;
+- field validation remains necessary for access, detectability, phenology, abundance, and efficiency claims;
+- `Campanula microdonta` remains development/freeze-regression evidence, not untouched confirmation;
 - the main interface should remain map-first and fieldwork-oriented.
