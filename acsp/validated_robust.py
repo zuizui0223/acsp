@@ -76,10 +76,8 @@ def _project_validated_patch_table(patches: pd.DataFrame, *, area_col: str) -> p
             "validation_status": VALIDATED_ROBUST_STATUS,
         }
     )
-    # The legacy aggregation helper sorts its diagnostic table by a score. The
-    # validated product has no patch ranking, so deliberately discard that row
-    # order and use a stable identifier order instead. Zone numbering itself is
-    # created before score sorting from deterministic candidate/universe order.
+    # Candidate patches are not ranked. Keep output order independent from any
+    # representative support strength and expose only deterministic area/id order.
     out["_neutral_area_sort"] = out[area_col].astype(str)
     out = out.sort_values(
         ["_neutral_area_sort", "candidate_patch_id"],
@@ -105,8 +103,8 @@ def validated_robust_candidate_patches(
 
     The returned rows are candidate patches, not occupancy probabilities,
     exact occupied sites, route plans, priority rankings, or budget-optimal
-    itineraries. Legacy planner scores/ranks and their row ordering are
-    deliberately removed from the validated output.
+    itineraries. Historical planner scores/ranks and their row ordering are
+    deliberately absent from the validated output.
     """
     consensus, _, audit = leave_one_out_consensus_support(
         universe,
