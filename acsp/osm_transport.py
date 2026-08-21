@@ -1,9 +1,10 @@
 """Topology-preserving OpenStreetMap transport-network provider.
 
 This module is downstream operational infrastructure. It retrieves OSM highway
-ways per declared survey area and preserves their node-to-node topology for the
-provider-neutral weighted transport adapter. Provider failure is explicit and
-never falls back to candidate-to-candidate straight-line connectivity.
+ways around candidate patches per declared survey area and preserves their
+node-to-node topology for the provider-neutral weighted transport adapter.
+Provider failure is explicit and never falls back to candidate-to-candidate
+straight-line connectivity.
 """
 from __future__ import annotations
 
@@ -35,6 +36,9 @@ class OsmTransportProviderAudit:
     way_count: int
     provider: str = "openstreetmap_overpass"
     topology_preserved: bool = True
+    query_scope: str = "candidate_around_union"
+    query_radius_derived_from_movement_limit: bool = True
+    region_spanning_bbox_query: bool = False
     straight_line_candidate_fallback: bool = False
     ferry_edges_included: bool = False
     route_time_claim: bool = False
@@ -51,6 +55,9 @@ class OsmTransportProviderAudit:
             "way_count": self.way_count,
             "provider": self.provider,
             "topology_preserved": self.topology_preserved,
+            "query_scope": self.query_scope,
+            "query_radius_derived_from_movement_limit": self.query_radius_derived_from_movement_limit,
+            "region_spanning_bbox_query": self.region_spanning_bbox_query,
             "straight_line_candidate_fallback": self.straight_line_candidate_fallback,
             "ferry_edges_included": self.ferry_edges_included,
             "route_time_claim": self.route_time_claim,
@@ -183,13 +190,36 @@ def overpass_ways_to_transport_tables(
     return nodes, edges, {"way_count": int(way_count), "node_count": int(len(nodes)), "edge_count": int(len(edges))}
 
 
-def _area_query(west: float, south: float, east: float, north: float) -> str:
-    bbox = f"{float(south):.7f},{float(west):.7f},{float(north):.7f},{float(east):.7f}"
-    return (
-        "[out:json][timeout:25];("
-        f"way[\"highway\"]({bbox});"
-        ");out body geom;"
-    )
+def _candidate_around_query(
+    candidates: pd.DataFrame,
+    *,
+    latitude_col: str,
+    longitude_col: str,
+    radius_km: float,
+) -> tuple[str, int]:
+    """Build one Overpass union of candidate-centered movement windows.
+
+    The query radius equals the downstream network movement limit. Geometric
+    neighborhoods bound data retrieval only; they do not create reachability.
+    Duplicate candidate coordinates are collapsed because they define identical
+    retrieval windows.
+    """
+    if candidates.empty:
+        raise ValueError("cannot derive OSM query windows from an empty area")
+    if float(radius_km) <= 0.0:
+        raise ValueError("radius_km must be positive")
+
+    coords = candidates[[latitude_col, longitude_col]].copy()
+    coords[latitude_col] = pd.to_numeric(coords[latitude_col], errors="raise")
+    coords[longitude_col] = pd.to_numeric(coords[longitude_col], errors="raise")
+    coords = coords.drop_duplicates(subset=[latitude_col, longitude_col], keep="first")
+    radius_m = float(radius_km) * 1000.0
+    statements = [
+        f'way["highway"](around:{radius_m:.3f},{float(lat):.7f},{float(lon):.7f});'
+        for lat, lon in coords[[latitude_col, longitude_col]].itertuples(index=False, name=None)
+    ]
+    query = "[out:json][timeout:25];(" + "".join(statements) + ");out body geom;"
+    return query, int(len(coords))
 
 
 def _area_bounds(
@@ -199,6 +229,7 @@ def _area_bounds(
     longitude_col: str,
     margin_km: float,
 ) -> tuple[float, float, float, float]:
+    """Return a bounding envelope retained for ferry-query compatibility."""
     lats = pd.to_numeric(candidates[latitude_col], errors="raise")
     lons = pd.to_numeric(candidates[longitude_col], errors="raise")
     if candidates.empty:
@@ -254,12 +285,18 @@ def fetch_osm_transport_network_for_patches(
     timeout_s: int = DEFAULT_OVERPASS_TIMEOUT_S,
     attempts: int = DEFAULT_OVERPASS_ATTEMPTS,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, OsmTransportProviderAudit]:
-    """Fetch road/trail topology per survey area for candidate patches.
+    """Fetch movement-relevant road/trail topology per survey area.
 
-    ``query_margin_km`` is expected to be derived from the downstream movement
-    limit by the caller; it is not an independent ranking or site-count control.
-    Failed areas emit audit rows and no transport network for that area. The
-    function never substitutes geometric candidate connectivity.
+    ``query_margin_km`` is derived from the downstream movement limit by the
+    caller. For each survey area, one Overpass request unions candidate-centered
+    ``around`` filters of that radius. A qualifying network path of total length
+    <= L is contained in the L-radius geodesic neighborhood of its start patch,
+    so these windows are a safe retrieval superset without querying one broad
+    validation-region bounding box.
+
+    Geometric windows only bound provider retrieval. Reachability itself remains
+    weighted network shortest path. Failed areas emit audit rows and no transport
+    network; the function never substitutes geometric candidate connectivity.
     """
     for column in (area_col, latitude_col, longitude_col):
         if column not in candidates.columns:
@@ -276,13 +313,13 @@ def fetch_osm_transport_network_for_patches(
 
     for area_value, area_candidates in candidates.groupby(area_col, sort=True):
         area_id = str(area_value)
-        west, south, east, north = _area_bounds(
+        query, unique_center_count = _candidate_around_query(
             area_candidates,
             latitude_col=latitude_col,
             longitude_col=longitude_col,
-            margin_km=float(query_margin_km),
+            radius_km=float(query_margin_km),
         )
-        query = _area_query(west, south, east, north)
+        candidate_center_count = int(len(area_candidates))
         try:
             payload = _post_overpass(
                 query,
@@ -298,11 +335,12 @@ def fetch_osm_transport_network_for_patches(
                 {
                     "survey_area_id": area_id,
                     "status": "success",
-                    "west": west,
-                    "south": south,
-                    "east": east,
-                    "north": north,
-                    "query_margin_km": float(query_margin_km),
+                    "query_scope": "candidate_around_union",
+                    "candidate_center_count": candidate_center_count,
+                    "unique_query_center_count": int(unique_center_count),
+                    "query_radius_km": float(query_margin_km),
+                    "query_radius_derived_from_movement_limit": True,
+                    "region_spanning_bbox_query": False,
                     "way_count": int(counts["way_count"]),
                     "node_count": int(counts["node_count"]),
                     "edge_count": int(counts["edge_count"]),
@@ -314,11 +352,12 @@ def fetch_osm_transport_network_for_patches(
                 {
                     "survey_area_id": area_id,
                     "status": "failed",
-                    "west": west,
-                    "south": south,
-                    "east": east,
-                    "north": north,
-                    "query_margin_km": float(query_margin_km),
+                    "query_scope": "candidate_around_union",
+                    "candidate_center_count": candidate_center_count,
+                    "unique_query_center_count": int(unique_center_count),
+                    "query_radius_km": float(query_margin_km),
+                    "query_radius_derived_from_movement_limit": True,
+                    "region_spanning_bbox_query": False,
                     "way_count": 0,
                     "node_count": 0,
                     "edge_count": 0,
