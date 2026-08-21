@@ -92,6 +92,7 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         self.assertFalse(audit["candidate_pair_straight_line_used"])
         self.assertFalse(audit["straight_line_candidate_fallback"])
         self.assertFalse(audit["ferry_edges_included"])
+        self.assertTrue(audit["ferry_relation_only_support"])
 
     def test_provider_failure_does_not_fallback_to_geometric_patch_edges(self):
         candidates = pd.DataFrame(
@@ -139,6 +140,7 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         self.assertFalse(audit["straight_line_candidate_fallback"])
         self.assertEqual(audit["provider"]["failed_area_count"], 1)
         self.assertFalse(audit["ferry_edges_included"])
+        self.assertTrue(audit["ferry_relation_only_support"])
 
     def test_explicit_ferry_edge_is_the_only_cross_area_bridge(self):
         candidates = pd.DataFrame(
@@ -216,7 +218,7 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         self.assertEqual(patch_edges.loc[0, "from_patch_id"], "a")
         self.assertEqual(patch_edges.loc[0, "to_patch_id"], "b")
         self.assertTrue(audit["ferry_edges_included"])
-        self.assertFalse(audit["ferry_relation_only_support"])
+        self.assertTrue(audit["ferry_relation_only_support"])
         self.assertFalse(audit["ferry_proximity_terminal_fallback"])
         self.assertFalse(audit["ferry_access_restrictions_enforced"])
 
