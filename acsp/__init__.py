@@ -1,9 +1,9 @@
 """Public ACSP API with lazy compatibility imports.
 
 The validated candidate-patch path is intentionally independent from the
-historical ranked-planner stack.  Public compatibility names remain available
-at the package root, but their implementation modules are imported only when a
-caller actually asks for those names.
+historical ranked-planner stack. Public compatibility and downstream operational
+names remain available at the package root, but their implementation modules are
+imported only when a caller actually asks for those names.
 """
 
 from __future__ import annotations
@@ -37,6 +37,9 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "write_comparator_pair_export": ("comparator_export", "write_comparator_pair_export"),
     "CoverageSelectionAudit": ("coverage", "CoverageSelectionAudit"),
     "select_maximum_coverage_sites": ("coverage", "select_maximum_coverage_sites"),
+    # Downstream operational geometry. Not part of validated patch generation.
+    "OperationalSelectionAudit": ("operational_selector", "OperationalSelectionAudit"),
+    "select_movement_constrained_patches": ("operational_selector", "select_movement_constrained_patches"),
     "DecisionBaselineConfig": ("decision_baselines", "DecisionBaselineConfig"),
     "compare_decision_baselines": ("decision_baselines", "compare_decision_baselines"),
     "random_same_pool_sets": ("decision_baselines", "random_same_pool_sets"),
@@ -104,7 +107,7 @@ __version__ = "0.1.0"
 
 
 def __getattr__(name: str):
-    """Resolve package-root compatibility exports on first use."""
+    """Resolve package-root exports on first use."""
     target = _EXPORTS.get(name)
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
