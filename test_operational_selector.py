@@ -44,7 +44,9 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
         self.assertEqual(audit.movement_component_count, 1)
         self.assertEqual(audit.selected_count, 3)
         self.assertEqual(selected["_input_index"].tolist(), [0, 1, 2])
-        self.assertEqual(selected["movement_parent_input_index"].tolist(), [pd.NA, 0, 1])
+        parents = selected["movement_parent_input_index"]
+        self.assertTrue(pd.isna(parents.iloc[0]))
+        self.assertEqual(parents.iloc[1:].astype(int).tolist(), [0, 1])
         self.assertAlmostEqual(audit.final_coverage_fraction, 1.0)
 
     def test_survey_area_is_a_hard_movement_and_coverage_barrier(self):
