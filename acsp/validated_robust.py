@@ -47,7 +47,7 @@ def _empty_patch_table(area_col: str) -> pd.DataFrame:
 
 
 def _project_validated_patch_table(patches: pd.DataFrame, *, area_col: str) -> pd.DataFrame:
-    """Drop legacy planner diagnostics and expose only candidate-patch fields."""
+    """Expose only candidate-patch fields in a neutral, non-priority row order."""
     if patches.empty:
         return _empty_patch_table(area_col)
 
@@ -76,7 +76,16 @@ def _project_validated_patch_table(patches: pd.DataFrame, *, area_col: str) -> p
             "validation_status": VALIDATED_ROBUST_STATUS,
         }
     )
-    return out.loc[:, list(validated_patch_columns(area_col))].reset_index(drop=True)
+    # The legacy aggregation helper sorts its diagnostic table by a score. The
+    # validated product has no patch ranking, so deliberately discard that row
+    # order and use a stable identifier order instead. Zone numbering itself is
+    # created before score sorting from deterministic candidate/universe order.
+    out["_neutral_area_sort"] = out[area_col].astype(str)
+    out = out.sort_values(
+        ["_neutral_area_sort", "candidate_patch_id"],
+        kind="mergesort",
+    ).drop(columns="_neutral_area_sort").reset_index(drop=True)
+    return out.loc[:, list(validated_patch_columns(area_col))]
 
 
 def validated_robust_candidate_patches(
@@ -95,8 +104,9 @@ def validated_robust_candidate_patches(
     float32 support worlds, and 1 km same-area patch aggregation.
 
     The returned rows are candidate patches, not occupancy probabilities,
-    exact occupied sites, route plans, or budget-optimal itineraries. Legacy
-    planner scores/ranks are deliberately removed from the validated output.
+    exact occupied sites, route plans, priority rankings, or budget-optimal
+    itineraries. Legacy planner scores/ranks and their row ordering are
+    deliberately removed from the validated output.
     """
     consensus, _, audit = leave_one_out_consensus_support(
         universe,
