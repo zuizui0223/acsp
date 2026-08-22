@@ -61,6 +61,7 @@ class OperationalCliTests(unittest.TestCase):
                     "latitude": [0.0, 0.0, 0.0],
                     "longitude": [0.000, 0.005, 0.010],
                     "candidate_patch_radius_m": [100.0] * 3,
+                    "patch_merge_distance_m": [1000.0] * 3,
                 }
             ).to_csv(patches, index=False)
 
@@ -80,6 +81,10 @@ class OperationalCliTests(unittest.TestCase):
             self.assertEqual(payload["movement_constraint_mode"], "geometric_transition_proxy")
             self.assertTrue(payload["straight_line_movement_assumption"])
             self.assertTrue(payload["movement_constraint_only"])
+            self.assertEqual(
+                payload["audit"]["coverage_scale_source"],
+                "candidate_patch_artifact.patch_merge_distance_m",
+            )
             self.assertFalse(payload["user_site_count_required"])
             self.assertFalse(payload["user_coverage_target_required"])
             self.assertFalse(payload["survey_days_input"])
@@ -102,6 +107,7 @@ class OperationalCliTests(unittest.TestCase):
                     "latitude": [35.0, 43.0],
                     "longitude": [139.0, 145.0],
                     "candidate_patch_radius_m": [100.0, 100.0],
+                    "patch_merge_distance_m": [1000.0, 1000.0],
                 }
             ).to_csv(patches, index=False)
             pd.DataFrame(
@@ -124,6 +130,10 @@ class OperationalCliTests(unittest.TestCase):
             self.assertEqual(payload["movement_constraint_mode"], "explicit_reachability_graph")
             self.assertFalse(payload["straight_line_movement_assumption"])
             self.assertEqual(payload["reachability_edge_count"], 1)
+            self.assertEqual(
+                payload["audit"]["coverage_scale_source"],
+                "candidate_patch_artifact.patch_merge_distance_m",
+            )
             self.assertFalse(payload["route_feasibility_claim"])
             self.assertFalse(payload["field_efficiency_claim"])
             self.assertFalse(payload["validated_candidate_generation_changed"])
@@ -141,6 +151,7 @@ class OperationalCliTests(unittest.TestCase):
                     "latitude": [35.0, 35.0],
                     "longitude": [139.0, 139.02],
                     "candidate_patch_radius_m": [100.0, 100.0],
+                    "patch_merge_distance_m": [1000.0, 1000.0],
                 }
             )
             patches.to_csv(patches_path, index=False)
@@ -214,6 +225,10 @@ class OperationalCliTests(unittest.TestCase):
             self.assertEqual(payload["provider_successful_area_count"], 1)
             self.assertEqual(payload["provider_failed_area_count"], 0)
             self.assertFalse(payload["ferry_edges_included"])
+            self.assertEqual(
+                payload["audit"]["coverage_scale_source"],
+                "candidate_patch_artifact.patch_merge_distance_m",
+            )
             self.assertFalse(payload["route_feasibility_claim"])
             self.assertFalse(payload["field_efficiency_claim"])
             self.assertFalse(payload["validated_candidate_generation_changed"])
