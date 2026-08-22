@@ -16,7 +16,7 @@ on:
       - ".github/workflows/geographic-framing-development-v1.yml"
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 env:
@@ -139,3 +139,69 @@ jobs:
             framing-development-results/
           if-no-files-found: error
           retention-days: 90
+
+      - name: Prepend AI changelog and restore this workflow
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/geographic-framing-development-v1'
+        env:
+          BRANCH: ${{ github.head_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('CHANGELOG_AI.md')
+          text = path.read_text(encoding='utf-8')
+          heading = '# AI Change Log\n\n'
+          marker = '## 2026-08-22 - ChatGPT (OpenAI) - Rejected geographic framing v1'
+          if not text.startswith(heading):
+              raise SystemExit('CHANGELOG_AI.md has unexpected heading')
+          if marker not in text:
+              entry = '''## 2026-08-22 - ChatGPT (OpenAI) - Rejected geographic framing v1
+
+Changed files:
+- research/geographic_framing.py
+- research/evaluate_geographic_framing_development_v1.py
+- research/diagnose_geographic_framing_v1_failures.py
+- research/test_geographic_framing.py
+- research/test_geographic_framing_evaluator.py
+- research/test_geographic_framing_failure_diagnostics.py
+- validation/acsp_geographic_framing_development_protocol_v1.json
+- validation/geographic_framing_development_v1/*
+- .github/workflows/geographic-framing-development-v1.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Froze and evaluated a research-only training-occurrence geographic-framing baseline without changing the validated Japanese 12-region adapter or robust candidate-patch core.
+- `training_block_component_10km_padding_v1` uses 0.1-degree occupied training blocks, 8-neighbour components, singleton retention, the already-frozen 10 km recovery scale as padding, and deterministic union of overlapping frames; it accepts no held-out coordinates, SDM/SSDM, ranking, user bounds, site count, survey days, or budget.
+- Reused the already-opened 96-taxon / 480-fold robust-patch cohort strictly as framing development evidence; these taxa are now permanently non-confirmatory for framing. The original untouched confirmation was not replayed.
+- Rejected v1 before candidate generation: mean held-out frame containment was 0.7662 while median frame area was 0.5181 of the fixed region (plant 0.8581 containment; animal 0.6743).
+- Post-hoc diagnosis found 1,694 of 1,996 v1 misses (84.9%) in held-out-only geographic components with no training block; only 302 misses were inside components also represented by training. A single training bounding box + the same 10 km padding reached 0.8806 containment at median area ratio 0.7835 but is not promoted because it collapses disjunct structure.
+- Fixed one evaluator schema bug exposed by the real v2 exporter: canonical `latitude`/`longitude` are now selected explicitly before renaming so preserved source `_latitude`/`_longitude` columns cannot create duplicates.
+
+Features preserved:
+- Frozen robust support fraction 0.025, float32 support worlds, 1 km same-area complete-link candidate-patch aggregation, the existing 96-pair/480-fold robust-core evidence, non-ranked candidate patches, OSM movement/ferry semantics, and the route/day/budget/access/field-efficiency claim ceiling are unchanged.
+- Campanula remains development/freeze-regression/operational-smoke evidence only.
+
+Validation / conclusion:
+- Protocol fingerprint: `887526145c4fc0e2c9c3986c8424b4814b50155108a937b5d6a613b2ee974c0f`.
+- Completed development run: 32573980179; durable summaries and pair diagnostics are stored under `validation/geographic_framing_development_v1/`.
+- The negative result changes the next architecture, not a parameter: do not retune local padding on these outcomes. Continue with a broad outcome-blind search universe followed by ecological robust support and candidate patches.
+
+Known risks / TODO:
+- The automatic geographic search-universe layer remains unvalidated. Fresh framing confirmation must exclude every framing-development taxon and include genuinely new geography before any beyond-Japan claim.
+
+'''
+              path.write_text(heading + entry + text[len(heading):], encoding='utf-8')
+          PY
+          git show HEAD^:.github/workflows/geographic-framing-development-v1.yml > .github/workflows/geographic-framing-development-v1.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG_AI.md .github/workflows/geographic-framing-development-v1.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Document rejected geographic framing v1"
+          git push origin HEAD:"$BRANCH"
