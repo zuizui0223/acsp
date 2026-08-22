@@ -1,0 +1,72 @@
+name: Temporary prepend complete-coverage changelog
+
+on:
+  push:
+    branches:
+      - agent/complete-coverage-auto-stop
+
+permissions:
+  contents: write
+
+jobs:
+  prepend-and-remove-self:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/complete-coverage-auto-stop
+          fetch-depth: 0
+
+      - name: Prepend changelog entry and remove this temporary workflow
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CHANGELOG_AI.md")
+          text = path.read_text(encoding="utf-8")
+          marker = "## 2026-08-22 - ChatGPT (OpenAI) - Complete-coverage operational auto-stop"
+          if marker not in text:
+              entry = '''## 2026-08-22 - ChatGPT (OpenAI) - Complete-coverage operational auto-stop
+
+Changed files:
+- acsp/operational_selector.py
+- acsp/reachability.py
+- test_operational_selector.py
+- test_reachability_selector.py
+- .github/workflows/live-field-plan-operational-gate.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Removed normalized-knee truncation from downstream geometric and explicit-reachability selection.
+- Automatic visit count now continues deterministic connected greedy redundancy selection until every candidate patch within each movement component is represented at the candidate-artifact-derived coverage scale.
+- Added hard invariants requiring 100% candidate-patch coverage for non-empty ordinary selections and explicit audit fields `auto_stop_method=complete_candidate_patch_coverage` and `selection_stop_reason=all_component_candidate_patches_covered`.
+- Kept site count, target coverage, survey days, monetary budget, Top-k, and ranking weights out of the ordinary selector API.
+
+Features preserved:
+- Frozen validated 2.5% support, float32 support worlds, frozen 1 km same-area candidate-patch aggregation, and 96-pair/480-fold confirmation evidence are unchanged.
+- OSM road/trail/ferry reachability and no-straight-line-fallback movement rules are unchanged.
+- Campanula remains development/freeze-regression/operational-smoke evidence only.
+
+Validation / operational consequence:
+- Python 3.10/3.11/3.12 survey/research/wheel/packaged-command checks, R, frozen audit, Campanula freeze, and the live field-plan gate passed before this changelog-only commit.
+- The live 5 km Campanula smoke remains 22 validated candidate patches and 30 reachability edges / 5 movement components, but complete candidate-patch coverage changes the downstream visit set from the old knee-truncated 14 (68.2% patch coverage) to 21 visits (100% patch coverage).
+- The 21-visit result is an operational consequence of the stopping contract, not biological validation and not a tuning target.
+
+Known risks / TODO:
+- Complete candidate-patch coverage can require nearly all patches when artifact-scale neighborhoods are weakly redundant, as the 22 -> 21 live smoke shows.
+- A real hard field-effort ceiling, if later required, should be a separate explicit constrained operational product with its own validation; it must not be reintroduced as another hidden knee or budget heuristic.
+
+'''
+              heading = "# AI Change Log\n\n"
+              if not text.startswith(heading):
+                  raise SystemExit("CHANGELOG_AI.md has unexpected heading")
+              text = heading + entry + text[len(heading):]
+              path.write_text(text, encoding="utf-8")
+          PY
+          rm .github/workflows/_agent-prepend-complete-coverage-changelog.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG_AI.md .github/workflows/_agent-prepend-complete-coverage-changelog.yml
+          git commit -m "Document complete-coverage operational auto-stop"
+          git push origin HEAD:agent/complete-coverage-auto-stop
