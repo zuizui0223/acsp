@@ -39,6 +39,12 @@ class GeographicFramingEvaluatorTests(unittest.TestCase):
             {
                 "latitude": [35.01, 35.02, 35.11, 35.12],
                 "longitude": [139.01, 139.02, 139.11, 139.12],
+                # The real v2 exporter preserves source underscore columns in
+                # addition to canonical latitude/longitude.  These deliberately
+                # disagree so the evaluator must select the canonical pair
+                # instead of creating duplicate names by broad renaming.
+                "_latitude": [-1.0, -1.0, -1.0, -1.0],
+                "_longitude": [-1.0, -1.0, -1.0, -1.0],
             }
         )
         heldout = pd.DataFrame(
