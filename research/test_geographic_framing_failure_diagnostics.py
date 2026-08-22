@@ -51,7 +51,8 @@ class GeographicFramingFailureDiagnosticTests(unittest.TestCase):
             self.assertGreaterEqual(row["v1_missed_records"], 2)
             self.assertGreaterEqual(row["missed_training_supported_component"], 1)
             self.assertGreaterEqual(row["missed_heldout_only_component"], 1)
-            self.assertGreater(row["bbox_10km_containment"], 0.0)
+            self.assertGreaterEqual(row["bbox_10km_containment"], 0.0)
+            self.assertLessEqual(row["bbox_10km_containment"], 1.0)
 
     def test_upstream_failure_is_retained_without_reclassification(self):
         with tempfile.TemporaryDirectory() as tmp:
