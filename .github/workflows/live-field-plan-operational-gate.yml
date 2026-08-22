@@ -20,7 +20,10 @@ on:
       - "acsp/osm_*.py"
       - "acsp/transport_reachability.py"
       - "acsp/reachability.py"
+      - "acsp/operational_selector.py"
       - "test_field_plan_cli.py"
+      - "test_operational_selector.py"
+      - "test_reachability_selector.py"
       - ".github/workflows/live-field-plan-operational-gate.yml"
 
 jobs:
@@ -131,6 +134,8 @@ jobs:
           summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
           patches = pd.read_csv(root / "candidate_patches.csv")
           visits = pd.read_csv(root / "operational_visits.csv")
+          operational = summary["downstream_operational_selection"]
+          selection = operational["selection_audit"]
 
           assert summary["status"] == "validated_candidates_plus_downstream_operations"
           assert summary.get("failed_stage") is None
@@ -140,15 +145,18 @@ jobs:
           assert summary["validated_candidate_product"]["non_ranked"] is True
           assert summary["artifact_boundary"]["candidate_patches_written_before_operations"] is True
           assert summary["artifact_boundary"]["candidate_patch_artifact_filtered_by_operations"] is False
-          assert summary["downstream_operational_selection"]["straight_line_movement_assumption"] is False
-          assert summary["downstream_operational_selection"]["user_site_count_required"] is False
-          assert summary["downstream_operational_selection"]["survey_days_input"] is False
-          assert summary["downstream_operational_selection"]["monetary_budget_input"] is False
+          assert operational["straight_line_movement_assumption"] is False
+          assert operational["user_site_count_required"] is False
+          assert operational["survey_days_input"] is False
+          assert operational["monetary_budget_input"] is False
+          assert selection["final_coverage_fraction"] == 1.0
+          assert selection["auto_stop_method"] == "complete_candidate_patch_coverage"
+          assert selection["selection_stop_reason"] == "all_component_candidate_patches_covered"
           print(
               "live gate passed:",
               len(patches),
               "validated patches ->",
               len(visits),
-              "operational visits",
+              "operational visits; complete candidate-patch coverage",
           )
           PY
