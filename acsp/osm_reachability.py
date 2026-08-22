@@ -4,9 +4,40 @@ from __future__ import annotations
 import pandas as pd
 
 from .osm_ferry import fetch_osm_ferry_edges_for_patches
+from .osm_ferry_stop_highways import fetch_explicit_highway_extensions_for_ferry_stops
 from .osm_ferry_stops import fetch_osm_ferry_stop_edges_for_patches
 from .osm_transport import fetch_osm_transport_network_for_patches
 from .transport_reachability import build_patch_reachability_edges_from_transport_network
+
+
+def _combine_nodes(base: pd.DataFrame, extension: pd.DataFrame) -> pd.DataFrame:
+    if extension is None or extension.empty:
+        return base.copy()
+    if base is None or base.empty:
+        return extension.copy().reset_index(drop=True)
+    return (
+        pd.concat([base, extension], ignore_index=True, sort=False)
+        .drop_duplicates("network_node_id", keep="first")
+        .sort_values("network_node_id")
+        .reset_index(drop=True)
+    )
+
+
+def _combine_edges(*frames: pd.DataFrame) -> pd.DataFrame:
+    usable = [frame for frame in frames if frame is not None and not frame.empty]
+    if not usable:
+        if frames:
+            return frames[0].copy()
+        return pd.DataFrame(columns=["from_node_id", "to_node_id", "distance_m"])
+    if len(usable) == 1:
+        return usable[0].copy().reset_index(drop=True)
+    return (
+        pd.concat(usable, ignore_index=True, sort=False)
+        .sort_values("distance_m")
+        .drop_duplicates(["from_node_id", "to_node_id"], keep="first")
+        .sort_values(["from_node_id", "to_node_id"])
+        .reset_index(drop=True)
+    )
 
 
 def build_osm_patch_reachability_edges(
@@ -26,17 +57,17 @@ def build_osm_patch_reachability_edges(
 ]:
     """Fetch OSM road/trail/ferry topology and derive patch reachability.
 
-    The sole movement tuning input is ``max_network_transition_km``. The same
-    distance controls the automatic OSM query margins and the weighted network
-    transition limit. Road/trail provider failures and ferry-provider failures
-    remain explicit; neither triggers candidate straight-line connectivity.
+    The sole movement tuning input is ``max_network_transition_km``. Road/trail
+    topology is retrieved around candidates. Ferry relation ``stop`` nodes are
+    audited explicitly. If a ferry stop is on the ferry member-way graph but is
+    missing from the candidate-window highway graph, ACSP performs one exact OSM
+    node-to-highway reverse lookup. A returned highway component is imported only
+    if it also contains a raw OSM node already present in the land graph, giving
+    an exact topological anchor. No coordinate-distance terminal snapping exists.
 
-    Direct ferry ways use exact shared OSM endpoint node IDs already present in
-    the land highway network. Relation-only ferry routes are reconstructed from
-    their member-way raw-node graph. Relation members with role ``stop`` are
-    additionally audited and may serve as terminals only when the same raw OSM
-    node is explicitly present in both the ferry member-way graph and the land
-    highway graph. Proximity-based terminal snapping is never used.
+    Direct/relation ferry matching is then evaluated against the augmented land
+    graph. All reachability remains weighted network shortest path; provider
+    failures never trigger candidate straight-line connectivity.
 
     Returns ``(patch_edges, attachments, network_nodes, network_edges,
     area_provider_audit, audit)``.
@@ -51,15 +82,14 @@ def build_osm_patch_reachability_edges(
         latitude_col=latitude_col,
         longitude_col=longitude_col,
     )
-    ferry_edges, _ferry_pair_audit, ferry_audit = fetch_osm_ferry_edges_for_patches(
-        candidates,
-        nodes,
-        max_network_transition_km=float(max_network_transition_km),
-        area_col=area_col,
-        latitude_col=latitude_col,
-        longitude_col=longitude_col,
-    )
-    ferry_stop_edges, _ferry_stop_rows, ferry_stop_audit = fetch_osm_ferry_stop_edges_for_patches(
+
+    # First stop pass is diagnostic. It identifies exact ferry-graph stop nodes
+    # missing from the candidate-window highway graph without creating a fallback.
+    (
+        initial_stop_edges,
+        initial_stop_rows,
+        initial_stop_audit,
+    ) = fetch_osm_ferry_stop_edges_for_patches(
         candidates,
         nodes,
         max_network_transition_km=float(max_network_transition_km),
@@ -68,24 +98,53 @@ def build_osm_patch_reachability_edges(
         longitude_col=longitude_col,
     )
 
-    edge_tables = [
-        frame
-        for frame in (road_edges, ferry_edges, ferry_stop_edges)
-        if frame is not None and not frame.empty
-    ]
-    if not edge_tables:
-        network_edges = road_edges.copy()
-    elif len(edge_tables) == 1:
-        network_edges = edge_tables[0].copy()
+    extension_nodes, extension_edges, stop_highway_audit = (
+        fetch_explicit_highway_extensions_for_ferry_stops(
+            initial_stop_rows,
+            nodes,
+        )
+    )
+    augmented_nodes = _combine_nodes(nodes, extension_nodes)
+    augmented_road_edges = _combine_edges(road_edges, extension_edges)
+
+    # If exact reverse lookup imported land topology, re-evaluate stop membership
+    # against the augmented graph. Otherwise reuse the first pass and avoid a
+    # redundant live provider request.
+    if extension_nodes is not None and not extension_nodes.empty:
+        ferry_stop_edges, _final_stop_rows, ferry_stop_audit = (
+            fetch_osm_ferry_stop_edges_for_patches(
+                candidates,
+                augmented_nodes,
+                max_network_transition_km=float(max_network_transition_km),
+                area_col=area_col,
+                latitude_col=latitude_col,
+                longitude_col=longitude_col,
+            )
+        )
     else:
-        network_edges = pd.concat(edge_tables, ignore_index=True, sort=False)
-        network_edges = network_edges.sort_values("distance_m").drop_duplicates(
-            subset=["from_node_id", "to_node_id"], keep="first"
-        ).reset_index(drop=True)
+        ferry_stop_edges = initial_stop_edges
+        ferry_stop_audit = initial_stop_audit
+
+    # Direct and relation-only ferry matching also benefits from any exact land
+    # topology imported by the stop-node reverse lookup.
+    ferry_edges, _ferry_pair_audit, ferry_audit = fetch_osm_ferry_edges_for_patches(
+        candidates,
+        augmented_nodes,
+        max_network_transition_km=float(max_network_transition_km),
+        area_col=area_col,
+        latitude_col=latitude_col,
+        longitude_col=longitude_col,
+    )
+
+    network_edges = _combine_edges(
+        augmented_road_edges,
+        ferry_edges,
+        ferry_stop_edges,
+    )
 
     patch_edges, attachments, reachability_audit = build_patch_reachability_edges_from_transport_network(
         candidates,
-        nodes,
+        augmented_nodes,
         network_edges,
         max_network_transition_km=float(max_network_transition_km),
         candidate_group_col=area_col,
@@ -102,6 +161,10 @@ def build_osm_patch_reachability_edges(
         "ferry_edges_included": bool(len(ferry_edges) or len(ferry_stop_edges)),
         "ferry_relation_only_support": True,
         "ferry_relation_stop_support": True,
+        "ferry_stop_highway_reverse_lookup": True,
+        "ferry_highway_extension_used": bool(
+            extension_nodes is not None and not extension_nodes.empty
+        ),
         "ferry_proximity_terminal_fallback": False,
         "ferry_access_restrictions_enforced": False,
         "route_time_claim": False,
@@ -111,7 +174,9 @@ def build_osm_patch_reachability_edges(
         "field_efficiency_claim": False,
         "provider": provider_audit.as_dict(),
         "ferry_provider": ferry_audit.as_dict(),
+        "ferry_stop_provider_before_highway_reverse_lookup": initial_stop_audit.as_dict(),
+        "ferry_stop_highway_provider": stop_highway_audit.as_dict(),
         "ferry_stop_provider": ferry_stop_audit.as_dict(),
         "reachability": reachability_audit.as_dict(),
     }
-    return patch_edges, attachments, nodes, network_edges, area_audit, audit
+    return patch_edges, attachments, augmented_nodes, network_edges, area_audit, audit
