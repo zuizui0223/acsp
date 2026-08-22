@@ -1,0 +1,154 @@
+name: Live field-plan operational gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      taxon:
+        description: Scientific species name for operational smoke only
+        required: true
+        default: Campanula microdonta
+        type: string
+      movement_km:
+        description: Maximum weighted OSM network transition distance in km
+        required: true
+        default: "5"
+        type: string
+  pull_request:
+    paths:
+      - "acsp/field_plan_cli.py"
+      - "acsp/taxon_patches.py"
+      - "acsp/osm_*.py"
+      - "acsp/transport_reachability.py"
+      - "acsp/reachability.py"
+      - "test_field_plan_cli.py"
+      - ".github/workflows/live-field-plan-operational-gate.yml"
+
+jobs:
+  live-field-plan:
+    name: Live one-command operational smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DEFAULT_TAXON: Campanula microdonta
+      DEFAULT_MOVEMENT_KM: "5"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ACSP
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pyproj
+
+      - name: Resolve smoke inputs
+        id: smoke
+        shell: bash
+        run: |
+          taxon='${{ inputs.taxon }}'
+          movement='${{ inputs.movement_km }}'
+          if [ -z "$taxon" ]; then taxon="$DEFAULT_TAXON"; fi
+          if [ -z "$movement" ]; then movement="$DEFAULT_MOVEMENT_KM"; fi
+          echo "taxon=$taxon" >> "$GITHUB_OUTPUT"
+          echo "movement_km=$movement" >> "$GITHUB_OUTPUT"
+          echo "Operational smoke taxon: $taxon"
+          echo "Movement limit (km): $movement"
+          echo "This workflow is operational/development evidence, not untouched biological confirmation."
+
+      - name: Run live one-command field plan
+        id: run
+        shell: bash
+        run: |
+          mkdir -p live-field-plan
+          set +e
+          acsp-field-plan \
+            --taxon "${{ steps.smoke.outputs.taxon }}" \
+            --osm-network-transition-km "${{ steps.smoke.outputs.movement_km }}" \
+            --patches-output live-field-plan/candidate_patches.csv \
+            --visits-output live-field-plan/operational_visits.csv \
+            --summary-json live-field-plan/summary.json \
+            > live-field-plan/stdout.json \
+            2> live-field-plan/stderr.log
+          status=$?
+          set -e
+          echo "$status" > live-field-plan/exit_code.txt
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Print live gate diagnostics
+        if: always()
+        shell: bash
+        run: |
+          echo "=== exit code ==="
+          cat live-field-plan/exit_code.txt || true
+          echo "=== summary ==="
+          cat live-field-plan/summary.json || true
+          echo "=== stderr tail ==="
+          tail -n 120 live-field-plan/stderr.log || true
+          echo "=== artifact row counts ==="
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+          for name in ("candidate_patches.csv", "operational_visits.csv"):
+              path = Path("live-field-plan") / name
+              if path.is_file():
+                  try:
+                      print(f"{name}: {len(pd.read_csv(path))} rows")
+                  except Exception as exc:
+                      print(f"{name}: unreadable: {exc}")
+              else:
+                  print(f"{name}: not produced")
+          PY
+
+      - name: Upload live field-plan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-field-plan-operational-gate
+          path: live-field-plan/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce live operational gate
+        if: always()
+        shell: bash
+        run: |
+          status=$(cat live-field-plan/exit_code.txt)
+          if [ "$status" -ne 0 ]; then
+            echo "acsp-field-plan failed; inspect summary.json failed_stage and uploaded artifacts."
+            exit "$status"
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path("live-field-plan")
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          patches = pd.read_csv(root / "candidate_patches.csv")
+          visits = pd.read_csv(root / "operational_visits.csv")
+
+          assert summary["status"] == "validated_candidates_plus_downstream_operations"
+          assert summary.get("failed_stage") is None
+          assert len(patches) > 0
+          assert len(visits) > 0
+          assert set(visits["candidate_patch_id"]).issubset(set(patches["candidate_patch_id"]))
+          assert summary["validated_candidate_product"]["non_ranked"] is True
+          assert summary["artifact_boundary"]["candidate_patches_written_before_operations"] is True
+          assert summary["artifact_boundary"]["candidate_patch_artifact_filtered_by_operations"] is False
+          assert summary["downstream_operational_selection"]["straight_line_movement_assumption"] is False
+          assert summary["downstream_operational_selection"]["user_site_count_required"] is False
+          assert summary["downstream_operational_selection"]["survey_days_input"] is False
+          assert summary["downstream_operational_selection"]["monetary_budget_input"] is False
+          print(
+              "live gate passed:",
+              len(patches),
+              "validated patches ->",
+              len(visits),
+              "operational visits",
+          )
+          PY
