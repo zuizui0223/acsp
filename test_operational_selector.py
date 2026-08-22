@@ -10,7 +10,7 @@ from acsp.operational_selector import (
 
 
 class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
-    def test_site_count_is_automatic_and_cluster_knee_stops_at_one_per_component(self):
+    def test_site_count_is_automatic_and_redundant_cluster_needs_one_representative(self):
         candidates = pd.DataFrame(
             {
                 "candidate_patch_id": [f"p{i}" for i in range(6)],
@@ -30,6 +30,12 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
         self.assertEqual(selected["operational_segment"].tolist(), [1, 2])
         self.assertTrue(selected["movement_parent_input_index"].isna().all())
         self.assertEqual(audit.coverage_scale_km, 1.0)
+        self.assertEqual(audit.final_coverage_fraction, 1.0)
+        self.assertEqual(audit.auto_stop_method, "complete_candidate_patch_coverage")
+        self.assertEqual(
+            audit.selection_stop_reason,
+            "all_component_candidate_patches_covered",
+        )
         self.assertEqual(
             audit.coverage_scale_source,
             "candidate_patch_artifact.patch_merge_distance_m",
@@ -38,9 +44,39 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
             (selected["operational_coverage_scale_source"]
              == "candidate_patch_artifact.patch_merge_distance_m").all()
         )
+        self.assertTrue(
+            (selected["operational_selection_stop_reason"]
+             == "all_component_candidate_patches_covered").all()
+        )
         self.assertFalse(audit.user_site_count_required)
         self.assertFalse(audit.user_coverage_target_required)
         self.assertFalse(audit.validated_candidate_membership_changed)
+
+    def test_complete_coverage_continues_past_old_knee(self):
+        candidates = pd.DataFrame(
+            {
+                "candidate_patch_id": [f"p{i}" for i in range(5)],
+                "survey_area_id": ["A"] * 5,
+                "latitude": [0.0] * 5,
+                "longitude": [0.000, 0.005, 0.010, 0.015, 0.020],
+                "candidate_patch_radius_m": [100.0] * 5,
+                "patch_merge_distance_m": [1000.0] * 5,
+            }
+        )
+        selected, audit = select_movement_constrained_patches(
+            candidates, max_transition_km=5.0
+        )
+        # The previous normalized-knee rule stopped after the first representative
+        # at 3/5 coverage. Complete-coverage stopping must add the second one.
+        self.assertEqual(selected["_input_index"].tolist(), [1, 3])
+        self.assertEqual(selected["segment_coverage_fraction"].tolist(), [0.6, 1.0])
+        self.assertEqual(audit.selected_count, 2)
+        self.assertEqual(audit.final_coverage_fraction, 1.0)
+        self.assertEqual(audit.auto_stop_method, "complete_candidate_patch_coverage")
+        self.assertEqual(
+            audit.selection_stop_reason,
+            "all_component_candidate_patches_covered",
+        )
 
     def test_merge_metadata_is_authoritative_over_candidate_radius(self):
         candidates = pd.DataFrame(
@@ -111,7 +147,7 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
         self.assertEqual(scale, 0.0)
         self.assertEqual(source, "empty_candidate_set_not_applicable")
 
-    def test_linear_coverage_curve_keeps_all_candidates_conservatively(self):
+    def test_nonredundant_component_keeps_all_candidates_for_complete_coverage(self):
         candidates = pd.DataFrame(
             {
                 "survey_area_id": ["A"] * 3,
