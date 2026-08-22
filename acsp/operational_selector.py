@@ -19,7 +19,6 @@ from sklearn.neighbors import BallTree
 
 from .coverage import EARTH_RADIUS_KM, _coverage_adjacency
 
-DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM = 1.0
 _AUTO_STOP_EPS = 1e-12
 
 
@@ -30,6 +29,7 @@ class OperationalSelectionAudit:
     movement_component_count: int
     max_transition_km: float
     coverage_scale_km: float
+    coverage_scale_source: str
     final_coverage_fraction: float
     movement_group_column: Optional[str]
     auto_stop_method: str = "maximum_normalized_knee_deviation"
@@ -46,6 +46,7 @@ class OperationalSelectionAudit:
             "movement_component_count": self.movement_component_count,
             "max_transition_km": self.max_transition_km,
             "coverage_scale_km": self.coverage_scale_km,
+            "coverage_scale_source": self.coverage_scale_source,
             "final_coverage_fraction": self.final_coverage_fraction,
             "movement_group_column": self.movement_group_column,
             "auto_stop_method": self.auto_stop_method,
@@ -57,15 +58,54 @@ class OperationalSelectionAudit:
         }
 
 
-def _derive_coverage_scale_km(candidates: pd.DataFrame, *, radius_col: str) -> float:
-    """Derive a non-user-tuned redundancy scale from patch footprints."""
-    if radius_col not in candidates.columns:
-        return float(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM)
-    radii_m = pd.to_numeric(candidates[radius_col], errors="coerce").to_numpy(float)
-    radii_m = radii_m[np.isfinite(radii_m) & (radii_m >= 0.0)]
-    if radii_m.size == 0:
-        return float(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM)
-    return float(max(DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM, np.median(radii_m) / 1000.0))
+def _derive_coverage_scale_km(
+    candidates: pd.DataFrame,
+    *,
+    radius_col: str,
+    merge_distance_col: str = "patch_merge_distance_m",
+) -> tuple[float, str]:
+    """Derive redundancy scale entirely from candidate-patch artifact metadata.
+
+    Validated ACSP candidate patches carry the frozen aggregation scale in
+    ``patch_merge_distance_m``. That artifact field is authoritative for the
+    downstream redundancy scale; no separate operational 1 km constant exists.
+
+    Legacy/pre-validated tables without merge metadata fall back to the median
+    positive finite candidate-patch radius. This fallback is deliberately
+    conservative and explicitly audited. A non-empty table with no usable
+    artifact-derived scale fails instead of inventing a numeric default.
+    """
+    if candidates.empty:
+        return 0.0, "empty_candidate_set_not_applicable"
+
+    if merge_distance_col in candidates.columns:
+        merge_m = pd.to_numeric(candidates[merge_distance_col], errors="coerce").to_numpy(float)
+        if merge_m.size != len(candidates) or not np.isfinite(merge_m).all() or (merge_m <= 0.0).any():
+            raise ValueError(
+                f"{merge_distance_col} must contain one finite positive value for every candidate patch"
+            )
+        first = float(merge_m[0])
+        tolerance = max(1e-9, abs(first) * 1e-9)
+        if not np.all(np.abs(merge_m - first) <= tolerance):
+            unique = sorted({float(value) for value in merge_m.tolist()})
+            raise ValueError(
+                f"{merge_distance_col} must be internally consistent; found {unique}"
+            )
+        return first / 1000.0, "candidate_patch_artifact.patch_merge_distance_m"
+
+    if radius_col in candidates.columns:
+        radii_m = pd.to_numeric(candidates[radius_col], errors="coerce").to_numpy(float)
+        radii_m = radii_m[np.isfinite(radii_m) & (radii_m > 0.0)]
+        if radii_m.size:
+            return (
+                float(np.median(radii_m) / 1000.0),
+                "legacy_candidate_patch_artifact.median_positive_radius",
+            )
+
+    raise ValueError(
+        "cannot derive operational coverage scale: non-empty candidate patches need "
+        "finite positive patch_merge_distance_m metadata or positive candidate_patch_radius_m"
+    )
 
 
 def _movement_adjacency(
@@ -221,13 +261,18 @@ def select_movement_constrained_patches(
     connected component is a separate operational segment. A deterministic
     connected greedy coverage prefix is generated and stopped at its internal
     coverage knee. A linear curve has no defensible knee, so all rows are kept.
+    Redundancy scale is derived from candidate-patch artifact metadata and is not
+    an independent operational threshold.
     """
     if float(max_transition_km) <= 0.0:
         raise ValueError("max_transition_km must be positive")
 
     work = candidates.reset_index(drop=False).rename(columns={"index": "_input_index"}).copy()
     n = len(work)
-    coverage_scale_km = _derive_coverage_scale_km(work, radius_col=radius_col)
+    coverage_scale_km, coverage_scale_source = _derive_coverage_scale_km(
+        work,
+        radius_col=radius_col,
+    )
     if n == 0:
         empty = work.copy()
         for column, dtype in (
@@ -238,8 +283,16 @@ def select_movement_constrained_patches(
             ("movement_parent_input_index", "Int64"),
         ):
             empty[column] = pd.Series(dtype=dtype)
+        empty["operational_coverage_scale_source"] = pd.Series(dtype="string")
         return empty, OperationalSelectionAudit(
-            0, 0, 0, float(max_transition_km), coverage_scale_km, 0.0, group_col
+            0,
+            0,
+            0,
+            float(max_transition_km),
+            coverage_scale_km,
+            coverage_scale_source,
+            0.0,
+            group_col,
         )
 
     coverage = _coverage_adjacency(
@@ -287,12 +340,14 @@ def select_movement_constrained_patches(
     out["operational_selector_status"] = "downstream_geometry_not_validated_efficiency"
     out["max_transition_km"] = float(max_transition_km)
     out["operational_coverage_scale_km"] = float(coverage_scale_km)
+    out["operational_coverage_scale_source"] = str(coverage_scale_source)
     audit = OperationalSelectionAudit(
         candidate_count=n,
         selected_count=int(len(out)),
         movement_component_count=int(len(components)),
         max_transition_km=float(max_transition_km),
         coverage_scale_km=float(coverage_scale_km),
+        coverage_scale_source=str(coverage_scale_source),
         final_coverage_fraction=float(globally_covered.mean()),
         movement_group_column=group_col,
     )
