@@ -59,15 +59,18 @@ def build_osm_patch_reachability_edges(
 
     The sole movement tuning input is ``max_network_transition_km``. Road/trail
     topology is retrieved around candidates. Ferry relation ``stop`` nodes are
-    audited explicitly. If a ferry stop is on the ferry member-way graph but is
-    missing from the candidate-window highway graph, ACSP performs one exact OSM
-    node-to-highway reverse lookup. A returned highway component is imported only
-    if it also contains a raw OSM node already present in the land graph, giving
-    an exact topological anchor. No coordinate-distance terminal snapping exists.
+    audited explicitly. If a stop is on the ferry member-way graph but missing
+    from the candidate-window highway graph, ACSP first reverse-queries highway
+    ways that reference that exact raw OSM node. If those direct ways do not
+    reach an existing land-graph raw-node anchor, it retrieves highways within
+    the same movement-limit radius around the exact stop-node set and follows
+    raw-node connectivity. The radius bounds provider retrieval only; it never
+    creates an edge. No coordinate-distance terminal snapping exists.
 
-    Direct/relation ferry matching is then evaluated against the augmented land
-    graph. All reachability remains weighted network shortest path; provider
-    failures never trigger candidate straight-line connectivity.
+    Direct/relation ferry matching is evaluated against any exactly anchored
+    augmented land graph. All final reachability remains weighted network
+    shortest path; provider failures never trigger candidate straight-line
+    connectivity.
 
     Returns ``(patch_edges, attachments, network_nodes, network_edges,
     area_provider_audit, audit)``.
@@ -83,8 +86,6 @@ def build_osm_patch_reachability_edges(
         longitude_col=longitude_col,
     )
 
-    # First stop pass is diagnostic. It identifies exact ferry-graph stop nodes
-    # missing from the candidate-window highway graph without creating a fallback.
     (
         initial_stop_edges,
         initial_stop_rows,
@@ -102,14 +103,12 @@ def build_osm_patch_reachability_edges(
         fetch_explicit_highway_extensions_for_ferry_stops(
             initial_stop_rows,
             nodes,
+            max_network_transition_km=float(max_network_transition_km),
         )
     )
     augmented_nodes = _combine_nodes(nodes, extension_nodes)
     augmented_road_edges = _combine_edges(road_edges, extension_edges)
 
-    # If exact reverse lookup imported land topology, re-evaluate stop membership
-    # against the augmented graph. Otherwise reuse the first pass and avoid a
-    # redundant live provider request.
     if extension_nodes is not None and not extension_nodes.empty:
         ferry_stop_edges, _final_stop_rows, ferry_stop_audit = (
             fetch_osm_ferry_stop_edges_for_patches(
@@ -125,8 +124,6 @@ def build_osm_patch_reachability_edges(
         ferry_stop_edges = initial_stop_edges
         ferry_stop_audit = initial_stop_audit
 
-    # Direct and relation-only ferry matching also benefits from any exact land
-    # topology imported by the stop-node reverse lookup.
     ferry_edges, _ferry_pair_audit, ferry_audit = fetch_osm_ferry_edges_for_patches(
         candidates,
         augmented_nodes,
@@ -162,6 +159,7 @@ def build_osm_patch_reachability_edges(
         "ferry_relation_only_support": True,
         "ferry_relation_stop_support": True,
         "ferry_stop_highway_reverse_lookup": True,
+        "ferry_stop_bounded_highway_component_lookup": True,
         "ferry_highway_extension_used": bool(
             extension_nodes is not None and not extension_nodes.empty
         ),
@@ -174,7 +172,7 @@ def build_osm_patch_reachability_edges(
         "field_efficiency_claim": False,
         "provider": provider_audit.as_dict(),
         "ferry_provider": ferry_audit.as_dict(),
-        "ferry_stop_provider_before_highway_reverse_lookup": initial_stop_audit.as_dict(),
+        "ferry_stop_provider_before_highway_recovery": initial_stop_audit.as_dict(),
         "ferry_stop_highway_provider": stop_highway_audit.as_dict(),
         "ferry_stop_provider": ferry_stop_audit.as_dict(),
         "reachability": reachability_audit.as_dict(),
