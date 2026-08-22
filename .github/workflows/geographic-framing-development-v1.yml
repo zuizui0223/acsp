@@ -1,0 +1,126 @@
+name: Geographic framing development v1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "research/geographic_framing.py"
+      - "research/evaluate_geographic_framing_development_v1.py"
+      - "research/test_geographic_framing.py"
+      - "research/test_geographic_framing_evaluator.py"
+      - "validation/acsp_geographic_framing_development_protocol_v1.json"
+      - ".github/workflows/geographic-framing-development-v1.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  framing-development:
+    name: 96-pair training-only framing diagnostic
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify frozen framing baseline before opening development folds
+        run: |
+          python -m unittest -v \
+            research/test_geographic_framing.py \
+            research/test_geographic_framing_evaluator.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          protocol = json.loads(Path('validation/acsp_geographic_framing_development_protocol_v1.json').read_text())
+          assert protocol['protocol_fingerprint'] == '887526145c4fc0e2c9c3986c8424b4814b50155108a937b5d6a613b2ee974c0f'
+          assert protocol['scope']['validated_japan_adapter_changed'] is False
+          assert protocol['development_data']['confirmation_status_for_framing'] == 'permanently_nonconfirmatory_after_use'
+          assert protocol['framing_baseline']['remote_noise_filter'] is False
+          assert protocol['fresh_confirmation_requirement']['new_geography_required_for_beyond_japan_claim'] is True
+          PY
+
+      - name: Download already-opened robust-patch v2 cohort identities
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: frozen-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+
+      - name: Audit development-only identity boundary
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('frozen-cohort')
+          declared = pd.read_csv(root/'predeclared_taxon_region_pairs.csv')
+          manifest = json.loads((root/'cohort_manifest.json').read_text())
+          assert len(declared) == 96
+          assert declared['scientific_name'].nunique() == 96
+          assert manifest['declared_pairs'] == 96
+          assert not declared['scientific_name'].astype(str).str.startswith(('Campanula microdonta','Campanula punctata')).any()
+          print('These 96 taxa are already opened robust-core evidence and are development-only for geographic framing.')
+          PY
+
+      - name: Re-export the already-opened taxa with the unchanged v2 fold rule
+        run: |
+          python research/export_robust_patch_confirmation_folds_v2.py \
+            --sample-file frozen-cohort/predeclared_taxon_region_pairs.csv \
+            --output framing-development-folds
+
+      - name: Evaluate training-only geographic framing diagnostics
+        run: |
+          python research/evaluate_geographic_framing_development_v1.py \
+            --export-root framing-development-folds \
+            --output framing-development-results
+
+      - name: Audit complete denominator without favorable-result gate
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('framing-development-results')
+          summary = json.loads((root/'framing_diagnostic_summary.json').read_text())
+          folds = pd.read_csv(root/'framing_fold_diagnostics.csv')
+          pairs = pd.read_csv(root/'framing_pair_diagnostics.csv')
+          assert summary['status'] == 'development_only_framing_diagnostic_complete'
+          assert summary['protocol_fingerprint'] == '887526145c4fc0e2c9c3986c8424b4814b50155108a937b5d6a613b2ee974c0f'
+          assert summary['declared_folds'] == 480
+          assert len(folds) == 480
+          assert len(pairs) == 96
+          assert summary['candidate_generation_run'] is False
+          assert summary['robust_support_run'] is False
+          assert summary['fresh_confirmation_taxa_consumed'] is False
+          assert summary['original_untouched_confirmation_replayed'] is False
+          assert summary['development_taxa_now_nonconfirmatory_for_framing'] is True
+          print(json.dumps(summary, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload framing development diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-geographic-framing-development-v1
+          path: |
+            framing-development-folds/export_manifest.json
+            framing-development-folds/pair_export_status.csv
+            framing-development-results/
+          if-no-files-found: error
+          retention-days: 90
