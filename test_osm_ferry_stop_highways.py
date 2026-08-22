@@ -54,7 +54,8 @@ class FerryStopHighwayReverseTests(unittest.TestCase):
         query = _highway_reverse_query(["40", "10", "10"])
         self.assertIn("node(id:10,40)->.st", query)
         self.assertIn('way(bn.st)["highway"]->.hw', query)
-        self.assertIn("(.st;.hw;>;);", query)
+        self.assertIn("node(w.hw)->.hwn", query)
+        self.assertIn("(.st;.hw;.hwn;);", query)
         self.assertIn("out body geom", query)
 
     def test_highway_component_with_exact_land_anchor_is_imported(self):
@@ -160,8 +161,27 @@ class FerryStopHighwayReverseTests(unittest.TestCase):
         self.assertEqual(audit.remaining_unconnected_stop_count, 0)
         self.assertFalse(audit.proximity_terminal_fallback)
         self.assertFalse(audit.candidate_to_terminal_straight_line_used)
+        self.assertFalse(audit.provider_query_failed)
         self.assertEqual(len(nodes), 3)
         self.assertEqual(len(edges), 2)
+
+    def test_provider_failure_is_explicit_and_leaves_stop_unconnected(self):
+        with patch(
+            "acsp.osm_ferry_stop_highways._post_overpass",
+            side_effect=RuntimeError("Overpass offline"),
+        ):
+            nodes, edges, audit = fetch_explicit_highway_extensions_for_ferry_stops(
+                _stop_audit(),
+                _land_nodes(),
+            )
+        self.assertTrue(nodes.empty)
+        self.assertTrue(edges.empty)
+        self.assertTrue(audit.provider_query_failed)
+        self.assertIn("Overpass offline", audit.provider_error)
+        self.assertEqual(audit.queried_stop_count, 1)
+        self.assertEqual(audit.anchored_stop_count, 0)
+        self.assertEqual(audit.remaining_unconnected_stop_count, 1)
+        self.assertFalse(audit.proximity_terminal_fallback)
 
     def test_no_unmatched_stop_skips_provider_request(self):
         stop_audit = pd.DataFrame(
