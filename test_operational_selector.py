@@ -3,7 +3,10 @@ import unittest
 
 import pandas as pd
 
-from acsp.operational_selector import select_movement_constrained_patches
+from acsp.operational_selector import (
+    _derive_coverage_scale_km,
+    select_movement_constrained_patches,
+)
 
 
 class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
@@ -15,6 +18,7 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
                 "latitude": [0.0] * 6,
                 "longitude": [0.000, 0.005, 0.010, 1.000, 1.005, 1.010],
                 "candidate_patch_radius_m": [100.0] * 6,
+                "patch_merge_distance_m": [1000.0] * 6,
             }
         )
         selected, audit = select_movement_constrained_patches(
@@ -25,9 +29,87 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
         self.assertEqual(selected["_input_index"].tolist(), [1, 4])
         self.assertEqual(selected["operational_segment"].tolist(), [1, 2])
         self.assertTrue(selected["movement_parent_input_index"].isna().all())
+        self.assertEqual(audit.coverage_scale_km, 1.0)
+        self.assertEqual(
+            audit.coverage_scale_source,
+            "candidate_patch_artifact.patch_merge_distance_m",
+        )
+        self.assertTrue(
+            (selected["operational_coverage_scale_source"]
+             == "candidate_patch_artifact.patch_merge_distance_m").all()
+        )
         self.assertFalse(audit.user_site_count_required)
         self.assertFalse(audit.user_coverage_target_required)
         self.assertFalse(audit.validated_candidate_membership_changed)
+
+    def test_merge_metadata_is_authoritative_over_candidate_radius(self):
+        candidates = pd.DataFrame(
+            {
+                "candidate_patch_radius_m": [10.0, 50.0, 9000.0],
+                "patch_merge_distance_m": [1000.0, 1000.0, 1000.0],
+            }
+        )
+        scale, source = _derive_coverage_scale_km(
+            candidates,
+            radius_col="candidate_patch_radius_m",
+        )
+        self.assertEqual(scale, 1.0)
+        self.assertEqual(source, "candidate_patch_artifact.patch_merge_distance_m")
+
+    def test_inconsistent_merge_metadata_fails_instead_of_choosing_hidden_scale(self):
+        candidates = pd.DataFrame(
+            {
+                "candidate_patch_radius_m": [100.0, 100.0],
+                "patch_merge_distance_m": [1000.0, 2000.0],
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "internally consistent"):
+            _derive_coverage_scale_km(
+                candidates,
+                radius_col="candidate_patch_radius_m",
+            )
+
+    def test_invalid_present_merge_metadata_fails_instead_of_falling_back(self):
+        candidates = pd.DataFrame(
+            {
+                "candidate_patch_radius_m": [100.0, 100.0],
+                "patch_merge_distance_m": [1000.0, float("nan")],
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "finite positive"):
+            _derive_coverage_scale_km(
+                candidates,
+                radius_col="candidate_patch_radius_m",
+            )
+
+    def test_legacy_table_without_merge_metadata_uses_radius_derived_fallback(self):
+        candidates = pd.DataFrame(
+            {"candidate_patch_radius_m": [100.0, 300.0, 500.0]}
+        )
+        scale, source = _derive_coverage_scale_km(
+            candidates,
+            radius_col="candidate_patch_radius_m",
+        )
+        self.assertAlmostEqual(scale, 0.3)
+        self.assertEqual(
+            source,
+            "legacy_candidate_patch_artifact.median_positive_radius",
+        )
+
+    def test_nonempty_table_without_artifact_scale_fails_explicitly(self):
+        with self.assertRaisesRegex(ValueError, "cannot derive operational coverage scale"):
+            _derive_coverage_scale_km(
+                pd.DataFrame({"candidate_patch_id": ["a"]}),
+                radius_col="candidate_patch_radius_m",
+            )
+
+    def test_empty_table_has_no_invented_coverage_scale(self):
+        scale, source = _derive_coverage_scale_km(
+            pd.DataFrame(),
+            radius_col="candidate_patch_radius_m",
+        )
+        self.assertEqual(scale, 0.0)
+        self.assertEqual(source, "empty_candidate_set_not_applicable")
 
     def test_linear_coverage_curve_keeps_all_candidates_conservatively(self):
         candidates = pd.DataFrame(
@@ -44,6 +126,11 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
         self.assertEqual(audit.movement_component_count, 1)
         self.assertEqual(audit.selected_count, 3)
         self.assertEqual(selected["_input_index"].tolist(), [0, 1, 2])
+        self.assertEqual(audit.coverage_scale_km, 0.05)
+        self.assertEqual(
+            audit.coverage_scale_source,
+            "legacy_candidate_patch_artifact.median_positive_radius",
+        )
         parents = selected["movement_parent_input_index"]
         self.assertTrue(pd.isna(parents.iloc[0]))
         self.assertEqual(parents.iloc[1:].astype(int).tolist(), [0, 1])
@@ -75,12 +162,10 @@ class MovementConstrainedOperationalSelectorTests(unittest.TestCase):
                 "candidate_patch_radius_m": [500.0, 500.0],
             }
         )
-        # The internal coverage floor is 1 km, so these points could cover each
-        # other geometrically. The 0.5 km movement limit splits them into two
-        # components; coverage must stay component-local rather than leaking.
         selected, audit = select_movement_constrained_patches(
             candidates, max_transition_km=0.5
         )
+        self.assertEqual(audit.coverage_scale_km, 0.5)
         self.assertEqual(audit.movement_component_count, 2)
         self.assertEqual(audit.selected_count, 2)
         self.assertAlmostEqual(audit.final_coverage_fraction, 1.0)
