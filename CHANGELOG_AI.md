@@ -1,5 +1,31 @@
 # AI Change Log
 
+## 2026-08-22 - ChatGPT (OpenAI) - Artifact-derived operational coverage scale
+
+Changed files:
+- acsp/operational_selector.py
+- acsp/reachability.py
+- research/campanula_robust_support_patch_export.py
+- test_field_plan_cli.py
+- test_operational_cli.py
+- test_operational_selector.py
+- test_reachability_selector.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed the separate hidden `DEFAULT_OPERATIONAL_COVERAGE_FLOOR_KM = 1.0` from downstream operational selection.
+- Validated candidate-patch artifacts now provide the downstream redundancy/coverage scale through `patch_merge_distance_m`; the selector verifies that the field is finite, positive, and internally consistent and reports `coverage_scale_source`.
+- Legacy or pre-validated candidate tables without merge-distance metadata may fall back only to the median positive finite `candidate_patch_radius_m`, with that fallback explicitly identified in the audit. Non-empty tables with neither usable source now fail instead of inventing a numeric threshold.
+- Carried the already-frozen Campanula patch merge distance into the archived patch artifact as provenance. This metadata does not alter robust support, patch identity, or validated candidate membership.
+
+Features preserved:
+- The frozen 2.5% leave-one-prototype-out support rule, float32 support worlds, frozen 1 km same-area complete-link candidate-patch aggregation, and 96-pair/480-fold confirmation evidence are unchanged.
+- Weighted OSM reachability, no candidate straight-line fallback, and automatic visit-count selection remain downstream and unchanged in behavior.
+- The live Campanula 5 km operational smoke remains 22 validated patches -> 14 operational visits, 30 reachability edges, and 5 movement components; the 1.0 km redundancy scale is now traceable to `candidate_patch_artifact.patch_merge_distance_m` rather than a duplicated operational constant.
+
+Known risks / TODO:
+- Legacy/pre-validated candidate tables without `patch_merge_distance_m` use the explicitly audited median-positive-radius fallback. That compatibility path is not part of the independently validated candidate-patch claim.
+
 ## 2026-08-21 - ChatGPT (OpenAI) - Planner-free package import boundary
 
 Changed files:

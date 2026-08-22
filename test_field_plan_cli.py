@@ -17,6 +17,7 @@ def _validated_patches() -> pd.DataFrame:
             "latitude": [35.0, 35.0, 35.0],
             "longitude": [139.000, 139.005, 139.010],
             "candidate_patch_radius_m": [100.0, 100.0, 100.0],
+            "patch_merge_distance_m": [1000.0, 1000.0, 1000.0],
             "validation_region_id": ["izu", "izu", "izu"],
         }
     )
@@ -151,6 +152,10 @@ class FieldPlanCliTests(unittest.TestCase):
             self.assertEqual(operational["automatic_selected_count"], 1)
             self.assertEqual(operational["movement_constraint_mode"], "osm_weighted_transport_network")
             self.assertFalse(operational["straight_line_movement_assumption"])
+            self.assertEqual(
+                operational["selection_audit"]["coverage_scale_source"],
+                "candidate_patch_artifact.patch_merge_distance_m",
+            )
             self.assertFalse(operational["user_site_count_required"])
             self.assertFalse(operational["user_coverage_target_required"])
             self.assertFalse(operational["survey_days_input"])

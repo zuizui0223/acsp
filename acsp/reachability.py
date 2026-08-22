@@ -30,6 +30,7 @@ class ReachabilitySelectionAudit:
     movement_component_count: int
     reachability_edge_count: int
     coverage_scale_km: float
+    coverage_scale_source: str
     final_coverage_fraction: float
     coverage_group_column: Optional[str]
     patch_id_column: str
@@ -49,6 +50,7 @@ class ReachabilitySelectionAudit:
             "movement_component_count": self.movement_component_count,
             "reachability_edge_count": self.reachability_edge_count,
             "coverage_scale_km": self.coverage_scale_km,
+            "coverage_scale_source": self.coverage_scale_source,
             "final_coverage_fraction": self.final_coverage_fraction,
             "coverage_group_column": self.coverage_group_column,
             "patch_id_column": self.patch_id_column,
@@ -134,6 +136,8 @@ def select_reachability_constrained_patches(
     The returned ``operational_selection_step`` is the deterministic connected
     set-construction order, not an optimized travel route. The parent column
     records one already-selected adjacent patch that made each addition legal.
+    Redundancy scale is read from candidate-patch artifact metadata rather than
+    maintained as a separate operational threshold.
     """
     work = candidates.reset_index(drop=False).rename(columns={"index": "_input_index"}).copy()
     movement, edge_count = _explicit_reachability_adjacency(
@@ -144,7 +148,10 @@ def select_reachability_constrained_patches(
         to_col=to_col,
     )
     n = len(work)
-    coverage_scale_km = _derive_coverage_scale_km(work, radius_col=radius_col)
+    coverage_scale_km, coverage_scale_source = _derive_coverage_scale_km(
+        work,
+        radius_col=radius_col,
+    )
 
     if n == 0:
         empty = work.copy()
@@ -160,12 +167,14 @@ def select_reachability_constrained_patches(
         empty["movement_constraint_mode"] = pd.Series(dtype="string")
         empty["straight_line_movement_assumption"] = pd.Series(dtype="bool")
         empty["operational_coverage_scale_km"] = pd.Series(dtype="float64")
+        empty["operational_coverage_scale_source"] = pd.Series(dtype="string")
         return empty, ReachabilitySelectionAudit(
             candidate_count=0,
             selected_count=0,
             movement_component_count=0,
             reachability_edge_count=edge_count,
             coverage_scale_km=coverage_scale_km,
+            coverage_scale_source=coverage_scale_source,
             final_coverage_fraction=0.0,
             coverage_group_column=coverage_group_col,
             patch_id_column=id_col,
@@ -218,6 +227,7 @@ def select_reachability_constrained_patches(
     out["straight_line_movement_assumption"] = False
     out["operational_selector_status"] = "downstream_reachability_not_validated_efficiency"
     out["operational_coverage_scale_km"] = float(coverage_scale_km)
+    out["operational_coverage_scale_source"] = str(coverage_scale_source)
 
     audit = ReachabilitySelectionAudit(
         candidate_count=n,
@@ -225,6 +235,7 @@ def select_reachability_constrained_patches(
         movement_component_count=int(len(components)),
         reachability_edge_count=edge_count,
         coverage_scale_km=float(coverage_scale_km),
+        coverage_scale_source=str(coverage_scale_source),
         final_coverage_fraction=float(globally_covered.mean()),
         coverage_group_column=coverage_group_col,
         patch_id_column=id_col,

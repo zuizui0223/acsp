@@ -82,6 +82,11 @@ def annotate_zones(
     annotated["consensus_support_uncertainty_max"] = max_uncertainty
     annotated["ecological_support_threshold"] = FROZEN_SUPPORT_THRESHOLD
     annotated["ecological_status"] = "frozen_robust_support_patch"
+    # Carry the archived patch-aggregation scale in the artifact itself. The
+    # downstream selector reads this provenance instead of maintaining a second
+    # hidden 1 km operational constant. This metadata does not alter patch
+    # identity; it only makes the already-frozen aggregation scale explicit.
+    annotated["patch_merge_distance_m"] = float(base.MERGE_DISTANCE_M)
     annotated["site_id"] = annotated["zone_id"].astype(str)
     return annotated
 
@@ -137,6 +142,7 @@ def main() -> None:
         "selected_cell_fraction": float(len(selected_indices) / len(universe)),
         "patch_count": int(len(zones)),
         "merge_distance_m": float(base.MERGE_DISTANCE_M),
+        "patch_artifact_merge_distance_column": "patch_merge_distance_m",
         "island_cell_counts": {str(k): int(v) for k, v in island_cells.items()},
         "island_patch_counts": {str(k): int(v) for k, v in island_patches.items()},
         "support_uncertainty_mean": float(np.mean(uncertainty[selected_mask])),
@@ -149,6 +155,7 @@ def main() -> None:
             "patch_count_is_not_a_user_budget": True,
             "output_stops_at_candidate_patches": True,
             "route_or_effort_optimization": False,
+            "patch_merge_scale_is_carried_in_artifact": True,
         },
     }
 
