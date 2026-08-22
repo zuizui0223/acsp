@@ -19,7 +19,6 @@ from .operational_selector import (
     _connected_components,
     _connected_greedy_prefix,
     _derive_coverage_scale_km,
-    _knee_prefix_length,
 )
 
 
@@ -35,6 +34,8 @@ class ReachabilitySelectionAudit:
     coverage_group_column: Optional[str]
     patch_id_column: str
     movement_constraint_mode: str = "explicit_reachability_graph"
+    auto_stop_method: str = "complete_candidate_patch_coverage"
+    selection_stop_reason: str = "all_component_candidate_patches_covered"
     straight_line_movement_assumption: bool = False
     user_site_count_required: bool = False
     user_coverage_target_required: bool = False
@@ -55,6 +56,8 @@ class ReachabilitySelectionAudit:
             "coverage_group_column": self.coverage_group_column,
             "patch_id_column": self.patch_id_column,
             "movement_constraint_mode": self.movement_constraint_mode,
+            "auto_stop_method": self.auto_stop_method,
+            "selection_stop_reason": self.selection_stop_reason,
             "straight_line_movement_assumption": self.straight_line_movement_assumption,
             "user_site_count_required": self.user_site_count_required,
             "user_coverage_target_required": self.user_coverage_target_required,
@@ -127,7 +130,7 @@ def select_reachability_constrained_patches(
     coverage_group_col: str | None = "survey_area_id",
     radius_col: str = "candidate_patch_radius_m",
 ) -> tuple[pd.DataFrame, ReachabilitySelectionAudit]:
-    """Select an automatically sized subset under an explicit movement graph.
+    """Select a fully redundancy-covered subset under an explicit movement graph.
 
     Only edges present in ``reachability_edges`` are traversable. The movement
     graph may cross ``survey_area_id`` when a cross-area edge is explicitly
@@ -136,8 +139,9 @@ def select_reachability_constrained_patches(
     The returned ``operational_selection_step`` is the deterministic connected
     set-construction order, not an optimized travel route. The parent column
     records one already-selected adjacent patch that made each addition legal.
-    Redundancy scale is read from candidate-patch artifact metadata rather than
-    maintained as a separate operational threshold.
+    Selection stops only after every candidate patch in each movement component
+    is represented at the artifact-derived redundancy scale. There is no knee,
+    target-coverage, site-count, survey-day, or monetary-budget stop.
     """
     work = candidates.reset_index(drop=False).rename(columns={"index": "_input_index"}).copy()
     movement, edge_count = _explicit_reachability_adjacency(
@@ -168,6 +172,7 @@ def select_reachability_constrained_patches(
         empty["straight_line_movement_assumption"] = pd.Series(dtype="bool")
         empty["operational_coverage_scale_km"] = pd.Series(dtype="float64")
         empty["operational_coverage_scale_source"] = pd.Series(dtype="string")
+        empty["operational_selection_stop_reason"] = pd.Series(dtype="string")
         return empty, ReachabilitySelectionAudit(
             candidate_count=0,
             selected_count=0,
@@ -178,6 +183,7 @@ def select_reachability_constrained_patches(
             final_coverage_fraction=0.0,
             coverage_group_column=coverage_group_col,
             patch_id_column=id_col,
+            selection_stop_reason="empty_candidate_set",
         )
 
     coverage = _coverage_adjacency(
@@ -194,33 +200,37 @@ def select_reachability_constrained_patches(
     for segment_id, component in enumerate(components, start=1):
         component_mask = np.zeros(n, dtype=bool)
         component_mask[component] = True
-        prefix, marginal, cumulative, parents = _connected_greedy_prefix(
+        chosen, marginal, cumulative, parents = _connected_greedy_prefix(
             coverage,
             component,
             movement,
         )
-        keep = _knee_prefix_length(cumulative)
-        chosen = prefix[:keep]
-        if not chosen:
-            continue
+        if not chosen or not cumulative or cumulative[-1] != 1.0:
+            raise RuntimeError(
+                f"movement component {segment_id} did not reach complete candidate-patch coverage"
+            )
 
         segment = work.iloc[chosen].copy().reset_index(drop=True)
         segment["operational_segment"] = int(segment_id)
         segment["operational_selection_step"] = np.arange(1, len(segment) + 1, dtype=int)
-        segment["marginal_covered_patches"] = marginal[:keep]
-        segment["segment_coverage_fraction"] = cumulative[:keep]
+        segment["marginal_covered_patches"] = marginal
+        segment["segment_coverage_fraction"] = cumulative
         segment["movement_parent_input_index"] = pd.array(
-            [pd.NA if p is None else int(work.iloc[p]["_input_index"]) for p in parents[:keep]],
+            [pd.NA if p is None else int(work.iloc[p]["_input_index"]) for p in parents],
             dtype="Int64",
         )
         segment["movement_parent_patch_id"] = pd.array(
-            [pd.NA if p is None else str(work.iloc[p][id_col]) for p in parents[:keep]],
+            [pd.NA if p is None else str(work.iloc[p][id_col]) for p in parents],
             dtype="string",
         )
+        segment["operational_selection_stop_reason"] = "all_component_candidate_patches_covered"
         rows.append(segment)
 
         for row in chosen:
             globally_covered[_component_coverage_columns(coverage, row, component_mask)] = True
+
+    if not bool(globally_covered.all()):
+        raise RuntimeError("automatic operational selection left candidate patches uncovered")
 
     out = pd.concat(rows, ignore_index=True) if rows else work.iloc[0:0].copy()
     out["movement_constraint_mode"] = "explicit_reachability_graph"
@@ -236,7 +246,7 @@ def select_reachability_constrained_patches(
         reachability_edge_count=edge_count,
         coverage_scale_km=float(coverage_scale_km),
         coverage_scale_source=str(coverage_scale_source),
-        final_coverage_fraction=float(globally_covered.mean()),
+        final_coverage_fraction=1.0,
         coverage_group_column=coverage_group_col,
         patch_id_column=id_col,
     )
