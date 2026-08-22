@@ -157,7 +157,11 @@ def evaluate_fold(fold_dir: Path) -> dict[str, object]:
         heldout = pd.read_csv(fold_dir / "held_out_occurrences.csv")
         if training.empty or heldout.empty:
             return _zero_row(meta, "empty training or heldout fold")
-        training_frame = training.rename(
+        # The unchanged v2 exporter preserves source columns and also writes
+        # canonical ``latitude``/``longitude`` columns. Select only the
+        # canonical pair before renaming so pre-existing ``_latitude`` /
+        # ``_longitude`` source columns cannot create duplicate column names.
+        training_frame = training.loc[:, ["latitude", "longitude"]].copy().rename(
             columns={"latitude": "_latitude", "longitude": "_longitude"}
         )
         frames, _, frame_summary = infer_training_block_frames(training_frame)
