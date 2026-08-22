@@ -1,0 +1,97 @@
+pair_id,scientific_name,taxon_group,region_name,geographic_stratum,fold_count,mean_heldout_frame_containment,mean_frame_count,mean_frame_area_ratio_to_fixed,failed_folds
+1,Heracleum maximum W.Bartram,plant,Hokkaido west,north,5,0.725,2.8,0.16942208121297797,0
+2,Dactylorhiza aristata (Fisch. ex Lindl.) Soó,plant,Hokkaido west,north,5,0.62,4.6,0.32000172903581414,0
+3,Boehmeria japonica (L.fil.) Miq.,plant,Hokkaido west,north,5,0.9111111111111111,2.8,0.28983482676192296,0
+4,Sorbus alnifolia (Siebold & Zucc.) K.Koch,plant,Hokkaido west,north,5,0.9292063492063491,3.0,0.40377039746874066,0
+5,"Geometra papilionaria (Linnaeus, 1758)",animal,Hokkaido west,north,5,0.5333333333333334,2.8,0.19442696603463422,0
+6,"Adoncholaimus pseudofervidus Shimada & Kajihara, 2014",animal,Hokkaido west,north,5,0.0,2.0,0.048676334089162276,0
+7,"Synuchus nitidus (Motschulsky, 1862)",animal,Hokkaido west,north,5,1.0,1.0,0.03824498182646519,0
+8,"Amara chalcites Dejean, 1828",animal,Hokkaido west,north,5,0.0,0.0,0.0,5
+9,Allium splendens Willd. ex Schult. & Schult.f.,plant,Hokkaido east,north,5,0.5466666666666666,3.2,0.22674942717538168,0
+10,Salicornia europaea L.,plant,Hokkaido east,north,5,0.7126016260162602,3.2,0.18868771935434478,0
+11,Vicia cracca L.,plant,Hokkaido east,north,5,0.9212820512820514,2.8,0.9271000315472259,0
+12,Maianthemum dilatatum (Alph.Wood) A.Nelson & J.F.Macbr.,plant,Hokkaido east,north,5,0.9657142857142856,3.4,0.7805649544379774,0
+13,"Calanus pacificus Brodsky, 1948",animal,Hokkaido east,north,5,0.8173076923076923,3.8,0.17620266989804662,0
+14,"Myrmica ruginodis Nylander, 1846",animal,Hokkaido east,north,5,0.8055555555555556,5.6,0.4138568545463303,0
+15,"Erithacus akahige (Temminck, 1835)",animal,Hokkaido east,north,5,0.8904710144927537,5.8,0.4916986317931816,0
+16,"Emberiza cioides J.F.Brandt, 1843",animal,Hokkaido east,north,5,0.9847275251648734,3.6,0.689042990178258,0
+17,Athyrium fallaciosum Milde,plant,Tohoku,north,5,0.8842450328720352,4.6,0.7824008167188039,0
+18,Drosera rotundifolia L.,plant,Tohoku,north,5,1.0,1.0,0.9284417363728175,0
+19,Hydrangea serrata (Thunb.) Ser.,plant,Tohoku,north,5,0.9621031746031747,1.4,1.096660996264637,0
+20,Hamamelis japonica Siebold & Zucc.,plant,Tohoku,north,5,0.2985459704111451,6.0,0.5061601325604002,0
+21,"Ourapteryx obtusicauda (Warren, 1894)",animal,Tohoku,north,5,0.8298039215686275,3.8,0.5513574831367001,0
+22,"Emberiza variabilis Temminck, 1836",animal,Tohoku,north,5,0.8003372619206285,4.2,0.7397601205212831,0
+23,"Artopoetes pryeri (Murray, 1873)",animal,Tohoku,north,5,0.43143209876543215,3.2,0.18630656270197712,0
+24,"Cygnus columbianus (Ord, 1815)",animal,Tohoku,north,5,0.5075087719298246,11.0,0.41298100351015143,0
+25,Cardiagyris scabra (Thunb.) G.L.Nesom,plant,Kanto,east,5,1.0,2.0,1.2321545488567216,0
+26,Dryopteris polylepis (Franch. & Sav.) C.Chr.,plant,Kanto,east,5,1.0,1.0,1.0457143742475024,0
+27,Ardisia japonica (Thunb.) Blume,plant,Kanto,east,5,0.9823529411764707,1.6,1.1293775459803013,0
+28,Carex conica Boott,plant,Kanto,east,5,1.0,2.0,0.8233641271150228,0
+29,"Vanellus cinereus (Blyth, 1842)",animal,Kanto,east,5,0.9523809523809523,2.2,0.8693461369002489,0
+30,"Elkalyce argiades (Pallas, 1771)",animal,Kanto,east,5,0.9533333333333334,3.0,0.8136762467853854,0
+31,"Larus canus Linnaeus, 1758",animal,Kanto,east,5,1.0,1.0,0.7162962660101146,0
+32,"Himantopus himantopus (Linnaeus, 1758)",animal,Kanto,east,5,0.9199999999999999,2.8,0.29708223124360444,0
+33,"Clerodendrum izuinsulare K.Inoue, M.Haseg. & Shiro Kobay.",plant,Izu,east,5,0.8,2.8,0.31902875701007993,0
+34,Asplenium anogrammoides Christ,plant,Izu,east,5,1.0,1.0,0.32274423642731004,0
+35,Pueraria montana (Lour.) Merr.,plant,Izu,east,5,1.0,2.0,0.8774305547123165,0
+36,Vandenboschia ×quelpaertensis (Nakai) Ebihara,plant,Izu,east,5,0.9032085561497325,1.8,1.0199370904785323,0
+37,"Entacmaea quadricolor (Leuckart, 1828)",animal,Izu,east,5,0.29087301587301584,2.2,0.637022409082227,0
+38,"Cyclothone pallida Brauer, 1902",animal,Izu,east,5,0.8800000000000001,2.2,0.5458274454399138,0
+39,"Aythya fuligula (Linnaeus, 1758)",animal,Izu,east,5,0.0,1.6,0.1549412586583013,0
+40,"Corvus macrorhynchos Wagler, 1827",animal,Izu,east,5,0.78,2.8,0.7942086447727859,0
+41,Cryptotaenia japonica Hassk.,plant,Chubu mountains,east,5,0.9597695097695098,3.6,1.1635051734597366,0
+42,Kerria japonica (L.) DC.,plant,Chubu mountains,east,5,0.9688428059395802,3.0,1.0493237136343956,0
+43,Polygonatum lasianthum Maxim.,plant,Chubu mountains,east,5,0.9676190476190476,3.0,1.0908568363233542,0
+44,Euonymus alatus (Thunb.) Siebold,plant,Chubu mountains,east,5,0.974204076823377,3.4,1.0803550640882233,0
+45,"Lophonycta confusa Leech, 1889",animal,Chubu mountains,east,5,1.0,1.4,0.7164900298125744,0
+46,"Dendrocopos leucotos (Bechstein, 1802)",animal,Chubu mountains,east,5,1.0,4.4,0.7321554511268119,0
+47,"Satsuma japonica (L.Pfeiffer, 1847)",animal,Chubu mountains,east,5,0.8292368550989242,6.0,0.4564094536010049,0
+48,"Lasioglossum apristum (Vachal, 1903)",animal,Chubu mountains,east,5,0.6556801449767811,1.6,0.09394018990815624,0
+49,Bromus remotiflorus (Steud.) Ohwi,plant,Kinki,west,5,0.9363973063973065,4.8,0.7950653598514867,0
+50,Papaver dubium L.,plant,Kinki,west,5,0.9085921744159731,4.6,0.580713696712516,0
+51,Phytolacca americana L.,plant,Kinki,west,5,0.9733333333333334,2.0,0.8262570108518007,0
+52,Hymenophyllum polyanthos (Sw.) Sw.,plant,Kinki,west,5,1.0,1.2,1.1478314596690298,0
+53,"Patanga japonica (Bolívar, 1898)",animal,Kinki,west,5,0.9431372549019608,1.6,0.9642170612214584,0
+54,"Holothuria pardalis Selenka, 1867",animal,Kinki,west,5,0.0,0.0,0.0,5
+55,"Carpodacus sibiricus (Pallas, 1773)",animal,Kinki,west,5,0.990909090909091,1.8,0.5331398792399011,0
+56,"Lanius bucephalus Temminck & Schlegel, 1845",animal,Kinki,west,5,0.9857142857142858,2.0,0.6745380585029166,0
+57,Poa sphondylodes Trin.,plant,Chugoku,west,5,0.0125,5.4,0.27889454705492495,0
+58,Carex dolichostachya Hayata,plant,Chugoku,west,5,1.0,1.4,1.150702531577061,0
+59,Hylodesmum podocarpum (DC.) H.Ohashi & R.R.Mill,plant,Chugoku,west,5,0.9866666666666667,1.6,1.0481827254589278,0
+60,Salvia nipponica Miq.,plant,Chugoku,west,5,0.9319211822660097,2.2,0.3781454745535267,0
+61,"Lemyra inaequalis (Butler, 1879)",animal,Chugoku,west,5,0.0,2.0,0.0475484783154226,0
+62,"Lycaena phlaeas (Linnaeus, 1761)",animal,Chugoku,west,5,0.9021746880570409,4.4,0.7909560306277961,0
+63,"Geometra dieckmanni Graeser, 1889",animal,Chugoku,west,5,0.0,2.0,0.047530205414786766,0
+64,"Ardea cinerea Linnaeus, 1758",animal,Chugoku,west,5,0.8343939393939394,5.4,0.6967147434458569,0
+65,Asplenium laciniatum D.Don,plant,Shikoku,west,5,0.9796881862099254,1.0,0.8578190547162194,0
+66,Thalictrum minus L.,plant,Shikoku,west,5,1.0,1.0,0.6927054490928795,0
+67,Comanthosphace japonica (Miq.) S.Moore,plant,Shikoku,west,5,0.9777606177606177,1.6,0.4657341003632469,0
+68,Viola violacea Makino,plant,Shikoku,west,5,0.9634920634920634,1.6,0.9889852891967102,0
+69,"Fusciphantes iharai (Saito, 1992)",animal,Shikoku,west,5,0.525,2.4,0.1636058811751076,0
+70,"Sebastiscus marmoratus (Cuvier, 1829)",animal,Shikoku,west,5,0.61,4.6,0.19262933871532129,0
+71,"Vignadula atrata (Lischke, 1871)",animal,Shikoku,west,5,0.0,1.0,0.024539399514706114,0
+72,"Zosterops japonicus Temminck & Schlegel, 1845",animal,Shikoku,west,5,0.7281923076923077,4.8,0.5378134640886142,0
+73,Sasamorpha borealis (Hack.) Nakai,plant,Northern Kyushu,south,5,0.4228571428571429,4.4,0.25748196730655637,0
+74,Symplocos glauca (Thunb.) Koidz.,plant,Northern Kyushu,south,5,0.5058608058608058,5.4,0.4542622090285583,0
+75,Arundinella hirta (Thunb.) Tanaka,plant,Northern Kyushu,south,5,0.8715277777777779,4.8,0.7248090702687422,0
+76,Dryopteris sparsa (D.Don) Kuntze,plant,Northern Kyushu,south,5,1.0,1.0,1.2284712029970841,0
+77,"Pseudaesopia japonica (Bleeker, 1860)",animal,Northern Kyushu,south,5,0.6,2.0,0.17787214729420564,0
+78,"Tringa guttifer (Nordmann, 1835)",animal,Northern Kyushu,south,5,0.8748717948717948,3.6,0.13110375479412675,0
+79,"Egretta sacra (Gmelin, 1789)",animal,Northern Kyushu,south,5,0.7315656565656565,3.8,0.8340524928420157,0
+80,"Larus vegae Palmén, 1887",animal,Northern Kyushu,south,5,0.9644429365113023,4.4,0.6147368655000058,0
+81,Glochidion obovatum Siebold & Zucc.,plant,Southern Kyushu,south,5,1.0,1.0,0.7075393405024356,0
+82,Clerodendrum trichotomum Thunb.,plant,Southern Kyushu,south,5,0.9503030303030304,1.2,0.8581441361811143,0
+83,Cirsium chikushiense Koidz.,plant,Southern Kyushu,south,5,0.4442687747035573,2.6,0.33989342384193033,0
+84,Athyrium clivicola Tagawa,plant,Southern Kyushu,south,5,0.9632928475033739,1.4,0.6619915923545945,0
+85,"Seriola quinqueradiata Temminck & Schlegel, 1845",animal,Southern Kyushu,south,5,0.3142857142857143,3.8,0.27148256982105695,0
+86,"Paracentropogon rubripinnis (Temminck & Schlegel, 1843)",animal,Southern Kyushu,south,5,0.7954545454545455,3.0,0.18201223926871438,0
+87,"Delichon dasypus (Bonaparte, 1850)",animal,Southern Kyushu,south,5,0.9568139745916515,3.8,0.5666779879165076,0
+88,"Aythya ferina (Linnaeus, 1758)",animal,Southern Kyushu,south,5,0.6488888888888888,3.4,0.21828158767329953,0
+89,Salvia pygmaea Matsum.,plant,Ryukyu,south,5,0.6816666666666666,4.0,0.049923531070348706,0
+90,Vincetoxicum tanakae (Maxim.) Franch. & Sav.,plant,Ryukyu,south,5,0.8461904761904762,5.6,0.14651191404450384,0
+91,Vandenboschia auriculata (Blume) Copel.,plant,Ryukyu,south,5,0.8842857142857143,3.4,0.04956721830179428,0
+92,Bredia hirsuta Blume,plant,Ryukyu,south,5,0.9158333333333333,3.6,0.06242968152640839,0
+93,"Rhinogobius nagoyae Jordan & Seale, 1906",animal,Ryukyu,south,5,0.5700000000000001,2.6,0.022187476551869378,0
+94,"Hypselodoris infucata (Rüppell & Leuckart, 1830)",animal,Ryukyu,south,5,0.960939393939394,4.0,0.04223725482942433,0
+95,"Armadillidium vulgare (Latreille, 1804)",animal,Ryukyu,south,5,0.6140485312899105,3.4,0.03457713744378009,0
+96,"Matrona japonica (Förster, 1897)",animal,Ryukyu,south,5,0.95359477124183,2.8,0.05458480394965426,0

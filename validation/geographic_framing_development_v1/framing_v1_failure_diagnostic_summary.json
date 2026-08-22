@@ -1,0 +1,21 @@
+{
+  "status": "development_only_posthoc_v1_failure_diagnostic",
+  "declared_folds": 480,
+  "evaluated_folds": 470,
+  "failed_folds_retained": 10,
+  "total_v1_missed_heldout_records_in_evaluated_folds": 1996,
+  "missed_records_in_training_supported_components": 302,
+  "missed_records_in_heldout_only_components": 1694,
+  "fraction_of_v1_misses_training_supported": 0.15130260521042085,
+  "fraction_of_v1_misses_heldout_only_component": 0.8486973947895792,
+  "mean_heldout_training_supported_component_fraction": 0.7460344195662519,
+  "mean_bbox_10km_containment": 0.8805717853014717,
+  "median_bbox_10km_area_ratio_to_fixed": 0.7834598835636833,
+  "bbox_role": "post-hoc diagnostic upper-envelope comparator only; not a promoted framing method",
+  "v1_method_changed": false,
+  "candidate_generation_run": false,
+  "fresh_confirmation_consumed": false,
+  "architectural_conclusion": "most framing loss is caused by held-out-only geographic components absent from training, so another local padding/occurrence-component threshold is not the justified next step; the next method must provide a broad outcome-blind search universe independently of focal occurrence components",
+  "workflow_run_id": 32573980179,
+  "artifact_id": 9476080869
+}
