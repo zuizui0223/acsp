@@ -14,6 +14,7 @@ def _patches() -> pd.DataFrame:
             "latitude": [35.0, 35.0, 40.0],
             "longitude": [139.0, 139.01, 145.0],
             "candidate_patch_radius_m": [100.0, 100.0, 100.0],
+            "patch_merge_distance_m": [1000.0, 1000.0, 1000.0],
         }
     )
 
@@ -29,6 +30,15 @@ class ExplicitReachabilitySelectorTests(unittest.TestCase):
         self.assertEqual(audit.reachability_edge_count, 1)
         self.assertEqual(audit.movement_constraint_mode, "explicit_reachability_graph")
         self.assertFalse(audit.straight_line_movement_assumption)
+        self.assertEqual(audit.coverage_scale_km, 1.0)
+        self.assertEqual(
+            audit.coverage_scale_source,
+            "candidate_patch_artifact.patch_merge_distance_m",
+        )
+        self.assertTrue(
+            (selected["operational_coverage_scale_source"]
+             == "candidate_patch_artifact.patch_merge_distance_m").all()
+        )
         self.assertEqual(selected["candidate_patch_id"].tolist(), ["a", "c"])
         self.assertTrue(pd.isna(selected["movement_parent_patch_id"].iloc[0]))
         self.assertEqual(selected["movement_parent_patch_id"].iloc[1], "a")
