@@ -1,0 +1,71 @@
+{
+  "protocol_id": "acsp-geographic-framing-development-v1",
+  "status": "development_only_frozen_before_end_to_end_framing_outcome_evaluation",
+  "scope": {
+    "goal": "evaluate an automatic training-occurrence-only geographic framing layer without modifying the validated robust candidate-patch core",
+    "validated_japan_adapter_changed": false,
+    "global_validation_claim": false,
+    "custom_extent_validation_claim": false
+  },
+  "development_data": {
+    "primary_source": "the already-opened 96-pair / 480-fold robust-patch confirmation cohort, repurposed as framing development evidence only",
+    "confirmation_status_for_framing": "permanently_nonconfirmatory_after_use",
+    "campanula_allowed_as_confirmation": false
+  },
+  "frozen_core": {
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0,
+    "max_prototypes": 32,
+    "candidate_surface_points": 800,
+    "primary_recovery_radius_km": 10.0
+  },
+  "framing_baseline": {
+    "name": "training_block_component_10km_padding_v1",
+    "input": "training occurrence coordinates only",
+    "block_degrees": 0.1,
+    "block_origin": [-180.0, -90.0],
+    "component_rule": "8-neighbour connected components of occupied global 0.1-degree blocks",
+    "singleton_components_retained": true,
+    "remote_noise_filter": false,
+    "padding_km": 10.0,
+    "padding_source": "already-frozen primary recovery radius; not newly tuned",
+    "overlapping_padded_frames": "deterministically union until no axis-aligned frame overlaps remain",
+    "frame_order": "west,south,east,north after union",
+    "sdm_required": false,
+    "user_bounds_required": false
+  },
+  "comparators": [
+    "fixed original taxon-region rectangle used by the robust-patch confirmation",
+    "historical infer_default_survey_scope/recommend_survey_regions operational heuristic as diagnostic only"
+  ],
+  "development_endpoints": {
+    "primary": "intention-to-evaluate mean 10-km robust-patch lift over same-size random after complete automatic frame generation",
+    "diagnostics": [
+      "held-out occurrence fraction lying inside inferred frames before candidate generation",
+      "total inferred frame area relative to the fixed original region cell",
+      "frame count",
+      "candidate-patch count",
+      "frame/candidate generation failure rate",
+      "compact versus disjunct distribution behavior",
+      "runtime/provider failures"
+    ],
+    "failure_rule": "retain every declared fold; framing or downstream failure contributes zero recovery and is not replaced"
+  },
+  "decision_rule": {
+    "v1_role": "diagnostic baseline only; no automatic promotion to validated product",
+    "no_retuning_on_future_fresh_confirmation": true,
+    "next_change_if_unfavorable": "change framing representation using development-only data; do not alter the frozen 2.5-percent/float32/1-km robust-patch core"
+  },
+  "fresh_confirmation_requirement": {
+    "exclude": [
+      "all historical exclusion-file taxa",
+      "all 96 robust-patch v2 taxa once used for framing development",
+      "all additional framing-development taxa",
+      "Campanula microdonta and Campanula punctata"
+    ],
+    "new_geography_required_for_beyond_japan_claim": true,
+    "new_taxa_only_inside_same_12_rectangles_insufficient_for_global_claim": true
+  },
+  "protocol_fingerprint": "887526145c4fc0e2c9c3986c8424b4814b50155108a937b5d6a613b2ee974c0f"
+}
