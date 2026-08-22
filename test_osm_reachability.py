@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pandas as pd
 
 from acsp.osm_ferry import OsmFerryProviderAudit
+from acsp.osm_ferry_stops import OsmFerryStopProviderAudit
 from acsp.osm_reachability import build_osm_patch_reachability_edges
 from acsp.osm_transport import OsmTransportProviderAudit
 
@@ -28,6 +29,32 @@ def _empty_ferry_result():
         emitted_ferry_edge_count=0,
     )
     return edges, pair_audit, audit
+
+
+def _empty_stop_result():
+    edges = pd.DataFrame(
+        columns=[
+            "from_node_id", "to_node_id", "distance_m", "survey_area_id",
+            "network_mode", "highway", "osm_way_id", "network_source",
+        ]
+    )
+    stops = pd.DataFrame()
+    audit = OsmFerryStopProviderAudit(
+        query_count=0,
+        successful_query_count=0,
+        failed_query_count=0,
+        ferry_relation_count=0,
+        relation_stop_member_count=0,
+        unique_stop_node_count=0,
+        ferry_terminal_tagged_stop_count=0,
+        public_transport_ferry_stop_count=0,
+        stop_in_ferry_graph_count=0,
+        stop_in_land_graph_count=0,
+        stop_in_both_graphs_count=0,
+        unmatched_land_stop_count=0,
+        emitted_ferry_edge_count=0,
+    )
+    return edges, stops, audit
 
 
 class OsmReachabilityPipelineTests(unittest.TestCase):
@@ -79,13 +106,17 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         ) as fetch, patch(
             "acsp.osm_reachability.fetch_osm_ferry_edges_for_patches",
             return_value=_empty_ferry_result(),
-        ) as ferry_fetch:
+        ) as ferry_fetch, patch(
+            "acsp.osm_reachability.fetch_osm_ferry_stop_edges_for_patches",
+            return_value=_empty_stop_result(),
+        ) as stop_fetch:
             patch_edges, attachments, _, _, _, audit = build_osm_patch_reachability_edges(
                 candidates, max_network_transition_km=1.0
             )
 
         self.assertEqual(fetch.call_args.kwargs["query_margin_km"], 1.0)
         self.assertEqual(ferry_fetch.call_args.kwargs["max_network_transition_km"], 1.0)
+        self.assertEqual(stop_fetch.call_args.kwargs["max_network_transition_km"], 1.0)
         self.assertEqual(len(patch_edges), 1)
         self.assertTrue(attachments["network_attached"].all())
         self.assertTrue(audit["query_margin_derived_from_movement_limit"])
@@ -93,6 +124,8 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         self.assertFalse(audit["straight_line_candidate_fallback"])
         self.assertFalse(audit["ferry_edges_included"])
         self.assertTrue(audit["ferry_relation_only_support"])
+        self.assertTrue(audit["ferry_relation_stop_support"])
+        self.assertEqual(audit["ferry_stop_provider"]["unique_stop_node_count"], 0)
 
     def test_provider_failure_does_not_fallback_to_geometric_patch_edges(self):
         candidates = pd.DataFrame(
@@ -129,6 +162,9 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         ), patch(
             "acsp.osm_reachability.fetch_osm_ferry_edges_for_patches",
             return_value=_empty_ferry_result(),
+        ), patch(
+            "acsp.osm_reachability.fetch_osm_ferry_stop_edges_for_patches",
+            return_value=_empty_stop_result(),
         ):
             patch_edges, attachments, _, _, returned_area_audit, audit = build_osm_patch_reachability_edges(
                 candidates, max_network_transition_km=5.0
@@ -141,6 +177,7 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         self.assertEqual(audit["provider"]["failed_area_count"], 1)
         self.assertFalse(audit["ferry_edges_included"])
         self.assertTrue(audit["ferry_relation_only_support"])
+        self.assertTrue(audit["ferry_relation_stop_support"])
 
     def test_explicit_ferry_edge_is_the_only_cross_area_bridge(self):
         candidates = pd.DataFrame(
@@ -206,6 +243,9 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         ), patch(
             "acsp.osm_reachability.fetch_osm_ferry_edges_for_patches",
             return_value=(ferry_edges, ferry_pair_audit, ferry_audit),
+        ), patch(
+            "acsp.osm_reachability.fetch_osm_ferry_stop_edges_for_patches",
+            return_value=_empty_stop_result(),
         ):
             patch_edges, attachments, _, combined_network, _, audit = build_osm_patch_reachability_edges(
                 candidates, max_network_transition_km=20.0
@@ -219,8 +259,82 @@ class OsmReachabilityPipelineTests(unittest.TestCase):
         self.assertEqual(patch_edges.loc[0, "to_patch_id"], "b")
         self.assertTrue(audit["ferry_edges_included"])
         self.assertTrue(audit["ferry_relation_only_support"])
+        self.assertTrue(audit["ferry_relation_stop_support"])
         self.assertFalse(audit["ferry_proximity_terminal_fallback"])
         self.assertFalse(audit["ferry_access_restrictions_enforced"])
+
+    def test_explicit_relation_stop_edge_is_integrated_without_proximity(self):
+        candidates = pd.DataFrame(
+            {
+                "candidate_patch_id": ["a", "b"],
+                "survey_area_id": ["A", "B"],
+                "latitude": [35.0, 35.1],
+                "longitude": [139.0, 139.1],
+            }
+        )
+        nodes = pd.DataFrame(
+            {
+                "network_node_id": ["osm:A:node:10", "osm:B:node:40"],
+                "survey_area_id": ["A", "B"],
+                "latitude": [35.0, 35.1],
+                "longitude": [139.0, 139.1],
+                "network_source": ["osm_overpass", "osm_overpass"],
+            }
+        )
+        road_edges = pd.DataFrame(columns=["from_node_id", "to_node_id", "distance_m"])
+        area_audit = pd.DataFrame({"survey_area_id": ["A", "B"], "status": ["success", "success"]})
+        road_audit = OsmTransportProviderAudit(
+            survey_area_count=2,
+            successful_area_count=2,
+            failed_area_count=0,
+            network_node_count=2,
+            network_edge_count=0,
+            way_count=0,
+        )
+        stop_edges = pd.DataFrame(
+            {
+                "from_node_id": ["osm:A:node:10"],
+                "to_node_id": ["osm:B:node:40"],
+                "distance_m": [12_000.0],
+                "survey_area_id": ["A|B"],
+                "network_mode": ["ferry"],
+                "network_source": ["osm_overpass_ferry_relation_stop"],
+            }
+        )
+        stop_audit = OsmFerryStopProviderAudit(
+            query_count=1,
+            successful_query_count=1,
+            failed_query_count=0,
+            ferry_relation_count=1,
+            relation_stop_member_count=2,
+            unique_stop_node_count=2,
+            ferry_terminal_tagged_stop_count=2,
+            public_transport_ferry_stop_count=2,
+            stop_in_ferry_graph_count=2,
+            stop_in_land_graph_count=2,
+            stop_in_both_graphs_count=2,
+            unmatched_land_stop_count=0,
+            emitted_ferry_edge_count=1,
+        )
+        with patch(
+            "acsp.osm_reachability.fetch_osm_transport_network_for_patches",
+            return_value=(nodes, road_edges, area_audit, road_audit),
+        ), patch(
+            "acsp.osm_reachability.fetch_osm_ferry_edges_for_patches",
+            return_value=_empty_ferry_result(),
+        ), patch(
+            "acsp.osm_reachability.fetch_osm_ferry_stop_edges_for_patches",
+            return_value=(stop_edges, pd.DataFrame(), stop_audit),
+        ):
+            patch_edges, _, _, combined_network, _, audit = build_osm_patch_reachability_edges(
+                candidates, max_network_transition_km=20.0
+            )
+        self.assertEqual(len(combined_network), 1)
+        self.assertEqual(combined_network.loc[0, "network_source"], "osm_overpass_ferry_relation_stop")
+        self.assertEqual(len(patch_edges), 1)
+        self.assertTrue(audit["ferry_edges_included"])
+        self.assertEqual(audit["ferry_stop_provider"]["stop_in_both_graphs_count"], 2)
+        self.assertFalse(audit["ferry_proximity_terminal_fallback"])
 
     def test_public_pipeline_has_one_movement_tuning_input(self):
         parameters = inspect.signature(build_osm_patch_reachability_edges).parameters
