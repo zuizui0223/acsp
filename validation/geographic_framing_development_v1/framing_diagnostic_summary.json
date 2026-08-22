@@ -1,0 +1,28 @@
+{
+  "status": "development_only_framing_diagnostic_complete",
+  "protocol_fingerprint": "887526145c4fc0e2c9c3986c8424b4814b50155108a937b5d6a613b2ee974c0f",
+  "framing_method": "training_block_component_10km_padding_v1",
+  "development_taxa": 96,
+  "declared_folds": 480,
+  "evaluated_folds": 470,
+  "failed_folds_retained_as_zero": 10,
+  "mean_fold_heldout_frame_containment": 0.7662012557957877,
+  "mean_pair_heldout_frame_containment": 0.7662012557957875,
+  "median_fold_frame_count": 3.0,
+  "median_fold_frame_area_ratio_to_fixed": 0.5180587961691208,
+  "mean_fold_frame_area_ratio_to_fixed": 0.5324858133071959,
+  "taxon_group_mean_containment": {
+    "animal": 0.6743001927293967,
+    "plant": 0.8581023188621786
+  },
+  "reexported_occurrence_snapshot_fingerprint": "4a72414e4916a0d2c870e4ccda4537d997398e859df8a3162683328359535209",
+  "original_untouched_confirmation_replayed": false,
+  "candidate_generation_run": false,
+  "robust_support_run": false,
+  "fresh_confirmation_taxa_consumed": false,
+  "development_taxa_now_nonconfirmatory_for_framing": true,
+  "interpretation": "framing containment/area diagnostic only; do not promote to validated product from this result",
+  "workflow_run_id": 32573980179,
+  "artifact_id": 9476080869,
+  "artifact_digest": "sha256:2fc47e36aec7ca7c06244ffaefd3e49e9786cf80f8dd2fe46790e3e87e90d8d1"
+}
