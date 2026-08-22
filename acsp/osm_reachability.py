@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from .osm_ferry import fetch_osm_ferry_edges_for_patches
-from .osm_ferry_stop_highways import fetch_explicit_highway_extensions_for_ferry_stops
+from .osm_ferry_impossibility import fetch_movement_pruned_highway_extensions_for_ferry_stops
 from .osm_ferry_stops import fetch_osm_ferry_stop_edges_for_patches
 from .osm_transport import fetch_osm_transport_network_for_patches
 from .transport_reachability import build_patch_reachability_edges_from_transport_network
@@ -59,17 +59,17 @@ def build_osm_patch_reachability_edges(
 
     The sole movement tuning input is ``max_network_transition_km``. Road/trail
     topology is retrieved around candidates. Ferry relation ``stop`` nodes are
-    audited explicitly. If a stop is on the ferry member-way graph but missing
-    from the candidate-window highway graph, ACSP first reverse-queries highway
-    ways that reference that exact raw OSM node. If those direct ways do not
-    reach an existing land-graph raw-node anchor, it retrieves highways within
-    the same movement-limit radius around the exact stop-node set and follows
-    raw-node connectivity. The radius bounds provider retrieval only; it never
-    creates an edge. No coordinate-distance terminal snapping exists.
+    audited explicitly. Before launching expensive bounded highway recovery for
+    an unmatched ferry stop, ACSP obtains that exact OSM stop coordinate and
+    computes a conservative geodesic lower bound to the candidate patch
+    footprints. If even that lower bound is greater than the movement limit,
+    the stop is movement-impossible and further topology retrieval is skipped.
 
-    Direct/relation ferry matching is evaluated against any exactly anchored
-    augmented land graph. All final reachability remains weighted network
-    shortest path; provider failures never trigger candidate straight-line
+    Geodesic distance is used only to prove impossibility. It never creates an
+    edge, ranks candidates, or declares reachability. Stops lacking sufficient
+    coordinate evidence remain eligible for the existing exact raw-node topology
+    recovery. Final reachability remains weighted network shortest path plus
+    off-network access, and provider failures never trigger straight-line
     connectivity.
 
     Returns ``(patch_edges, attachments, network_nodes, network_edges,
@@ -100,9 +100,10 @@ def build_osm_patch_reachability_edges(
     )
 
     extension_nodes, extension_edges, stop_highway_audit = (
-        fetch_explicit_highway_extensions_for_ferry_stops(
+        fetch_movement_pruned_highway_extensions_for_ferry_stops(
             initial_stop_rows,
             nodes,
+            candidates,
             max_network_transition_km=float(max_network_transition_km),
         )
     )
@@ -158,8 +159,7 @@ def build_osm_patch_reachability_edges(
         "ferry_edges_included": bool(len(ferry_edges) or len(ferry_stop_edges)),
         "ferry_relation_only_support": True,
         "ferry_relation_stop_support": True,
-        "ferry_stop_highway_reverse_lookup": True,
-        "ferry_stop_bounded_highway_component_lookup": True,
+        "ferry_stop_movement_impossibility_certificate": True,
         "ferry_highway_extension_used": bool(
             extension_nodes is not None and not extension_nodes.empty
         ),
