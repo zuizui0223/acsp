@@ -8,8 +8,10 @@ on:
     paths:
       - "research/geographic_framing.py"
       - "research/evaluate_geographic_framing_development_v1.py"
+      - "research/diagnose_geographic_framing_v1_failures.py"
       - "research/test_geographic_framing.py"
       - "research/test_geographic_framing_evaluator.py"
+      - "research/test_geographic_framing_failure_diagnostics.py"
       - "validation/acsp_geographic_framing_development_protocol_v1.json"
       - ".github/workflows/geographic-framing-development-v1.yml"
 
@@ -41,7 +43,8 @@ jobs:
         run: |
           python -m unittest -v \
             research/test_geographic_framing.py \
-            research/test_geographic_framing_evaluator.py
+            research/test_geographic_framing_evaluator.py \
+            research/test_geographic_framing_failure_diagnostics.py
           python - <<'PY'
           import json
           from pathlib import Path
@@ -90,6 +93,12 @@ jobs:
             --export-root framing-development-folds \
             --output framing-development-results
 
+      - name: Diagnose v1 misses without changing the frozen framing method
+        run: |
+          python research/diagnose_geographic_framing_v1_failures.py \
+            --export-root framing-development-folds \
+            --output framing-development-results
+
       - name: Audit complete denominator without favorable-result gate
         run: |
           python - <<'PY'
@@ -98,19 +107,25 @@ jobs:
           from pathlib import Path
           root = Path('framing-development-results')
           summary = json.loads((root/'framing_diagnostic_summary.json').read_text())
+          failure = json.loads((root/'framing_v1_failure_diagnostic_summary.json').read_text())
           folds = pd.read_csv(root/'framing_fold_diagnostics.csv')
           pairs = pd.read_csv(root/'framing_pair_diagnostics.csv')
+          failure_folds = pd.read_csv(root/'framing_v1_failure_diagnostics.csv')
           assert summary['status'] == 'development_only_framing_diagnostic_complete'
           assert summary['protocol_fingerprint'] == '887526145c4fc0e2c9c3986c8424b4814b50155108a937b5d6a613b2ee974c0f'
           assert summary['declared_folds'] == 480
           assert len(folds) == 480
           assert len(pairs) == 96
+          assert len(failure_folds) == 480
+          assert failure['status'] == 'development_only_posthoc_v1_failure_diagnostic'
+          assert failure['v1_method_changed'] is False
           assert summary['candidate_generation_run'] is False
           assert summary['robust_support_run'] is False
           assert summary['fresh_confirmation_taxa_consumed'] is False
           assert summary['original_untouched_confirmation_replayed'] is False
           assert summary['development_taxa_now_nonconfirmatory_for_framing'] is True
           print(json.dumps(summary, indent=2, ensure_ascii=False))
+          print(json.dumps(failure, indent=2, ensure_ascii=False))
           PY
 
       - name: Upload framing development diagnostics
