@@ -36,6 +36,8 @@ class OsmFerryStopHighwayAudit:
     exact_raw_osm_topology_required: bool = True
     proximity_terminal_fallback: bool = False
     candidate_to_terminal_straight_line_used: bool = False
+    provider_query_failed: bool = False
+    provider_error: str = ""
     legal_access_claim: bool = False
     safety_claim: bool = False
 
@@ -52,6 +54,8 @@ class OsmFerryStopHighwayAudit:
             "exact_raw_osm_topology_required": self.exact_raw_osm_topology_required,
             "proximity_terminal_fallback": self.proximity_terminal_fallback,
             "candidate_to_terminal_straight_line_used": self.candidate_to_terminal_straight_line_used,
+            "provider_query_failed": self.provider_query_failed,
+            "provider_error": self.provider_error,
             "legal_access_claim": self.legal_access_claim,
             "safety_claim": self.safety_claim,
         }
@@ -114,7 +118,8 @@ def _highway_reverse_query(stop_ids: list[str]) -> str:
         "[out:json][timeout:25];"
         f"node(id:{id_list})->.st;"
         "way(bn.st)[\"highway\"]->.hw;"
-        "(.st;.hw;>;);"
+        "node(w.hw)->.hwn;"
+        "(.st;.hw;.hwn;);"
         "out body geom;"
     )
 
@@ -278,7 +283,7 @@ def fetch_explicit_highway_extensions_for_ferry_stops(
             stop_ids,
             land_nodes,
         )
-    except Exception:
+    except Exception as exc:
         audit = OsmFerryStopHighwayAudit(
             queried_stop_count=int(len(stop_ids)),
             stops_with_highway_way_count=0,
@@ -287,6 +292,8 @@ def fetch_explicit_highway_extensions_for_ferry_stops(
             imported_extension_node_count=0,
             imported_extension_edge_count=0,
             remaining_unconnected_stop_count=int(len(stop_ids)),
+            provider_query_failed=True,
+            provider_error=f"{type(exc).__name__}: {exc}",
         )
         return _empty_transport_nodes(), _empty_transport_edges(), audit
 
