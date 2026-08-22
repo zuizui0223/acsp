@@ -19,8 +19,6 @@ from sklearn.neighbors import BallTree
 
 from .coverage import EARTH_RADIUS_KM, _coverage_adjacency
 
-_AUTO_STOP_EPS = 1e-12
-
 
 @dataclass(frozen=True)
 class OperationalSelectionAudit:
@@ -32,7 +30,8 @@ class OperationalSelectionAudit:
     coverage_scale_source: str
     final_coverage_fraction: float
     movement_group_column: Optional[str]
-    auto_stop_method: str = "maximum_normalized_knee_deviation"
+    auto_stop_method: str = "complete_candidate_patch_coverage"
+    selection_stop_reason: str = "all_component_candidate_patches_covered"
     user_site_count_required: bool = False
     user_coverage_target_required: bool = False
     route_feasibility_claim: bool = False
@@ -50,6 +49,7 @@ class OperationalSelectionAudit:
             "final_coverage_fraction": self.final_coverage_fraction,
             "movement_group_column": self.movement_group_column,
             "auto_stop_method": self.auto_stop_method,
+            "selection_stop_reason": self.selection_stop_reason,
             "user_site_count_required": self.user_site_count_required,
             "user_coverage_target_required": self.user_coverage_target_required,
             "route_feasibility_claim": self.route_feasibility_claim,
@@ -171,20 +171,6 @@ def _connected_components(neighbours: list[np.ndarray]) -> list[np.ndarray]:
     return components
 
 
-def _knee_prefix_length(cumulative_fraction: list[float]) -> int:
-    """Choose the coverage knee, retaining all rows if the curve is linear."""
-    n = len(cumulative_fraction)
-    if n <= 1:
-        return n
-    y = np.asarray(cumulative_fraction, dtype=float)
-    x = np.arange(1, n + 1, dtype=float) / float(n)
-    deviation = y - x
-    maximum = float(np.nanmax(deviation))
-    if not np.isfinite(maximum) or maximum <= _AUTO_STOP_EPS:
-        return n
-    return int(np.flatnonzero(np.isclose(deviation, maximum, rtol=0.0, atol=_AUTO_STOP_EPS))[0] + 1)
-
-
 def _component_coverage_columns(coverage, row: int, component_mask: np.ndarray) -> np.ndarray:
     start, stop = coverage.indptr[row], coverage.indptr[row + 1]
     cols = coverage.indices[start:stop]
@@ -196,7 +182,12 @@ def _connected_greedy_prefix(
     component: np.ndarray,
     movement_neighbours: list[np.ndarray],
 ) -> tuple[list[int], list[int], list[float], list[int | None]]:
-    """Build a coverage-greedy prefix whose selected subgraph stays connected."""
+    """Build a connected greedy set until the whole movement component is covered.
+
+    This function does not decide a user budget or truncate at an elbow. It adds
+    movement-legal representatives until every candidate patch in ``component``
+    is redundancy-covered at the already supplied coverage geometry.
+    """
     component_set = set(int(x) for x in component)
     component_mask = np.zeros(coverage.shape[1], dtype=bool)
     component_mask[component] = True
@@ -216,7 +207,9 @@ def _connected_greedy_prefix(
                 frontier.update(int(x) for x in movement_neighbours[chosen] if int(x) in remaining)
             eligible = sorted(frontier)
             if not eligible:
-                break
+                raise RuntimeError(
+                    "movement component became disconnected during complete-coverage selection"
+                )
 
         best = eligible[0]
         best_gain = -1
@@ -243,6 +236,10 @@ def _connected_greedy_prefix(
         if bool(covered[component].all()):
             break
 
+    if not bool(covered[component].all()):
+        raise RuntimeError(
+            "complete candidate-patch coverage was not achieved inside a movement component"
+        )
     return selected, marginal, cumulative, parents
 
 
@@ -255,14 +252,13 @@ def select_movement_constrained_patches(
     group_col: str | None = "survey_area_id",
     radius_col: str = "candidate_patch_radius_m",
 ) -> tuple[pd.DataFrame, OperationalSelectionAudit]:
-    """Select an automatically sized connected operational subset of patches.
+    """Select a fully redundancy-covered connected operational subset of patches.
 
     ``max_transition_km`` is the only user tuning quantity. Each movement-
     connected component is a separate operational segment. A deterministic
-    connected greedy coverage prefix is generated and stopped at its internal
-    coverage knee. A linear curve has no defensible knee, so all rows are kept.
-    Redundancy scale is derived from candidate-patch artifact metadata and is not
-    an independent operational threshold.
+    connected greedy set is expanded until every candidate patch in that
+    component is represented at the artifact-derived redundancy scale. There is
+    no knee, target-coverage, site-count, survey-day, or monetary-budget stop.
     """
     if float(max_transition_km) <= 0.0:
         raise ValueError("max_transition_km must be positive")
@@ -284,15 +280,17 @@ def select_movement_constrained_patches(
         ):
             empty[column] = pd.Series(dtype=dtype)
         empty["operational_coverage_scale_source"] = pd.Series(dtype="string")
+        empty["operational_selection_stop_reason"] = pd.Series(dtype="string")
         return empty, OperationalSelectionAudit(
-            0,
-            0,
-            0,
-            float(max_transition_km),
-            coverage_scale_km,
-            coverage_scale_source,
-            0.0,
-            group_col,
+            candidate_count=0,
+            selected_count=0,
+            movement_component_count=0,
+            max_transition_km=float(max_transition_km),
+            coverage_scale_km=coverage_scale_km,
+            coverage_scale_source=coverage_scale_source,
+            final_coverage_fraction=0.0,
+            movement_group_column=group_col,
+            selection_stop_reason="empty_candidate_set",
         )
 
     coverage = _coverage_adjacency(
@@ -316,25 +314,29 @@ def select_movement_constrained_patches(
     for segment_id, component in enumerate(components, start=1):
         component_mask = np.zeros(n, dtype=bool)
         component_mask[component] = True
-        prefix, marginal, cumulative, parents = _connected_greedy_prefix(
+        chosen, marginal, cumulative, parents = _connected_greedy_prefix(
             coverage, component, movement
         )
-        keep = _knee_prefix_length(cumulative)
-        chosen = prefix[:keep]
-        if not chosen:
-            continue
+        if not chosen or not cumulative or cumulative[-1] != 1.0:
+            raise RuntimeError(
+                f"movement component {segment_id} did not reach complete candidate-patch coverage"
+            )
         segment = work.iloc[chosen].copy().reset_index(drop=True)
         segment["operational_segment"] = int(segment_id)
         segment["operational_selection_step"] = np.arange(1, len(segment) + 1, dtype=int)
-        segment["marginal_covered_patches"] = marginal[:keep]
-        segment["segment_coverage_fraction"] = cumulative[:keep]
+        segment["marginal_covered_patches"] = marginal
+        segment["segment_coverage_fraction"] = cumulative
         segment["movement_parent_input_index"] = pd.array(
-            [pd.NA if p is None else int(work.iloc[p]["_input_index"]) for p in parents[:keep]],
+            [pd.NA if p is None else int(work.iloc[p]["_input_index"]) for p in parents],
             dtype="Int64",
         )
+        segment["operational_selection_stop_reason"] = "all_component_candidate_patches_covered"
         rows.append(segment)
         for row in chosen:
             globally_covered[_component_coverage_columns(coverage, row, component_mask)] = True
+
+    if not bool(globally_covered.all()):
+        raise RuntimeError("automatic operational selection left candidate patches uncovered")
 
     out = pd.concat(rows, ignore_index=True) if rows else work.iloc[0:0].copy()
     out["operational_selector_status"] = "downstream_geometry_not_validated_efficiency"
@@ -348,7 +350,7 @@ def select_movement_constrained_patches(
         max_transition_km=float(max_transition_km),
         coverage_scale_km=float(coverage_scale_km),
         coverage_scale_source=str(coverage_scale_source),
-        final_coverage_fraction=float(globally_covered.mean()),
+        final_coverage_fraction=1.0,
         movement_group_column=group_col,
     )
     return out, audit
