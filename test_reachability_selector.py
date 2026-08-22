@@ -81,7 +81,9 @@ class ExplicitReachabilitySelectorTests(unittest.TestCase):
         # are represented at the 1 km artifact scale.
         self.assertEqual(selected["candidate_patch_id"].tolist(), ["b", "d"])
         self.assertEqual(selected["segment_coverage_fraction"].tolist(), [0.6, 1.0])
-        self.assertEqual(selected["movement_parent_patch_id"].tolist(), [pd.NA, "b"])
+        parents = selected["movement_parent_patch_id"]
+        self.assertTrue(pd.isna(parents.iloc[0]))
+        self.assertEqual(parents.iloc[1], "b")
         self.assertEqual(audit.selected_count, 2)
         self.assertEqual(audit.final_coverage_fraction, 1.0)
         self.assertEqual(audit.auto_stop_method, "complete_candidate_patch_coverage")
