@@ -1,0 +1,83 @@
+{
+  "protocol_id": "acsp_geographic_framing_country_registry_v4_two_part",
+  "status": "predeclared_new_disjoint_development_before_v4_cohort_sampling_or_outcomes",
+  "parent_issue": 135,
+  "representation": {
+    "source": "focal_species_GBIF_country_facets",
+    "historical_year_range": [1900, 2020],
+    "heldout_year_range": [2021, 2025],
+    "quality_filters": {
+      "hasCoordinate": true,
+      "hasGeospatialIssue": false,
+      "occurrenceStatus": "PRESENT"
+    },
+    "country_expansion": false,
+    "higher_taxon_fallback": false,
+    "continent_or_realm_fallback": false,
+    "local_component_geometry": false,
+    "all_world_fallback": false
+  },
+  "cohort": {
+    "pair_count": 96,
+    "taxon_groups": ["plant", "animal"],
+    "region_cell_count": 12,
+    "record_count_strata": 4,
+    "taxa_per_region_group_record_stratum": 1,
+    "seed": 2026082304,
+    "minimum_records": 20,
+    "facet_limit": 400,
+    "sampling_rule": "reuse taxonomy-safe Japanese factorial identity sampler only; no focal occurrence rows or temporal country outcomes inspected before declaration",
+    "prior_96_exclusion_run": 32335791948,
+    "prior_96_exclusion_artifact": "acsp-robust-patch-untouched-confirmation-cohort-v2",
+    "prior_96_exclusion_artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "prior_96_exclusion_path": "frozen-v3-development/predeclared_taxon_region_pairs.csv"
+  },
+  "exclusion_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+    "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv",
+    "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+    "frozen-v3-development/predeclared_taxon_region_pairs.csv"
+  ],
+  "explicit_exclusion_prefixes": ["Campanula microdonta", "Campanula punctata"],
+  "evaluation": {
+    "all_declared_taxa_retained_for_yield": true,
+    "historical_registry_availability": "positive historical country facet count",
+    "temporal_evaluability": "positive 2021-2025 country facet count after historical registry exists",
+    "conditional_containment_denominator": "only taxa with positive historical registry and positive recent country facet records",
+    "provider_failures_are_not_conditional_containment_observations": true,
+    "candidate_generation_run_before_gate": false,
+    "robust_support_run_before_gate": false
+  },
+  "development_gate": {
+    "historical_registry_availability_min": 0.95,
+    "temporal_evaluability_overall_min": 0.9,
+    "plant_temporal_evaluability_min": 0.85,
+    "animal_temporal_evaluability_min": 0.85,
+    "conditional_containment_overall_min": 0.97,
+    "plant_conditional_containment_min": 0.95,
+    "animal_conditional_containment_min": 0.95,
+    "required_declared_taxa": 96,
+    "if_fail": "reject_v4_without_registry_expansion_or_temporal_window_tuning_on_this_cohort",
+    "if_pass": "freeze_country_registry_representation_before_fresh_framing_confirmation"
+  },
+  "claim_boundary": {
+    "new_cohort_is_development_only": true,
+    "fresh_confirmation_taxa_consumed": false,
+    "validated_japan_adapter_changed": false,
+    "global_name_only_claim_allowed": false
+  },
+  "preserved_core": {
+    "robust_support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "candidate_patch_merge_distance_m": 1000.0,
+    "non_ranked_candidate_product_changed": false,
+    "operational_complete_candidate_coverage_changed": false,
+    "osm_movement_semantics_changed": false
+  },
+  "protocol_fingerprint": "3bd9e6145e17a99b52d8a9f82c07f346541f56a2bf81bd768e180de78c295bf8"
+}

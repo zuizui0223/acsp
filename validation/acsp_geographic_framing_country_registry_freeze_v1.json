@@ -1,0 +1,95 @@
+{
+  "freeze_id": "acsp_geographic_framing_country_registry_freeze_v1",
+  "status": "frozen_after_v4_development_pass_before_fresh_confirmation",
+  "parent_issue": 135,
+  "representation": {
+    "concept": "past_observed_focal_species_countries_as_outer_geographic_registry",
+    "source": "GBIF occurrence country facets for the focal species",
+    "development_temporal_instantiation": {
+      "registry_year_range": [1900, 2020],
+      "heldout_year_range": [2021, 2025],
+      "current_incomplete_year_excluded": 2026
+    },
+    "quality_filters": {
+      "hasCoordinate": true,
+      "hasGeospatialIssue": false,
+      "occurrenceStatus": "PRESENT"
+    },
+    "neighbour_country_expansion": false,
+    "geographic_padding": false,
+    "distance_buffer": false,
+    "higher_taxon_fallback": false,
+    "continent_or_realm_fallback": false,
+    "local_component_geometry": false,
+    "all_world_fallback": false,
+    "role": "high_recall_outer_search_universe_only",
+    "downstream_narrowing": "frozen ecological robust-support candidate-patch core",
+    "candidate_ranking_part_of_representation": false,
+    "route_or_budget_part_of_representation": false
+  },
+  "development_protocol": {
+    "protocol_path": "validation/acsp_geographic_framing_development_protocol_v4.json",
+    "protocol_fingerprint": "3bd9e6145e17a99b52d8a9f82c07f346541f56a2bf81bd768e180de78c295bf8",
+    "cohort_seed": 2026082304,
+    "declared_taxa": 96,
+    "taxon_groups": {"plant": 48, "animal": 48},
+    "region_cells": 12,
+    "record_count_strata": 4,
+    "prior_framing_development_taxa_excluded": 96,
+    "taxon_replacement_after_identity_freeze_allowed": false
+  },
+  "authoritative_first_run": {
+    "workflow_run_id": 32615423653,
+    "evaluated_code_head_sha": "4068f439c19703ea6d47fdcdac58615416322b3f",
+    "cohort_artifact": "acsp-geographic-framing-development-v4-cohort",
+    "cohort_artifact_digest": "sha256:c7492cd70717ad906b8132291ec4fb19f8f68d0c3635bb267fee0730429fb369",
+    "results_artifact": "acsp-geographic-framing-development-v4-results",
+    "results_artifact_digest": "sha256:825b26ac6597393547f89feb7dd37d7e9ca9c72b6efb179a8c19f228cf76a05f",
+    "identity_csv_path": "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv",
+    "identity_csv_sha256": "04342b9c06f6bdf109ea4a684945acdbba8a7063cd11b29b563f80e701de485f",
+    "cohort_manifest_path": "validation/geographic_framing_development_v4/cohort_manifest.json",
+    "cohort_manifest_sha256": "2360838d9665835ccd12766d83dea60b13ce56f1d022fb46dac2c6713e673dad",
+    "summary_path": "validation/geographic_framing_development_v4/country_registry_v4_summary.json",
+    "summary_sha256": "93150e9a0f2bfefcdbdee9b244d4d3d70125b07e06f497c33ff6bd932f73638c",
+    "full_taxon_diagnostics_artifact_sha256": "4829e8164889699856b968eea7cdb9ec8d189d58353514e15ae6185885e98711",
+    "diagnostic_snapshot_fingerprint": "cdaf111af4ab86e1ebb018bb2c227d387e6b3f85d6b7b1e82373acb6ffe4f886"
+  },
+  "development_gate": {
+    "historical_registry_availability_min": 0.95,
+    "temporal_evaluability_overall_min": 0.90,
+    "plant_temporal_evaluability_min": 0.85,
+    "animal_temporal_evaluability_min": 0.85,
+    "conditional_containment_overall_min": 0.97,
+    "plant_conditional_containment_min": 0.95,
+    "animal_conditional_containment_min": 0.95,
+    "required_declared_taxa": 96
+  },
+  "development_result": {
+    "promotion_gate_passed": true,
+    "historical_registry_availability": 1.0,
+    "temporal_evaluability": 0.9583333333333334,
+    "plant_temporal_evaluability": 0.9791666666666666,
+    "animal_temporal_evaluability": 0.9375,
+    "conditional_mean_recent_record_containment": 0.9899387912799702,
+    "plant_conditional_mean_recent_record_containment": 0.995618567825204,
+    "animal_conditional_mean_recent_record_containment": 0.9840065802216151,
+    "temporally_evaluable_taxa": 92,
+    "zero_recent_country_record_taxa": 4
+  },
+  "decision": {
+    "representation_frozen": true,
+    "retuning_on_v4_development_taxa_allowed": false,
+    "fresh_framing_confirmation_required": true,
+    "fresh_framing_confirmation_started": false,
+    "candidate_generation_integration_allowed_before_confirmation": false,
+    "fresh_confirmation_must_exclude_all_v3_and_v4_development_taxa": true
+  },
+  "claim_boundary": {
+    "development_result_is_not_confirmation": true,
+    "global_name_only_acsp_validated": false,
+    "validated_japan_candidate_patch_core_changed": false,
+    "robust_support_fraction_changed": false,
+    "patch_merge_distance_changed": false,
+    "ranking_route_day_budget_claim_added": false
+  }
+}
