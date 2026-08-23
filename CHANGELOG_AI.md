@@ -1,5 +1,35 @@
 # AI Change Log
 
+## 2026-08-23 - ChatGPT (OpenAI) - Independent geographic framing confirmation
+
+Changed files:
+- .github/workflows/geographic-framing-confirmation-v1.yml
+- research/evaluate_geographic_framing_confirmation_v1.py
+- research/predeclare_geographic_framing_confirmation_cohort_v1.py
+- research/test_geographic_framing_confirmation_v1.py
+- validation/acsp_geographic_framing_confirmation_protocol_v1.json
+- validation/acsp_geographic_framing_confirmation_result_v1.json
+- validation/geographic_framing_confirmation_v1/*
+- validation/geographic_framing_development_v3/predeclared_taxon_region_pairs.csv
+- CHANGELOG_AI.md
+
+Summary:
+- Persisted the previously opened framing-development v3 identities so future cohorts can exclude them durably rather than relying on a 90-day workflow artifact.
+- Predeclared a fresh 96-taxon framing confirmation with the country-registry representation, 1900-2020 / 2021-2025 temporal split, quality filters, and all seven gates frozen before identity sampling or outcome inspection.
+- Froze the fresh 48-plant / 48-animal cohort before temporal outcomes, with zero overlap with v3/v4 framing-development taxa and no post-declaration replacement.
+- The authoritative first confirmation run 32624041517 passed every gate: historical-registry availability 1.0000; temporal evaluability 0.97917 overall, plant, and animal; conditional recent-record containment 0.98903 overall, 0.99383 plant, and 0.98422 animal.
+- Persisted the cohort/result provenance, artifact digests, identity list, aggregate summary, and canonical confirmation decision in the repository.
+- Converted the dedicated confirmation workflow to manual replay only so later GBIF drift cannot replace the authoritative first confirmation result.
+
+Features preserved:
+- The validated Japan candidate-patch core remains unchanged: support fraction 0.025, float32 support worlds, 1 km same-area complete-link aggregation, non-ranked output, and planner-free patch membership.
+- Candidate generation and robust support were deliberately not run in the framing confirmation; downstream OSM movement semantics and operational selection are unchanged.
+- No country expansion, higher-taxon fallback, route/day/budget claim, SDM/SSDM claim, or global all-name ACSP claim was added.
+
+Known risks / TODO:
+- The independently confirmed result applies to the frozen outer geographic-framing rule in the tested taxonomy-safe Japan-recorded plant/animal frame, not yet to an integrated global candidate-generation product.
+- Integrating the confirmed country registry with the frozen robust candidate-patch core is a separate next experiment; the fresh confirmation taxa are permanently unavailable for tuning that integration.
+
 ## 2026-08-22 - ChatGPT (OpenAI) - Artifact-derived operational coverage scale
 
 Changed files:
@@ -339,7 +369,7 @@ Validation:
 - The benchmark exposed and fixed two performance issues: serial GBIF taxon-name resolution and repeated pandas grouping inside ensemble search.
 
 Features preserved:
-- The simple Streamlit workflow, occurrence/local candidates, optional ensemble SDM/SSDM, VIF, spatial partition choices, exploratory candidates, zone planning, and field exports remain available.
+- The simple Streamlit workflow, occurrence/local candidates, optional ensemble SDM/SSDM, VIF, spatial partition choices, exploratory candidates, zone planning, route outputs, and exports remain available.
 
 Known risks / TODO:
 - The 20-species benchmark supports only modest macro-SDM geographic transferability and shows overconfident raw probabilities. Macro support should remain secondary to observed/local evidence.
@@ -476,7 +506,6 @@ Validation:
 - `Cirsium` (Japan): 569 fetched genus records; 20 observed-richness candidates; six species modeled; 4,832 SSDM cells and 20 model-only richness exploration candidates; SSDM completed in 55.7 seconds.
 - Izu-island test extent produced 327 valid land prediction cells, including small-island areas, instead of depending on coarse source-cell centers falling on land.
 - `python -m unittest test_automatic_hierarchy.py test_gbif_fetch_resilience.py test_acsp_package.py test_acsp_cli.py test_acsp_discover.py` passed 36 tests.
-- `python -m py_compile gbif_fieldmap_builder_app.py` passed.
 
 Scientific limitation:
 - NASA POWER is a fast macro-climate filter, not a high-resolution habitat layer. The interpolated prediction grid must not be interpreted as adding climate detail beyond the native POWER grid; fine-scale site discrimination remains the role of GSI terrain, habitat analogue, access, occurrence support, and field validation.
@@ -586,7 +615,7 @@ Features preserved:
 Known risks / TODO:
 - Four algorithms increase optional SDM/SSDM runtime relative to the previous two-model ensemble.
 - PyPI/CRAN/Zenodo publication still requires final author metadata, release review, and repository-owner credentials.
-- R CMD check is delegated to GitHub Actions because R is not installed in the current Windows environment.
+- R CMD check is delegated to GitHub Actions because R is not installed in the current environment.
 
 ## 2026-06-30 - Codex (OpenAI) - Full candidate maps, publication metadata, and Python/R packages
 
@@ -673,9 +702,9 @@ Summary:
 - Added `Eligible candidate pool` to the species proposal metrics so users can see the full usable pool separately from the selected one-day priority plan.
 - Applied the same one-day drawn-area rule to the mirrored genus workflow.
 
-Validation:
-- `Campanula microdonta` matched 300 GBIF coordinate records and retained 87 cleaned records.
-- Automatic SDM QC excluded one remote point at 33.635783, 134.493324; 86 records remained for the independent SDM workflow.
+Validation (`Campanula microdonta`):
+- GBIF total 300; cleaned records 87.
+- Automatic SDM QC excluded one remote point at 33.635783, 134.493324; 86 records remained for SDM input.
 - Izu Oshima: 22 eligible candidates; one-day Balanced plan 3 sites.
 - Toshima: 20 generated, 19 eligible candidates; one-day Balanced plan 3 sites.
 - Niijima: 20 eligible candidates; one-day Balanced plan 3 sites.
@@ -1219,14 +1248,14 @@ Summary:
 - Left infrastructure identifiers unchanged to avoid breaking deployment and tooling: the source filename `gbif_fieldmap_builder_app.py`, `Procfile`, the GitHub repository slug `zuizui0223/gbif-fieldmap-builder`, and `APP_BUILD_ID`.
 - Ran `python -m py_compile gbif_fieldmap_builder_app.py` successfully.
 
-## 2026-06-12 - Claude - Add ACSP candidate-SET selection algorithm
+## 2026-06-12 - Claude (claude-sonnet-4-6) — Add ACSP candidate-SET selection algorithm
 
 Changed files:
 - gbif_fieldmap_builder_app.py
 - CHANGELOG_AI.md
 
 Summary:
-- Read the latest policy files (`AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`) and inspected the current candidate-generation, scoring, selection, and export code before editing.
+- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`; refreshed `origin/main` before editing.
 - Added **ACSP (Adaptive Complementarity-based Survey Prioritization)** — a candidate-*set* selection algorithm, not just new per-candidate scoring variables. It moves beyond independent weighted candidate scores to choose a survey set that jointly maximises detection potential, model support, environmental/geographic complementarity, exploration value, and sampling-gap coverage while reducing redundancy and excessive travel.
 - Implemented `acsp_select()` as a greedy marginal-gain set builder. For each unselected candidate the marginal gain is `base_score + coverage_gain + exploration_gain + sampling_gap_gain - redundancy_penalty - travel_penalty`. The existing `priority_score` is preserved and reused as `base_score`.
 - Added four selection modes (`ACSP_SELECTION_MODES`), each with its own component weight preset: **Simple top-ranked** (pure priority order), **Complementarity-based batch selection**, **Exploration-focused active survey**, and **Phylogeographic gap-filling**.
@@ -1255,7 +1284,7 @@ Changed files:
 - CHANGELOG_AI.md
 
 Summary:
-- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, and `CHANGELOG_AI.md`; refreshed `origin/main` before editing.
+- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`; refreshed `origin/main` before editing.
 - Reverted the closed-by-default candidate/hotspot map behavior so species and genus candidate maps are visible again by default.
 - Kept the lightweight map defaults: only the currently filtered top-ranked candidates/hotspots are shown, with occurrence points and richness grid layers still opt-in because they are slower.
 - Added prominent top-ranked output tables and direct CSV/KML/field-validation CSV downloads for species candidates and genus hotspots, so the app can be used primarily as a priority-ranking output tool without requiring marker clicks or rectangle selection.
@@ -1274,7 +1303,7 @@ Changed files:
 - CHANGELOG_AI.md
 
 Summary:
-- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, and `CHANGELOG_AI.md`.
+- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`.
 - Cached the large-dataset working-set preparation helper so unchanged occurrence subsets are not rebuilt across downstream reruns.
 - Made the species candidate-selection map closed by default after Step 2 survey-area confirmation, with explicit open/close buttons for click and rectangle selection.
 - Made the genus hotspot-selection map use the same closed-by-default pattern.
@@ -1561,7 +1590,7 @@ Features preserved:
 Known risks / TODO:
 - Sessions with a previously active "Exclude records inside drawn rectangle" mode will default to simple include mode on next load; users who need exclude mode must enable `allow_advanced_modes`.
 
-## 2026-06-04 - Claude (claude-sonnet-4-6) - SSDM validation parity: per-species auto_sdm_partition, jackknife, spatial CV
+## 2026-06-04 - Claude (claude-sonnet-4-6) — SSDM validation parity: per-species auto_sdm_partition, jackknife, spatial CV
 
 Changed files:
 - gbif_fieldmap_builder_app.py
@@ -1714,9 +1743,6 @@ Features preserved:
 - Occurrence-supported candidates work without SDM; SDM-high exploration candidates remain available and clearly distinct.
 - Selected-site session state, compact selected-sites summary, Google Maps links, CSV/HTML/KML downloads, validation CSV download, and priority-aware candidate markers remain available.
 - Step 2 survey-area selection and independent optional SDM workflow are unchanged.
-
-Known risks / TODO:
-- Rectangle selection adds sites inside drawn rectangles; removing a group still uses individual click toggles or the Clear selected sites button.
 
 ## 2026-06-04 - Codex (OpenAI) - Strengthen field-validation exports
 
@@ -1888,7 +1914,7 @@ Features preserved:
 
 Known risks / TODO:
 - The older rectangle QC helper remains in code for compatibility but is no longer called from Step 2.
-- SSDM has been decoupled from Step 2 selection, but a fuller SSDM-specific rectangle QC UI can still be added later if needed.
+- SSDM has been decoupled from Step 2 selection, but a fuller SSDM-specific rectangle QC UI can still be added in a follow-up if full SSDM QC parity is required.
 
 ## 2026-06-04 - Codex (OpenAI) - Count-first representative GBIF fetching and rectangle QC workflow
 
@@ -1909,7 +1935,7 @@ Summary:
 
 Features preserved:
 - Raw GBIF records are kept for summary/download while maps, candidates, SDM, and SSDM use representative working subsets by default.
-- GBIF taxon matching, paginated occurrence requests, CSV upload, target occurrence set selection, occurrence candidates, genus richness hotspots, optional SDM/SSDM, weighted scoring, NoData cleaning, prediction maps, downloads, and route/site list remain available.
+- GBIF taxon matching, paginated occurrence requests, CSV upload, target occurrence selection, occurrence candidates, genus richness hotspots, optional SDM/SSDM, weighted scoring, NoData cleaning, prediction maps, downloads, and route/site list remain available.
 - VIF stepwise and spatial partition diagnostics remain available under advanced settings.
 
 Known risks / TODO:
@@ -2016,7 +2042,7 @@ Summary:
 - Same preset-based redesign applied symmetrically to SSDM.
 - Default is "Balanced ecology preset".
 - Advanced variable selection (shared VIF strategy, thresholds) collapsed inside "Advanced variable selection" expander.
-- All existing variable-selection strategies (No VIF, Correlation filter, VIF stepwise, Advanced custom) preserved in the advanced expander.
+- All existing variable-selection strategies (No VIF, Correlation filter, VIF stepwise, Ecological preset / representative climate set, Advanced custom selection) preserved in the advanced expander.
 
 Features preserved:
 - All variable-selection strategies (No VIF, Correlation filter, VIF stepwise, Ecological preset, Advanced custom) preserved.
@@ -2094,6 +2120,9 @@ Summary:
 
 Features preserved:
 - Coordinate exclusion, occurrence candidate ranges, SDM/VIF/spatial partition diagnostics, predict maps, SSDM workflows, route planning, and HTML downloads remain available.
+
+Known risks / TODO:
+- In very large datasets, only displayed map points can be toggled by clicking; increase Max occurrence points shown on map to inspect more points.
 
 ## 2026-06-03 - Codex (OpenAI) - Issue #10 VIF NoData cleaning and SSDM UI consistency
 
@@ -2173,58 +2202,6 @@ Summary:
 
 Features preserved:
 - All exclusion logic (click, rectangle, clear), SDM/SSDM, VIF, route planner, downloads unchanged.
-
-## 2026-06-03 - Claude (claude-sonnet-4-6) — Issue #2 follow-up: shared SSDM VIF, BIO protection, VIF diagnostics, partition settings
-
-Changed files:
-- gbif_fieldmap_builder_app.py
-- CHANGELOG_AI.md
-
-Summary:
-
-**Shared SSDM VIF (run once, not per species)**
-- Removed per-species VIF from `fit_stacked_species_sdms`. VIF is now run **once** on a pooled sample (up to 1,000 genus occurrence records + shared background grid points) before the species loop.
-- The same retained variable set (`kept_vars`) is used for every per-species model, preventing inconsistent variable sets and the BIO-variable disappearance bug reported by the user.
-- Added `ssdm_variable_diagnostics(env_df, variables)` — computes diagnostic table before VIF: variable, group (climate/topography/other), min, max, sd, unique_values, missing_fraction, max_abs_corr, VIF, status.
-- Added `run_ssdm_shared_vif(env_df, variables, vif_threshold)` — wraps `vif_step` with BIO-variable protection: if VIF removes all `bio1`–`bio19` variables, the least-correlated BIO variable is automatically restored and marked `fallback-kept (BIO protection)`.
-
-**SSDM partition settings exposed**
-- `fit_stacked_species_sdms` now accepts `ssdm_partition_method` (default `"random holdout"`) and `ssdm_test_split` (default `0.20`). Passes `holdout_test_size` through to `fit_sdm`.
-- `fit_sdm` gains `holdout_test_size=0.25` parameter (used by random holdout); single-species SDM callers are unchanged and keep the existing 0.25 default.
-- UI: added `SSDM partition method` selectbox (`random holdout` / `none (training only)`) and `SSDM holdout test split proportion` number input. `none` skips validation for fastest exploratory runs.
-- UI caption clearly states: "Spatial block/checkerboard partitions are available in single-species SDM but not yet implemented for SSDM."
-
-**VIF diagnostics table in UI**
-- After SSDM runs with VIF enabled, displays `Shared VIF diagnostics` table showing per-variable stats, max_abs_corr, VIF, and final status (kept/removed/fallback-kept).
-- If BIO fallback was triggered, a `st.warning` is shown explaining which variable was restored.
-- Added `ssdm_vif_diagnostics.csv` download button.
-
-**UI label update**
-- Checkbox label changed from "Apply VIF stepwise filtering for each species SDM" → "Apply shared VIF for SSDM (run once on pooled data)".
-- Updated caption to explain shared VIF behavior and BIO protection.
-
-**Single-species SDM unchanged**
-- VIF, spatial partition, and all single-species SDM workflow are unmodified.
-
-Features preserved:
-- Genus occurrence richness, hotspots, SSDM maps, SSDM downloads, large-dataset mode, exclusion/QC, route planner unchanged.
-
-## 2026-06-03 - Claude (claude-sonnet-4-6) — Issue #4: Unify species/genus workflows; make SDM/SSDM optional
-
-Changed files:
-- gbif_fieldmap_builder_app.py
-- CHANGELOG_AI.md
-
-Summary:
-- **Mode switching fix**: Added `_last_analysis_mode` to session state. On every mode switch between "Single species survey planning" and "Genus diversity / SSDM", widget-collision-prone state (map-click signatures, selected site IDs, draw signatures, QC rectangle IDs) is reset. This prevents Streamlit session-state inconsistencies when users freely alternate between modes.
-- **Species mode — occurrence candidates before SDM**: Added "Occurrence-supported survey candidates" section immediately after DBSCAN clustering, before the SDM section. Shows candidate table with priority scores, plus CSV/KML download buttons. Users can plan surveys from raw occurrence data without running SDM.
-- **Species mode — SDM is optional**: Changed SDM expander from `expanded=True` to `expanded=False` and relabeled from "Build SDM and predict map" to "Optional: Build SDM and predict map". Relabeled the subheader to "SDM (optional enhancement)". SDM exploration candidates and suitability scoring are still fully available when the user chooses to run SDM.
-- **Genus mode — hotspots before SSDM**: Updated heading and caption to emphasize that occurrence richness hotspots are the primary output (no modeling required). The optional SSDM expander was already collapsed; caption now explicitly points users to it as an enhancement-only section.
-- **Large datasets**: Occurrence candidates are always computed from spatially thinned clusters regardless of dataset size, consistent with existing large-dataset-mode behavior.
-
-Features preserved:
-- All existing species SDM, VIF, spatial partition, predict map, exclusion/QC, and route planner features unchanged.
-- All genus richness grid, hotspot, SSDM, and download features unchanged.
 
 ## 2026-06-03 - Claude (Anthropic) — Issue #2 follow-up: SSDM eligibility label and map legends
 
@@ -2318,7 +2295,7 @@ Summary:
 - Updated genus download status text to show the GBIF backbone taxonKey.
 
 Features preserved:
-- Genus occurrence richness outputs, single species planning, coordinate exclusion, SDM, VIF, spatial partition diagnostics, predict map, route planner, and downloads remain unchanged.
+- Genus occurrence richness outputs, single species planning, coordinate exclusion, SDM, VIF, spatial partition diagnostics, predict map, route planner, and genus richness outputs remain unchanged.
 
 Known risks / TODO:
 - Homonymous or highly ambiguous genus names may still need manual verification in future UI.
@@ -2432,6 +2409,9 @@ Features preserved:
 - All selection logic (auto, manual map click, rectangle Draw) unchanged.
 - Day list state (survey_day_lists) preserved and still functional inside the expander.
 - All SDM/VIF/spatial partition/predict map features unchanged.
+
+Known risks / TODO:
+- Users must open the candidate or hotspot map before using click/rectangle site selection or downloading that HTML map; this is intentional to keep Survey area confirmation and movement toward SDM responsive.
 
 ## 2026-06-02 - Claude (Anthropic) — Fix StreamlitAPIException in coordinate_exclusion_panel
 
