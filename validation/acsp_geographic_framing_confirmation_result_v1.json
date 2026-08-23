@@ -1,0 +1,61 @@
+{
+  "result_id": "acsp_geographic_framing_confirmation_v1",
+  "status": "independently_confirmed_for_tested_japan_recorded_plant_animal_frame",
+  "parent_issue": 135,
+  "representation_freeze_id": "acsp_geographic_framing_country_registry_freeze_v1",
+  "protocol_fingerprint": "9f655f6121f1c917659dcf85ba039304b645ea88b5afff8d7855a11cf1e7a490",
+  "authoritative_first_run": {
+    "workflow_run_id": 32624041517,
+    "evaluated_code_head_sha": "90c818f0754479755c24aa905962ea07437a7279",
+    "cohort_artifact": "acsp-geographic-framing-confirmation-v1-cohort",
+    "cohort_artifact_digest": "sha256:52f62323c55ed0bef4298f372285305ae53cfcbb322eacab1891aeb2287759b5",
+    "results_artifact": "acsp-geographic-framing-confirmation-v1-results",
+    "results_artifact_digest": "sha256:350314a14e1631a0697534d6a82188871871b2ff63a8fc4e19699d17f4ca4263",
+    "identity_csv_sha256": "cd145e74de66319b6f878d2ceb384c399008a510a51814490dddb32b4f0f0273",
+    "cohort_manifest_sha256": "ae6e97cf7315c7a28ddeedcbb863347ac40b79765f13e09238f953522f6ac510",
+    "summary_sha256": "4b1d761311d22a5407aa01b7f4b2b5fdbf96912747c5ba7b9758ac77570b6cd7",
+    "full_taxon_diagnostics_sha256": "0a8bbc0f9c9d6d6640614d10952e2c75ee845cab5e381219efba0557b3c99468",
+    "diagnostic_snapshot_fingerprint": "a17b57c48258351c4d56aeb0862412b01e026391112e0a1481907b0b538c883a"
+  },
+  "cohort": {
+    "declared_taxa": 96,
+    "plant_taxa": 48,
+    "animal_taxa": 48,
+    "region_cells": 12,
+    "record_count_strata": 4,
+    "seed": 2026082305,
+    "development_v3_taxa_reused": false,
+    "development_v4_taxa_reused": false,
+    "taxon_replacement_after_declaration_allowed": false
+  },
+  "confirmation_result": {
+    "historical_registry_availability": 1.0,
+    "temporal_evaluability": 0.9791666666666666,
+    "plant_temporal_evaluability": 0.9791666666666666,
+    "animal_temporal_evaluability": 0.9791666666666666,
+    "conditional_mean_recent_record_containment": 0.9890252679856605,
+    "plant_conditional_mean_recent_record_containment": 0.9938304823223192,
+    "animal_conditional_mean_recent_record_containment": 0.9842200536490014,
+    "temporally_evaluable_taxa": 94,
+    "zero_recent_country_record_taxa": 2,
+    "confirmation_gate_passed": true
+  },
+  "scientific_decision": {
+    "country_registry_framing_independently_confirmed": true,
+    "retuning_on_confirmation_taxa_allowed": false,
+    "country_expansion_or_fallback_allowed_from_this_result": false,
+    "candidate_generation_was_tested": false,
+    "robust_support_was_tested": false,
+    "candidate_generation_integration_is_separate_next_experiment": true
+  },
+  "claim_boundary": {
+    "permitted": "The frozen focal-species historical country-registry outer framing rule independently replicated across a fresh taxonomy-safe cohort drawn from Japan-recorded plant and animal taxa.",
+    "not_permitted": [
+      "global all-name ACSP is validated",
+      "country framing alone predicts exact field sites or occupancy",
+      "candidate-generation integration is validated",
+      "route, day, budget, access, SDM, or SSDM superiority is validated"
+    ],
+    "validated_japan_robust_candidate_patch_core_changed": false
+  }
+}

@@ -1,0 +1,97 @@
+pair_id,taxon_group,region_name,record_count_stratum,speciesKey,scientific_name
+1,plant,Hokkaido west,0,2722481,Carex mertensii J.D.Prescott ex Bong.
+2,plant,Hokkaido west,1,5384931,Houttuynia cordata Thunb.
+3,plant,Hokkaido west,2,4130562,Sasa kurilensis (Rupr.) Makino & Shibata
+4,plant,Hokkaido west,3,7846556,Cornus controversa Hemsl.
+5,animal,Hokkaido west,0,9722670,"Charadrius mongolus Pallas, 1776"
+6,animal,Hokkaido west,1,2481719,"Tringa stagnatilis (Bechstein, 1803)"
+7,animal,Hokkaido west,2,1340411,"Bombus beaticola (Tkalcu, 1968)"
+8,animal,Hokkaido west,3,2477872,"Dryocopus martius (Linnaeus, 1758)"
+9,plant,Hokkaido east,0,5334294,Polygonum arenastrum Boreau
+10,plant,Hokkaido east,1,3090393,Parasenecio hastatus (L.) H.Koyama
+11,plant,Hokkaido east,2,3188797,Circaea alpina L.
+12,plant,Hokkaido east,3,2863943,Zostera japonica Asch. & Graebn.
+13,animal,Hokkaido east,0,7621329,"Cicindela japana Motschulsky, 1858"
+14,animal,Hokkaido east,1,2440728,"Balaenoptera acutorostrata Lacépède, 1804"
+15,animal,Hokkaido east,2,5135026,"Erebia niphonica Janson, 1877"
+16,animal,Hokkaido east,3,2481791,"Numenius madagascariensis (Linnaeus, 1766)"
+17,plant,Tohoku,0,2715429,Cyperus microiria Steud.
+18,plant,Tohoku,1,2717310,Eleocharis wichurae Boeckeler
+19,plant,Tohoku,2,4046542,Polystichum longifrons Sa.Kurata
+20,plant,Tohoku,3,7228804,Cornopteris crenulatoserrulata (Makino) Nakai
+21,animal,Tohoku,0,6066379,"Ardea modesta J.E.Gray, 1831"
+22,animal,Tohoku,1,6976122,Dalopius patagiatus
+23,animal,Tohoku,2,1937819,"Papilio xuthus Linnaeus, 1767"
+24,animal,Tohoku,3,5219673,"Sciurus lis Temminck, 1844"
+25,plant,Kanto,0,2710716,Schoenoplectiella juncoides (Roxb.) Lye
+26,plant,Kanto,1,2651832,Adiantum pedatum L.
+27,plant,Kanto,2,7102969,Euonymus hamiltonianus Wall.
+28,plant,Kanto,3,2863967,Zostera marina L.
+29,animal,Kanto,0,2177741,"Hasarius adansoni (Audouin, 1826)"
+30,animal,Kanto,1,8225376,"Papilio machaon Linnaeus, 1758"
+31,animal,Kanto,2,8294007,"Turdus naumanni Temminck, 1820"
+32,animal,Kanto,3,2481681,"Limosa lapponica (Linnaeus, 1758)"
+33,plant,Izu,0,7293727,Ampelopsis glandulosa (Wall.) Momiy.
+34,plant,Izu,1,5567370,Chrysosplenium macrostemon Maxim. ex Franch. & Sav.
+35,plant,Izu,2,7272600,Weigela decora (Nakai) Nakai
+36,plant,Izu,3,3607282,Vandenboschia birmanica (Bedd.) Ching
+37,animal,Izu,0,2264753,"Lensia havock Totton, 1941"
+38,animal,Izu,1,9616058,"Falco tinnunculus Linnaeus, 1758"
+39,animal,Izu,2,6100944,"Spodiopsar cineraceus (Temminck, 1835)"
+40,animal,Izu,3,10777640,"Emberiza personata Temminck, 1836"
+41,plant,Chubu mountains,0,7315212,Corydalis pallida (Thunb.) Pers.
+42,plant,Chubu mountains,1,2685280,Cephalotaxus harringtonii (Knight ex J.Forbes) K.Koch
+43,plant,Chubu mountains,2,2988959,Rubus palmatus Thunb.
+44,plant,Chubu mountains,3,7319342,Dryopteris crassirhizoma Nakai
+45,animal,Chubu mountains,0,5141212,"Graphium sarpedon (Linnaeus, 1758)"
+46,animal,Chubu mountains,1,8911158,Aegista vulgivaga
+47,animal,Chubu mountains,2,9235549,"Sibirionetta formosa (Georgi, 1775)"
+48,animal,Chubu mountains,3,2498265,"Aythya marila (Linnaeus, 1761)"
+49,plant,Kinki,0,3033546,Clematis terniflora DC.
+50,plant,Kinki,1,3130279,Pertya scandens (Thunb.) Sch.Bip.
+51,plant,Kinki,2,5289666,Setaria faberi R.A.W.Herrm.
+52,plant,Kinki,3,8198582,Phegopteris decursive-pinnata (H.C.Hall) Fée
+53,animal,Kinki,0,2498259,"Aythya nyroca (Güldenstädt, 1770)"
+54,animal,Kinki,1,2256559,"Actinia equina (Linnaeus, 1758)"
+55,animal,Kinki,2,4369992,"Cellana grata (A.Gould, 1859)"
+56,animal,Kinki,3,5817100,"Acrocephalus orientalis (Temminck & Schlegel, 1847)"
+57,plant,Chugoku,0,3645891,Osmunda lancea Thunb.
+58,plant,Chugoku,1,10693035,Lepisorus nigripes T.Fujiw. & Seriz.
+59,plant,Chugoku,2,5656424,Dryopteris atrata (Wall) Ching
+60,plant,Chugoku,3,7286549,Lycopodium japonicum Thunb.
+61,animal,Chugoku,0,10482364,"Antipercnia albinigrata (Warren, 1896)"
+62,animal,Chugoku,1,1311401,"Vespa simillima Smith, 1868"
+63,animal,Chugoku,2,1862578,"Smerinthus planus Walker, 1856"
+64,animal,Chugoku,3,10051223,"Paracalanus parvus (Claus, 1863)"
+65,plant,Shikoku,0,2729157,Carex siderosticta Hance
+66,plant,Shikoku,1,3930870,Clematis lasiandra Maxim.
+67,plant,Shikoku,2,2985965,Deutzia scabra Thunb.
+68,plant,Shikoku,3,4039250,Cyrtomium devexiscapulae (Koidz.) Ching
+69,animal,Shikoku,0,1920496,"Pieris rapae (Linnaeus, 1758)"
+70,animal,Shikoku,1,11141140,"Perichaeta sieboldi (Horst, 1883)"
+71,animal,Shikoku,2,2408834,"Pseudorhombus pentophthalmus Günther, 1862"
+72,animal,Shikoku,3,1679398,"Chaoborus punctipennis (Say, 1823)"
+73,plant,Northern Kyushu,0,2739071,Trachycarpus fortunei (Hook.) H.Wendl.
+74,plant,Northern Kyushu,1,5284237,Cryptomeria japonica (Thunb. ex L.f.) D.Don
+75,plant,Northern Kyushu,2,2875940,Carpinus tschonoskii Maxim.
+76,plant,Northern Kyushu,3,2876873,Quercus glauca Thunb.
+77,animal,Northern Kyushu,0,1428682,"Orthetrum melania (Selys, 1883)"
+78,animal,Northern Kyushu,1,2484916,"Sitta europaea Linnaeus, 1758"
+79,animal,Northern Kyushu,2,2484596,"Regulus regulus (Linnaeus, 1758)"
+80,animal,Northern Kyushu,3,2431144,"Hynobius nebulosus (Temminck & Schlegel, 1838)"
+81,plant,Southern Kyushu,0,2688176,Psilotum nudum (L.) P.Beauv.
+82,plant,Southern Kyushu,1,8424006,Imperata cylindrica (L.) Raeusch.
+83,plant,Southern Kyushu,2,3605278,Microlepia ×bipinnata (Makino) Shimura
+84,plant,Southern Kyushu,3,7141749,Plagiogyria japonica Nakai
+85,animal,Southern Kyushu,0,8400775,"Dipsastraea speciosa (Dana, 1846)"
+86,animal,Southern Kyushu,1,2378544,"Trimma kudoi Suzuki & Senou, 2008"
+87,animal,Southern Kyushu,2,5205698,"Phoxinus jouyi (Jordan & Snyder, 1901)"
+88,animal,Southern Kyushu,3,2395490,"Praealticus margaritarius (Snyder, 1908)"
+89,plant,Ryukyu,0,2774214,Ophiopogon jaburan (Siebold) G.Lodd.
+90,plant,Ryukyu,1,5420987,Ludwigia octovalvis (Jacq.) P.H.Raven
+91,plant,Ryukyu,2,5295623,Smilax sebeana Miq.
+92,plant,Ryukyu,3,7870679,Leptochilus wrightii (Hook.) X.C.Zhang
+93,animal,Ryukyu,0,2383731,"Labroides dimidiatus (Valenciennes, 1839)"
+94,animal,Ryukyu,1,5728295,"Conus litteratus Linnaeus, 1758"
+95,animal,Ryukyu,2,2334382,"Scorpaenodes guamensis (Quoy & Gaimard, 1824)"
+96,animal,Ryukyu,3,2481703,"Xenus cinereus (Güldenstädt, 1775)"
