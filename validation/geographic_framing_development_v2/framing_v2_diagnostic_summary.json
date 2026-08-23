@@ -1,0 +1,45 @@
+{
+  "status": "development_only_higher_taxon_framing_v2_complete",
+  "decision": "rejected_at_predeclared_development_gate",
+  "authoritative_workflow_run": 32613456408,
+  "authoritative_artifact": "acsp-geographic-framing-development-v2",
+  "authoritative_artifact_digest": "sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e",
+  "protocol_fingerprint": "5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f",
+  "framing_method": "higher_taxon_nonfocal_block_component_10km_padding_v2",
+  "development_taxa": 96,
+  "declared_folds": 480,
+  "evaluated_folds": 460,
+  "failed_folds_retained_as_zero": 20,
+  "mean_fold_heldout_frame_containment": 0.744772572437666,
+  "animal_mean_fold_heldout_frame_containment": 0.7231096470162608,
+  "plant_mean_fold_heldout_frame_containment": 0.7664354978590712,
+  "median_fold_frame_area_ratio_to_fixed": 0.6484982090965489,
+  "mean_fold_frame_area_ratio_to_fixed": 0.5901962855585602,
+  "median_fold_frame_count": 2.0,
+  "prior_pair_status_counts": {
+    "ready": 92,
+    "no_usable_nonfocal_prior": 2,
+    "upstream_focal_export_failure": 2
+  },
+  "prior_rank_counts": {
+    "GENUS": 75,
+    "FAMILY": 19,
+    "NONE": 2
+  },
+  "prior_snapshot_fingerprint": "26d93bb3de0b2613e0d328a40290d8a65dce307232d06abf3c9f64e60d885bb4",
+  "focal_occurrence_snapshot_fingerprint": "4a72414e4916a0d2c870e4ccda4537d997398e859df8a3162683328359535209",
+  "promotion_gate": {
+    "mean_heldout_frame_containment_min": 0.95,
+    "animal_mean_heldout_frame_containment_min": 0.9,
+    "median_frame_area_ratio_to_fixed_max": 0.85,
+    "required_declared_folds": 480
+  },
+  "promotion_gate_passed": false,
+  "candidate_generation_run": false,
+  "robust_support_run": false,
+  "fresh_confirmation_taxa_consumed": false,
+  "validated_japan_adapter_changed": false,
+  "beyond_japan_claim_allowed": false,
+  "next_architecture": "independently_broad_outcome_blind_geographic_registry_or_domain_prior",
+  "retuning_on_same_96_taxa_allowed": false
+}
