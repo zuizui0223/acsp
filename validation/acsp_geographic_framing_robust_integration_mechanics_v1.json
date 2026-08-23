@@ -1,0 +1,47 @@
+{
+  "protocol_id": "acsp_geographic_framing_robust_integration_mechanics_v1",
+  "status": "predeclared_mechanical_contract_before_integrated_outcome_evaluation",
+  "parent_issue": 141,
+  "upstream_framing": {
+    "freeze_id": "acsp_geographic_framing_country_registry_freeze_v1",
+    "confirmation_result": "validation/acsp_geographic_framing_confirmation_result_v1.json",
+    "country_membership_rule": "past_observed_focal_species_countries_only",
+    "historical_year_range": [1900, 2020],
+    "country_expansion": false,
+    "higher_taxon_fallback": false,
+    "local_occurrence_component_fallback": false
+  },
+  "country_geometry_boundary": {
+    "provider": "explicit_injected_external_land_geometry",
+    "geometry_must_be_independent_of_focal_species_occurrence_envelope": true,
+    "provider_selection_frozen_for_scientific_evaluation": false,
+    "production_provider_selected": false
+  },
+  "downstream_robust_core": {
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0,
+    "surface_points_per_country": 800,
+    "max_prototypes": 32,
+    "terrain_features": ["elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi"],
+    "ranking_or_topk": false,
+    "sdm_or_ssdm": false,
+    "movement_route_day_budget": false
+  },
+  "mechanical_gate": {
+    "production_acsp_files_changed": false,
+    "japan_validated_adapter_changed": false,
+    "country_membership_is_sole_outer_selector": true,
+    "country_geometry_provider_is_injectable_and_audited": true,
+    "country_failure_triggers_fallback_expansion": false,
+    "validated_robust_candidate_patches_called_unchanged": true,
+    "integrated_scientific_outcomes_opened": false
+  },
+  "data_boundary": {
+    "confirmation_v1_taxa_allowed_for_tuning": false,
+    "v3_v4_framing_development_taxa_may_be_used_for_future_integration_development": true,
+    "campanula_role": "development_and_freeze_regression_only"
+  },
+  "next_step_if_mechanics_pass": "freeze external country geometry provider and preregister integration development evaluation before inspecting integrated outcomes",
+  "protocol_fingerprint": "71641ccc809f63aa84ed7dc404a027a77b611b8ff7fb097c4bb1c43c35df1a6b"
+}
