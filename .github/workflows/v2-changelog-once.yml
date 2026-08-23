@@ -1,0 +1,70 @@
+name: One-shot v2 changelog writer
+
+on:
+  push:
+    branches:
+      - agent/geographic-framing-higher-taxon-v2
+    paths:
+      - ".github/workflows/v2-changelog-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  prepend-and-remove-self:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/geographic-framing-higher-taxon-v2
+
+      - name: Prepend rejected v2 result without rewriting history
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('CHANGELOG_AI.md')
+          text = path.read_text(encoding='utf-8')
+          heading = '# AI Change Log\n\n'
+          marker = '## 2026-08-23 - ChatGPT (OpenAI) - Rejected geographic framing v2'
+          if not text.startswith(heading):
+              raise SystemExit('unexpected CHANGELOG_AI.md heading')
+          if marker not in text:
+              entry = '''## 2026-08-23 - ChatGPT (OpenAI) - Rejected geographic framing v2
+
+Changed files:
+- research/geographic_framing_higher_taxon_v2.py
+- research/evaluate_geographic_framing_development_v2.py
+- research/test_geographic_framing_higher_taxon_v2.py
+- research/test_geographic_framing_v2_evaluator.py
+- validation/acsp_geographic_framing_development_protocol_v2.json
+- validation/geographic_framing_development_v2/*
+- .github/workflows/geographic-framing-development-v2.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Predeclared a non-focal higher-taxon geographic prior after local focal-component framing v1 failed structurally. Genus occurrences were preferred; family was fallback only when genus yielded zero usable non-focal coordinates, and focal-species records were excluded before framing.
+- Reused v1 geometry unchanged: 0.1-degree occupied blocks, 8-neighbour components, singleton retention, frozen 10 km padding, deterministic overlap union. One pair-level prior snapshot was reused across five focal folds; focal training and held-out coordinates did not enter prior construction.
+- On 96 already-opened development taxa / all 480 folds, v2 failed the predeclared gate: mean containment 0.7448 (<0.95), animal 0.7231 (<0.90), plant 0.7664, median frame-area ratio 0.6485 (<=0.85). GENUS supplied 75 priors, FAMILY 19, and 2 had no usable non-focal prior; 2 additional focal pairs were upstream export failures.
+- Candidate generation and robust support were not run. The representation is rejected without parameter tuning on these same 96 taxa; the next framing architecture must use a more independently broad outcome-blind geographic search universe.
+
+Features preserved:
+- Frozen robust support 0.025, float32 support worlds, 1 km candidate-patch aggregation, existing robust-core evidence, non-ranked candidate product, complete operational candidate coverage, OSM movement semantics, and claim ceilings remain unchanged.
+- No fresh framing confirmation taxa were consumed and no beyond-Japan claim was made.
+
+Validation / provenance:
+- Authoritative development run `32613456408`; artifact digest `sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e`.
+- Protocol fingerprint `5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f`.
+
+'''
+              path.write_text(heading + entry + text[len(heading):], encoding='utf-8')
+          Path('.github/workflows/v2-changelog-once.yml').unlink()
+          PY
+
+      - name: Commit changelog and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG_AI.md .github/workflows/v2-changelog-once.yml
+          git commit -m "Document rejected geographic framing v2 [skip ci]"
+          git push origin HEAD:agent/geographic-framing-higher-taxon-v2
