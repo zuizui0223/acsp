@@ -1,0 +1,87 @@
+name: Geographic framing development v3 replay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+  AUTHORITATIVE_RUN_ID: "32614846554"
+  AUTHORITATIVE_ARTIFACT_DIGEST: "sha256:4b35f7cd06e9f549e05ec4244bcc2715e699838d4c62c65942b1e53a5253fefd"
+
+jobs:
+  replay-development:
+    name: Manual replay of rejected v3 country registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify frozen v3 contract and authoritative decision
+        run: |
+          python -m unittest -v \
+            research/test_geographic_framing_country_registry_v3.py \
+            research/test_geographic_framing_v3_evaluator.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(
+              Path('validation/geographic_framing_development_v3/country_registry_v3_summary.json').read_text(encoding='utf-8')
+          )
+          assert summary['authoritative_workflow_run'] == 32614846554
+          assert summary['authoritative_artifact_digest'] == 'sha256:4b35f7cd06e9f549e05ec4244bcc2715e699838d4c62c65942b1e53a5253fefd'
+          assert summary['protocol_fingerprint'] == '23ccd2ad90d387438079a992335978734bd0a460433cf266300e3852cdd1f9ce'
+          assert summary['promotion_gate_passed'] is False
+          assert summary['retuning_on_same_96_taxa_allowed'] is False
+          PY
+
+      - name: Download development identities
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: frozen-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+
+      - name: Replay historical focal-species country registry
+        run: |
+          python research/evaluate_geographic_framing_development_v3.py \
+            --sample-file frozen-cohort/predeclared_taxon_region_pairs.csv \
+            --output framing-development-v3-replay
+
+      - name: Compare replay without revising the frozen decision
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          authoritative = json.loads(
+              Path('validation/geographic_framing_development_v3/country_registry_v3_summary.json').read_text(encoding='utf-8')
+          )
+          replay = json.loads(Path('framing-development-v3-replay/country_registry_v3_summary.json').read_text(encoding='utf-8'))
+          print('authoritative overall:', authoritative['mean_taxon_recent_record_country_containment'])
+          print('replay overall:', replay['mean_taxon_recent_record_country_containment'])
+          print('authoritative decision remains:', authoritative['decision'])
+          print('Live-provider drift cannot revise the frozen v3 rejection.')
+          PY
+
+      - name: Upload replay diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-geographic-framing-development-v3-replay
+          path: framing-development-v3-replay/
+          if-no-files-found: error
+          retention-days: 30

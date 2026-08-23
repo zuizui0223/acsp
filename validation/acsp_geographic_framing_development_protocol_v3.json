@@ -1,0 +1,80 @@
+{
+  "protocol_id": "acsp_geographic_framing_historical_country_registry_v3",
+  "status": "predeclared_development_only_before_v3_outcomes",
+  "parent_issue": 135,
+  "development_data": {
+    "cohort": "same_96_already_opened_geographic_framing_development_taxa",
+    "confirmation_status_for_framing": "permanently_nonconfirmatory_after_use",
+    "fresh_confirmation_taxa_consumed": false,
+    "validated_japan_product_changed": false,
+    "global_name_only_claim_allowed": false
+  },
+  "registry": {
+    "provider": "GBIF occurrence search country facet",
+    "quality_filters": {
+      "hasCoordinate": true,
+      "hasGeospatialIssue": false,
+      "occurrenceStatus": "PRESENT"
+    },
+    "historical_year_range": [1900, 2020],
+    "heldout_year_range": [2021, 2025],
+    "current_incomplete_year_excluded": 2026,
+    "facet": "country",
+    "facet_limit": 300,
+    "valid_country_code_rule": "uppercase two-letter A-Z only",
+    "frame_definition": "countries with positive historical focal-species facet count",
+    "neighbour_country_expansion": false,
+    "geographic_padding": false,
+    "distance_buffer": false,
+    "higher_taxon_fallback": false,
+    "continent_or_realm_fallback": false,
+    "local_occurrence_component_geometry": false,
+    "all_world_fallback": false
+  },
+  "evaluation": {
+    "declared_taxa": 96,
+    "all_taxa_retained": true,
+    "provider_failure_retained_as_zero": true,
+    "zero_historical_country_retained_as_zero": true,
+    "zero_recent_country_records_retained_as_zero": true,
+    "primary_endpoint": "mean_taxon_level_recent_record_country_containment",
+    "taxon_endpoint_formula": "sum(recent_country_counts_in_historical_registry)/sum(all_recent_country_counts)",
+    "secondary_endpoints": [
+      "plant_mean_taxon_level_recent_record_country_containment",
+      "animal_mean_taxon_level_recent_record_country_containment",
+      "taxon_recent_country_containment",
+      "historical_country_count",
+      "recent_country_count",
+      "new_recent_country_count",
+      "historical_country_fraction_of_249_reference_codes",
+      "analyzable_taxon_count",
+      "provider_failure_count"
+    ],
+    "candidate_generation_run_before_gate": false,
+    "robust_support_run_before_gate": false
+  },
+  "breadth_contract": {
+    "compactness_gate": false,
+    "reason": "v3 tests a deliberately broad high-recall outer frame; downstream robust ecological support is the narrowing layer",
+    "structural_breadth_control": "historical focal-species country observations only; no expansion or fallback",
+    "reference_country_code_count_for_descriptive_fraction": 249
+  },
+  "development_gate": {
+    "overall_mean_recent_record_containment_min": 0.95,
+    "plant_mean_recent_record_containment_min": 0.9,
+    "animal_mean_recent_record_containment_min": 0.9,
+    "required_taxa_in_denominator": 96,
+    "if_gate_fails": "reject_v3_without_temporal_split_or_country_expansion_tuning_on_same_96_taxa",
+    "if_gate_passes": "eligible_to_freeze_registry_before_fresh_framing_confirmation_not_promoted_to_validated_product"
+  },
+  "preserved_core": {
+    "robust_support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "candidate_patch_merge_distance_m": 1000.0,
+    "non_ranked_candidate_product_changed": false,
+    "operational_complete_candidate_coverage_changed": false,
+    "osm_movement_semantics_changed": false,
+    "validated_japan_adapter_changed": false
+  },
+  "protocol_fingerprint": "23ccd2ad90d387438079a992335978734bd0a460433cf266300e3852cdd1f9ce"
+}
