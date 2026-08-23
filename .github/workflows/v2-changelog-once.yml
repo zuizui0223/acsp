@@ -1,3 +1,4 @@
+# one-shot trigger after workflow exists on branch
 name: One-shot v2 changelog writer
 
 on:
