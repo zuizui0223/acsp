@@ -1,0 +1,75 @@
+{
+  "protocol_id": "acsp_geographic_framing_higher_taxon_prior_v2",
+  "status": "predeclared_development_only_before_v2_outcomes",
+  "parent_issue": 135,
+  "development_data": {
+    "cohort": "already_opened_96_pair_480_fold_robust_patch_v2_cohort",
+    "confirmation_status_for_framing": "permanently_nonconfirmatory_after_use",
+    "fresh_confirmation_taxa_consumed": false,
+    "fixed_region_used_only_as_development_sandbox": true,
+    "beyond_japan_claim_allowed": false
+  },
+  "research_question": "Can a non-focal higher-taxon occurrence prior recover focal held-out-only geographic components while retaining a compact search frame?",
+  "prior_fetch": {
+    "provider": "GBIF occurrence search",
+    "quality_filters": {
+      "hasCoordinate": true,
+      "hasGeospatialIssue": false,
+      "occurrenceStatus": "PRESENT"
+    },
+    "query_boundary": "existing fixed development rectangle",
+    "records_per_query": 300,
+    "preferred_rank": "GENUS",
+    "fallback_rank": "FAMILY",
+    "fallback_condition": "zero usable non-focal genus records only",
+    "focal_species_records_excluded": true,
+    "focal_scientific_name_records_excluded": true,
+    "heldout_focal_records_used": false,
+    "focal_training_records_used_for_prior": false
+  },
+  "frame_geometry": {
+    "method": "higher_taxon_nonfocal_block_component_10km_padding_v2",
+    "block_degrees": 0.1,
+    "neighbourhood": 8,
+    "singleton_components_retained": true,
+    "padding_km": 10.0,
+    "overlapping_frames_union": true,
+    "remote_noise_filter": false,
+    "new_geographic_scale_tuned": false
+  },
+  "evaluation": {
+    "declared_folds": 480,
+    "all_folds_retained": true,
+    "provider_or_prior_failures_retained_as_zero": true,
+    "primary_endpoint": "full_denominator_mean_heldout_frame_containment",
+    "secondary_endpoints": [
+      "animal_mean_heldout_frame_containment",
+      "median_frame_area_ratio_to_fixed",
+      "prior_rank_used",
+      "prior_record_count",
+      "frame_count",
+      "provider_failure_count"
+    ],
+    "candidate_generation_run_before_gate": false,
+    "robust_support_run_before_gate": false
+  },
+  "development_gate": {
+    "mean_heldout_frame_containment_min": 0.95,
+    "animal_mean_heldout_frame_containment_min": 0.9,
+    "median_frame_area_ratio_to_fixed_max": 0.85,
+    "required_declared_folds": 480,
+    "if_gate_fails": "reject_v2_without_parameter_tuning_on_same_96_taxa",
+    "if_gate_passes": "eligible_to_freeze_representation_before_fresh_confirmation_not_promoted_to_validated_product"
+  },
+  "preserved_core": {
+    "robust_support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "candidate_patch_merge_distance_m": 1000.0,
+    "validated_japan_adapter_changed": false,
+    "operational_complete_candidate_coverage_changed": false,
+    "osm_movement_semantics_changed": false,
+    "ranking_or_topk_added": false,
+    "survey_day_or_budget_added": false
+  },
+  "protocol_fingerprint": "5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f"
+}
