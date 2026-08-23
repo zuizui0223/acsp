@@ -1,20 +1,10 @@
-name: Geographic framing development v2
+name: Geographic framing development v2 replay
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "research/geographic_framing_higher_taxon_v2.py"
-      - "research/evaluate_geographic_framing_development_v2.py"
-      - "research/test_geographic_framing_higher_taxon_v2.py"
-      - "research/test_geographic_framing_v2_evaluator.py"
-      - "validation/acsp_geographic_framing_development_protocol_v2.json"
-      - ".github/workflows/geographic-framing-development-v2.yml"
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 env:
@@ -23,140 +13,8 @@ env:
   AUTHORITATIVE_ARTIFACT_DIGEST: "sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e"
 
 jobs:
-  persist-authoritative-first-run:
-    name: Persist rejected first-run evidence
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-
-      - name: Download authoritative first-run artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: acsp-geographic-framing-development-v2
-          path: authoritative-v2
-          github-token: ${{ github.token }}
-          repository: zuizui0223/acsp
-          run-id: ${{ env.AUTHORITATIVE_RUN_ID }}
-
-      - name: Verify and persist rejected v2 evidence
-        run: |
-          python - <<'PY'
-          import json
-          import shutil
-          from pathlib import Path
-
-          source = Path('authoritative-v2/framing-development-v2-results')
-          summary = json.loads((source/'framing_v2_diagnostic_summary.json').read_text(encoding='utf-8'))
-          assert summary['protocol_fingerprint'] == '5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f'
-          assert summary['declared_folds'] == 480
-          assert summary['evaluated_folds'] == 460
-          assert summary['failed_folds_retained_as_zero'] == 20
-          assert abs(summary['mean_fold_heldout_frame_containment'] - 0.744772572437666) < 1e-12
-          assert abs(summary['animal_mean_fold_heldout_frame_containment'] - 0.7231096470162608) < 1e-12
-          assert abs(summary['plant_mean_fold_heldout_frame_containment'] - 0.7664354978590712) < 1e-12
-          assert abs(summary['median_fold_frame_area_ratio_to_fixed'] - 0.6484982090965489) < 1e-12
-          assert summary['prior_rank_counts'] == {'GENUS': 75, 'FAMILY': 19, 'NONE': 2}
-          assert summary['promotion_gate_passed'] is False
-          assert summary['candidate_generation_run'] is False
-          assert summary['robust_support_run'] is False
-          assert summary['fresh_confirmation_taxa_consumed'] is False
-          assert summary['validated_japan_adapter_changed'] is False
-
-          dest = Path('validation/geographic_framing_development_v2')
-          dest.mkdir(parents=True, exist_ok=True)
-          for name in (
-              'framing_v2_diagnostic_summary.json',
-              'framing_v2_fold_diagnostics.csv',
-              'framing_v2_pair_diagnostics.csv',
-              'higher_taxon_prior_pair_audit.csv',
-          ):
-              shutil.copy2(source/name, dest/name)
-          shutil.copy2(Path('authoritative-v2/framing-development-v2-folds/export_manifest.json'), dest/'focal_fold_export_manifest.json')
-          shutil.copy2(Path('authoritative-v2/framing-development-v2-folds/pair_export_status.csv'), dest/'focal_pair_export_status.csv')
-
-          (dest/'README.md').write_text('''# Geographic framing development v2 — rejected
-
-This directory preserves the authoritative first predeclared development result for `higher_taxon_nonfocal_block_component_10km_padding_v2`.
-
-- Source workflow run: `32613456408`
-- Source artifact digest: `sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e`
-- Protocol fingerprint: `5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f`
-- Development taxa: 96 already-opened, permanently nonconfirmatory framing taxa
-- Declared folds: 480; evaluated: 460; failed retained as zero: 20
-- Mean held-out containment: 0.7447725724
-- Animal mean containment: 0.7231096470
-- Plant mean containment: 0.7664354979
-- Median inferred-frame/fixed-region area ratio: 0.6484982091
-- Prior ranks: GENUS 75, FAMILY 19, NONE 2
-- Promotion gate: **FAIL**
-
-The predeclared containment requirements were >=0.95 overall and >=0.90 for animals, with median area ratio <=0.85. Area compactness passed, but both containment requirements failed. Candidate generation and robust support were intentionally not run.
-
-This rejects the representation, not a tuned parameter value. Do not retune the 0.1-degree blocks, frozen 10 km padding, genus/family fallback, or 300-record cap on these same 96 taxa. The next framing architecture must obtain a broader outcome-blind search universe from a source other than focal local components or local genus/family occurrence components.
-
-The raw `higher_taxon_prior_points.csv` remains in the immutable workflow artifact; its fingerprint is recorded in the summary. Pair/fold diagnostics and pair-level prior audit are committed here for durable review.
-''', encoding='utf-8')
-
-          changelog = Path('CHANGELOG_AI.md')
-          text = changelog.read_text(encoding='utf-8')
-          heading = '# AI Change Log\n\n'
-          marker = '## 2026-08-23 - ChatGPT (OpenAI) - Rejected geographic framing v2'
-          if not text.startswith(heading):
-              raise SystemExit('unexpected CHANGELOG_AI.md heading')
-          if marker not in text:
-              entry = '''## 2026-08-23 - ChatGPT (OpenAI) - Rejected geographic framing v2
-
-Changed files:
-- research/geographic_framing_higher_taxon_v2.py
-- research/evaluate_geographic_framing_development_v2.py
-- research/test_geographic_framing_higher_taxon_v2.py
-- research/test_geographic_framing_v2_evaluator.py
-- validation/acsp_geographic_framing_development_protocol_v2.json
-- validation/geographic_framing_development_v2/*
-- .github/workflows/geographic-framing-development-v2.yml
-- CHANGELOG_AI.md
-
-Summary:
-- Predeclared a non-focal higher-taxon geographic prior after local focal-component framing v1 failed structurally. Genus occurrences were preferred; family was fallback only when genus yielded zero usable non-focal coordinates, and focal-species records were excluded before framing.
-- Reused v1 geometry unchanged: 0.1-degree occupied blocks, 8-neighbour components, singleton retention, frozen 10 km padding, deterministic overlap union. One pair-level prior snapshot was reused across five focal folds; focal training and held-out coordinates did not enter prior construction.
-- On 96 already-opened development taxa / all 480 folds, v2 failed the predeclared gate: mean containment 0.7448 (<0.95), animal 0.7231 (<0.90), plant 0.7664, median frame-area ratio 0.6485 (<=0.85). GENUS supplied 75 priors, FAMILY 19, and 2 had no usable non-focal prior; 2 additional focal pairs were upstream export failures.
-- Candidate generation and robust support were not run. The representation is rejected without parameter tuning on these same 96 taxa; the next framing architecture must use a more independently broad outcome-blind geographic search universe.
-
-Features preserved:
-- Frozen robust support 0.025, float32 support worlds, 1 km candidate-patch aggregation, existing robust-core evidence, non-ranked candidate product, complete operational candidate coverage, OSM movement semantics, and claim ceilings remain unchanged.
-- No fresh framing confirmation taxa were consumed and no beyond-Japan claim was made.
-
-Validation / provenance:
-- Authoritative development run `32613456408`; artifact digest `sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e`.
-- Protocol fingerprint `5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f`.
-
-'''
-              changelog.write_text(heading + entry + text[len(heading):], encoding='utf-8')
-
-          # Remove the temporary bootstrap workflow if it was added during the
-          # same PR. The authoritative persistence now lives here.
-          Path('.github/workflows/geographic-framing-v2-persist-first-run.yml').unlink(missing_ok=True)
-          PY
-
-      - name: Commit first-run evidence to PR branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A validation/geographic_framing_development_v2 CHANGELOG_AI.md .github/workflows/geographic-framing-v2-persist-first-run.yml
-          if git diff --cached --quiet; then
-            echo "Authoritative first-run evidence is already persisted."
-            exit 0
-          fi
-          git commit -m "Record rejected geographic framing v2 [skip ci]"
-          git push origin HEAD:${{ github.head_ref }}
-
   replay-development:
     name: Manual replay of rejected v2 representation
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -177,6 +35,18 @@ Validation / provenance:
             research/test_geographic_framing.py \
             research/test_geographic_framing_higher_taxon_v2.py \
             research/test_geographic_framing_v2_evaluator.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary = json.loads(
+              Path('validation/geographic_framing_development_v2/framing_v2_diagnostic_summary.json').read_text(encoding='utf-8')
+          )
+          assert summary['authoritative_workflow_run'] == 32613456408
+          assert summary['authoritative_artifact_digest'] == 'sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e'
+          assert summary['promotion_gate_passed'] is False
+          assert summary['retuning_on_same_96_taxa_allowed'] is False
+          PY
 
       - name: Download development identities
         uses: actions/download-artifact@v4
@@ -198,6 +68,24 @@ Validation / provenance:
           python research/evaluate_geographic_framing_development_v2.py \
             --export-root framing-development-v2-folds \
             --output framing-development-v2-results
+
+      - name: Compare replay with authoritative first run without changing the decision
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          authoritative = json.loads(
+              Path('validation/geographic_framing_development_v2/framing_v2_diagnostic_summary.json').read_text(encoding='utf-8')
+          )
+          replay = json.loads(
+              Path('framing-development-v2-results/framing_v2_diagnostic_summary.json').read_text(encoding='utf-8')
+          )
+          print('authoritative containment:', authoritative['mean_fold_heldout_frame_containment'])
+          print('replay containment:', replay['mean_fold_heldout_frame_containment'])
+          print('authoritative decision remains:', authoritative['decision'])
+          print('Replay is reproducibility diagnostics only; live-provider drift cannot revise the frozen decision.')
+          PY
 
       - name: Upload replay diagnostics
         if: always()
