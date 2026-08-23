@@ -2,115 +2,16 @@ name: Geographic framing development v4
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "research/predeclare_geographic_framing_country_registry_v4_cohort.py"
-      - "research/evaluate_geographic_framing_development_v4.py"
-      - "research/test_geographic_framing_country_registry_v4.py"
-      - "validation/acsp_geographic_framing_development_protocol_v4.json"
-      - ".github/workflows/geographic-framing-development-v4.yml"
 
 permissions:
   contents: read
-  actions: read
 
 env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
-  predeclare-v4-cohort:
-    name: Freeze new disjoint 96-taxon v4 cohort
-    runs-on: ubuntu-latest
-    timeout-minutes: 150
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install ACSP
-        run: python -m pip install -e .
-
-      - name: Verify v4 contract before cohort sampling
-        run: |
-          python -m unittest -v research/test_geographic_framing_country_registry_v4.py
-          python - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-          path = Path('validation/acsp_geographic_framing_development_protocol_v4.json')
-          payload = json.loads(path.read_text(encoding='utf-8'))
-          stored = payload.pop('protocol_fingerprint')
-          calculated = hashlib.sha256(
-              json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
-          ).hexdigest()
-          expected = '3bd9e6145e17a99b52d8a9f82c07f346541f56a2bf81bd768e180de78c295bf8'
-          assert stored == calculated == expected
-          assert payload['cohort']['seed'] == 2026082304
-          assert payload['cohort']['pair_count'] == 96
-          assert payload['cohort']['prior_96_exclusion_run'] == 32335791948
-          assert payload['cohort']['prior_96_exclusion_artifact_digest'] == 'sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3'
-          assert payload['representation']['historical_year_range'] == [1900, 2020]
-          assert payload['representation']['heldout_year_range'] == [2021, 2025]
-          assert payload['representation']['country_expansion'] is False
-          assert payload['representation']['higher_taxon_fallback'] is False
-          assert payload['evaluation']['candidate_generation_run_before_gate'] is False
-          assert payload['evaluation']['robust_support_run_before_gate'] is False
-          PY
-
-      - name: Download prior 96 framing-development identities for exact exclusion
-        uses: actions/download-artifact@v4
-        with:
-          name: acsp-robust-patch-untouched-confirmation-cohort-v2
-          path: frozen-v3-development
-          github-token: ${{ github.token }}
-          repository: zuizui0223/acsp
-          run-id: 32335791948
-
-      - name: Draw new disjoint v4 development identities only
-        run: |
-          python research/predeclare_geographic_framing_country_registry_v4_cohort.py \
-            --output geographic-framing-v4-cohort
-
-      - name: Audit identity freeze before temporal outcomes
-        run: |
-          python - <<'PY'
-          import json
-          import pandas as pd
-          from pathlib import Path
-
-          old = pd.read_csv(Path('frozen-v3-development')/'predeclared_taxon_region_pairs.csv')
-          new = pd.read_csv(Path('geographic-framing-v4-cohort')/'predeclared_taxon_region_pairs.csv')
-          manifest = json.loads(Path('geographic-framing-v4-cohort/cohort_manifest.json').read_text())
-          assert len(new) == 96
-          assert new['scientific_name'].nunique() == 96
-          assert set(new['scientific_name'].astype(str)).isdisjoint(set(old['scientific_name'].astype(str)))
-          assert manifest['purpose'] == 'geographic_framing_v4_development_only'
-          assert manifest['previous_96_taxa_excluded'] is True
-          assert manifest['temporal_country_outcomes_inspected'] is False
-          assert manifest['fresh_confirmation_cohort'] is False
-          assert manifest['taxon_group_counts'] == {'animal': 48, 'plant': 48}
-          assert set(manifest['region_cell_counts'].values()) == {8}
-          assert set(manifest['record_count_stratum_counts'].values()) == {24}
-          print(json.dumps(manifest, indent=2, ensure_ascii=False))
-          PY
-
-      - name: Freeze v4 cohort artifact before outcome evaluation
-        uses: actions/upload-artifact@v4
-        with:
-          name: acsp-geographic-framing-development-v4-cohort
-          path: geographic-framing-v4-cohort/
-          if-no-files-found: error
-          retention-days: 90
-
-  evaluate-v4-country-registry:
-    name: Evaluate frozen v4 two-part country registry
-    needs: predeclare-v4-cohort
+  replay-frozen-v4:
+    name: Manual replay of frozen v4 country registry
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -125,52 +26,66 @@ jobs:
       - name: Install ACSP
         run: python -m pip install -e .
 
-      - name: Download already-frozen v4 cohort from this run
-        uses: actions/download-artifact@v4
-        with:
-          name: acsp-geographic-framing-development-v4-cohort
-          path: frozen-v4-cohort
+      - name: Verify frozen representation and durable identities
+        run: |
+          python -m unittest -v research/test_geographic_framing_country_registry_v4.py
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
 
-      - name: Open temporal country outcomes only after identity artifact exists
+          protocol_path = Path('validation/acsp_geographic_framing_development_protocol_v4.json')
+          protocol = json.loads(protocol_path.read_text(encoding='utf-8'))
+          stored = protocol.pop('protocol_fingerprint')
+          calculated = hashlib.sha256(
+              json.dumps(protocol, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+          ).hexdigest()
+          expected_protocol = '3bd9e6145e17a99b52d8a9f82c07f346541f56a2bf81bd768e180de78c295bf8'
+          assert stored == calculated == expected_protocol
+
+          identity_path = Path('validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv')
+          identity_sha = hashlib.sha256(identity_path.read_bytes()).hexdigest()
+          assert identity_sha == '04342b9c06f6bdf109ea4a684945acdbba8a7063cd11b29b563f80e701de485f'
+
+          freeze = json.loads(Path('validation/acsp_geographic_framing_country_registry_freeze_v1.json').read_text(encoding='utf-8'))
+          assert freeze['status'] == 'frozen_after_v4_development_pass_before_fresh_confirmation'
+          assert freeze['decision']['representation_frozen'] is True
+          assert freeze['decision']['retuning_on_v4_development_taxa_allowed'] is False
+          assert freeze['authoritative_first_run']['workflow_run_id'] == 32615423653
+          assert freeze['development_result']['promotion_gate_passed'] is True
+          PY
+
+      - name: Replay frozen v4 development identities against live GBIF
         run: |
           python research/evaluate_geographic_framing_development_v4.py \
-            --sample-file frozen-v4-cohort/predeclared_taxon_region_pairs.csv \
-            --output geographic-framing-v4-results
+            --sample-file validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv \
+            --output geographic-framing-v4-replay
 
-      - name: Audit two-part gate and claim boundary
+      - name: Keep authoritative first-run decision immutable
         run: |
           python - <<'PY'
           import json
-          import pandas as pd
           from pathlib import Path
 
-          root = Path('geographic-framing-v4-results')
-          summary = json.loads((root/'country_registry_v4_summary.json').read_text(encoding='utf-8'))
-          taxa = pd.read_csv(root/'country_registry_v4_taxon_diagnostics.csv')
-          assert summary['status'] == 'development_only_country_registry_v4_two_part_complete'
-          assert summary['protocol_fingerprint'] == '3bd9e6145e17a99b52d8a9f82c07f346541f56a2bf81bd768e180de78c295bf8'
-          assert summary['taxa_in_yield_denominator'] == 96
-          assert len(taxa) == 96
-          assert summary['country_representation_changed_from_v3'] is False
-          assert summary['country_expansion_or_fallback_used'] is False
-          assert summary['candidate_generation_run'] is False
-          assert summary['robust_support_run'] is False
-          assert summary['new_cohort_is_development_only'] is True
-          assert summary['fresh_confirmation_taxa_consumed'] is False
-          assert summary['validated_japan_adapter_changed'] is False
-          assert summary['global_name_only_claim_allowed'] is False
-          print(json.dumps(summary, indent=2, ensure_ascii=False))
-          if summary['promotion_gate_passed']:
-              print('DEVELOPMENT GATE PASSED: freeze representation before fresh framing confirmation; not validated here.')
-          else:
-              print('DEVELOPMENT GATE FAILED: reject v4 without country expansion or temporal-window tuning on this cohort.')
+          authoritative = json.loads(
+              Path('validation/geographic_framing_development_v4/country_registry_v4_summary.json').read_text(encoding='utf-8')
+          )
+          replay = json.loads(
+              Path('geographic-framing-v4-replay/country_registry_v4_summary.json').read_text(encoding='utf-8')
+          )
+          assert authoritative['protocol_fingerprint'] == replay['protocol_fingerprint']
+          assert authoritative['taxa_in_yield_denominator'] == replay['taxa_in_yield_denominator'] == 96
+          print('AUTHORITATIVE FIRST RUN (immutable):')
+          print(json.dumps(authoritative, indent=2, ensure_ascii=False))
+          print('LIVE REPLAY (diagnostic only; does not revise the freeze):')
+          print(json.dumps(replay, indent=2, ensure_ascii=False))
           PY
 
-      - name: Upload v4 development evidence
+      - name: Upload replay diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: acsp-geographic-framing-development-v4-results
-          path: geographic-framing-v4-results/
+          name: acsp-geographic-framing-development-v4-replay
+          path: geographic-framing-v4-replay/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
