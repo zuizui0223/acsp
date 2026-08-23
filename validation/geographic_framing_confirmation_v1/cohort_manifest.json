@@ -1,0 +1,51 @@
+{
+  "status": "ready",
+  "protocol_path": "validation/acsp_geographic_framing_confirmation_protocol_v1.json",
+  "protocol_fingerprint": "9f655f6121f1c917659dcf85ba039304b645ea88b5afff8d7855a11cf1e7a490",
+  "declared_pairs": 96,
+  "unique_declared_taxa": 96,
+  "excluded_unique_exact_taxa": 539,
+  "explicit_exclusion_prefixes": [
+    "Campanula microdonta",
+    "Campanula punctata"
+  ],
+  "taxon_group_counts": {
+    "animal": 48,
+    "plant": 48
+  },
+  "region_cell_counts": {
+    "Chubu mountains": 8,
+    "Chugoku": 8,
+    "Hokkaido east": 8,
+    "Hokkaido west": 8,
+    "Izu": 8,
+    "Kanto": 8,
+    "Kinki": 8,
+    "Northern Kyushu": 8,
+    "Ryukyu": 8,
+    "Shikoku": 8,
+    "Southern Kyushu": 8,
+    "Tohoku": 8
+  },
+  "record_count_stratum_counts": {
+    "0": 24,
+    "1": 24,
+    "2": 24,
+    "3": 24
+  },
+  "sampling_frame_cells": 96,
+  "minimum_available_unused_in_cell_stratum": 26,
+  "outcomes_inspected": false,
+  "occurrence_rows_fetched_for_declared_taxa": false,
+  "candidate_generation_run": false,
+  "robust_support_run": false,
+  "heldout_recovery_run": false,
+  "taxon_replacement_after_declaration_allowed": false,
+  "purpose": "geographic_framing_country_registry_fresh_confirmation_v1",
+  "development_v3_taxa_excluded": true,
+  "development_v4_taxa_excluded": true,
+  "temporal_country_outcomes_inspected": false,
+  "fresh_confirmation_cohort": true,
+  "confirmation_outcomes_opened": false,
+  "identity_csv_sha256": "cd145e74de66319b6f878d2ceb384c399008a510a51814490dddb32b4f0f0273"
+}
