@@ -2,10 +2,7 @@ name: One-shot v2 changelog writer
 
 on:
   pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/v2-changelog-once.yml"
+    types: [ready_for_review]
 
 permissions:
   contents: write
