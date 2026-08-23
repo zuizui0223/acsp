@@ -1,0 +1,145 @@
+name: Persist geographic framing v2 first run
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/geographic-framing-v2-persist-first-run.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  FIRST_V2_RUN_ID: "32613456408"
+  FIRST_V2_ARTIFACT_DIGEST: "sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e"
+
+jobs:
+  persist-first-run:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/geographic-framing-higher-taxon-v2'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out development branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Download immutable first v2 development artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-geographic-framing-development-v2
+          path: first-v2-run
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.FIRST_V2_RUN_ID }}
+
+      - name: Verify, persist compact evidence, and document rejection
+        run: |
+          python - <<'PY'
+          import json
+          import shutil
+          from pathlib import Path
+
+          source = Path('first-v2-run/framing-development-v2-results')
+          summary = json.loads((source/'framing_v2_diagnostic_summary.json').read_text(encoding='utf-8'))
+          assert summary['protocol_fingerprint'] == '5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f'
+          assert summary['declared_folds'] == 480
+          assert summary['evaluated_folds'] == 460
+          assert summary['failed_folds_retained_as_zero'] == 20
+          assert abs(summary['mean_fold_heldout_frame_containment'] - 0.744772572437666) < 1e-12
+          assert abs(summary['animal_mean_fold_heldout_frame_containment'] - 0.7231096470162608) < 1e-12
+          assert abs(summary['plant_mean_fold_heldout_frame_containment'] - 0.7664354978590712) < 1e-12
+          assert abs(summary['median_fold_frame_area_ratio_to_fixed'] - 0.6484982090965489) < 1e-12
+          assert summary['promotion_gate_passed'] is False
+          assert summary['candidate_generation_run'] is False
+          assert summary['robust_support_run'] is False
+          assert summary['fresh_confirmation_taxa_consumed'] is False
+          assert summary['validated_japan_adapter_changed'] is False
+
+          dest = Path('validation/geographic_framing_development_v2')
+          dest.mkdir(parents=True, exist_ok=True)
+          for name in (
+              'framing_v2_diagnostic_summary.json',
+              'framing_v2_fold_diagnostics.csv',
+              'framing_v2_pair_diagnostics.csv',
+              'higher_taxon_prior_pair_audit.csv',
+          ):
+              shutil.copy2(source/name, dest/name)
+          shutil.copy2(Path('first-v2-run/framing-development-v2-folds/export_manifest.json'), dest/'focal_fold_export_manifest.json')
+          shutil.copy2(Path('first-v2-run/framing-development-v2-folds/pair_export_status.csv'), dest/'focal_pair_export_status.csv')
+
+          readme = '''# Geographic framing development v2 — rejected
+
+This directory preserves the first, predeclared development result for `higher_taxon_nonfocal_block_component_10km_padding_v2`.
+
+- Source workflow run: `32613456408`
+- Source artifact: `acsp-geographic-framing-development-v2`
+- Source artifact digest: `sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e`
+- Protocol fingerprint: `5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f`
+- Development taxa: 96 already-opened, permanently nonconfirmatory framing taxa
+- Declared folds: 480; evaluated: 460; failed retained as zero: 20
+- Mean held-out containment: 0.7447725724
+- Animal mean containment: 0.7231096470
+- Plant mean containment: 0.7664354979
+- Median inferred-frame/fixed-region area ratio: 0.6484982091
+- Prior ranks: GENUS 75, FAMILY 19, NONE 2
+- Promotion gate: **FAIL**
+
+The predeclared containment requirements were >=0.95 overall and >=0.90 for animals, with median area ratio <=0.85. Area compactness passed, but both containment requirements failed. Candidate generation and robust support were intentionally not run.
+
+This result rejects the representation, not a tuned parameter value. Do not retune the 0.1-degree blocks, frozen 10 km padding, genus/family fallback, or 300-record cap on these same 96 taxa. The next framing architecture must obtain a broader outcome-blind geographic search universe from a source other than focal local components or local genus/family occurrence components.
+
+`higher_taxon_prior_points.csv` is intentionally not committed because the raw live-provider snapshot is retained in the workflow artifact; its fingerprint is recorded in the summary. Compact pair/fold diagnostics and pair-level prior audit are committed here for durable review.
+'''
+          (dest/'README.md').write_text(readme, encoding='utf-8')
+
+          changelog = Path('CHANGELOG_AI.md')
+          text = changelog.read_text(encoding='utf-8')
+          heading = '# AI Change Log\n\n'
+          marker = '## 2026-08-23 - ChatGPT (OpenAI) - Rejected geographic framing v2'
+          if not text.startswith(heading):
+              raise SystemExit('unexpected CHANGELOG_AI.md heading')
+          if marker not in text:
+              entry = '''## 2026-08-23 - ChatGPT (OpenAI) - Rejected geographic framing v2
+
+Changed files:
+- research/geographic_framing_higher_taxon_v2.py
+- research/evaluate_geographic_framing_development_v2.py
+- research/test_geographic_framing_higher_taxon_v2.py
+- research/test_geographic_framing_v2_evaluator.py
+- validation/acsp_geographic_framing_development_protocol_v2.json
+- validation/geographic_framing_development_v2/*
+- .github/workflows/geographic-framing-development-v2.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Predeclared and evaluated a non-focal higher-taxon geographic prior after local focal-component framing v1 failed structurally.
+- Genus occurrences were preferred and the focal species was excluded before framing; family was used only when genus yielded zero usable non-focal coordinates. The prior snapshot was pair-level and reused unchanged across five focal folds.
+- Reused v1 geometry unchanged: 0.1-degree occupied blocks, 8-neighbour components, singleton retention, frozen 10 km padding, deterministic overlap union. No held-out or focal-training coordinates entered the prior.
+- The 96 already-opened taxa remained development-only; all 480 folds stayed in the denominator. Candidate generation and robust support were not run before the framing gate.
+- v2 failed the predeclared gate: mean containment 0.7448 (<0.95), animal 0.7231 (<0.90), plant 0.7664, median frame-area ratio 0.6485 (<=0.85). GENUS supplied 75 priors, FAMILY 19, and 2 had no usable non-focal prior; 2 additional focal pairs were upstream export failures.
+- The representation is rejected without parameter tuning on these 96 taxa. The next architecture must use a more independently broad outcome-blind geographic search universe rather than local focal or local higher-taxon occurrence components.
+
+Features preserved:
+- Frozen robust support 0.025, float32 support worlds, 1 km candidate-patch aggregation, the existing 96-pair/480-fold robust-core evidence, non-ranked candidate product, complete operational candidate coverage, OSM movement semantics, and all claim ceilings remain unchanged.
+- No fresh framing confirmation taxa were consumed and no beyond-Japan claim was made.
+
+Validation / provenance:
+- Development workflow run `32613456408`; source artifact digest `sha256:76a3eafaeeb3a42fcc7d0f525db9d01f7ec5809b6fc26313ccafece5ec7de03e`.
+- Protocol fingerprint `5f77d4e0d33fec794ce85c666a6bfafbe029f0ed001ab2644eb2e64eceb35f5f`.
+
+'''
+              changelog.write_text(heading + entry + text[len(heading):], encoding='utf-8')
+          PY
+
+      - name: Commit immutable first-run evidence to PR branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add validation/geographic_framing_development_v2 CHANGELOG_AI.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Record rejected geographic framing v2"
+          git push origin HEAD:${{ github.head_ref }}
