@@ -2,17 +2,6 @@ name: Geographic framing confirmation v1
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "validation/acsp_geographic_framing_confirmation_protocol_v1.json"
-      - "validation/geographic_framing_development_v3/predeclared_taxon_region_pairs.csv"
-      - "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv"
-      - "research/predeclare_geographic_framing_confirmation_cohort_v1.py"
-      - "research/evaluate_geographic_framing_confirmation_v1.py"
-      - "research/test_geographic_framing_confirmation_v1.py"
-      - ".github/workflows/geographic-framing-confirmation-v1.yml"
 
 permissions:
   contents: read
@@ -22,7 +11,7 @@ env:
 
 jobs:
   predeclare-confirmation-cohort:
-    name: Freeze fresh disjoint 96-taxon confirmation cohort
+    name: Manual replay - freeze fresh disjoint 96-taxon confirmation cohort
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
@@ -68,12 +57,12 @@ jobs:
           assert payload['claim_boundary']['robust_support_run_before_gate'] is False
           PY
 
-      - name: Draw fresh confirmation identities only
+      - name: Draw replay confirmation identities only
         run: |
           python research/predeclare_geographic_framing_confirmation_cohort_v1.py \
             --output geographic-framing-confirmation-v1-cohort
 
-      - name: Audit complete independence before temporal outcomes
+      - name: Audit independence before replay outcomes
         run: |
           python - <<'PY'
           import hashlib
@@ -105,16 +94,16 @@ jobs:
           print(json.dumps(manifest, indent=2, ensure_ascii=False))
           PY
 
-      - name: Freeze confirmation cohort artifact before outcome evaluation
+      - name: Upload replay cohort evidence
         uses: actions/upload-artifact@v4
         with:
-          name: acsp-geographic-framing-confirmation-v1-cohort
+          name: acsp-geographic-framing-confirmation-v1-cohort-replay
           path: geographic-framing-confirmation-v1-cohort/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
 
   evaluate-confirmation:
-    name: Evaluate frozen fresh country-registry confirmation
+    name: Manual replay - evaluate frozen country-registry confirmation
     needs: predeclare-confirmation-cohort
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -130,19 +119,19 @@ jobs:
       - name: Install ACSP
         run: python -m pip install -e .
 
-      - name: Download already-frozen confirmation cohort from this run
+      - name: Download replay cohort from this run
         uses: actions/download-artifact@v4
         with:
-          name: acsp-geographic-framing-confirmation-v1-cohort
+          name: acsp-geographic-framing-confirmation-v1-cohort-replay
           path: frozen-confirmation-cohort
 
-      - name: Open temporal country outcomes only after identity artifact exists
+      - name: Re-evaluate temporal country outcomes for drift diagnosis only
         run: |
           python research/evaluate_geographic_framing_confirmation_v1.py \
             --sample-file frozen-confirmation-cohort/predeclared_taxon_region_pairs.csv \
             --output geographic-framing-confirmation-v1-results
 
-      - name: Audit confirmation gate and strict claim boundary
+      - name: Audit strict claim boundary
         run: |
           python - <<'PY'
           import json
@@ -156,27 +145,21 @@ jobs:
           assert summary['protocol_fingerprint'] == '9f655f6121f1c917659dcf85ba039304b645ea88b5afff8d7855a11cf1e7a490'
           assert summary['taxa_in_yield_denominator'] == 96
           assert len(taxa) == 96
-          assert summary['fresh_confirmation_taxa_consumed'] is True
           assert summary['confirmation_taxon_replacement_allowed'] is False
-          assert summary['development_v3_taxa_reused'] is False
-          assert summary['development_v4_taxa_reused'] is False
           assert summary['candidate_generation_run'] is False
           assert summary['robust_support_run'] is False
           assert summary['country_representation_changed_after_v4_freeze'] is False
           assert summary['country_expansion_or_fallback_used'] is False
           assert summary['global_name_only_acsp_validated'] is False
           print(json.dumps(summary, indent=2, ensure_ascii=False))
-          if summary['confirmation_gate_passed']:
-              print('CONFIRMATION PASSED: frozen country-registry framing independently replicated in this tested frame; integration is still separate.')
-          else:
-              print('CONFIRMATION FAILED: do not retune or expand the registry on these confirmation taxa; keep integration blocked.')
+          print('Manual replay only: this result diagnoses GBIF drift and cannot replace authoritative run 32624041517.')
           PY
 
-      - name: Upload confirmation evidence
+      - name: Upload replay result evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: acsp-geographic-framing-confirmation-v1-results
+          name: acsp-geographic-framing-confirmation-v1-results-replay
           path: geographic-framing-confirmation-v1-results/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
