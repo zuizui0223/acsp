@@ -1,17 +1,7 @@
-name: Geographic framing development v3
+name: Geographic framing development v3 replay
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "research/geographic_framing_country_registry_v3.py"
-      - "research/evaluate_geographic_framing_development_v3.py"
-      - "research/test_geographic_framing_country_registry_v3.py"
-      - "research/test_geographic_framing_v3_evaluator.py"
-      - "validation/acsp_geographic_framing_development_protocol_v3.json"
-      - ".github/workflows/geographic-framing-development-v3.yml"
 
 permissions:
   contents: read
@@ -19,10 +9,12 @@ permissions:
 
 env:
   PYTHONPATH: ${{ github.workspace }}/research
+  AUTHORITATIVE_RUN_ID: "32614846554"
+  AUTHORITATIVE_ARTIFACT_DIGEST: "sha256:4b35f7cd06e9f549e05ec4244bcc2715e699838d4c62c65942b1e53a5253fefd"
 
 jobs:
-  historical-country-registry-development:
-    name: 96-taxon temporal country-registry diagnostic
+  replay-development:
+    name: Manual replay of rejected v3 country registry
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -37,39 +29,25 @@ jobs:
       - name: Install ACSP
         run: python -m pip install -e .
 
-      - name: Verify frozen v3 contract before opening outcomes
+      - name: Verify frozen v3 contract and authoritative decision
         run: |
           python -m unittest -v \
             research/test_geographic_framing_country_registry_v3.py \
             research/test_geographic_framing_v3_evaluator.py
           python - <<'PY'
-          import hashlib
           import json
           from pathlib import Path
-
-          path = Path('validation/acsp_geographic_framing_development_protocol_v3.json')
-          payload = json.loads(path.read_text(encoding='utf-8'))
-          stored = payload.pop('protocol_fingerprint')
-          calculated = hashlib.sha256(
-              json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
-          ).hexdigest()
-          expected = '23ccd2ad90d387438079a992335978734bd0a460433cf266300e3852cdd1f9ce'
-          assert stored == calculated == expected
-          assert payload['registry']['historical_year_range'] == [1900, 2020]
-          assert payload['registry']['heldout_year_range'] == [2021, 2025]
-          assert payload['registry']['current_incomplete_year_excluded'] == 2026
-          assert payload['registry']['neighbour_country_expansion'] is False
-          assert payload['registry']['higher_taxon_fallback'] is False
-          assert payload['registry']['all_world_fallback'] is False
-          assert payload['breadth_contract']['compactness_gate'] is False
-          assert payload['development_gate']['overall_mean_recent_record_containment_min'] == 0.95
-          assert payload['development_gate']['plant_mean_recent_record_containment_min'] == 0.90
-          assert payload['development_gate']['animal_mean_recent_record_containment_min'] == 0.90
-          assert payload['development_gate']['required_taxa_in_denominator'] == 96
-          assert payload['preserved_core']['validated_japan_adapter_changed'] is False
+          summary = json.loads(
+              Path('validation/geographic_framing_development_v3/country_registry_v3_summary.json').read_text(encoding='utf-8')
+          )
+          assert summary['authoritative_workflow_run'] == 32614846554
+          assert summary['authoritative_artifact_digest'] == 'sha256:4b35f7cd06e9f549e05ec4244bcc2715e699838d4c62c65942b1e53a5253fefd'
+          assert summary['protocol_fingerprint'] == '23ccd2ad90d387438079a992335978734bd0a460433cf266300e3852cdd1f9ce'
+          assert summary['promotion_gate_passed'] is False
+          assert summary['retuning_on_same_96_taxa_allowed'] is False
           PY
 
-      - name: Download already-opened framing-development taxon identities
+      - name: Download development identities
         uses: actions/download-artifact@v4
         with:
           name: acsp-robust-patch-untouched-confirmation-cohort-v2
@@ -78,59 +56,32 @@ jobs:
           repository: zuizui0223/acsp
           run-id: 32335791948
 
-      - name: Audit permanently nonconfirmatory development boundary
-        run: |
-          python - <<'PY'
-          import pandas as pd
-          from pathlib import Path
-          sample = pd.read_csv(Path('frozen-cohort')/'predeclared_taxon_region_pairs.csv')
-          sample = sample.loc[sample['status'].astype(str).eq('predeclared')]
-          assert len(sample) == 96
-          assert sample['scientific_name'].nunique() == 96
-          assert not sample['scientific_name'].astype(str).str.startswith(
-              ('Campanula microdonta', 'Campanula punctata')
-          ).any()
-          print('The same 96 already-opened taxa remain development-only for framing v3.')
-          PY
-
-      - name: Evaluate historical focal-species country registry
+      - name: Replay historical focal-species country registry
         run: |
           python research/evaluate_geographic_framing_development_v3.py \
             --sample-file frozen-cohort/predeclared_taxon_region_pairs.csv \
-            --output framing-development-v3-results
+            --output framing-development-v3-replay
 
-      - name: Audit complete denominator and frozen claim boundary
+      - name: Compare replay without revising the frozen decision
         run: |
           python - <<'PY'
           import json
-          import pandas as pd
           from pathlib import Path
-
-          root = Path('framing-development-v3-results')
-          summary = json.loads((root/'country_registry_v3_summary.json').read_text(encoding='utf-8'))
-          taxa = pd.read_csv(root/'country_registry_v3_taxon_diagnostics.csv')
-          assert summary['status'] == 'development_only_historical_country_registry_v3_complete'
-          assert summary['protocol_fingerprint'] == '23ccd2ad90d387438079a992335978734bd0a460433cf266300e3852cdd1f9ce'
-          assert summary['taxa_in_denominator'] == 96
-          assert len(taxa) == 96
-          assert summary['candidate_generation_run'] is False
-          assert summary['robust_support_run'] is False
-          assert summary['fresh_confirmation_taxa_consumed'] is False
-          assert summary['validated_japan_adapter_changed'] is False
-          assert summary['global_name_only_claim_allowed'] is False
-          assert summary['country_expansion_or_fallback_used'] is False
-          print(json.dumps(summary, indent=2, ensure_ascii=False))
-          if summary['promotion_gate_passed']:
-              print('DEVELOPMENT GATE PASSED: freeze registry before fresh framing confirmation; not validated here.')
-          else:
-              print('DEVELOPMENT GATE FAILED: reject v3 without changing split or adding country/fallback expansion on these taxa.')
+          authoritative = json.loads(
+              Path('validation/geographic_framing_development_v3/country_registry_v3_summary.json').read_text(encoding='utf-8')
+          )
+          replay = json.loads(Path('framing-development-v3-replay/country_registry_v3_summary.json').read_text(encoding='utf-8'))
+          print('authoritative overall:', authoritative['mean_taxon_recent_record_country_containment'])
+          print('replay overall:', replay['mean_taxon_recent_record_country_containment'])
+          print('authoritative decision remains:', authoritative['decision'])
+          print('Live-provider drift cannot revise the frozen v3 rejection.')
           PY
 
-      - name: Upload v3 development evidence
+      - name: Upload replay diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: acsp-geographic-framing-development-v3
-          path: framing-development-v3-results/
+          name: acsp-geographic-framing-development-v3-replay
+          path: framing-development-v3-replay/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
