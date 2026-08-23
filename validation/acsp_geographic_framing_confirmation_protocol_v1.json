@@ -1,0 +1,101 @@
+{
+  "protocol_id": "acsp_geographic_framing_country_registry_confirmation_v1",
+  "status": "frozen_before_fresh_confirmation_cohort_sampling_or_outcome_inspection",
+  "parent_issue": 135,
+  "representation_freeze": {
+    "path": "validation/acsp_geographic_framing_country_registry_freeze_v1.json",
+    "freeze_id": "acsp_geographic_framing_country_registry_freeze_v1",
+    "representation_frozen": true,
+    "development_protocol_fingerprint": "3bd9e6145e17a99b52d8a9f82c07f346541f56a2bf81bd768e180de78c295bf8"
+  },
+  "representation": {
+    "concept": "past_observed_focal_species_countries_as_outer_geographic_registry",
+    "source": "focal_species_GBIF_country_facets",
+    "historical_year_range": [1900, 2020],
+    "heldout_year_range": [2021, 2025],
+    "current_incomplete_year_excluded": 2026,
+    "quality_filters": {
+      "hasCoordinate": true,
+      "hasGeospatialIssue": false,
+      "occurrenceStatus": "PRESENT"
+    },
+    "country_expansion": false,
+    "geographic_padding": false,
+    "distance_buffer": false,
+    "higher_taxon_fallback": false,
+    "continent_or_realm_fallback": false,
+    "local_component_geometry": false,
+    "all_world_fallback": false,
+    "role": "high_recall_outer_search_universe_only"
+  },
+  "cohort": {
+    "pair_count": 96,
+    "taxon_groups": ["plant", "animal"],
+    "region_cell_count": 12,
+    "record_count_strata": 4,
+    "taxa_per_region_group_record_stratum": 1,
+    "seed": 2026082305,
+    "minimum_records": 20,
+    "facet_limit": 400,
+    "sampling_rule": "reuse taxonomy-safe Japanese factorial identity sampler only; no focal occurrence rows or temporal country outcomes inspected before declaration",
+    "development_v3_identity_path": "validation/geographic_framing_development_v3/predeclared_taxon_region_pairs.csv",
+    "development_v3_identity_sha256": "8e8eebf56b071572ad4eb84d6fe5dbe9ec12c4cd561e84dfca22abd398bede4d",
+    "development_v4_identity_path": "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv",
+    "development_v4_identity_sha256": "04342b9c06f6bdf109ea4a684945acdbba8a7063cd11b29b563f80e701de485f",
+    "taxon_replacement_after_declaration_allowed": false
+  },
+  "exclusion_files": [
+    "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+    "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+    "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+    "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv",
+    "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+    "validation/geographic_framing_development_v3/predeclared_taxon_region_pairs.csv",
+    "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv"
+  ],
+  "explicit_exclusion_prefixes": ["Campanula microdonta", "Campanula punctata"],
+  "evaluation": {
+    "all_declared_taxa_retained_for_yield": true,
+    "historical_registry_availability": "positive historical country facet count",
+    "temporal_evaluability": "positive 2021-2025 country facet count after historical registry exists",
+    "conditional_containment_denominator": "only taxa with positive historical registry and positive recent country facet records",
+    "provider_failures_are_not_conditional_containment_observations": true,
+    "candidate_generation_run_before_gate": false,
+    "robust_support_run_before_gate": false
+  },
+  "confirmation_gate": {
+    "historical_registry_availability_min": 0.95,
+    "temporal_evaluability_overall_min": 0.90,
+    "plant_temporal_evaluability_min": 0.85,
+    "animal_temporal_evaluability_min": 0.85,
+    "conditional_containment_overall_min": 0.97,
+    "plant_conditional_containment_min": 0.95,
+    "animal_conditional_containment_min": 0.95,
+    "required_declared_taxa": 96,
+    "if_fail": "reject_confirmation_without_retuning_or_expansion_on_confirmation_taxa",
+    "if_pass": "independently_confirm_country_registry_framing_for_tested_japan_recorded_plant_animal_frame"
+  },
+  "claim_boundary": {
+    "fresh_confirmation_cohort": true,
+    "development_taxa_eligible": false,
+    "confirmation_taxon_replacement_allowed": false,
+    "candidate_generation_run_before_gate": false,
+    "robust_support_run_before_gate": false,
+    "validated_japan_adapter_changed": false,
+    "global_name_only_acsp_validated_if_passes": false,
+    "if_passes": "independently confirms the frozen focal-species historical country-registry framing rule across a fresh taxonomy-safe Japan-recorded plant/animal cohort; candidate-generation integration remains a separate next step",
+    "if_fails": "do not retune country expansion, temporal windows, fallback rules, or thresholds on confirmation taxa; keep integration blocked"
+  },
+  "preserved_core": {
+    "robust_support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "candidate_patch_merge_distance_m": 1000.0,
+    "non_ranked_candidate_product_changed": false,
+    "operational_complete_candidate_coverage_changed": false,
+    "osm_movement_semantics_changed": false
+  },
+  "protocol_fingerprint": "9f655f6121f1c917659dcf85ba039304b645ea88b5afff8d7855a11cf1e7a490"
+}
