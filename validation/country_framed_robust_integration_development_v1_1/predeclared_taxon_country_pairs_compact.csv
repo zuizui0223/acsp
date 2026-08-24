@@ -1,0 +1,25 @@
+integration_pair_id,taxon_group,region_cell_index,record_count_stratum,speciesKey,scientific_name,selected_country_code,historical_selected_country_count,geometry_canonical_sha256,declaration_status
+1,plant,1,1,3093702,Hypochaeris radicata L.,ZA,903,1e6eed488b8adc3732f2613859f059a334b437f5c1a86fced0a5706094a0517f,declared
+2,animal,1,1,2439261,"Rattus norvegicus (Berkenhout, 1769)",KW,6,7af954e3714ec3cd5573854f8e6211ca07d57c442a6c3182e1c7007e5677d17c,declared
+3,plant,2,2,2875893,Carpinus cordata Blume,CN,1202,be36120d682e6cd764827b61dfacfa2e366a99cbca7a760140aafd7cf4bda635,declared
+4,animal,2,2,2481810,"Gallinago solitaria Hodgson, 1831",NP,45,6647371411e2b6acdc1e9f586a12c5059d95e9a5fbf2d29bab15f8e2539ec1f3,declared
+5,plant,3,3,5654221,Dryopteris monticola (Makino) C.Chr.,KR,170,b4f94093731f2cb8c463731c75a80fd54f847d3a3d87674fef8190ab3a50bf1d,declared
+6,animal,3,3,5229493,"Garrulus glandarius (Linnaeus, 1758)",IN,4823,35df113b4ce6fea2e351b49af0a0a9acf620f8c36ae3dc022a5216c4353e8705,declared
+7,plant,4,0,2723640,Carex breviculmis R.Br.,NZ,831,2f95dc198219b9672e7f7e5b4a02250eddd057098920a9306a0624afa0fe36e0,declared
+8,animal,4,0,1428280,"Sympetrum pedemontanum (Müller, 1766)",ES,37,b073fb680d94f9952862f8f137633a88faffb257a41260a28e236d188ab33110,declared
+9,plant,5,1,5389058,Solidago altissima L.,ES,29,b073fb680d94f9952862f8f137633a88faffb257a41260a28e236d188ab33110,declared
+10,animal,5,1,2406303,"Diaphus garmani Gilbert, 1906",PH,24,6ace51d65e62006563e75960f4d6048d46df6d1bcc9c63b8a59d35914a1e4e24,declared
+11,plant,6,2,2890448,Geranium yesoense Franch. & Sav.,RU,12,48d1a32e30c5bab33c7cd39ad9b8b1976a385848f9e6aea0c169acfd67b8b6e2,declared
+12,animal,6,2,1423563,"Paracercion calamorum (Ris, 1916)",CN,42,be36120d682e6cd764827b61dfacfa2e366a99cbca7a760140aafd7cf4bda635,declared
+13,plant,7,3,12243617,Sitobolium hirsutum (Sw.) L.A.Triana & Sundue,KP,5,3aabe3a5557657799fdfb0647a0651920de3ea9ba9db9430790b84a18219faef,declared
+14,animal,7,3,5231927,"Cuculus poliocephalus Latham, 1790",NP,158,6647371411e2b6acdc1e9f586a12c5059d95e9a5fbf2d29bab15f8e2539ec1f3,declared
+15,plant,8,0,11136476,"Lepisorus ensatus (Thunb.) C.F.Zhao, R.Wei & X.C.Zhang",VN,7,87c119230ef6da55e714270b76707fc72de3c65f4979efb5f308d24e9c96488f,declared
+16,animal,8,0,1968767,"Somatina indicataria (Walker, 1861)",RU,11,48d1a32e30c5bab33c7cd39ad9b8b1976a385848f9e6aea0c169acfd67b8b6e2,declared
+17,plant,9,1,4046885,Polystichum ×kurokawae Tagawa,JP,489,372f335cf1c5e9624352ce2c843775a9c1a148d53a454e590587270784dbd2b1,declared
+18,animal,9,1,4987716,"Halocypria globosa Claus, 1874",SC,5,e1cc1ca13af31b5a34d8474da7cb54a004b7c056307978c3697d27adf26cb757,declared
+19,plant,10,2,5305668,Cymbidium goeringii (Rchb.f.) Rchb.f.,CN,62,be36120d682e6cd764827b61dfacfa2e366a99cbca7a760140aafd7cf4bda635,declared
+20,animal,10,2,2498017,"Anser albifrons (Scopoli, 1769)",IL,234,e4b935c00219744ba707e3fc34feff862721eda3a4f5183bfa387ca8d79ef491,declared
+21,plant,11,3,2650725,Microlepia strigosa (Thunb.) C.Presl,MY,7,863f41c4cc339ef9eebe9bc1fbb5670dc621f028db1e1fabeff317a37d775aa3,declared
+22,animal,11,3,2495681,"Streptopelia orientalis (Latham, 1790)",KG,247,8a6ba922e5ccd571fddaf0bc683615f54d025c52e57b0d2e7308e55c5b8bb0c7,declared
+23,plant,12,0,5388989,Solidago decurrens Lour.,RU,61,48d1a32e30c5bab33c7cd39ad9b8b1976a385848f9e6aea0c169acfd67b8b6e2,declared
+24,animal,12,0,6519793,"Goniobranchus geometricus (Risbec, 1928)",PH,171,6ace51d65e62006563e75960f4d6048d46df6d1bcc9c63b8a59d35914a1e4e24,declared
