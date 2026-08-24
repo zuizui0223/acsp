@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 from pathlib import Path
 from typing import Sequence
 
@@ -102,13 +101,12 @@ def fetch_recent_country_occurrences(
     longitude_col = next((c for c in ("longitude", "_longitude", "decimalLongitude", "lon") if c in cleaned.columns), None)
     if latitude_col is None or longitude_col is None:
         raise ValueError("recent occurrence rows do not contain recognizable coordinates")
-    out = pd.DataFrame(
+    return pd.DataFrame(
         {
             "latitude": pd.to_numeric(cleaned[latitude_col], errors="coerce"),
             "longitude": pd.to_numeric(cleaned[longitude_col], errors="coerce"),
         }
     ).dropna().drop_duplicates().reset_index(drop=True)
-    return out
 
 
 def _minimum_haversine_km(points: pd.DataFrame, candidates: pd.DataFrame) -> np.ndarray:
@@ -130,8 +128,7 @@ def _minimum_haversine_km(points: pd.DataFrame, candidates: pd.DataFrame) -> np.
 def recovery_fraction(points: pd.DataFrame, candidates: pd.DataFrame, radius_km: float) -> float:
     if points.empty:
         return float("nan")
-    distances = _minimum_haversine_km(points, candidates)
-    return float(np.mean(distances <= float(radius_km)))
+    return float(np.mean(_minimum_haversine_km(points, candidates) <= float(radius_km)))
 
 
 def _random_seed(base_seed: int, species_key: int, country_code: str) -> int:
@@ -206,38 +203,19 @@ def evaluate_frozen_declarations(declarations: pd.DataFrame) -> tuple[pd.DataFra
         candidate_failure_reason = ""
         temporal_status = "not_attempted_no_declared_country"
         temporal_failure_reason = ""
-        occurrence_rows = 0
-        recent_rows = 0
-        surface_points = 0
-        prototype_rows = 0
-        candidate_patch_count = 0
+        occurrence_rows = recent_rows = surface_points = prototype_rows = candidate_patch_count = 0
         support_audit_json = "{}"
-        robust_recall = float("nan")
-        random_mean = float("nan")
-        random_q025 = float("nan")
-        random_q975 = float("nan")
-        lift = float("nan")
+        robust_recall = random_mean = random_q025 = random_q975 = lift = float("nan")
         verified_geometry_sha = ""
         surface = pd.DataFrame()
         patches = pd.DataFrame()
+        recent = pd.DataFrame(columns=["latitude", "longitude"])
 
-        # Recent-outcome evaluability is measured separately from candidate
-        # generation once a country identity has been frozen.
         if declaration_status == "declared" and country_code:
-            try:
-                recent = fetch_recent_country_occurrences(
-                    species_key,
-                    country_code,
-                    years=recent_years,
-                    cap=recent_cap,
-                )
-                recent_rows = int(len(recent))
-                temporal_status = "evaluated" if recent_rows > 0 else "zero_recent_country_records"
-            except Exception as exc:
-                recent = pd.DataFrame(columns=["latitude", "longitude"])
-                temporal_status = "recent_provider_failed"
-                temporal_failure_reason = f"{type(exc).__name__}: {exc}"
-
+            # Candidate generation is completed first, before any recent held-out
+            # occurrence is requested. This ordering is deliberate even though
+            # the algorithm is already frozen, so the execution trace cannot
+            # be mistaken for outcome-informed candidate construction.
             try:
                 geometry = fetch_geoboundaries_country_geometry(country_code)
                 verified_geometry_sha = _geometry_digest_from_source_version(geometry.source_version)
@@ -248,7 +226,7 @@ def evaluate_frozen_declarations(declarations: pd.DataFrame) -> tuple[pd.DataFra
                     )
                 occurrences = fetch_country_occurrences(species_key, country_code)
                 occurrence_rows = int(len(occurrences))
-                surface, prototypes, surface_seed = country_terrain_inputs(occurrences, geometry)
+                surface, prototypes, _surface_seed = country_terrain_inputs(occurrences, geometry)
                 surface_points = int(len(surface))
                 prototype_rows = int(len(prototypes))
                 if surface_points != 800:
@@ -273,22 +251,38 @@ def evaluate_frozen_declarations(declarations: pd.DataFrame) -> tuple[pd.DataFra
                 patches["taxon_group"] = str(base["taxon_group"])
                 patches["framing_country_code"] = country_code
                 patch_frames.append(patches)
-
-                if temporal_status == "evaluated":
-                    robust_recall = recovery_fraction(recent, patches, radius_km)
-                    seed = _random_seed(random_seed_base, species_key, country_code)
-                    random_mean, random_q025, random_q975 = same_size_random_recovery(
-                        recent,
-                        surface,
-                        selected_count=candidate_patch_count,
-                        radius_km=radius_km,
-                        repetitions=repetitions,
-                        seed=seed,
-                    )
-                    lift = float(robust_recall - random_mean)
             except Exception as exc:
                 candidate_status = "candidate_generation_failed"
                 candidate_failure_reason = f"{type(exc).__name__}: {exc}"
+
+            # Temporal evaluability is measured independently after candidate
+            # construction has either succeeded or failed. Candidate failures do
+            # not suppress recent-outcome accounting for the frozen country.
+            try:
+                recent = fetch_recent_country_occurrences(
+                    species_key,
+                    country_code,
+                    years=recent_years,
+                    cap=recent_cap,
+                )
+                recent_rows = int(len(recent))
+                temporal_status = "evaluated" if recent_rows > 0 else "zero_recent_country_records"
+            except Exception as exc:
+                temporal_status = "recent_provider_failed"
+                temporal_failure_reason = f"{type(exc).__name__}: {exc}"
+
+            if candidate_status == "generated" and temporal_status == "evaluated":
+                robust_recall = recovery_fraction(recent, patches, radius_km)
+                seed = _random_seed(random_seed_base, species_key, country_code)
+                random_mean, random_q025, random_q975 = same_size_random_recovery(
+                    recent,
+                    surface,
+                    selected_count=candidate_patch_count,
+                    radius_km=radius_km,
+                    repetitions=repetitions,
+                    seed=seed,
+                )
+                lift = float(robust_recall - random_mean)
 
         result_rows.append(
             {
@@ -321,13 +315,12 @@ def evaluate_frozen_declarations(declarations: pd.DataFrame) -> tuple[pd.DataFra
     integrated = candidate_success & temporal_evaluable & pd.to_numeric(
         results["robust_minus_random_recall"], errors="coerce"
     ).notna()
-
     lifts = pd.to_numeric(results.loc[integrated, "robust_minus_random_recall"], errors="coerce").to_numpy(float)
-    bootstrap_cfg = protocol["development_gate"]
+    gate_cfg = protocol["development_gate"]
     mean_lift, ci_low, ci_high = taxon_bootstrap_mean_ci(
         lifts,
-        repetitions=int(bootstrap_cfg["bootstrap_repetitions"]),
-        seed=int(bootstrap_cfg["bootstrap_seed"]),
+        repetitions=int(gate_cfg["bootstrap_repetitions"]),
+        seed=int(gate_cfg["bootstrap_seed"]),
     )
     plant_mean = _finite_mean(results.loc[integrated & results["taxon_group"].eq("plant"), "robust_minus_random_recall"])
     animal_mean = _finite_mean(results.loc[integrated & results["taxon_group"].eq("animal"), "robust_minus_random_recall"])
@@ -335,13 +328,13 @@ def evaluate_frozen_declarations(declarations: pd.DataFrame) -> tuple[pd.DataFra
     temporal_rate = float(temporal_evaluable.mean())
 
     gate_checks = {
-        "declared_taxa": int(len(results)) == int(bootstrap_cfg["required_declared_taxa"]),
-        "candidate_generation_success_rate": candidate_rate >= float(bootstrap_cfg["candidate_generation_success_rate_min"]),
-        "temporal_evaluability_rate": temporal_rate >= float(bootstrap_cfg["temporal_evaluability_rate_min"]),
+        "declared_taxa": int(len(results)) == int(gate_cfg["required_declared_taxa"]),
+        "candidate_generation_success_rate": candidate_rate >= float(gate_cfg["candidate_generation_success_rate_min"]),
+        "temporal_evaluability_rate": temporal_rate >= float(gate_cfg["temporal_evaluability_rate_min"]),
         "mean_lift_positive": bool(np.isfinite(mean_lift) and mean_lift > 0.0),
         "bootstrap_lower_positive": bool(np.isfinite(ci_low) and ci_low > 0.0),
-        "plant_mean_nonnegative": bool(np.isfinite(plant_mean) and plant_mean >= float(bootstrap_cfg["plant_mean_lift_min"])),
-        "animal_mean_nonnegative": bool(np.isfinite(animal_mean) and animal_mean >= float(bootstrap_cfg["animal_mean_lift_min"])),
+        "plant_mean_nonnegative": bool(np.isfinite(plant_mean) and plant_mean >= float(gate_cfg["plant_mean_lift_min"])),
+        "animal_mean_nonnegative": bool(np.isfinite(animal_mean) and animal_mean >= float(gate_cfg["animal_mean_lift_min"])),
     }
     summary: dict[str, object] = {
         "status": "country_framed_robust_integration_development_v1_complete",
@@ -361,6 +354,7 @@ def evaluate_frozen_declarations(declarations: pd.DataFrame) -> tuple[pd.DataFra
         "animal_mean_robust_minus_random_recall": animal_mean,
         "gate_checks": gate_checks,
         "development_gate_passed": bool(all(gate_checks.values())),
+        "candidate_generation_preceded_recent_outcome_fetch": True,
         "retuned_after_outcome_opening": False,
         "country_representation_changed": False,
         "country_geometry_provider_changed": False,
