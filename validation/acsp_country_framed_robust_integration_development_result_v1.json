@@ -1,0 +1,77 @@
+{
+  "result_id": "acsp_country_framed_robust_integration_development_result_v1",
+  "status": "development_instantiation_rejected",
+  "protocol_file": "validation/acsp_country_framed_robust_integration_development_v1.json",
+  "protocol_fingerprint": "b35b1fee5dd899e800d2449d966266b15df8f4b8987fe3ddcf49c6e7884b092a",
+  "authoritative_run_id": 32685558754,
+  "authoritative_workflow_head": "6e89ec582eb5c5a35b0b00a876dbce829a81cbc1",
+  "pre_outcome_cohort_artifact": {
+    "artifact_id": 9505552371,
+    "zip_sha256": "b01c0e7b1b757a0e749ab67ebf2926e05134c0070c5a771aa18abd856c80910f",
+    "identity_csv_sha256": "a13c47bf19fc59f2cca7a42059bc9cc4553f2f73928779994be44419d263cae8",
+    "declared_taxa": 24,
+    "successful_country_declarations": 24,
+    "recent_outcomes_inspected_at_freeze": false,
+    "candidate_generation_run_at_freeze": false
+  },
+  "result_artifact": {
+    "artifact_id": 9505595741,
+    "zip_sha256": "47d86fa88d17bb055976ea32e3cdece157273b7d9b35375789bb6ac2b389de2f"
+  },
+  "primary_result": {
+    "declared_taxa": 24,
+    "candidate_generation_success_taxa": 7,
+    "candidate_generation_success_rate": 0.2916666666666667,
+    "temporally_evaluable_taxa": 19,
+    "temporal_evaluability_rate": 0.7916666666666666,
+    "integrated_evaluable_taxa": 5,
+    "support_fraction": 0.025,
+    "primary_radius_km": 10.0,
+    "random_baseline_repetitions": 200,
+    "mean_robust_minus_random_recall": -0.010446969696969694,
+    "taxon_bootstrap_95pct_ci": [-0.030446969696969695, 0.0],
+    "plant_mean_robust_minus_random_recall": -0.0007449494949494905,
+    "animal_mean_robust_minus_random_recall": -0.025
+  },
+  "gate_checks": {
+    "declared_taxa": true,
+    "candidate_generation_success_rate": false,
+    "temporal_evaluability_rate": true,
+    "mean_lift_positive": false,
+    "bootstrap_lower_positive": false,
+    "plant_mean_nonnegative": false,
+    "animal_mean_nonnegative": false,
+    "development_gate_passed": false
+  },
+  "candidate_failure_diagnosis": {
+    "total_candidate_generation_failures": 17,
+    "exact_800_complete_surface_requirement": 12,
+    "fewer_than_five_usable_historical_coordinate_rows": 3,
+    "fewer_than_five_unique_complete_terrain_prototypes": 2,
+    "note": "The exact-800 post-terrain requirement belongs to this integration v1 instantiation. It is not part of the independently validated Japan robust-core claim. The same 24 taxa must not be rerun with this condition relaxed."
+  },
+  "integrated_evaluable_lift_signs": {
+    "positive": 0,
+    "zero": 3,
+    "negative": 2
+  },
+  "decision": {
+    "country_wide_800_point_integration_accepted": false,
+    "retuning_on_these_24_taxa_allowed": false,
+    "scale_up_to_remaining_v4_under_same_instantiation_allowed": false,
+    "fresh_confirmation_taxa_consumed": false,
+    "global_candidate_generation_validated": false,
+    "next_question": "Does integration need to preserve the independently validated regional candidate-surface scale within the confirmed country outer frame rather than applying a single 800-point surface to an entire country?"
+  },
+  "frozen_components_unchanged": {
+    "country_framing_representation": true,
+    "geoBoundaries_v6_provider": true,
+    "robust_support_fraction": true,
+    "float32_support_worlds": true,
+    "patch_merge_1km": true,
+    "terrain_features": true,
+    "primary_10km_endpoint": true,
+    "same_size_random_baseline": true,
+    "japan_validated_adapter": true
+  }
+}
