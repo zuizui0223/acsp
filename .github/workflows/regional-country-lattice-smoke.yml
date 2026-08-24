@@ -1,0 +1,78 @@
+name: Regional country lattice geometry smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "research/regional_country_lattice.py"
+      - "research/test_regional_country_lattice.py"
+      - "validation/acsp_country_regional_lattice_2deg_freeze_v1.json"
+      - ".github/workflows/regional-country-lattice-smoke.yml"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  lattice-smoke:
+    name: Build geometry-only 2-degree surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify frozen mechanics contract
+        run: python -m unittest -v research/test_regional_country_lattice.py
+      - name: Build pinned geometry-only regional surfaces
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from geoboundaries_v6_provider import fetch_geoboundaries_country_geometry
+          from regional_country_lattice import build_regional_country_surface
+
+          rows = []
+          for code in ('JP', 'KR', 'GB'):
+              geometry = fetch_geoboundaries_country_geometry(code)
+              surface, audit = build_regional_country_surface(geometry)
+              assert len(surface) == audit.intersecting_tile_count * 800
+              assert surface['regional_tile_id'].nunique() == audit.intersecting_tile_count
+              assert surface['survey_area_id'].nunique() == 1
+              assert surface['survey_area_id'].iloc[0] == f'country-{code}'
+              assert (surface.groupby('regional_tile_id').size() == 800).all()
+              rows.append(audit.as_dict())
+
+          payload = {
+              'status': 'regional_lattice_geometry_smoke_only',
+              'freeze_fingerprint': '6d5c0ca8cc699eda7856d37e72007cadcc208a9312765f1162ed963ae0de0ba1',
+              'countries': rows,
+              'taxon_input_used': False,
+              'occurrence_input_used': False,
+              'terrain_extraction_run': False,
+              'candidate_generation_run': False,
+              'robust_support_run': False,
+              'ecological_outcome_opened': False,
+          }
+          Path('regional-country-lattice-smoke.json').write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(payload, indent=2, ensure_ascii=False))
+          PY
+      - name: Upload geometry-only evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: regional-country-lattice-smoke
+          path: regional-country-lattice-smoke.json
+          if-no-files-found: error
+          retention-days: 30
