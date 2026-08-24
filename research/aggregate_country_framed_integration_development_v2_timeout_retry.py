@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+import pandas as pd
+
+from acsp.validated_robust import (
+    VALIDATED_ROBUST_PRIMARY_RADIUS_KM,
+    VALIDATED_ROBUST_SUPPORT_FRACTION,
+)
+from regional_country_lattice import LATTICE_STEP_DEG, POINTS_PER_REGIONAL_TILE
+from run_country_framed_integration_development_v1_1 import _finite_mean, taxon_bootstrap_mean_ci
+from run_country_framed_integration_development_v2 import EXPECTED_PROTOCOL_FINGERPRINT, _protocol
+from run_country_framed_integration_development_v2_timeout_retry_pair import EXPECTED_RETRY_FINGERPRINT, _retry_contract
+
+
+def aggregate(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
+    protocol = _protocol()
+    retry = _retry_contract()
+    gate = protocol["development_gate"]
+    evalcfg = protocol["evaluation"]
+
+    result_files = sorted(input_root.glob("pair-*/taxon_country_results.csv"))
+    manifest_files = sorted(input_root.glob("pair-*/pair_manifest.json"))
+    if len(result_files) != 24 or len(manifest_files) != 24:
+        raise ValueError(f"expected 24 pair artifacts, found results={len(result_files)} manifests={len(manifest_files)}")
+
+    results = pd.concat([pd.read_csv(path) for path in result_files], ignore_index=True)
+    if len(results) != 24:
+        raise ValueError("aggregated retry must contain exactly 24 result rows")
+    pair_ids = pd.to_numeric(results["integration_pair_id"], errors="raise").astype(int)
+    if sorted(pair_ids.tolist()) != list(range(1, 25)):
+        raise ValueError("aggregated retry pair ids must be exactly 1..24")
+    if results["speciesKey"].nunique() != 24:
+        raise ValueError("aggregated retry must preserve 24 unique frozen taxa")
+    if not results["retry_execution_fingerprint"].astype(str).eq(EXPECTED_RETRY_FINGERPRINT).all():
+        raise ValueError("retry fingerprint drift across pair results")
+
+    for path in manifest_files:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        if manifest["authoritative_protocol_fingerprint"] != EXPECTED_PROTOCOL_FINGERPRINT:
+            raise ValueError("pair manifest protocol drift")
+        if manifest["retry_execution_fingerprint"] != EXPECTED_RETRY_FINGERPRINT:
+            raise ValueError("pair manifest retry drift")
+        if manifest["scientific_method_changed"] is not False or manifest["declaration_reselected"] is not False:
+            raise ValueError("pair manifest violates exact-method retry contract")
+
+    patch_files = sorted(input_root.glob("pair-*/integrated_candidate_patches.csv"))
+    patch_frames: list[pd.DataFrame] = []
+    for path in patch_files:
+        try:
+            frame = pd.read_csv(path)
+        except pd.errors.EmptyDataError:
+            continue
+        if not frame.empty:
+            patch_frames.append(frame)
+    patches = pd.concat(patch_frames, ignore_index=True) if patch_frames else pd.DataFrame()
+
+    cs = results["candidate_generation_status"].eq("generated")
+    te = results["temporal_status"].eq("evaluated")
+    integrated = cs & te & pd.to_numeric(results["robust_minus_random_recall"], errors="coerce").notna()
+    lifts = pd.to_numeric(results.loc[integrated, "robust_minus_random_recall"], errors="coerce").to_numpy(float)
+
+    mean, low, high = taxon_bootstrap_mean_ci(
+        lifts,
+        repetitions=int(gate["bootstrap_repetitions"]),
+        seed=int(gate["bootstrap_seed"]),
+    )
+    plant = _finite_mean(results.loc[integrated & results["taxon_group"].eq("plant"), "robust_minus_random_recall"])
+    animal = _finite_mean(results.loc[integrated & results["taxon_group"].eq("animal"), "robust_minus_random_recall"])
+    cr = float(cs.mean())
+    tr = float(te.mean())
+    checks = {
+        "declared_taxa": len(results) == 24,
+        "candidate_generation_success_rate": cr >= float(gate["candidate_generation_success_rate_min"]),
+        "temporal_evaluability_rate": tr >= float(gate["temporal_evaluability_rate_min"]),
+        "mean_lift_positive": bool(np.isfinite(mean) and mean > 0),
+        "bootstrap_lower_positive": bool(np.isfinite(low) and low > 0),
+        "plant_mean_nonnegative": bool(np.isfinite(plant) and plant >= float(gate["plant_mean_lift_min"])),
+        "animal_mean_nonnegative": bool(np.isfinite(animal) and animal >= float(gate["animal_mean_lift_min"])),
+    }
+    radius = float(evalcfg["primary_recovery_radius_km"])
+    reps = int(evalcfg["random_baseline_repetitions"])
+    if radius != 10.0 or radius != float(VALIDATED_ROBUST_PRIMARY_RADIUS_KM):
+        raise ValueError("retry radius drift")
+
+    summary = {
+        "status": "country_framed_robust_integration_development_v2_complete",
+        "protocol_fingerprint": EXPECTED_PROTOCOL_FINGERPRINT,
+        "retry_execution_fingerprint": EXPECTED_RETRY_FINGERPRINT,
+        "retry_of_timeout_run_id": int(retry["authoritative_timeout_run_id"]),
+        "frozen_cohort_artifact_id": int(retry["frozen_cohort_artifact_id"]),
+        "declared_taxa": 24,
+        "candidate_generation_success_taxa": int(cs.sum()),
+        "candidate_generation_success_rate": cr,
+        "temporally_evaluable_taxa": int(te.sum()),
+        "temporal_evaluability_rate": tr,
+        "integrated_evaluable_taxa": int(integrated.sum()),
+        "lattice_step_deg": LATTICE_STEP_DEG,
+        "points_per_regional_tile": POINTS_PER_REGIONAL_TILE,
+        "primary_support_fraction": float(VALIDATED_ROBUST_SUPPORT_FRACTION),
+        "primary_radius_km": radius,
+        "random_baseline_repetitions": reps,
+        "mean_robust_minus_random_recall": mean,
+        "taxon_bootstrap_95pct_ci": [low, high],
+        "plant_mean_robust_minus_random_recall": plant,
+        "animal_mean_robust_minus_random_recall": animal,
+        "gate_checks": checks,
+        "development_gate_passed": all(checks.values()),
+        "method_change_from_v1_1": "regional_lattice_only",
+        "candidate_generation_preceded_recent_outcome_fetch": True,
+        "retuned_after_outcome_opening": False,
+        "country_representation_changed": False,
+        "country_geometry_provider_changed": False,
+        "robust_core_changed": False,
+        "v1_or_v1_1_taxa_reused": False,
+        "confirmation_v1_taxa_consumed": False,
+        "development_only": True,
+        "global_candidate_generation_validated": False,
+        "technical_retry_only": True,
+        "scientific_method_changed_in_retry": False,
+    }
+    return results.sort_values("integration_pair_id").reset_index(drop=True), patches, summary
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--input-root", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    a = p.parse_args(argv)
+    a.output.mkdir(parents=True, exist_ok=True)
+    results, patches, summary = aggregate(a.input_root)
+    results.to_csv(a.output / "taxon_country_results.csv", index=False)
+    patches.to_csv(a.output / "integrated_candidate_patches.csv", index=False)
+    (a.output / "development_summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
