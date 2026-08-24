@@ -1,0 +1,25 @@
+integration_pair_id,taxon_group,speciesKey,scientific_name,selected_country_code,candidate_generation_status,candidate_generation_failure_reason,temporal_status,recent_heldout_occurrence_rows,country_surface_points,prototype_rows,candidate_patch_count,robust_recall,random_recall_mean,robust_minus_random_recall
+1,plant,7308143,Scutellaria strigillosa Hemsl.,RU,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 739,evaluated,96,739,30,0,,,
+2,animal,4485321,"Microvelia reticulata (Burmeister, 1835)",EE,generated,,evaluated,2,800,8,18,0.0,0.05,-0.05
+3,plant,3026550,Spiraea betulifolia Pall.,CA,generated,,evaluated,4,800,31,19,0.0,0.0,0.0
+4,animal,1007180,"Cauloramphus magnus Dick & Ross, 1988",US,candidate_generation_failed,ValueError: fewer than five unique complete training environment prototypes in US,zero_recent_country_records,0,0,0,0,,,
+5,plant,8356787,Pourthiaea villosa (Thunb.) Decne.,TW,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 795,evaluated,54,795,23,0,,,
+6,animal,4769550,"Hypocaccus varians (J.E.F.Schmidt, 1890)",KR,candidate_generation_failed,ValueError: fewer than five usable historical occurrence rows in KR: 1,evaluated,5,0,0,0,,,
+7,plant,5275012,Pteridium aquilinum (L.) Kuhn,DK,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 788,evaluated,299,788,15,0,,,
+8,animal,2491582,"Emberiza rustica Pallas, 1776",UA,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 754,evaluated,5,754,6,0,,,
+9,plant,5391845,Bidens pilosa L.,CU,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 799,zero_recent_country_records,0,799,25,0,,,
+10,animal,2481324,"Cerorhinca monocerata (Pallas, 1811)",MX,candidate_generation_failed,ValueError: fewer than five unique complete training environment prototypes in MX,evaluated,18,0,0,0,,,
+11,plant,2706026,Miscanthus sinensis Andersson,AU,generated,,evaluated,23,800,23,19,0.0,0.0,0.0
+12,animal,1428235,"Sympetrum depressiusculum (Selys, 1841)",RU,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 739,evaluated,152,739,28,0,,,
+13,plant,7436054,Callicarpa mollis Siebold & Zucc.,KR,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 798,evaluated,43,798,20,0,,,
+14,animal,1342422,"Xylocopa appendiculata Smith, 1852",CN,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 799,evaluated,285,799,32,0,,,
+15,plant,5284492,Torreya nucifera (L.) Siebold & Zucc.,US,generated,,zero_recent_country_records,0,800,16,20,,,
+16,animal,2498388,"Aix galericulata (Linnaeus, 1758)",CA,generated,,evaluated,66,800,6,12,0.0,0.0,0.0
+17,plant,5392174,Bidens frondosa L.,PT,generated,,evaluated,264,800,20,20,0.053030303030303,0.0552651515151515,-0.0022348484848484
+18,animal,2409621,Cynoglossus ochiaii Yokogawa,VN,candidate_generation_failed,ValueError: fewer than five usable historical occurrence rows in VN: 1,zero_recent_country_records,0,0,0,0,,,
+19,plant,4046740,Polystichum lepidocaulon (Hook.) J.Sm.,KR,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 798,evaluated,9,798,16,0,,,
+20,animal,2480759,"Glareola maldivarum J.R.Forster, 1795",MP,candidate_generation_failed,ValueError: fewer than five usable historical occurrence rows in MP: 4,evaluated,4,0,0,0,,,
+21,plant,4047324,Polystichum hookerianum (C.Presl) C.Chr.,TW,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 795,evaluated,15,795,23,0,,,
+22,animal,2396355,"Equulites elongatus (Günther, 1874)",MZ,generated,,zero_recent_country_records,0,800,5,18,,,
+23,plant,3188511,Melastoma malabathricum L.,CN,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 799,evaluated,20,799,27,0,,,
+24,animal,2495806,"Treron formosae Swinhoe, 1863",PH,candidate_generation_failed,ValueError: frozen integration requires exactly 800 complete country surface points; got 799,evaluated,85,799,10,0,,,

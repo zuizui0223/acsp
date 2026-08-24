@@ -1,0 +1,25 @@
+integration_pair_id,taxon_group,region_cell_index,record_count_stratum,speciesKey,scientific_name,selected_country_code,historical_selected_country_count,geometry_canonical_sha256,declaration_status
+1,plant,1,0,7308143,Scutellaria strigillosa Hemsl.,RU,56,48d1a32e30c5bab33c7cd39ad9b8b1976a385848f9e6aea0c169acfd67b8b6e2,declared
+2,animal,1,0,4485321,"Microvelia reticulata (Burmeister, 1835)",EE,10,e0c187882bccaf4802c23649f98f6f3222b8f1d79c46a841f39918e7e7c2ec3c,declared
+3,plant,2,1,3026550,Spiraea betulifolia Pall.,CA,114,75a6551f65d30b09343a43137c5e249fa726bb573cde7e0c531a3676c4566aa8,declared
+4,animal,2,1,1007180,"Cauloramphus magnus Dick & Ross, 1988",US,14,8b00831640436a0de19c697626fe891dacad7e466ee175595d12650892591dad,declared
+5,plant,3,2,8356787,Pourthiaea villosa (Thunb.) Decne.,TW,80,0945ac4180dfe6163cf86d3f982d7ce05dc1e2d5fd5c617cda7a2f6123e6ba48,declared
+6,animal,3,2,4769550,"Hypocaccus varians (J.E.F.Schmidt, 1890)",KR,10,b4f94093731f2cb8c463731c75a80fd54f847d3a3d87674fef8190ab3a50bf1d,declared
+7,plant,4,3,5275012,Pteridium aquilinum (L.) Kuhn,DK,5726,7e238e020ec55930427a1712df7998312e7e69e25bff9eee0e840576cba0f66d,declared
+8,animal,4,3,2491582,"Emberiza rustica Pallas, 1776",UA,9,7c24537195d6071b538ea4f047eb9aae2d5cbd82e928187d0d769ae8d235f3a2,declared
+9,plant,5,0,5391845,Bidens pilosa L.,CU,47,1f644795f2b30ac9985de88fdd8de99b2336b757f9f6b43ab9c6a09814ab721d,declared
+10,animal,5,0,2481324,"Cerorhinca monocerata (Pallas, 1811)",MX,316,23776898cb71a4e77972cf04074ec0cc506b78afc879c90cabb9ebcee14e6d22,declared
+11,plant,6,1,2706026,Miscanthus sinensis Andersson,AU,56,05246369a75afd196ae40000c989302bfbf61b8bbc31a6f9a9b01234c29f1c59,declared
+12,animal,6,1,1428235,"Sympetrum depressiusculum (Selys, 1841)",RU,52,48d1a32e30c5bab33c7cd39ad9b8b1976a385848f9e6aea0c169acfd67b8b6e2,declared
+13,plant,7,2,7436054,Callicarpa mollis Siebold & Zucc.,KR,211,b4f94093731f2cb8c463731c75a80fd54f847d3a3d87674fef8190ab3a50bf1d,declared
+14,animal,7,2,1342422,"Xylocopa appendiculata Smith, 1852",CN,187,be36120d682e6cd764827b61dfacfa2e366a99cbca7a760140aafd7cf4bda635,declared
+15,plant,8,3,5284492,Torreya nucifera (L.) Siebold & Zucc.,US,32,8b00831640436a0de19c697626fe891dacad7e466ee175595d12650892591dad,declared
+16,animal,8,3,2498388,"Aix galericulata (Linnaeus, 1758)",CA,1178,75a6551f65d30b09343a43137c5e249fa726bb573cde7e0c531a3676c4566aa8,declared
+17,plant,9,0,5392174,Bidens frondosa L.,PT,531,2180c75346c5dce8267f1fa1fbdf4af8734b2c52269b0db2d846b3d51ecff238,declared
+18,animal,9,0,2409621,Cynoglossus ochiaii Yokogawa,VN,11,87c119230ef6da55e714270b76707fc72de3c65f4979efb5f308d24e9c96488f,declared
+19,plant,10,1,4046740,Polystichum lepidocaulon (Hook.) J.Sm.,KR,58,b4f94093731f2cb8c463731c75a80fd54f847d3a3d87674fef8190ab3a50bf1d,declared
+20,animal,10,1,2480759,"Glareola maldivarum J.R.Forster, 1795",MP,5,adeff7579f79dff0481874c70f5321625f25a7a666055516080df5d7aa8b8a57,declared
+21,plant,11,2,4047324,Polystichum hookerianum (C.Presl) C.Chr.,TW,150,0945ac4180dfe6163cf86d3f982d7ce05dc1e2d5fd5c617cda7a2f6123e6ba48,declared
+22,animal,11,2,2396355,"Equulites elongatus (Günther, 1874)",MZ,20,a572e824851b2fbca5cb0d1a74e50ca9bb9e9591d845e5d34e1434c9f1fbb218,declared
+23,plant,12,3,3188511,Melastoma malabathricum L.,CN,1222,be36120d682e6cd764827b61dfacfa2e366a99cbca7a760140aafd7cf4bda635,declared
+24,animal,12,3,2495806,"Treron formosae Swinhoe, 1863",PH,102,6ace51d65e62006563e75960f4d6048d46df6d1bcc9c63b8a59d35914a1e4e24,declared
