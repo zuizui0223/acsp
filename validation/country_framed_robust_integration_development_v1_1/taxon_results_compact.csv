@@ -1,0 +1,25 @@
+integration_pair_id,taxon_group,speciesKey,scientific_name,selected_country_code,candidate_generation_status,candidate_generation_failure_reason,temporal_status,recent_heldout_occurrence_rows,complete_post_terrain_surface_rows,prototype_rows,candidate_patch_count,robust_recall,random_recall_mean,robust_minus_random_recall
+1,plant,3093702,Hypochaeris radicata L.,ZA,generated,,evaluated,300,800,24,20,0.0066666666666666,0.00355,0.0031166666666666
+2,animal,2439261,"Rattus norvegicus (Berkenhout, 1769)",KW,candidate_generation_failed,ValueError: fewer than five unique complete training environment prototypes in KW,evaluated,4,0,0,0,,,
+3,plant,2875893,Carpinus cordata Blume,CN,generated,,evaluated,8,799,28,19,0.0,0.0,0.0
+4,animal,2481810,"Gallinago solitaria Hodgson, 1831",NP,generated,,evaluated,7,800,12,19,0.0,0.0192857142857142,-0.0192857142857142
+5,plant,5654221,Dryopteris monticola (Makino) C.Chr.,KR,generated,,evaluated,23,798,26,19,0.0,0.0689130434782608,-0.0689130434782608
+6,animal,5229493,"Garrulus glandarius (Linnaeus, 1758)",IN,generated,,evaluated,159,797,28,19,0.0,0.0102830188679245,-0.0102830188679245
+7,plant,2723640,Carex breviculmis R.Br.,NZ,generated,,evaluated,112,799,16,20,0.0089285714285714,0.0155357142857142,-0.0066071428571428
+8,animal,1428280,"Sympetrum pedemontanum (Müller, 1766)",ES,candidate_generation_failed,ValueError: fewer than five unique complete training environment prototypes in ES,evaluated,2,0,0,0,,,
+9,plant,5389058,Solidago altissima L.,ES,generated,,evaluated,1,800,10,20,0.0,0.0,0.0
+10,animal,2406303,"Diaphus garmani Gilbert, 1906",PH,candidate_generation_failed,ValueError: fewer than five unique complete training environment prototypes in PH,zero_recent_country_records,0,0,0,0,,,
+11,plant,2890448,Geranium yesoense Franch. & Sav.,RU,generated,,evaluated,41,739,8,19,0.0,0.0,0.0
+12,animal,1423563,"Paracercion calamorum (Ris, 1916)",CN,generated,,evaluated,165,799,27,20,0.0,0.0,0.0
+13,plant,12243617,Sitobolium hirsutum (Sw.) L.A.Triana & Sundue,KP,generated,,zero_recent_country_records,0,797,5,15,,,
+14,animal,5231927,"Cuculus poliocephalus Latham, 1790",NP,generated,,evaluated,129,800,27,19,0.1162790697674418,0.0272868217054263,0.0889922480620155
+15,plant,11136476,"Lepisorus ensatus (Thunb.) C.F.Zhao, R.Wei & X.C.Zhang",VN,generated,,evaluated,1,798,5,19,0.0,0.0,0.0
+16,animal,1968767,"Somatina indicataria (Walker, 1861)",RU,generated,,zero_recent_country_records,0,739,8,17,,,
+17,plant,4046885,Polystichum ×kurokawae Tagawa,JP,generated,,zero_recent_country_records,0,798,27,18,,,
+18,animal,4987716,"Halocypria globosa Claus, 1874",SC,candidate_generation_failed,ValueError: country geometry sampling produced 227/800 points for SC; do not widen the frame or fall back to occurrence envelopes,zero_recent_country_records,0,0,0,0,,,
+19,plant,5305668,Cymbidium goeringii (Rchb.f.) Rchb.f.,CN,generated,,evaluated,189,799,32,19,0.0,0.0,0.0
+20,animal,2498017,"Anser albifrons (Scopoli, 1769)",IL,generated,,evaluated,51,800,21,19,0.4901960784313725,0.1717647058823529,0.3184313725490196
+21,plant,2650725,Microlepia strigosa (Thunb.) C.Presl,MY,generated,,zero_recent_country_records,0,800,5,11,,,
+22,animal,2495681,"Streptopelia orientalis (Latham, 1790)",KG,generated,,evaluated,153,800,21,19,0.2026143790849673,0.0286601307189542,0.1739542483660131
+23,plant,5388989,Solidago decurrens Lour.,RU,generated,,evaluated,69,739,28,19,0.0,0.0,0.0
+24,animal,6519793,"Goniobranchus geometricus (Risbec, 1928)",PH,generated,,evaluated,163,799,24,21,0.4846625766871165,0.0183742331288343,0.4662883435582822
