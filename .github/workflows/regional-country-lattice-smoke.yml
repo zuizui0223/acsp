@@ -1,15 +1,7 @@
-name: Regional country lattice geometry smoke
+name: Regional country lattice geometry smoke replay
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "research/regional_country_lattice.py"
-      - "research/test_regional_country_lattice.py"
-      - "validation/acsp_country_regional_lattice_2deg_freeze_v1.json"
-      - ".github/workflows/regional-country-lattice-smoke.yml"
 
 permissions:
   contents: read
@@ -19,7 +11,7 @@ env:
 
 jobs:
   lattice-smoke:
-    name: Build geometry-only 2-degree surfaces
+    name: Manual replay - build geometry-only 2-degree surfaces
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -33,7 +25,7 @@ jobs:
         run: python -m pip install -e .
       - name: Verify frozen mechanics contract
         run: python -m unittest -v research/test_regional_country_lattice.py
-      - name: Build pinned geometry-only regional surfaces
+      - name: Rebuild pinned geometry-only regional surfaces for drift diagnosis
         run: |
           python - <<'PY'
           import json
@@ -53,7 +45,9 @@ jobs:
               rows.append(audit.as_dict())
 
           payload = {
-              'status': 'regional_lattice_geometry_smoke_only',
+              'status': 'manual_regional_lattice_geometry_replay_only',
+              'authoritative_run_id': 32687506839,
+              'can_replace_authoritative_smoke': False,
               'freeze_fingerprint': '6d5c0ca8cc699eda7856d37e72007cadcc208a9312765f1162ed963ae0de0ba1',
               'countries': rows,
               'taxon_input_used': False,
@@ -69,10 +63,10 @@ jobs:
           )
           print(json.dumps(payload, indent=2, ensure_ascii=False))
           PY
-      - name: Upload geometry-only evidence
+      - name: Upload replay evidence
         uses: actions/upload-artifact@v4
         with:
-          name: regional-country-lattice-smoke
+          name: regional-country-lattice-smoke-replay
           path: regional-country-lattice-smoke.json
           if-no-files-found: error
           retention-days: 30
