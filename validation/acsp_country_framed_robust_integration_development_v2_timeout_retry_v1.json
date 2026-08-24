@@ -1,0 +1,36 @@
+{
+  "execution_id": "acsp_country_framed_robust_integration_development_v2_timeout_retry_v1",
+  "status": "technical_retry_after_300min_timeout_no_scientific_result",
+  "parent_issue": 141,
+  "parent_pr": 147,
+  "authoritative_protocol_fingerprint": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
+  "authoritative_timeout_run_id": 32693242882,
+  "frozen_cohort_artifact_id": 9507965813,
+  "frozen_cohort_artifact_sha256": "c3445f430ccaa0be56999d4be2f2251b9399e9d8de5a6b057b42c51d4f3c8921",
+  "retry_rule": {
+    "scientific_method_changed": false,
+    "cohort_changed": false,
+    "declarations_changed": false,
+    "execution_mechanics_only": "deterministically shard 24 frozen declarations into 6 chunks by (integration_pair_id-1) mod 6; evaluate each declaration with unchanged v2 per-taxon method; concatenate all 24 results; apply unchanged v2 gates and bootstrap once to full set",
+    "shard_count": 6,
+    "identities_or_outcomes_reselected": false,
+    "outcome_driven_tuning_allowed": false
+  },
+  "unchanged_scientific_contract": {
+    "lattice_step_deg": 2.0,
+    "points_per_regional_tile": 800,
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0,
+    "primary_recovery_radius_km": 10.0,
+    "random_baseline_repetitions": 200,
+    "random_seed": 2026082402,
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082403,
+    "plant_mean_lift_min": 0.0,
+    "animal_mean_lift_min": 0.0,
+    "candidate_generation_success_rate_min": 0.75,
+    "temporal_evaluability_rate_min": 0.75
+  },
+  "execution_fingerprint": "107957e6df23a5fe563c96dec54fa96fe86341391f5da98edbd6ac29cc626728"
+}
