@@ -1,15 +1,12 @@
-name: Country-framed robust integration development v2
+name: Country-framed robust integration development v2 (timed-out replay only)
 
+# Authoritative first attempt: run 32693242882.
+# It preserved the pre-outcome identity freeze but the monolithic evaluate job
+# reached its 300-minute execution limit before producing a scientific result.
+# Keep this workflow only for explicit forensic replay. The exact-method
+# technical retry is implemented separately and reuses the frozen cohort.
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - validation/acsp_country_framed_robust_integration_development_v2.json
-      - research/predeclare_country_framed_integration_development_v2.py
-      - research/run_country_framed_integration_development_v2.py
-      - research/test_country_framed_integration_development_v2.py
-      - .github/workflows/country-framed-integration-development-v2.yml
 
 permissions:
   contents: read
