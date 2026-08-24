@@ -11,8 +11,9 @@
     "scientific_method_changed": false,
     "cohort_changed": false,
     "declarations_changed": false,
-    "execution_mechanics_only": "deterministically shard 24 frozen declarations into 6 chunks by (integration_pair_id-1) mod 6; evaluate each declaration with unchanged v2 per-taxon method; concatenate all 24 results; apply unchanged v2 gates and bootstrap once to full set",
-    "shard_count": 6,
+    "execution_mechanics_only": "evaluate each of the exact 24 frozen declarations in its own job keyed by integration_pair_id; each declaration uses the unchanged v2 per-taxon method; concatenate all 24 results; apply unchanged v2 gates and bootstrap once to full set",
+    "shard_count": 24,
+    "max_parallel": 4,
     "identities_or_outcomes_reselected": false,
     "outcome_driven_tuning_allowed": false
   },
@@ -32,5 +33,5 @@
     "candidate_generation_success_rate_min": 0.75,
     "temporal_evaluability_rate_min": 0.75
   },
-  "execution_fingerprint": "107957e6df23a5fe563c96dec54fa96fe86341391f5da98edbd6ac29cc626728"
+  "execution_fingerprint": "9ce9411b1d1e837f1276e990a6d4dcfe170c8009a2e9776d4316483c83a220ba"
 }
