@@ -1,0 +1,55 @@
+{
+  "freeze_id": "acsp_country_geometry_geoboundaries_gbopen_v6_0_0_adm0_freeze_v1",
+  "status": "provider_frozen_before_integrated_ecological_outcome_evaluation",
+  "parent_issue": 141,
+  "provider": {
+    "name": "geoBoundaries gbOpen ADM0 simplified GeoJSON",
+    "repository": "wmgeolab/geoBoundaries",
+    "release_tag": "v6.0.0",
+    "release_commit": "1289e40e366c7b320550be1ee0614a9472d572d4",
+    "path_template": "releaseData/gbOpen/{ISO3}/ADM0/geoBoundaries-{ISO3}-ADM0_simplified.geojson",
+    "download_url_template": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/1289e40e366c7b320550be1ee0614a9472d572d4/releaseData/gbOpen/{ISO3}/ADM0/geoBoundaries-{ISO3}-ADM0_simplified.geojson",
+    "license": "CC BY 4.0",
+    "license_repository_path": "LICENSE",
+    "license_blob_sha": "82e5f0190c068568b975ebb42d77f7f25e4d09ef"
+  },
+  "country_code_mapping": {
+    "input_code_system": "GBIF country facet two-letter codes / ISO 3166-1 alpha-2",
+    "output_code_system": "ISO 3166-1 alpha-3 used by geoBoundaries paths",
+    "mapping_file": "validation/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json",
+    "mapping_sha256": "f77ba13da1e25967d759805f5eda8562f577bf4dc70f9fd3519f2edafdd0f26e",
+    "mapping_count": 249,
+    "generator": "pycountry 24.6.1 snapshot; runtime does not depend on pycountry"
+  },
+  "geometry_contract": {
+    "feature_geometries_unioned": true,
+    "required_output_geometry": [
+      "Polygon",
+      "MultiPolygon"
+    ],
+    "canonical_geojson_sha256_recorded_at_runtime": true,
+    "focal_occurrence_geometry_used": false,
+    "bbox_fallback": false,
+    "neighbour_country_fallback": false,
+    "alternate_provider_fallback": false,
+    "provider_or_code_failure_is_explicit": true
+  },
+  "selection_rationale": {
+    "versioned_static_release": true,
+    "per_country_adm0_geojson": true,
+    "license_reuse_allowed_with_attribution": true,
+    "no_live_geocoder_required": true,
+    "natural_earth_not_selected_reason": "would require an additional shapefile/DBF reader path for ISO-A2 lookup in this research adapter",
+    "gadm_not_selected_reason": "redistribution/use constraints are less suitable for an open reproducible software artifact"
+  },
+  "scientific_boundary": {
+    "provider_frozen_before_integration_outcomes": true,
+    "country_membership_representation_changed": false,
+    "robust_core_changed": false,
+    "confirmation_v1_taxa_allowed_for_tuning": false,
+    "integrated_ecological_outcomes_opened": false,
+    "global_candidate_generation_validated": false
+  },
+  "next_step": "preregister development-only integrated evaluation on already-opened v3/v4 development taxa using this provider; do not use confirmation-v1 taxa",
+  "provider_freeze_fingerprint": "d0f9c9b2dfe939ffd91984b8a291442553f11b962ff64de4da2ed88d07f49589"
+}

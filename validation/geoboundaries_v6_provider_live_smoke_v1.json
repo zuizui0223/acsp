@@ -1,0 +1,35 @@
+{
+  "status": "provider_live_smoke_only_no_ecological_outcomes",
+  "authoritative_run_id": 32684692035,
+  "provider_freeze_id": "acsp_country_geometry_geoboundaries_gbopen_v6_0_0_adm0_freeze_v1",
+  "release_commit": "1289e40e366c7b320550be1ee0614a9472d572d4",
+  "artifact_id": 9505262343,
+  "artifact_zip_sha256": "5d03a97864be0998011e78026a333d88899aedecbd106774e51ca1be9d4607be",
+  "countries": [
+    {
+      "country_code": "JP",
+      "iso3": "JPN",
+      "geometry_type": "MultiPolygon",
+      "bounds": [122.93391306, 24.045884279000063, 153.98607194600004, 45.55682258600012],
+      "canonical_geojson_sha256": "372f335cf1c5e9624352ce2c843775a9c1a148d53a454e590587270784dbd2b1"
+    },
+    {
+      "country_code": "KR",
+      "iso3": "KOR",
+      "geometry_type": "MultiPolygon",
+      "bounds": [124.61361738443497, 33.19757721591583, 130.92066490995785, 38.62433502803924],
+      "canonical_geojson_sha256": "b4f94093731f2cb8c463731c75a80fd54f847d3a3d87674fef8190ab3a50bf1d"
+    },
+    {
+      "country_code": "GB",
+      "iso3": "GBR",
+      "geometry_type": "MultiPolygon",
+      "bounds": [-8.645449000271071, 49.88482600011986, 1.754925999835052, 60.843381000432885],
+      "canonical_geojson_sha256": "8e692f43379136aaa4557462abb5dd2f2df4d244bd5005ba92d7aaf9c18ba180"
+    }
+  ],
+  "candidate_generation_run": false,
+  "robust_support_run": false,
+  "confirmation_taxa_consumed": false,
+  "scientific_interpretation": "provider accessibility and pinned-boundary parsing only; not an ecological or candidate-generation result"
+}
