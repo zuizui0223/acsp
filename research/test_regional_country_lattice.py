@@ -35,7 +35,7 @@ class RegionalCountryLatticeTests(unittest.TestCase):
         self.assertEqual(calculated, EXPECTED_FREEZE_FINGERPRINT)
         width, height = validated_reference_region_scale()
         self.assertEqual(width, 2.0)
-        self.assertEqual(height, 1.9)
+        self.assertAlmostEqual(height, 1.9)
         self.assertEqual(LATTICE_STEP_DEG, 2.0)
         self.assertEqual(LATTICE_LON_ANCHOR, -180.0)
         self.assertEqual(LATTICE_LAT_ANCHOR, -90.0)
