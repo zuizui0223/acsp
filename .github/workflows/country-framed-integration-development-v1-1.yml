@@ -1,0 +1,98 @@
+name: Country-framed robust integration development v1.1 replay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze-development-identities:
+    name: Manual drift replay - declare disjoint v1.1 identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify frozen v1.1 protocol
+        run: python -m unittest -v research/test_country_framed_integration_development_v1_1.py
+      - name: Re-declare identities for drift diagnosis only
+        run: |
+          python research/predeclare_country_framed_integration_development_v1_1.py \
+            --output country-framed-integration-development-v1-1-cohort
+      - name: Mark replay as non-authoritative
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('country-framed-integration-development-v1-1-cohort')
+          manifest = json.loads((root/'cohort_manifest.json').read_text(encoding='utf-8'))
+          manifest['manual_replay_only'] = True
+          manifest['authoritative_run_id'] = 32686580507
+          manifest['can_replace_authoritative_result'] = False
+          (root/'cohort_manifest.json').write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+      - name: Upload replay declarations
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v1-1-cohort-replay
+          path: country-framed-integration-development-v1-1-cohort/
+          if-no-files-found: error
+          retention-days: 30
+
+  evaluate-frozen-integration:
+    name: Manual drift replay - evaluate v1.1
+    needs: freeze-development-identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Download replay declarations
+        uses: actions/download-artifact@v4
+        with:
+          name: country-framed-integration-development-v1-1-cohort-replay
+          path: frozen-integration-v1-1-cohort
+      - name: Re-run v1.1 for provider/data drift diagnosis only
+        run: |
+          python research/run_country_framed_integration_development_v1_1.py \
+            --declarations frozen-integration-v1-1-cohort/predeclared_taxon_country_pairs.csv \
+            --output country-framed-integration-development-v1-1-results
+      - name: State authoritative result boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('country-framed-integration-development-v1-1-results')
+          summary = json.loads((root/'development_summary.json').read_text(encoding='utf-8'))
+          assert summary['protocol_fingerprint'] == 'b61ab7f2625112c459559d28129db89c74ddc32808ebd5cfc6cf43009824d555'
+          assert summary['primary_support_fraction'] == 0.025
+          assert summary['primary_radius_km'] == 10.0
+          assert summary['random_baseline_repetitions'] == 200
+          assert summary['v1_taxa_reused'] is False
+          print(json.dumps(summary, indent=2, ensure_ascii=False))
+          print('Manual replay only: authoritative v1.1 result remains run 32686580507 and cannot be replaced by this replay.')
+          PY
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v1-1-results-replay
+          path: country-framed-integration-development-v1-1-results/
+          if-no-files-found: error
+          retention-days: 30

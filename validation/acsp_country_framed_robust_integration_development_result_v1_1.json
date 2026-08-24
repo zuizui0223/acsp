@@ -1,0 +1,94 @@
+{
+  "result_id": "acsp_country_framed_robust_integration_development_result_v1_1",
+  "status": "universal_integration_rejected_exact800_portability_diagnosis_supported",
+  "protocol_file": "validation/acsp_country_framed_robust_integration_development_v1_1.json",
+  "protocol_fingerprint": "b61ab7f2625112c459559d28129db89c74ddc32808ebd5cfc6cf43009824d555",
+  "authoritative_run_id": 32686580507,
+  "authoritative_workflow_head": "8afc255bd0f1dc6c16a9cfe3762c9e4860cfbc10",
+  "parent_rejected_v1_run_id": 32685558754,
+  "pre_outcome_cohort_artifact": {
+    "artifact_id": 9505872905,
+    "zip_sha256": "39963cefae128cc3453b5d19b3bf25187246f62b7503f8c68421964060795260",
+    "identity_csv_sha256": "c87cde0c202365a9ccb12ff9aa8650621c593e32cd7028d4c4339a4e7428dd7a",
+    "declared_taxa": 24,
+    "successful_country_declarations": 24,
+    "v1_taxa_reused": false,
+    "recent_outcomes_inspected_at_freeze": false,
+    "candidate_generation_run_at_freeze": false
+  },
+  "result_artifact": {
+    "artifact_id": 9505911984,
+    "zip_sha256": "3589068687f000e07304365728f0f633411b3ef61227b1855ad6f6dd084d53ac",
+    "summary_file_sha256": "0e9bebb2b1e72ea774e2c59c0d8e6272c3db39e49d0a48f3621f162076484ef8",
+    "taxon_results_file_sha256": "0e59f759fec3fff33fd91b07bef1268754c0e7a623f9c18b6bad95635775467a"
+  },
+  "sole_change_from_v1": {
+    "change": "removed the integration-specific requirement that complete post-terrain surface rows equal exactly 800",
+    "geometry_draws_per_country": 800,
+    "new_minimum_complete_surface_rows_added": false,
+    "country_rule_changed": false,
+    "provider_changed": false,
+    "robust_core_changed": false,
+    "endpoint_or_baseline_changed": false
+  },
+  "primary_result": {
+    "declared_taxa": 24,
+    "candidate_generation_success_taxa": 20,
+    "candidate_generation_success_rate": 0.8333333333333334,
+    "temporally_evaluable_taxa": 18,
+    "temporal_evaluability_rate": 0.75,
+    "integrated_evaluable_taxa": 16,
+    "support_fraction": 0.025,
+    "primary_radius_km": 10.0,
+    "random_baseline_repetitions": 200,
+    "mean_robust_minus_random_recall": 0.05910587248205965,
+    "taxon_bootstrap_95pct_ci": [5.532323387317384e-06, 0.13540000760526907],
+    "plant_mean_robust_minus_random_recall": -0.008044835518748562,
+    "animal_mean_robust_minus_random_recall": 0.1454424970545274,
+    "successful_complete_surface_rows_median": 799.0,
+    "successful_complete_surface_rows_min": 739
+  },
+  "gate_checks": {
+    "declared_taxa": true,
+    "candidate_generation_success_rate": true,
+    "temporal_evaluability_rate": true,
+    "mean_lift_positive": true,
+    "bootstrap_lower_positive": true,
+    "plant_mean_nonnegative": false,
+    "animal_mean_nonnegative": true,
+    "development_gate_passed": false
+  },
+  "taxon_lift_signs": {
+    "all_evaluable": {"positive": 5, "zero": 7, "negative": 4},
+    "plant": {"n": 9, "positive": 1, "zero": 6, "negative": 2},
+    "animal": {"n": 7, "positive": 4, "zero": 1, "negative": 2}
+  },
+  "candidate_failure_diagnosis": {
+    "total_candidate_generation_failures": 4,
+    "fewer_than_five_unique_complete_terrain_prototypes": 3,
+    "country_land_rejection_sampling_exhausted": 1,
+    "exact_800_post_terrain_failures": 0,
+    "interpretation": "removing exact-800 on a disjoint cohort raised candidate-generation success from v1 0.2917 to v1.1 0.8333, supporting exact-800 as a major portability blocker"
+  },
+  "decision": {
+    "exact800_portability_blocker_supported": true,
+    "one_country_sparse_surface_accepted_as_universal_integration": false,
+    "reason_for_universal_rejection": "predeclared plant mean lift gate failed despite favorable overall and animal means",
+    "retuning_on_these_24_taxa_allowed": false,
+    "v1_taxa_or_v1_1_taxa_reusable_for_next_method_tuning": false,
+    "fresh_confirmation_taxa_consumed": false,
+    "global_candidate_generation_validated": false,
+    "next_question": "Can a deterministic regional-scale representation inside the confirmed country outer frame recover plant transfer without changing the confirmed country rule or frozen robust core?"
+  },
+  "frozen_components_unchanged": {
+    "country_framing_representation": true,
+    "geoBoundaries_v6_provider": true,
+    "robust_support_fraction": true,
+    "float32_support_worlds": true,
+    "patch_merge_1km": true,
+    "terrain_features": true,
+    "primary_10km_endpoint": true,
+    "same_size_random_baseline": true,
+    "japan_validated_adapter": true
+  }
+}

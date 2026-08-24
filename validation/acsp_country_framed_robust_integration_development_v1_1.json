@@ -1,0 +1,118 @@
+{
+  "protocol_id": "acsp_country_framed_robust_integration_development_v1_1",
+  "status": "predeclared_before_recent_outcomes_or_integrated_candidate_generation",
+  "parent_issue": 141,
+  "parent_rejected_result": {
+    "result_file": "validation/acsp_country_framed_robust_integration_development_result_v1.json",
+    "authoritative_run_id": 32685558754,
+    "same_taxa_reuse_allowed": false,
+    "reason_for_v1_1": "isolate_only_the_extra_exact_800_post_terrain_requirement_on_a_disjoint_development_cohort"
+  },
+  "country_geometry_provider": {
+    "freeze_file": "validation/acsp_country_geometry_geoboundaries_v6_freeze_v1.json",
+    "freeze_id": "acsp_country_geometry_geoboundaries_gbopen_v6_0_0_adm0_freeze_v1",
+    "freeze_fingerprint": "d0f9c9b2dfe939ffd91984b8a291442553f11b962ff64de4da2ed88d07f49589",
+    "provider_release_commit": "1289e40e366c7b320550be1ee0614a9472d572d4",
+    "fallback_allowed": false
+  },
+  "development_cohort": {
+    "source": "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv",
+    "source_git_blob_sha": "0b0475065a4b222bb79550a35297e53051d5714e",
+    "excluded_v1_identity_file": "validation/country_framed_robust_integration_development_v1/predeclared_taxon_country_pairs_compact.csv",
+    "development_only": true,
+    "confirmation_v1_taxa_allowed": false,
+    "v1_taxa_allowed": false,
+    "expected_taxa": 24,
+    "selection_rule": "for each of 12 region_cell_index values and each taxon_group, select record_count_stratum=region_cell_index mod 4",
+    "expected_taxon_group_counts": {
+      "plant": 12,
+      "animal": 12
+    },
+    "expected_record_count_stratum_counts": {
+      "0": 6,
+      "1": 6,
+      "2": 6,
+      "3": 6
+    }
+  },
+  "country_selection": {
+    "historical_count_min": 5,
+    "prefer_non_jp": true,
+    "one_country_per_taxon": true,
+    "selection_seed": 2026082401,
+    "selection_rule": "among non-JP historical countries with count>=5 choose minimum sha256(seed|speciesKey|country); if none, use JP only when historical count>=5; otherwise declaration fails without replacement",
+    "replacement_after_declaration_allowed": false,
+    "recent_outcomes_opened_during_selection": false
+  },
+  "candidate_surface_change_from_v1": {
+    "geometry_draws_per_country": 800,
+    "terrain_complete_rows_required_exactly_800": false,
+    "minimum_complete_surface_rows_added": false,
+    "rule": "sample the same 800 external country-geometry points, attach terrain, drop incomplete terrain rows exactly as the existing country_terrain_inputs helper does, and pass the remaining non-empty complete surface to the unchanged robust core",
+    "all_other_integration_components_unchanged": true
+  },
+  "frozen_robust_core": {
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0,
+    "max_prototypes": 32,
+    "terrain_features": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "ranking_or_topk": false,
+    "sdm_or_ssdm": false,
+    "movement_route_day_budget": false
+  },
+  "outcome_evaluation": {
+    "heldout_year_range": [
+      2021,
+      2025
+    ],
+    "heldout_max_coordinate_records_per_taxon_country": 300,
+    "primary_recovery_radius_km": 10.0,
+    "random_baseline_repetitions": 200,
+    "random_baseline_rule": "same number of points as robust patch representatives sampled without replacement from the exact complete post-terrain candidate surface used by the robust core",
+    "random_seed": 2026082402,
+    "taxon_is_primary_independence_unit": true,
+    "failed_or_unevaluable_taxa_not_replaced": true
+  },
+  "development_gate": {
+    "required_declared_taxa": 24,
+    "candidate_generation_success_rate_min": 0.75,
+    "temporal_evaluability_rate_min": 0.75,
+    "mean_robust_minus_random_recall_must_be_positive": true,
+    "taxon_bootstrap_95pct_lower_bound_must_be_positive": true,
+    "plant_mean_lift_min": 0.0,
+    "animal_mean_lift_min": 0.0,
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082403,
+    "if_fail": "reject v1.1 without retuning country rule, provider, support threshold, terrain features, recovery radius, baseline, or post-terrain completeness handling on these 24 taxa",
+    "if_pass": "the exact-800 extra constraint is diagnosed as a portability blocker, but ecological lift still determines whether the one-country surface representation merits further scale-up on remaining development taxa"
+  },
+  "claim_boundary": {
+    "integrated_ecological_outcomes_opened_before_protocol": false,
+    "development_result_can_validate_global_product": false,
+    "japan_validated_adapter_changed": false,
+    "country_framing_representation_changed": false,
+    "provider_changed_after_freeze": false,
+    "confirmation_v1_taxa_consumed": false,
+    "v1_taxa_reused": false,
+    "only_method_change_from_v1_is_exact_complete_surface_requirement": true
+  },
+  "upstream_framing": {
+    "freeze_id": "acsp_geographic_framing_country_registry_freeze_v1",
+    "confirmation_result": "validation/acsp_geographic_framing_confirmation_result_v1.json",
+    "historical_year_range": [
+      1900,
+      2020
+    ],
+    "country_expansion": false,
+    "higher_taxon_fallback": false
+  },
+  "protocol_fingerprint": "b61ab7f2625112c459559d28129db89c74ddc32808ebd5cfc6cf43009824d555"
+}
