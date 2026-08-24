@@ -1,0 +1,170 @@
+name: Country-framed robust integration development v1.1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "validation/acsp_country_framed_robust_integration_development_v1_1.json"
+      - "validation/acsp_country_framed_robust_integration_development_result_v1.json"
+      - "validation/country_framed_robust_integration_development_v1/predeclared_taxon_country_pairs_compact.csv"
+      - "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv"
+      - "validation/geographic_framing_confirmation_v1/confirmation_taxa.csv"
+      - "research/predeclare_country_framed_integration_development_v1_1.py"
+      - "research/run_country_framed_integration_development_v1_1.py"
+      - "research/test_country_framed_integration_development_v1_1.py"
+      - ".github/workflows/country-framed-integration-development-v1-1.yml"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze-development-identities:
+    name: Freeze disjoint 24-taxon v1.1 identities before outcomes
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify frozen one-change contract before declaration
+        run: python -m unittest -v research/test_country_framed_integration_development_v1_1.py
+
+      - name: Freeze disjoint taxon-country identities from historical data only
+        run: |
+          python research/predeclare_country_framed_integration_development_v1_1.py \
+            --output country-framed-integration-development-v1-1-cohort
+
+      - name: Audit pre-outcome identity artifact
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('country-framed-integration-development-v1-1-cohort')
+          manifest = json.loads((root/'cohort_manifest.json').read_text(encoding='utf-8'))
+          pairs = pd.read_csv(root/'predeclared_taxon_country_pairs.csv')
+          assert manifest['protocol_fingerprint'] == 'b61ab7f2625112c459559d28129db89c74ddc32808ebd5cfc6cf43009824d555'
+          assert len(pairs) == 24
+          assert pairs['speciesKey'].nunique() == 24
+          assert manifest['taxon_group_counts'] == {'animal': 12, 'plant': 12}
+          assert manifest['record_count_stratum_counts'] == {'0': 6, '1': 6, '2': 6, '3': 6}
+          assert manifest['v1_taxa_reused'] is False
+          assert manifest['recent_outcomes_inspected'] is False
+          assert manifest['candidate_generation_run'] is False
+          assert manifest['robust_support_run'] is False
+          assert manifest['random_baseline_run'] is False
+          assert manifest['confirmation_v1_taxa_consumed'] is False
+          assert manifest['replacement_after_declaration_allowed'] is False
+          assert manifest['terrain_complete_rows_required_exactly_800'] is False
+          print(json.dumps(manifest, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload frozen pre-outcome v1.1 declarations
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v1-1-cohort
+          path: country-framed-integration-development-v1-1-cohort/
+          if-no-files-found: error
+          retention-days: 90
+
+  evaluate-frozen-integration:
+    name: Evaluate frozen disjoint integration v1.1
+    needs: freeze-development-identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Download already-frozen v1.1 declarations
+        uses: actions/download-artifact@v4
+        with:
+          name: country-framed-integration-development-v1-1-cohort
+          path: frozen-integration-v1-1-cohort
+
+      - name: Re-audit artifact before integrated outcomes
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('frozen-integration-v1-1-cohort')
+          manifest = json.loads((root/'cohort_manifest.json').read_text(encoding='utf-8'))
+          pairs = pd.read_csv(root/'predeclared_taxon_country_pairs.csv')
+          assert len(pairs) == 24
+          assert manifest['recent_outcomes_inspected'] is False
+          assert manifest['candidate_generation_run'] is False
+          assert manifest['robust_support_run'] is False
+          assert manifest['v1_taxa_reused'] is False
+          assert manifest['replacement_after_declaration_allowed'] is False
+          PY
+
+      - name: Build candidate patches first, then open recent outcomes
+        run: |
+          python research/run_country_framed_integration_development_v1_1.py \
+            --declarations frozen-integration-v1-1-cohort/predeclared_taxon_country_pairs.csv \
+            --output country-framed-integration-development-v1-1-results
+
+      - name: Audit fixed v1.1 endpoint and preserve any result
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('country-framed-integration-development-v1-1-results')
+          summary = json.loads((root/'development_summary.json').read_text(encoding='utf-8'))
+          rows = pd.read_csv(root/'taxon_country_results.csv')
+          assert summary['status'] == 'country_framed_robust_integration_development_v1_1_complete'
+          assert summary['protocol_fingerprint'] == 'b61ab7f2625112c459559d28129db89c74ddc32808ebd5cfc6cf43009824d555'
+          assert summary['declared_taxa'] == 24
+          assert len(rows) == 24
+          assert summary['primary_support_fraction'] == 0.025
+          assert summary['primary_radius_km'] == 10.0
+          assert summary['random_baseline_repetitions'] == 200
+          assert summary['only_method_change_from_v1'] == 'remove_exact_800_complete_post_terrain_surface_requirement'
+          assert summary['terrain_complete_rows_required_exactly_800'] is False
+          assert summary['new_minimum_complete_surface_rows_added'] is False
+          assert summary['candidate_generation_preceded_recent_outcome_fetch'] is True
+          assert summary['retuned_after_outcome_opening'] is False
+          assert summary['country_representation_changed'] is False
+          assert summary['country_geometry_provider_changed'] is False
+          assert summary['robust_core_changed'] is False
+          assert summary['v1_taxa_reused'] is False
+          assert summary['confirmation_v1_taxa_consumed'] is False
+          assert summary['global_candidate_generation_validated'] is False
+          print(json.dumps(summary, indent=2, ensure_ascii=False))
+          if summary['development_gate_passed']:
+              print('V1.1 DEVELOPMENT GATE PASSED: exact-800 was a portability blocker; ecological-lift gates still determine whether one-country representation merits further development.')
+          else:
+              print('V1.1 DEVELOPMENT GATE FAILED: preserve rejection and do not retune this cohort. If candidate portability passes but ecological lift fails, move to a new regional-scale representation on different taxa.')
+          PY
+
+      - name: Upload v1.1 integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v1-1-results
+          path: country-framed-integration-development-v1-1-results/
+          if-no-files-found: error
+          retention-days: 90
