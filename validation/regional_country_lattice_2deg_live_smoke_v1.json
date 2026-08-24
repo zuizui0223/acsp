@@ -1,0 +1,53 @@
+{
+  "status": "regional_lattice_geometry_smoke_only",
+  "authoritative_run_id": 32687506839,
+  "artifact_id": 9506151214,
+  "artifact_zip_sha256": "57f63ce2456b78b1e540ac86aa2066130dee2a2bcc4ddce1507d66a7cdc56485",
+  "freeze_id": "acsp_country_regional_lattice_2deg_freeze_v1",
+  "freeze_fingerprint": "6d5c0ca8cc699eda7856d37e72007cadcc208a9312765f1162ed963ae0de0ba1",
+  "countries": [
+    {
+      "country_code": "JP",
+      "lattice_step_deg": 2.0,
+      "reference_region_width_median_deg": 2.0,
+      "reference_region_height_median_deg": 1.8999999999999986,
+      "intersecting_tile_count": 49,
+      "points_per_tile": 800,
+      "total_geometry_points": 39200,
+      "occurrence_selected_tiles": false,
+      "tile_is_scientific_barrier": false,
+      "country_geometry_is_outer_frame": true
+    },
+    {
+      "country_code": "KR",
+      "lattice_step_deg": 2.0,
+      "reference_region_width_median_deg": 2.0,
+      "reference_region_height_median_deg": 1.8999999999999986,
+      "intersecting_tile_count": 10,
+      "points_per_tile": 800,
+      "total_geometry_points": 8000,
+      "occurrence_selected_tiles": false,
+      "tile_is_scientific_barrier": false,
+      "country_geometry_is_outer_frame": true
+    },
+    {
+      "country_code": "GB",
+      "lattice_step_deg": 2.0,
+      "reference_region_width_median_deg": 2.0,
+      "reference_region_height_median_deg": 1.8999999999999986,
+      "intersecting_tile_count": 26,
+      "points_per_tile": 800,
+      "total_geometry_points": 20800,
+      "occurrence_selected_tiles": false,
+      "tile_is_scientific_barrier": false,
+      "country_geometry_is_outer_frame": true
+    }
+  ],
+  "taxon_input_used": false,
+  "occurrence_input_used": false,
+  "terrain_extraction_run": false,
+  "candidate_generation_run": false,
+  "robust_support_run": false,
+  "ecological_outcome_opened": false,
+  "scientific_interpretation": "geometry-mechanics evidence only; no taxon or ecological claim"
+}
