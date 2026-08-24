@@ -1,0 +1,53 @@
+{
+  "freeze_id": "acsp_country_regional_lattice_2deg_freeze_v1",
+  "status": "mechanics_frozen_before_v2_taxon_selection_or_ecological_outcomes",
+  "parent_issue": 141,
+  "scale_derivation": {
+    "source": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS",
+    "validated_region_count": 12,
+    "median_width_deg": 2.0,
+    "median_height_deg": 1.9,
+    "chosen_lattice_step_deg": 2.0,
+    "rule": "use the round 2-degree scale matching the validated region width median and closely matching the 1.9-degree height median; no v1/v1.1 recovery outcome used to choose scale"
+  },
+  "lattice": {
+    "longitude_anchor": -180.0,
+    "latitude_anchor": -90.0,
+    "longitude_step_deg": 2.0,
+    "latitude_step_deg": 2.0,
+    "include_every_polygonal_country_intersection": true,
+    "historical_occurrence_tile_selection": false,
+    "country_boundary_provider": "acsp_country_geometry_geoboundaries_gbopen_v6_0_0_adm0_freeze_v1",
+    "tile_is_scientific_barrier": false,
+    "shared_country_survey_area_id": true
+  },
+  "sampling": {
+    "points_per_intersecting_tile": 800,
+    "deterministic_seed_basis": "sha256(regional-lattice-v1|country_code|tile_id)",
+    "polygon_component_allocation": "multinomial proportional to component planar area within each clipped tile",
+    "component_sampling": "deterministic rejection sampling inside each component bounding box",
+    "geometry_repair_fallback": false,
+    "bbox_country_fallback": false,
+    "alternate_provider_fallback": false
+  },
+  "future_v2_boundary": {
+    "country_wide_historical_prototype_scope_unchanged_from_v1_v1_1": true,
+    "robust_support_fraction_unchanged": 0.025,
+    "patch_merge_distance_m_unchanged": 1000.0,
+    "terrain_features_unchanged": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "candidate_ranking_or_topk": false,
+    "confirmation_taxa_allowed": false,
+    "v1_taxa_allowed": false,
+    "v1_1_taxa_allowed": false,
+    "ecological_outcomes_opened": false
+  },
+  "next_step": "after mechanics and live geometry-only smoke pass, preregister v2 on a third disjoint 24-taxon subset from remaining v4 development taxa before any recent outcome",
+  "freeze_fingerprint": "6d5c0ca8cc699eda7856d37e72007cadcc208a9312765f1162ed963ae0de0ba1"
+}
