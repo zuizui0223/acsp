@@ -1,0 +1,94 @@
+name: geoBoundaries provider smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "research/geoboundaries_v6_provider.py"
+      - "research/test_geoboundaries_v6_provider.py"
+      - "validation/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json"
+      - "validation/acsp_country_geometry_geoboundaries_v6_freeze_v1.json"
+      - ".github/workflows/geoboundaries-provider-smoke.yml"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  provider-smoke:
+    name: Fetch commit-pinned ADM0 boundaries only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify provider contract before live fetch
+        run: python -m unittest -v research/test_geoboundaries_v6_provider.py
+
+      - name: Fetch pinned country boundaries without ecological outcomes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from shapely import wkt
+          from geoboundaries_v6_provider import (
+              GEOBOUNDARIES_RELEASE_COMMIT,
+              GEOBOUNDARIES_SOURCE_ID,
+              fetch_geoboundaries_country_geometry,
+          )
+
+          rows = []
+          for code in ("JP", "KR", "GB"):
+              item = fetch_geoboundaries_country_geometry(code)
+              geom = wkt.loads(item.land_geometry_wkt)
+              assert item.country_code == code
+              assert item.source_id == GEOBOUNDARIES_SOURCE_ID
+              assert GEOBOUNDARIES_RELEASE_COMMIT in item.source_version
+              assert geom.geom_type in {"Polygon", "MultiPolygon"}
+              assert geom.is_valid and not geom.is_empty
+              rows.append(
+                  {
+                      "country_code": code,
+                      "geometry_type": geom.geom_type,
+                      "bounds": list(map(float, geom.bounds)),
+                      "source_id": item.source_id,
+                      "source_version": item.source_version,
+                  }
+              )
+
+          payload = {
+              "status": "provider_live_smoke_only_no_ecological_outcomes",
+              "release_commit": GEOBOUNDARIES_RELEASE_COMMIT,
+              "country_count": len(rows),
+              "countries": rows,
+              "candidate_generation_run": False,
+              "robust_support_run": False,
+              "confirmation_taxa_consumed": False,
+          }
+          Path("geoboundaries-provider-smoke.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(payload, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload provider smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: geoboundaries-v6-provider-smoke
+          path: geoboundaries-provider-smoke.json
+          if-no-files-found: error
+          retention-days: 30
