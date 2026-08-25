@@ -1,13 +1,6 @@
 name: Country-framed robust integration v2 exact timeout retry
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - validation/acsp_country_framed_robust_integration_development_v2_timeout_retry_v1.json
-      - research/run_country_framed_integration_development_v2_timeout_retry_pair.py
-      - research/aggregate_country_framed_integration_development_v2_timeout_retry.py
-      - .github/workflows/country-framed-integration-development-v2-timeout-retry.yml
   workflow_dispatch:
 
 permissions:
