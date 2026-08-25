@@ -1,0 +1,11 @@
+source_run_id=32795662847
+technical_limit_confirmed=true
+scientific_method_changed=false
+outcome_driven_tuning=false
+verification=github_actions_metadata
+source_job_ids=97647507761,97647507676,97647507704,97647507686
+source_started_at=2026-08-25T01:03:30Z
+source_completed_at_range=2026-08-25T04:03:44Z..2026-08-25T04:03:45Z
+source_job_conclusion=cancelled
+source_evaluation_step_conclusion=cancelled
+strict_activation_verifier=research/verify_ru_robust_timeout_activation.py
