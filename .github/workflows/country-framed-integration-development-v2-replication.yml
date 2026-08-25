@@ -28,6 +28,7 @@ jobs:
           python - <<'PY'
           import os
           from pathlib import Path
+          assert os.environ.get('GITHUB_RUN_NUMBER') == '1', 'fresh second replication activation is forbidden; rerun jobs within run 1 instead'
           if os.environ.get('GITHUB_EVENT_NAME') == 'push':
               assert os.environ.get('GITHUB_REF') == 'refs/heads/main'
               marker = Path('validation/activate_country_framed_integration_development_v2_replication.marker')
