@@ -19,7 +19,7 @@ from acsp.robust_patches import leave_one_out_consensus_support, robust_environm
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "validation" / "acsp_country_framed_robust_integration_development_v2_ru_robust_world_shard_prep_v1.json"
-EXPECTED_FINGERPRINT = "6ed3cf68fe9eac282c78c901f9b1d4b70681cbaa2ba89db8dbfa3392013e2829"
+EXPECTED_FINGERPRINT = "c05f25ad2c1f10b608f33f922804a42188cd75c255aac4d030efd691dc305a41"
 FEATURES = ("elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi")
 
 
@@ -47,6 +47,13 @@ def load_contract() -> dict[str, object]:
         raise AssertionError("world sharding contract drift")
     if rule["support_world_dtype"] != "float32" or int(rule["max_prototypes"]) != 32:
         raise AssertionError("frozen robust representation drift")
+    surface = payload["ru_surface_source"]
+    if int(surface["workflow_run_id"]) != 32795662847 or int(surface["artifact_id"]) != 9544853686:
+        raise AssertionError("RU complete-surface provenance drift")
+    if surface["ru_complete_surface_parquet_sha256"] != "77729dfa45b9e123f035ca15a421f834a6b155140ae410b8806e9f4eca19c982":
+        raise AssertionError("RU complete-surface parquet digest drift")
+    if surface["surface_manifest_sha256"] != "a4cd321cee240f050d4223ab19b3af8f956ac80d675229703d2dffdbb0908d7e":
+        raise AssertionError("RU complete-surface manifest digest drift")
     payload["execution_fingerprint"] = stored
     return payload
 
@@ -81,7 +88,6 @@ def _synthetic_case(prototype_count: int, seed: int) -> None:
     rng = np.random.default_rng(seed)
     prototypes = pd.DataFrame(rng.normal(size=(prototype_count, len(FEATURES))), columns=FEATURES)
     universe = pd.DataFrame(rng.normal(size=(257, len(FEATURES))), columns=FEATURES)
-    # Include valid-but-extreme rows so percentile ranking and float32 world casts are exercised.
     universe.loc[0, :] = 0.0
     universe.loc[1, :] = 25.0
     original_consensus, original_uncertainty, audit = leave_one_out_consensus_support(
