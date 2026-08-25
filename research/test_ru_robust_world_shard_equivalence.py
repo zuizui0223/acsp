@@ -19,7 +19,7 @@ from acsp.robust_patches import leave_one_out_consensus_support, robust_environm
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "validation" / "acsp_country_framed_robust_integration_development_v2_ru_robust_world_shard_prep_v1.json"
-EXPECTED_FINGERPRINT = "c05f25ad2c1f10b608f33f922804a42188cd75c255aac4d030efd691dc305a41"
+EXPECTED_FINGERPRINT = "3d64d54723070343e23fc74c2ce9ca1303585a3ad80cafaa4221c90ffe04795d"
 FEATURES = ("elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi")
 
 
@@ -37,7 +37,8 @@ def load_contract() -> dict[str, object]:
         "country_geometry_changed", "complete_ru_surface_changed", "historical_training_scope_changed",
         "prototype_rule_changed", "leave_one_out_world_definition_changed", "support_world_dtype_changed",
         "consensus_reduction_changed", "uncertainty_reduction_changed", "support_threshold_changed",
-        "patch_aggregation_changed", "random_baseline_changed", "heldout_outcome_opening_order_changed",
+        "patch_aggregation_changed", "patch_compatibility_rule_changed", "patch_tie_break_changed",
+        "patch_projection_changed", "random_baseline_changed", "heldout_outcome_opening_order_changed",
         "gates_changed", "outcome_driven_tuning_allowed",
     )
     for key in required_false:
@@ -47,6 +48,10 @@ def load_contract() -> dict[str, object]:
         raise AssertionError("world sharding contract drift")
     if rule["support_world_dtype"] != "float32" or int(rule["max_prototypes"]) != 32:
         raise AssertionError("frozen robust representation drift")
+    if rule["patch_lookup_implementation_only"] is not True or rule["patch_equivalence_required"] is not True:
+        raise AssertionError("exact patch lookup contract drift")
+    if rule["patch_lookup_filter"] != "unit_sphere_first_member_chord_grid":
+        raise AssertionError("patch lookup filter drift")
     surface = payload["ru_surface_source"]
     if int(surface["workflow_run_id"]) != 32795662847 or int(surface["artifact_id"]) != 9544853686:
         raise AssertionError("RU complete-surface provenance drift")
