@@ -1,0 +1,134 @@
+name: Country-framed robust integration v2 frozen replication
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze-identities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Verify frozen replication and execution contracts before identities
+        run: |
+          python research/test_country_framed_integration_development_v2_replication_contract.py
+          python research/test_country_framed_integration_development_v2_replication_execution_contract.py
+      - name: Freeze final reserved 24 identities and historical country declarations only
+        run: python research/predeclare_country_framed_integration_development_v2_replication.py --output frozen-replication-cohort
+      - name: Re-audit freeze before any candidate or recent outcome
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from country_framed_integration_v2_replication_execution_contract import EXPECTED_EXECUTION_FINGERPRINT, execution_contract
+          from predeclare_country_framed_integration_development_v2_replication import EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT
+          m=json.loads(Path('frozen-replication-cohort/cohort_manifest.json').read_text())
+          assert m['replication_protocol_fingerprint']==EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT
+          assert m['declared_taxa']==24 and m['unique_declared_taxa']==24
+          assert m['taxon_group_counts']=={'animal':12,'plant':12}
+          assert m['record_count_stratum_counts']=={'0':6,'1':6,'2':6,'3':6}
+          assert m['v1_taxa_reused'] is False and m['v1_1_taxa_reused'] is False and m['v2_taxa_reused'] is False
+          assert m['confirmation_v1_taxa_consumed'] is False
+          assert m['recent_outcomes_inspected'] is False and m['candidate_generation_run'] is False
+          assert m['robust_support_run'] is False and m['random_baseline_run'] is False
+          assert m['replacement_after_declaration_allowed'] is False and m['retuning_allowed'] is False
+          c=execution_contract(); assert c['execution_fingerprint']==EXPECTED_EXECUTION_FINGERPRINT
+          print(json.dumps(m,indent=2,ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-replication-cohort
+          path: frozen-replication-cohort/
+          if-no-files-found: error
+          retention-days: 90
+
+  evaluate-pair:
+    needs: freeze-identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        pair-id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download exact same-run frozen replication declarations
+        uses: actions/download-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-replication-cohort
+          path: frozen-replication-cohort
+      - name: Re-audit frozen declaration artifact before opening this pair's outcome
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          m=json.loads(Path('frozen-replication-cohort/cohort_manifest.json').read_text())
+          d=pd.read_csv('frozen-replication-cohort/predeclared_taxon_country_pairs.csv')
+          assert len(d)==24 and d['integration_pair_id'].nunique()==24 and d['speciesKey'].nunique()==24
+          assert m['recent_outcomes_inspected'] is False and m['candidate_generation_run'] is False
+          assert m['replacement_after_declaration_allowed'] is False and m['retuning_allowed'] is False
+          PY
+      - name: Evaluate one frozen declaration with unchanged authoritative v2 method
+        run: python research/run_country_framed_integration_development_v2_replication_pair.py --declarations frozen-replication-cohort/predeclared_taxon_country_pairs.csv --pair-id ${{ matrix.pair-id }} --output pair-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replication-pair-${{ matrix.pair-id }}
+          path: pair-output/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: evaluate-pair
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download all 24 frozen replication pair artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: replication-pair-*
+          path: replication-pairs
+          merge-multiple: false
+      - name: Aggregate once using unchanged preregistered replication gates
+        run: python research/aggregate_country_framed_integration_development_v2_replication.py --input-root replication-pairs --output replication-results
+      - name: Preserve favorable or unfavorable replication result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('replication-results/replication_summary.json').read_text())
+          assert s['replication_protocol_fingerprint']=='66d5eba6d5e92e89bcf941b40aa0cec91f39479c25bb8c5e1a0f403b50d3a94c'
+          assert s['replication_execution_fingerprint']=='408acbf32ab2cb2d9d4ee802f599aa425185a6cf82c956173f4f53a1089fc63e'
+          assert s['authoritative_v2_protocol_fingerprint']=='7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9'
+          assert s['scientific_method_changed_in_execution'] is False
+          assert s['retuning_on_replication_taxa_allowed'] is False
+          print(json.dumps(s,indent=2,ensure_ascii=False))
+          print('V2 REPLICATION PASS' if s['replication_gate_passed'] else 'V2 REPLICATION FAIL')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-replication-results
+          path: replication-results/
+          if-no-files-found: error
+          retention-days: 90
