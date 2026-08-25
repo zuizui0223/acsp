@@ -22,6 +22,8 @@ from predeclare_country_framed_integration_development_v2_replication import (
 from regional_country_lattice import LATTICE_STEP_DEG, POINTS_PER_REGIONAL_TILE
 from run_country_framed_integration_development_v1_1 import _finite_mean, taxon_bootstrap_mean_ci
 
+PAIR_ARTIFACT_GLOB = "replication-pair-*"
+
 
 def aggregate_replication(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
     authoritative = _protocol()
@@ -30,8 +32,8 @@ def aggregate_replication(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame,
     gate = replication["replication_gate"]
     evalcfg = authoritative["evaluation"]
 
-    result_files = sorted(input_root.glob("pair-*/taxon_country_results.csv"))
-    manifest_files = sorted(input_root.glob("pair-*/pair_manifest.json"))
+    result_files = sorted(input_root.glob(f"{PAIR_ARTIFACT_GLOB}/taxon_country_results.csv"))
+    manifest_files = sorted(input_root.glob(f"{PAIR_ARTIFACT_GLOB}/pair_manifest.json"))
     if len(result_files) != 24 or len(manifest_files) != 24:
         raise ValueError(f"expected 24 replication pair artifacts, found results={len(result_files)} manifests={len(manifest_files)}")
 
@@ -64,7 +66,7 @@ def aggregate_replication(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame,
             raise ValueError("replication pair opened recent outcome before candidate generation")
 
     patch_frames: list[pd.DataFrame] = []
-    for path in sorted(input_root.glob("pair-*/integrated_candidate_patches.csv")):
+    for path in sorted(input_root.glob(f"{PAIR_ARTIFACT_GLOB}/integrated_candidate_patches.csv")):
         try:
             frame = pd.read_csv(path)
         except pd.errors.EmptyDataError:
