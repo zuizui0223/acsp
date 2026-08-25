@@ -1,0 +1,325 @@
+name: Country-framed v2 replication RU recovery artifact-layout continuation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - validation/activate_country_framed_integration_development_v2_replication_ru_recovery_continuation.marker
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  continuation-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      recover_pairs: ${{ steps.source.outputs.recover_pairs }}
+      world_matrix: ${{ steps.source.outputs.world_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Verify one-shot artifact-layout continuation marker
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          assert os.environ['GITHUB_RUN_NUMBER'] == '1', 'fresh second continuation activation is forbidden'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/main'
+          marker=Path('validation/activate_country_framed_integration_development_v2_replication_ru_recovery_continuation.marker')
+          assert marker.is_file()
+          values={}
+          for line in marker.read_text(encoding='utf-8').splitlines():
+              if '=' in line:
+                  k,v=line.split('=',1); values[k.strip()]=v.strip()
+          assert values['source_replication_run_id']=='32811169261'
+          assert values['source_recovery_run_id']=='32851181814'
+          assert values['source_recovery_input_artifact_id']=='9564336761'
+          assert values['source_recovery_input_artifact_digest']=='sha256:f35944d7e99c0b6f1d221caac4a79076d7d4e3aa21e7a8833289b39572866114'
+          assert values['recovery_execution_fingerprint']=='694e838b02717a20429070e291d7226c1b7c2c575d736020895f2676c1cbb504'
+          assert values['artifact_layout_fix_only']=='true'
+          assert values['scientific_method_changed']=='false'
+          assert values['outcome_driven_tuning']=='false'
+          assert values['cohort_refrozen']=='false'
+          PY
+      - name: Verify exact failed-recovery input artifact identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import os, requests
+          headers={'Authorization':f"Bearer {os.environ['GH_TOKEN']}", 'Accept':'application/vnd.github+json'}
+          url=f"https://api.github.com/repos/{os.environ['GH_REPOSITORY']}/actions/runs/32851181814/artifacts?name=replication-ru-recovery-inputs"
+          r=requests.get(url,headers=headers,timeout=60); r.raise_for_status()
+          arts=r.json()['artifacts']
+          assert len(arts)==1, arts
+          a=arts[0]
+          assert a['id']==9564336761, a
+          assert a['digest']=='sha256:f35944d7e99c0b6f1d221caac4a79076d7d4e3aa21e7a8833289b39572866114', a
+          assert not a['expired'], a
+          PY
+      - name: Download exact verified recovery inputs at their archived root
+        uses: actions/download-artifact@v4
+        with:
+          name: replication-ru-recovery-inputs
+          path: .
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32851181814
+      - name: Re-verify frozen bytes, surface, and original recovery contract
+        run: >-
+          python research/run_replication_ru_robust_world_recovery.py verify
+          --declarations recovery-inputs/cohort/predeclared_taxon_country_pairs.csv
+          --cohort-manifest recovery-inputs/cohort/cohort_manifest.json
+          --surface recovery-inputs/surface/ru_complete_surface.parquet
+          --surface-manifest recovery-inputs/surface/surface_manifest.json
+      - name: Re-verify source run and select only genuine RU timeouts
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime
+          import requests
+          run_id=32811169261
+          ru_ids=(1,4,15,19)
+          headers={'Authorization':f"Bearer {os.environ['GH_TOKEN']}", 'Accept':'application/vnd.github+json'}
+          run=requests.get(f"https://api.github.com/repos/{os.environ['GH_REPOSITORY']}/actions/runs/{run_id}",headers=headers,timeout=60)
+          run.raise_for_status(); run=run.json()
+          assert run['status']=='completed', run['status']
+          jobs=requests.get(f"https://api.github.com/repos/{os.environ['GH_REPOSITORY']}/actions/runs/{run_id}/jobs?per_page=100",headers=headers,timeout=60)
+          jobs.raise_for_status(); jobs=jobs.json()['jobs']
+          by_name={j['name']:j for j in jobs}
+          recover=[]
+          for pair_id in ru_ids:
+              j=by_name[f'evaluate-pair ({pair_id})']
+              assert j['status']=='completed', j
+              started=datetime.fromisoformat(j['started_at'].replace('Z','+00:00'))
+              completed=datetime.fromisoformat(j['completed_at'].replace('Z','+00:00'))
+              runtime=(completed-started).total_seconds()/60.0
+              if j['conclusion']=='success':
+                  continue
+              if j['conclusion']=='cancelled' and runtime >= 299.0:
+                  recover.append(pair_id)
+                  continue
+              raise AssertionError(f"non-recoverable RU state pair={pair_id} conclusion={j['conclusion']} runtime={runtime:.2f}")
+          assert recover, 'no genuine RU technical timeout exists'
+          world={'include':[{'pair_id':p,'shard_id':s} for p in recover for s in range(8)]}
+          out=os.environ['GITHUB_OUTPUT']
+          with open(out,'a',encoding='utf-8') as fh:
+              fh.write('recover_pairs='+json.dumps(recover,separators=(',',':'))+'\n')
+              fh.write('world_matrix='+json.dumps(world,separators=(',',':'))+'\n')
+          print(json.dumps({'recover_pairs':recover},indent=2))
+          PY
+
+  prepare-pair:
+    needs: continuation-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pair-id: ${{ fromJSON(needs.continuation-contract.outputs.recover_pairs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download exact verified recovery inputs at archived root
+        uses: actions/download-artifact@v4
+        with:
+          name: replication-ru-recovery-inputs
+          path: .
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32851181814
+      - name: Freeze unchanged historical prototypes for timed-out RU pair
+        run: >-
+          python research/run_replication_ru_robust_world_recovery.py prepare-pair
+          --declarations recovery-inputs/cohort/predeclared_taxon_country_pairs.csv
+          --cohort-manifest recovery-inputs/cohort/cohort_manifest.json
+          --pair-id ${{ matrix.pair-id }}
+          --output pair-prep
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replication-ru-recovery-continuation-prep-${{ matrix.pair-id }}
+          path: pair-prep/
+          if-no-files-found: error
+          retention-days: 90
+
+  world-shard:
+    needs: [continuation-contract, prepare-pair]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.continuation-contract.outputs.world_matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download exact verified recovery inputs at archived root
+        uses: actions/download-artifact@v4
+        with:
+          name: replication-ru-recovery-inputs
+          path: .
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32851181814
+      - uses: actions/download-artifact@v4
+        with:
+          name: replication-ru-recovery-continuation-prep-${{ matrix.pair_id }}
+          path: pair-prep
+      - name: Compute exact subset of unchanged float32 LOO worlds
+        run: >-
+          python research/run_replication_ru_robust_world_recovery.py world-shard
+          --surface recovery-inputs/surface/ru_complete_surface.parquet
+          --surface-manifest recovery-inputs/surface/surface_manifest.json
+          --pair-prep pair-prep
+          --pair-id ${{ matrix.pair_id }}
+          --shard-id ${{ matrix.shard_id }}
+          --output world-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replication-ru-recovery-continuation-world-${{ matrix.pair_id }}-${{ matrix.shard_id }}
+          path: world-output/
+          if-no-files-found: error
+          retention-days: 90
+
+  assemble-pair:
+    needs: [continuation-contract, prepare-pair, world-shard]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        pair-id: ${{ fromJSON(needs.continuation-contract.outputs.recover_pairs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download exact verified recovery inputs at archived root
+        uses: actions/download-artifact@v4
+        with:
+          name: replication-ru-recovery-inputs
+          path: .
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32851181814
+      - uses: actions/download-artifact@v4
+        with:
+          name: replication-ru-recovery-continuation-prep-${{ matrix.pair-id }}
+          path: pair-prep
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: replication-ru-recovery-continuation-world-${{ matrix.pair-id }}-*
+          path: worlds
+          merge-multiple: false
+      - name: Reassemble original LOO order, build exact patches, then open heldout endpoint
+        run: >-
+          python research/run_replication_ru_robust_world_recovery.py assemble-pair
+          --declarations recovery-inputs/cohort/predeclared_taxon_country_pairs.csv
+          --cohort-manifest recovery-inputs/cohort/cohort_manifest.json
+          --surface recovery-inputs/surface/ru_complete_surface.parquet
+          --surface-manifest recovery-inputs/surface/surface_manifest.json
+          --pair-prep pair-prep
+          --worlds-root worlds
+          --pair-id ${{ matrix.pair-id }}
+          --output recovered-pair
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replication-ru-recovery-continuation-pair-${{ matrix.pair-id }}
+          path: recovered-pair/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: [continuation-contract, assemble-pair]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download all successful pair artifacts from replication run 1
+        uses: actions/download-artifact@v4
+        with:
+          pattern: replication-pair-*
+          path: combined-pairs
+          merge-multiple: false
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32811169261
+      - name: Download recovered RU pair artifacts from this continuation
+        uses: actions/download-artifact@v4
+        with:
+          pattern: replication-ru-recovery-continuation-pair-*
+          path: recovered-pairs
+          merge-multiple: false
+      - name: Overlay only technically recovered RU pairs onto source artifacts
+        env:
+          RECOVER_PAIRS: ${{ needs.continuation-contract.outputs.recover_pairs }}
+        run: |
+          python - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          recover=[int(x) for x in json.loads(os.environ['RECOVER_PAIRS'])]
+          for pair_id in recover:
+              src=Path('recovered-pairs')/f'replication-ru-recovery-continuation-pair-{pair_id}'
+              dst=Path('combined-pairs')/f'replication-pair-{pair_id}'
+              assert src.is_dir(), src
+              if dst.exists(): shutil.rmtree(dst)
+              shutil.copytree(src,dst)
+          dirs=sorted(p for p in Path('combined-pairs').glob('replication-pair-*') if p.is_dir())
+          assert len(dirs)==24, [p.name for p in dirs]
+          PY
+      - name: Aggregate once with the original frozen replication gates
+        run: python research/aggregate_country_framed_integration_development_v2_replication.py --input-root combined-pairs --output replication-results
+      - name: Attach technical continuation provenance without changing scientific result
+        env:
+          RECOVER_PAIRS: ${{ needs.continuation-contract.outputs.recover_pairs }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('replication-results/replication_summary.json')
+          s=json.loads(p.read_text())
+          s.update({
+            'replication_ru_recovery_execution_fingerprint':'694e838b02717a20429070e291d7226c1b7c2c575d736020895f2676c1cbb504',
+            'replication_ru_recovery_source_run_id':32811169261,
+            'replication_ru_recovery_source_failed_run_id':32851181814,
+            'replication_ru_recovery_source_input_artifact_id':9564336761,
+            'replication_ru_recovered_pair_ids':[int(x) for x in json.loads(os.environ['RECOVER_PAIRS'])],
+            'replication_ru_recovery_artifact_layout_fix_only':True,
+            'replication_ru_recovery_scientific_method_changed':False,
+            'replication_ru_recovery_cohort_refrozen':False,
+            'replication_ru_recovery_outcome_driven_tuning':False,
+          })
+          p.write_text(json.dumps(s,indent=2,ensure_ascii=False)+'\n')
+          print(json.dumps(s,indent=2,ensure_ascii=False))
+          print('V2 REPLICATION PASS' if s['replication_gate_passed'] else 'V2 REPLICATION FAIL')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-replication-results-ru-recovery
+          path: replication-results/
+          if-no-files-found: error
+          retention-days: 90
