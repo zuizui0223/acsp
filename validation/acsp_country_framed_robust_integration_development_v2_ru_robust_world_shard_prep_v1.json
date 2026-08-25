@@ -36,6 +36,12 @@
     "uncertainty_reduction_changed": false,
     "support_threshold_changed": false,
     "patch_aggregation_changed": false,
+    "patch_lookup_implementation_only": true,
+    "patch_lookup_filter": "unit_sphere_first_member_chord_grid",
+    "patch_compatibility_rule_changed": false,
+    "patch_tie_break_changed": false,
+    "patch_projection_changed": false,
+    "patch_equivalence_required": true,
     "random_baseline_changed": false,
     "heldout_outcome_opening_order_changed": false,
     "gates_changed": false,
@@ -47,5 +53,5 @@
     "taxon_replacement_allowed": false,
     "parameter_retuning_allowed": false
   },
-  "execution_fingerprint": "c05f25ad2c1f10b608f33f922804a42188cd75c255aac4d030efd691dc305a41"
+  "execution_fingerprint": "3d64d54723070343e23fc74c2ce9ca1303585a3ad80cafaa4221c90ffe04795d"
 }
