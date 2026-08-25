@@ -23,6 +23,7 @@ import run_country_framed_integration_development_v2_timeout_retry_pair as retry
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "country-framed-integration-development-v2-replication.yml"
+ACTIVATION_MARKER = "validation/activate_country_framed_integration_development_v2_replication.marker"
 
 
 class ReplicationExecutionContractTests(unittest.TestCase):
@@ -82,7 +83,12 @@ class ReplicationExecutionContractTests(unittest.TestCase):
     def test_workflow_cannot_open_identities_from_pr_event(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", text)
+        self.assertIn("push:", text)
+        self.assertIn("branches: [main]", text)
+        self.assertIn(ACTIVATION_MARKER, text)
         self.assertNotIn("pull_request:", text)
+        self.assertIn("Verify explicit activation before identities", text)
+        self.assertIn("identities_opened_before_activation", text)
         self.assertIn("needs: freeze-identities", text)
         self.assertIn("fail-fast: false", text)
         self.assertIn("max-parallel: 4", text)
