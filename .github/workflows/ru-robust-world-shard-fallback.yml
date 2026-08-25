@@ -70,10 +70,14 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
+          name: ru-timeout-activation-audit
+          path: ru-timeout-audit.json
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        with:
           name: ru-fallback-pinned-inputs
-          path: |
-            pinned-inputs/
-            ru-timeout-audit.json
+          path: pinned-inputs/
           if-no-files-found: error
           retention-days: 90
 
