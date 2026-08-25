@@ -1,0 +1,40 @@
+{
+  "execution_id": "acsp_country_framed_robust_integration_development_v2_replication_execution_v1",
+  "status": "frozen_before_replication_identities",
+  "replication_protocol_fingerprint": "66d5eba6d5e92e89bcf941b40aa0cec91f39479c25bb8c5e1a0f403b50d3a94c",
+  "authoritative_v2_protocol_fingerprint": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
+  "trigger_evidence": {
+    "v2_development_gate_passed": true,
+    "result_workflow_run_id": 32807630828,
+    "result_artifact_id": 9548910518,
+    "result_artifact_sha256": "6ca2e6fce167d61df5537f4343739b316da2a598e3beac28485265f5bf8f0be3",
+    "issue_141_result_comment_id": 5405091485
+  },
+  "execution_decomposition": {
+    "identity_freeze_first": true,
+    "pair_shard_count": 24,
+    "max_parallel": 4,
+    "pair_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "pair_timeout_minutes": 300,
+    "fail_fast": false,
+    "aggregate_once_after_all_pairs": true,
+    "same_frozen_declarations_artifact": true,
+    "candidate_generation_before_recent_outcome": true,
+    "scientific_method_changed": false,
+    "cohort_rule_changed": false,
+    "country_declaration_rule_changed": false,
+    "regional_lattice_changed": false,
+    "robust_core_changed": false,
+    "endpoint_changed": false,
+    "random_baseline_changed": false,
+    "gate_changed": false,
+    "seed_changed": false
+  },
+  "failure_semantics": {
+    "technical_failure_is_scientific_failure": false,
+    "scientific_fail_preserved_without_workflow_failure": true,
+    "retuning_on_replication_taxa_allowed": false,
+    "replacement_after_declaration_allowed": false
+  },
+  "execution_fingerprint": "408acbf32ab2cb2d9d4ee802f599aa425185a6cf82c956173f4f53a1089fc63e"
+}
