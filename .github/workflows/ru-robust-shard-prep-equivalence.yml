@@ -26,3 +26,5 @@ jobs:
         run: python research/test_ru_robust_world_shard_equivalence.py
       - name: Verify exact complete-link acceleration
         run: python research/test_exact_fast_complete_link.py
+      - name: Verify strict RU timeout activation semantics
+        run: python research/test_verify_ru_robust_timeout_activation.py
