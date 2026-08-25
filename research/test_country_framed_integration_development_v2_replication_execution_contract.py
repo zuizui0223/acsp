@@ -87,7 +87,8 @@ class ReplicationExecutionContractTests(unittest.TestCase):
         self.assertIn("max-parallel: 4", text)
         self.assertIn("timeout-minutes: 300", text)
         self.assertIn("country-framed-integration-development-v2-replication-cohort", text)
-        self.assertIn("candidate_generation_preceded_recent_outcome_fetch", text)
+        self.assertIn("Evaluate one frozen declaration with unchanged authoritative v2 method", text)
+        self.assertIn("run_country_framed_integration_development_v2_replication_pair.py", text)
         self.assertIn("replication_execution_fingerprint", text)
 
 
