@@ -1,0 +1,30 @@
+name: RU robust-shard fallback equivalence prep
+
+on:
+  push:
+    branches:
+      - agent/country-framed-integration-v2-ru-robust-shard-prep
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  equivalence-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Verify exact LOO world sharding
+        run: python research/test_ru_robust_world_shard_equivalence.py
+      - name: Verify exact complete-link acceleration
+        run: python research/test_exact_fast_complete_link.py
+      - name: Verify strict RU timeout activation semantics
+        run: python research/test_verify_ru_robust_timeout_activation.py

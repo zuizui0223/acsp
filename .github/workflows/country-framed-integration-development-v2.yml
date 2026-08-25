@@ -1,0 +1,102 @@
+name: Country-framed robust integration development v2 (timed-out replay only)
+
+# Authoritative first attempt: run 32693242882.
+# It preserved the pre-outcome identity freeze but the monolithic evaluate job
+# reached its 300-minute execution limit before producing a scientific result.
+# Keep this workflow only for explicit forensic replay. The exact-method
+# technical retry is implemented separately and reuses the frozen cohort.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze-identities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Verify frozen v2 contract before declaration
+        run: python -m unittest -v research/test_country_framed_integration_development_v2.py
+      - name: Freeze third disjoint development taxon-country identities
+        run: python research/predeclare_country_framed_integration_development_v2.py --output v2-cohort
+      - name: Audit pre-outcome artifact
+        run: |
+          python - <<'PY'
+          import json, pandas as pd
+          from pathlib import Path
+          root=Path('v2-cohort'); m=json.loads((root/'cohort_manifest.json').read_text()); d=pd.read_csv(root/'predeclared_taxon_country_pairs.csv')
+          assert len(d)==24 and d['speciesKey'].nunique()==24
+          assert m['recent_outcomes_inspected'] is False
+          assert m['candidate_generation_run'] is False and m['robust_support_run'] is False and m['random_baseline_run'] is False
+          assert m['v1_taxa_reused'] is False and m['v1_1_taxa_reused'] is False and m['confirmation_v1_taxa_consumed'] is False
+          assert m['replacement_after_declaration_allowed'] is False
+          print(json.dumps(m,indent=2,ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-cohort
+          path: v2-cohort/
+          if-no-files-found: error
+          retention-days: 90
+
+  evaluate:
+    needs: freeze-identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-cohort
+          path: frozen-v2-cohort
+          run-id: ${{ github.run_id }}
+      - name: Re-audit identity freeze before outcomes
+        run: |
+          python - <<'PY'
+          import json, pandas as pd
+          from pathlib import Path
+          root=Path('frozen-v2-cohort'); m=json.loads((root/'cohort_manifest.json').read_text()); d=pd.read_csv(root/'predeclared_taxon_country_pairs.csv')
+          assert len(d)==24
+          assert m['recent_outcomes_inspected'] is False and m['candidate_generation_run'] is False
+          assert m['replacement_after_declaration_allowed'] is False
+          PY
+      - name: Build regional-lattice robust patches first, then open recent outcomes
+        run: python research/run_country_framed_integration_development_v2.py --declarations frozen-v2-cohort/predeclared_taxon_country_pairs.csv --output v2-results
+      - name: Preserve favorable or unfavorable fixed-gate result
+        run: |
+          python - <<'PY'
+          import json, pandas as pd
+          from pathlib import Path
+          root=Path('v2-results'); s=json.loads((root/'development_summary.json').read_text()); r=pd.read_csv(root/'taxon_country_results.csv')
+          assert len(r)==24
+          assert s['protocol_fingerprint']=='7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9'
+          assert s['lattice_step_deg']==2.0 and s['points_per_regional_tile']==800
+          assert s['primary_support_fraction']==0.025 and s['primary_radius_km']==10.0 and s['random_baseline_repetitions']==200
+          assert s['method_change_from_v1_1']=='regional_lattice_only'
+          assert s['retuned_after_outcome_opening'] is False and s['v1_or_v1_1_taxa_reused'] is False and s['confirmation_v1_taxa_consumed'] is False
+          print(json.dumps(s,indent=2,ensure_ascii=False))
+          if s['development_gate_passed']:
+              print('V2 DEVELOPMENT PASS: freeze before any scale-up; do not consume confirmation taxa.')
+          else:
+              print('V2 DEVELOPMENT FAIL: preserve rejection; do not retune lattice/support/radius/baseline on these taxa.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-results
+          path: v2-results/
+          if-no-files-found: error
+          retention-days: 90
