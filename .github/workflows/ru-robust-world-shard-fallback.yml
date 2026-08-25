@@ -1,0 +1,257 @@
+name: RU robust-world exact technical fallback
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/country-framed-integration-v2-ru-robust-shard-prep
+    paths:
+      - validation/activate_ru_robust_world_shard_retry.marker
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download exact frozen cohort from original v2 run
+        uses: actions/download-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-cohort
+          path: pinned-inputs/frozen-v2-cohort
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32693242882
+      - name: Download pinned RU complete surface from exact tile retry
+        uses: actions/download-artifact@v4
+        with:
+          name: ru-complete-surface
+          path: pinned-inputs/ru-surface
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32795662847
+      - name: Verify activation, pinned bytes, and exact-equivalence contracts
+        run: |
+          test -f validation/activate_ru_robust_world_shard_retry.marker
+          python research/run_ru_robust_world_shard_fallback.py verify \
+            --surface pinned-inputs/ru-surface/ru_complete_surface.parquet \
+            --surface-manifest pinned-inputs/ru-surface/surface_manifest.json \
+            --activation-marker validation/activate_ru_robust_world_shard_retry.marker
+          python research/test_ru_robust_world_shard_equivalence.py
+          python research/test_exact_fast_complete_link.py
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root=Path('pinned-inputs/frozen-v2-cohort')
+          expected={
+            'predeclared_taxon_country_pairs.csv':'e379cd836616232b55e06d10de2f92c84a5522c675161d9d4bb3c2f0b23ea1b1',
+            'cohort_manifest.json':'eca68ae999ecbaad0bce2880b6d277e772adfb2096e8475539cdc9bd1391d7e1',
+          }
+          for name,digest in expected.items():
+              got=hashlib.sha256((root/name).read_bytes()).hexdigest()
+              assert got==digest,(name,got,digest)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ru-fallback-pinned-inputs
+          path: pinned-inputs/
+          if-no-files-found: error
+          retention-days: 90
+
+  prepare-pair:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        pair-id: [2, 7, 9, 16]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/gbif_fieldmap_builder
+          key: acsp-worldclim-2.5m-elev-v1
+      - uses: actions/download-artifact@v4
+        with:
+          name: ru-fallback-pinned-inputs
+          path: pinned-inputs
+      - name: Freeze same historical prototypes for one RU pair without outcomes
+        run: |
+          python research/run_ru_robust_world_shard_fallback.py prepare-pair \
+            --declarations pinned-inputs/frozen-v2-cohort/predeclared_taxon_country_pairs.csv \
+            --pair-id ${{ matrix.pair-id }} \
+            --output pair-prep
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ru-fallback-prep-${{ matrix.pair-id }}
+          path: pair-prep/
+          if-no-files-found: error
+          retention-days: 90
+
+  world-shard:
+    needs: prepare-pair
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        pair-id: [2, 7, 9, 16]
+        shard-id: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          name: ru-fallback-pinned-inputs
+          path: pinned-inputs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ru-fallback-prep-${{ matrix.pair-id }}
+          path: pair-prep
+      - name: Compute only assigned frozen LOO worlds
+        run: |
+          python research/run_ru_robust_world_shard_fallback.py world-shard \
+            --surface pinned-inputs/ru-surface/ru_complete_surface.parquet \
+            --surface-manifest pinned-inputs/ru-surface/surface_manifest.json \
+            --pair-prep pair-prep \
+            --pair-id ${{ matrix.pair-id }} \
+            --shard-id ${{ matrix.shard-id }} \
+            --output world-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ru-fallback-world-${{ matrix.pair-id }}-${{ matrix.shard-id }}
+          path: world-output/
+          if-no-files-found: error
+          retention-days: 90
+
+  assemble-pair:
+    needs: world-shard
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        pair-id: [2, 7, 9, 16]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          name: ru-fallback-pinned-inputs
+          path: pinned-inputs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ru-fallback-prep-${{ matrix.pair-id }}
+          path: pair-prep
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ru-fallback-world-${{ matrix.pair-id }}-*
+          path: world-artifacts
+          merge-multiple: false
+      - name: Restore original world order, build exact patches, then open heldout outcomes
+        run: |
+          python research/run_ru_robust_world_shard_fallback.py assemble-pair \
+            --declarations pinned-inputs/frozen-v2-cohort/predeclared_taxon_country_pairs.csv \
+            --surface pinned-inputs/ru-surface/ru_complete_surface.parquet \
+            --surface-manifest pinned-inputs/ru-surface/surface_manifest.json \
+            --pair-prep pair-prep \
+            --worlds-root world-artifacts \
+            --pair-id ${{ matrix.pair-id }} \
+            --output pair-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ru-fallback-pair-${{ matrix.pair-id }}
+          path: pair-output/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: assemble-pair
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Download the 20 preserved pair artifacts from first exact retry
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pair-*
+          path: prior-pairs
+          merge-multiple: false
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32721251040
+      - name: Download four exact robust-world fallback pairs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ru-fallback-pair-*
+          path: fallback-pairs
+          merge-multiple: false
+      - name: Combine exactly 20 preserved plus 4 RU fallback pair artifacts
+        run: |
+          mkdir -p retry-pairs
+          cp -R prior-pairs/pair-* retry-pairs/
+          rm -rf retry-pairs/pair-2 retry-pairs/pair-7 retry-pairs/pair-9 retry-pairs/pair-16
+          for id in 2 7 9 16; do
+            mkdir -p retry-pairs/pair-$id
+            cp -R fallback-pairs/ru-fallback-pair-$id/. retry-pairs/pair-$id/
+          done
+          python - <<'PY'
+          from pathlib import Path
+          ids=sorted(int(p.name.split('-')[1]) for p in Path('retry-pairs').glob('pair-*'))
+          assert ids==list(range(1,25)),ids
+          PY
+      - name: Aggregate once with unchanged v2 gates and bootstrap
+        run: python research/aggregate_country_framed_integration_development_v2_timeout_retry.py --input-root retry-pairs --output v2-results
+      - name: Attach RU tile and robust-world technical provenance
+        run: |
+          python research/run_country_framed_integration_development_v2_ru_tile_retry.py finalize --result-dir v2-results
+          python research/run_ru_robust_world_shard_fallback.py finalize --result-dir v2-results
+      - name: Preserve favorable or unfavorable final v2 result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('v2-results/development_summary.json').read_text())
+          assert s['protocol_fingerprint']=='7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9'
+          assert s['retry_execution_fingerprint']=='9ce9411b1d1e837f1276e990a6d4dcfe170c8009a2e9776d4316483c83a220ba'
+          assert s['ru_tile_retry_execution_fingerprint']=='f3b58b3cb439fdea74009703d815a22b009a5dcac14e257ad9762e6d41347433'
+          assert s['ru_robust_world_fallback_execution_fingerprint']=='3d64d54723070343e23fc74c2ce9ca1303585a3ad80cafaa4221c90ffe04795d'
+          assert s['ru_robust_world_fallback_scientific_method_changed'] is False
+          print(json.dumps(s,indent=2,ensure_ascii=False))
+          print('V2 DEVELOPMENT PASS' if s['development_gate_passed'] else 'V2 DEVELOPMENT FAIL')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-integration-development-v2-results-ru-robust-world-fallback
+          path: v2-results/
+          if-no-files-found: error
+          retention-days: 90
