@@ -88,6 +88,8 @@ class ReplicationExecutionContractTests(unittest.TestCase):
         self.assertIn(ACTIVATION_MARKER, text)
         self.assertNotIn("pull_request:", text)
         self.assertIn("Verify explicit activation before identities", text)
+        self.assertIn("GITHUB_RUN_NUMBER", text)
+        self.assertIn("fresh second replication activation is forbidden", text)
         self.assertIn("identities_opened_before_activation", text)
         self.assertIn("needs: freeze-identities", text)
         self.assertIn("fail-fast: false", text)
