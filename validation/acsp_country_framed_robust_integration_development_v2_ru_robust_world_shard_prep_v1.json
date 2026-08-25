@@ -4,6 +4,13 @@
   "authoritative_protocol_fingerprint": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
   "first_retry_execution_fingerprint": "9ce9411b1d1e837f1276e990a6d4dcfe170c8009a2e9776d4316483c83a220ba",
   "ru_tile_retry_execution_fingerprint": "f3b58b3cb439fdea74009703d815a22b009a5dcac14e257ad9762e6d41347433",
+  "ru_surface_source": {
+    "workflow_run_id": 32795662847,
+    "artifact_id": 9544853686,
+    "artifact_name": "ru-complete-surface",
+    "ru_complete_surface_parquet_sha256": "77729dfa45b9e123f035ca15a421f834a6b155140ae410b8806e9f4eca19c982",
+    "surface_manifest_sha256": "a4cd321cee240f050d4223ab19b3af8f956ac80d675229703d2dffdbb0908d7e"
+  },
   "execution_rule": {
     "scientific_method_changed": false,
     "cohort_changed": false,
@@ -40,5 +47,5 @@
     "taxon_replacement_allowed": false,
     "parameter_retuning_allowed": false
   },
-  "execution_fingerprint": "6ed3cf68fe9eac282c78c901f9b1d4b70681cbaa2ba89db8dbfa3392013e2829"
+  "execution_fingerprint": "c05f25ad2c1f10b608f33f922804a42188cd75c255aac4d030efd691dc305a41"
 }
