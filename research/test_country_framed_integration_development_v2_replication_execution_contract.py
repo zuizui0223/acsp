@@ -17,6 +17,7 @@ from predeclare_country_framed_integration_development_v2_replication import (
     replication_protocol,
     select_replication_taxa,
 )
+import aggregate_country_framed_integration_development_v2_replication as replication_aggregate
 import run_country_framed_integration_development_v2_replication_pair as replication_pair
 import run_country_framed_integration_development_v2_timeout_retry_pair as retry_pair
 
@@ -90,6 +91,12 @@ class ReplicationExecutionContractTests(unittest.TestCase):
         self.assertIn("Evaluate one frozen declaration with unchanged authoritative v2 method", text)
         self.assertIn("run_country_framed_integration_development_v2_replication_pair.py", text)
         self.assertIn("replication_execution_fingerprint", text)
+
+    def test_workflow_and_aggregator_share_pair_artifact_prefix(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertEqual(replication_aggregate.PAIR_ARTIFACT_GLOB, "replication-pair-*")
+        self.assertIn("name: replication-pair-${{ matrix.pair-id }}", text)
+        self.assertIn("pattern: replication-pair-*", text)
 
 
 if __name__ == "__main__":
