@@ -9,18 +9,24 @@ from typing import Sequence
 import pandas as pd
 
 from country_framed_integration_v2_pair_core import evaluate_one_v2_core
+from country_framed_integration_v2_replication_execution_contract import (
+    EXPECTED_EXECUTION_FINGERPRINT,
+    execution_contract,
+)
+from predeclare_country_framed_integration_development_v2 import EXPECTED_PROTOCOL_FINGERPRINT
 from predeclare_country_framed_integration_development_v2_replication import (
     EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT,
     replication_protocol,
 )
-from predeclare_country_framed_integration_development_v2 import EXPECTED_PROTOCOL_FINGERPRINT
 
 
 def evaluate_one_replication(declaration: pd.Series) -> tuple[pd.DataFrame, pd.DataFrame]:
     replication_protocol()
+    execution_contract()
     results, patches = evaluate_one_v2_core(declaration)
     results = results.copy()
     results["replication_protocol_fingerprint"] = EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT
+    results["replication_execution_fingerprint"] = EXPECTED_EXECUTION_FINGERPRINT
     return results, patches
 
 
@@ -49,6 +55,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     manifest = {
         "integration_pair_id": int(a.pair_id),
         "replication_protocol_fingerprint": EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT,
+        "replication_execution_fingerprint": EXPECTED_EXECUTION_FINGERPRINT,
         "authoritative_v2_protocol_fingerprint": EXPECTED_PROTOCOL_FINGERPRINT,
         "scientific_method_changed": False,
         "cohort_reselected": False,
