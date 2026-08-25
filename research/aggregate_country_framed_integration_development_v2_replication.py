@@ -10,6 +10,10 @@ import numpy as np
 import pandas as pd
 
 from acsp.validated_robust import VALIDATED_ROBUST_PRIMARY_RADIUS_KM, VALIDATED_ROBUST_SUPPORT_FRACTION
+from country_framed_integration_v2_replication_execution_contract import (
+    EXPECTED_EXECUTION_FINGERPRINT,
+    execution_contract,
+)
 from predeclare_country_framed_integration_development_v2 import EXPECTED_PROTOCOL_FINGERPRINT, _protocol
 from predeclare_country_framed_integration_development_v2_replication import (
     EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT,
@@ -22,6 +26,7 @@ from run_country_framed_integration_development_v1_1 import _finite_mean, taxon_
 def aggregate_replication(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
     authoritative = _protocol()
     replication = replication_protocol()
+    execution_contract()
     gate = replication["replication_gate"]
     evalcfg = authoritative["evaluation"]
 
@@ -40,11 +45,15 @@ def aggregate_replication(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame,
         raise ValueError("replication must preserve 24 unique frozen taxa")
     if not results["replication_protocol_fingerprint"].astype(str).eq(EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT).all():
         raise ValueError("replication protocol fingerprint drift across pair results")
+    if not results["replication_execution_fingerprint"].astype(str).eq(EXPECTED_EXECUTION_FINGERPRINT).all():
+        raise ValueError("replication execution fingerprint drift across pair results")
 
     for path in manifest_files:
         manifest = json.loads(path.read_text(encoding="utf-8"))
         if manifest["replication_protocol_fingerprint"] != EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT:
             raise ValueError("pair manifest replication fingerprint drift")
+        if manifest["replication_execution_fingerprint"] != EXPECTED_EXECUTION_FINGERPRINT:
+            raise ValueError("pair manifest execution fingerprint drift")
         if manifest["authoritative_v2_protocol_fingerprint"] != EXPECTED_PROTOCOL_FINGERPRINT:
             raise ValueError("pair manifest authoritative v2 fingerprint drift")
         if manifest["scientific_method_changed"] is not False:
@@ -95,6 +104,7 @@ def aggregate_replication(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame,
     summary = {
         "status": "country_framed_robust_integration_development_v2_replication_complete",
         "replication_protocol_fingerprint": EXPECTED_REPLICATION_PROTOCOL_FINGERPRINT,
+        "replication_execution_fingerprint": EXPECTED_EXECUTION_FINGERPRINT,
         "authoritative_v2_protocol_fingerprint": EXPECTED_PROTOCOL_FINGERPRINT,
         "declared_taxa": 24,
         "candidate_generation_success_taxa": int(cs.sum()),
