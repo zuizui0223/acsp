@@ -1,0 +1,82 @@
+{
+  "protocol_id": "acsp_country_framed_robust_integration_development_v2_replication",
+  "status": "conditional_predeclared_before_v2_outcome_execute_only_if_v2_passes",
+  "parent_issue": 141,
+  "upstream_v2": {
+    "pr": 147,
+    "workflow_run_id": 32693242882,
+    "authoritative_protocol_fingerprint": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
+    "execution_trigger": "all_v2_development_gates_pass",
+    "execute_if_v2_fails": false
+  },
+  "cohort": {
+    "source": "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv",
+    "required_taxa": 24,
+    "rule": "record_count_stratum == (region_cell_index + 2) mod 4",
+    "plant": 12,
+    "animal": 12,
+    "expected_record_count_stratum_counts": {
+      "0": 6,
+      "1": 6,
+      "2": 6,
+      "3": 6
+    },
+    "exclude_v1": true,
+    "exclude_v1_1": true,
+    "exclude_v2": true,
+    "exclude_framing_confirmation_v1": true,
+    "replacement_after_declaration": false,
+    "identities_opened_by_preregistration": false
+  },
+  "method_identity": {
+    "change_from_authoritative_v2": "cohort_identity_rule_only",
+    "framing_historical_year_range": [1900, 2020],
+    "heldout_year_range": [2021, 2025],
+    "historical_country_min_count": 5,
+    "country_selection_seed": 2026082401,
+    "country_rule": "same_as_v2_prefer_non_jp_hash_min_else_jp",
+    "country_geometry_provider_freeze_fingerprint": "d0f9c9b2dfe939ffd91984b8a291442553f11b962ff64de4da2ed88d07f49589",
+    "regional_lattice_freeze_fingerprint": "6d5c0ca8cc699eda7856d37e72007cadcc208a9312765f1162ed963ae0de0ba1",
+    "lattice_step_deg": 2.0,
+    "points_per_tile": 800,
+    "all_intersecting_tiles": true,
+    "tile_occurrence_selection": false,
+    "prototype_scope": "country_wide_historical",
+    "terrain_features": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0,
+    "tile_is_barrier": false,
+    "primary_recovery_radius_km": 10.0,
+    "random_baseline_repetitions": 200,
+    "random_seed": 2026082402,
+    "candidate_generation_before_recent_outcome": true
+  },
+  "replication_gate": {
+    "required_declared_taxa": 24,
+    "candidate_generation_success_rate_min": 0.75,
+    "temporal_evaluability_rate_min": 0.75,
+    "mean_lift_positive": true,
+    "bootstrap_lower_positive": true,
+    "plant_mean_lift_min": 0.0,
+    "animal_mean_lift_min": 0.0,
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082403
+  },
+  "decision": {
+    "if_v2_pass_and_replication_pass": "freeze_integrated_regional_lattice_development_representation_then_design_genuinely_fresh_integration_confirmation",
+    "if_v2_pass_and_replication_fail": "do_not_promote_preserve_both_results_and_diagnose_heterogeneity_without_retuning_on_replication_taxa",
+    "if_v2_fail": "do_not_execute_replication",
+    "retuning_on_replication_taxa_allowed": false,
+    "fresh_confirmation_taxa_consumed": false,
+    "global_candidate_generation_validated": false
+  },
+  "protocol_fingerprint": "66d5eba6d5e92e89bcf941b40aa0cec91f39479c25bb8c5e1a0f403b50d3a94c"
+}
