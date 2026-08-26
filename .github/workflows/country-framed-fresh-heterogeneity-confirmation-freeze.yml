@@ -36,7 +36,7 @@ jobs:
           import os
           from pathlib import Path
 
-          expected = '2ef792a09309008e0091cd9df70678b0719674352db95880c521d1f641a24520'
+          expected = '65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01'
           assert int(os.environ['RUN_NUMBER']) == 1, 'fresh identity freeze is one-shot; do not re-freeze a new cohort'
           marker = Path('validation/activate_country_framed_fresh_heterogeneity_confirmation.marker').read_text(encoding='utf-8')
           for token in (
@@ -57,6 +57,7 @@ jobs:
           assert payload['cohort']['target_taxa'] == 48
           assert payload['method']['scientific_method_changed'] is False
           assert payload['decision']['retuning_allowed'] is False
+          assert payload['exclusions']['prior_untouched_96_provenance']['byte_identical_to_artifact'] is True
           PY
 
       - name: Run outcome-free freeze contract tests
@@ -77,7 +78,7 @@ jobs:
           root = Path('fresh-country-framed-confirmation-cohort')
           manifest = json.loads((root / 'cohort_manifest.json').read_text(encoding='utf-8'))
           frame = pd.read_csv(root / 'predeclared_fresh_taxon_country_pairs.csv')
-          assert manifest['protocol_fingerprint'] == '2ef792a09309008e0091cd9df70678b0719674352db95880c521d1f641a24520'
+          assert manifest['protocol_fingerprint'] == '65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01'
           assert manifest['declared_taxa'] == manifest['unique_species_keys'] == len(frame) == 48
           assert frame['taxon_group'].value_counts().to_dict() == {'plant': 24, 'animal': 24}
           for group in ('plant', 'animal'):
