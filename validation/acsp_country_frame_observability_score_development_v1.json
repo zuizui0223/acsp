@@ -1,0 +1,116 @@
+{
+  "development_name": "pre-heldout country-frame observability score",
+  "status": "exploratory development on consumed pre-fresh cohorts",
+  "score_definition": {
+    "formula": "log1p(historical_selected_country_count)",
+    "continuous": true,
+    "threshold_selected": false,
+    "historical_selected_country_count_known_before_heldout": true
+  },
+  "source": {
+    "development_cohorts": [
+      {
+        "name": "v1",
+        "predeclared_blob_sha": "3219514af7087aa6524dc6c31c32af5f3438cdce",
+        "results_blob_sha": "254ba1bcad3689a11b6f08a9c665a0addd1376a4"
+      },
+      {
+        "name": "v1_1",
+        "predeclared_blob_sha": "1f8f3c880b6ad9195c06fdc92359fa7286d4c9ce",
+        "results_blob_sha": "868e2c27e61f0ef9bf28b05cab39d862938fa78e"
+      }
+    ],
+    "development_taxa": 48,
+    "unique_development_taxa": 48,
+    "fresh_terminal_audit_blob_sha": "1584a0a8efdd9adc10c8fcb9ca8dd8bdd63cb1b1",
+    "fresh_terminal_audit_used_for_score_development": false
+  },
+  "temporal_endpoint": {
+    "positive": "temporal_status == evaluated",
+    "negative": "temporal_status == zero_recent_country_records",
+    "temporally_evaluated": 37,
+    "zero_recent_country_records": 11,
+    "temporally_evaluable_fraction": 0.7708333333333334
+  },
+  "primary_development_result": {
+    "observability_score_auc": 0.7923832923832924,
+    "bootstrap": {
+      "requested_replicates": 10000,
+      "valid_replicates": 10000,
+      "seed": 20260827,
+      "mean_auc": 0.7905048482811496,
+      "median_auc": 0.7960687960687961,
+      "ci95_lower": 0.6241697191697192,
+      "ci95_upper": 0.925,
+      "fraction_auc_le_0_5": 0.0012
+    },
+    "evaluated_historical_country_count": {
+      "min": 5,
+      "median": 102.0,
+      "mean": 516.5675675675676,
+      "max": 5726
+    },
+    "zero_recent_historical_country_count": {
+      "min": 5,
+      "median": 14.0,
+      "mean": 60.45454545454545,
+      "max": 489
+    }
+  },
+  "negative_comparator": {
+    "name": "generic preregistered record_count_stratum",
+    "auc": 0.5442260442260443,
+    "observability_score_minus_comparator_auc": 0.24815724815724816
+  },
+  "secondary": {
+    "by_development_cohort": {
+      "v1": {
+        "taxa": 24,
+        "temporally_evaluated": 19,
+        "temporally_evaluable_fraction": 0.7916666666666666,
+        "observability_score_auc": 0.7894736842105263,
+        "generic_record_count_stratum_auc": 0.5947368421052631
+      },
+      "v1_1": {
+        "taxa": 24,
+        "temporally_evaluated": 18,
+        "temporally_evaluable_fraction": 0.75,
+        "observability_score_auc": 0.8101851851851852,
+        "generic_record_count_stratum_auc": 0.5
+      }
+    },
+    "by_taxon_group": {
+      "plant": {
+        "taxa": 24,
+        "temporally_evaluated": 19,
+        "temporally_evaluable_fraction": 0.7916666666666666,
+        "observability_score_auc": 0.7947368421052632,
+        "generic_record_count_stratum_auc": 0.34210526315789475
+      },
+      "animal": {
+        "taxa": 24,
+        "temporally_evaluated": 18,
+        "temporally_evaluable_fraction": 0.75,
+        "observability_score_auc": 0.7638888888888888,
+        "generic_record_count_stratum_auc": 0.7222222222222222
+      }
+    }
+  },
+  "interpretation": {
+    "country_specific_historical_evidence_discriminates_later_observability": true,
+    "country_specific_score_outperforms_generic_record_stratum_in_this_development_set": true,
+    "candidate_or_lift_outcomes_needed_for_score": false,
+    "working_product_role": "evidence-adequacy axis reported alongside, not used to filter or retune candidate patches"
+  },
+  "guards": {
+    "fresh_48_used_to_fit_or_select_score": false,
+    "candidate_generation_outcomes_read": false,
+    "lift_outcomes_read": false,
+    "taxa_or_countries_replaced": false,
+    "candidate_generation_method_changed": false,
+    "scientific_threshold_selected": false,
+    "completed_seven_gate_decision_changed": false,
+    "development_result_is_confirmation": false,
+    "future_confirmation_requires_genuinely_fresh_identities": true
+  }
+}
