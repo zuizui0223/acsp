@@ -1,0 +1,185 @@
+name: Country-frame observability confirmation freeze
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/country-frame-observability-confirmation-freeze.yml
+      - research/predeclare_country_frame_observability_confirmation.py
+      - research/test_country_frame_observability_confirmation.py
+      - validation/acsp_country_frame_observability_confirmation_v1.json
+      - validation/acsp_country_framed_fresh_heterogeneity_confirmation_identities_v1.csv
+  push:
+    branches: [main]
+    paths:
+      - validation/activate_country_frame_observability_confirmation.marker
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify outcome-free protocol boundary
+        run: |
+          python - <<'PY'
+          from predeclare_country_frame_observability_confirmation import (
+              _terminal_fresh_identity_exclusions,
+              protocol,
+          )
+
+          expected = "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
+          cfg = protocol()
+          assert cfg["protocol_fingerprint"] == expected
+          assert cfg["cohort"]["target_frames"] == 96
+          assert cfg["cohort"]["plant"] == cfg["cohort"]["animal"] == 48
+          assert cfg["exclusions"]["freeze_reads_terminal_fresh_outcome_audit"] is False
+          assert cfg["execution"]["freeze_workflow_may_open_heldout"] is False
+          assert cfg["decision"]["retuning_allowed"] is False
+          assert cfg["decision"]["score_cutoff_creation_allowed"] is False
+          keys, names = _terminal_fresh_identity_exclusions()
+          assert len(keys) == len(names) == 48
+          PY
+
+      - name: Run outcome-free freeze contract tests
+        run: python -m unittest -v research/test_country_frame_observability_confirmation.py
+
+  freeze-observability-frames:
+    if: github.event_name == 'push'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify one-shot activation before identities
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          expected = "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
+          assert int(os.environ["RUN_NUMBER"]) == 1, (
+              "observability identity/country freeze is one-shot; do not refreeze a second cohort"
+          )
+          marker = Path(
+              "validation/activate_country_frame_observability_confirmation.marker"
+          ).read_text(encoding="utf-8")
+          for token in (
+              "issue=163",
+              f"protocol_fingerprint={expected}",
+              "identities_opened_before_activation=false",
+              "heldout_outcomes_opened_before_activation=false",
+              "scientific_candidate_method_changed=false",
+              "outcome_driven_tuning=false",
+          ):
+              assert token in marker, f"missing activation token: {token}"
+          PY
+
+      - name: Freeze 96 fresh declared frames and continuous scores only
+        run: |
+          python research/predeclare_country_frame_observability_confirmation.py \
+            --output observability-confirmation-cohort
+
+      - name: Verify complete frozen cohort before any heldout activation
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+
+          import pandas as pd
+
+          from predeclare_country_frame_observability_confirmation import (
+              consumed_exclusion_sets,
+              observability_score,
+          )
+
+          root = Path("observability-confirmation-cohort")
+          frame = pd.read_csv(root / "predeclared_observability_frames.csv")
+          audit = pd.read_csv(root / "pre_freeze_declaration_attempts.csv")
+          manifest = json.loads((root / "cohort_manifest.json").read_text(encoding="utf-8"))
+
+          assert manifest["status"] == "observability_confirmation_96_frames_frozen_before_heldout"
+          assert manifest["protocol_fingerprint"] == (
+              "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
+          )
+          assert manifest["frozen_frames"] == manifest["unique_species_keys"] == len(frame) == 96
+          assert frame["scientific_name"].nunique() == 96
+          assert frame["taxon_group"].value_counts().to_dict() == {"plant": 48, "animal": 48}
+          for group in ("plant", "animal"):
+              counts = (
+                  frame.loc[frame["taxon_group"].eq(group), "record_count_stratum"]
+                  .astype(int)
+                  .value_counts()
+                  .sort_index()
+                  .to_dict()
+              )
+              assert counts == {0: 12, 1: 12, 2: 12, 3: 12}
+          per_cell = frame.groupby(["region_cell_index", "taxon_group"]).size()
+          assert len(per_cell) == 24 and (per_cell == 4).all()
+          assert frame["declaration_status"].eq("declared").all()
+          assert (frame["historical_selected_country_count"].astype(int) >= 5).all()
+          for row in frame.itertuples(index=False):
+              assert math.isclose(
+                  float(row.country_frame_observability_score),
+                  observability_score(int(row.historical_selected_country_count)),
+                  rel_tol=0.0,
+                  abs_tol=1e-12,
+              )
+          excluded_keys, excluded_names = consumed_exclusion_sets()
+          assert not (set(frame["speciesKey"].astype(int)) & excluded_keys)
+          assert not (set(frame["scientific_name"].astype(str)) & excluded_names)
+          assert int(audit["selected"].astype(str).str.lower().eq("true").sum()) == 96
+
+          forbidden_fragments = (
+              "recent",
+              "heldout",
+              "candidate_patch",
+              "robust_recall",
+              "random_recall",
+              "lift",
+          )
+          for column in frame.columns:
+              assert not any(fragment in column.lower() for fragment in forbidden_fragments), column
+
+          assert manifest["recent_outcomes_opened"] is False
+          assert manifest["candidate_generation_run"] is False
+          assert manifest["robust_support_run"] is False
+          assert manifest["random_baseline_run"] is False
+          assert manifest["recall_or_lift_read"] is False
+          assert manifest["replacement_after_freeze_allowed"] is False
+          assert manifest["score_cutoff_selected"] is False
+          assert manifest["scientific_candidate_method_changed"] is False
+          PY
+
+      - name: Upload frozen cohort or abort audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-frame-observability-confirmation-cohort
+          path: observability-confirmation-cohort/
+          if-no-files-found: warn
+          retention-days: 90

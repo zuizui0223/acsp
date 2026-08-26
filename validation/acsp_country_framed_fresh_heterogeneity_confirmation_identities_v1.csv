@@ -1,0 +1,49 @@
+fresh_pair_id,taxon_group,speciesKey,scientific_name
+1,plant,2882446,Brasenia schreberi J.F.Gmel.
+2,plant,3926854,Anemone debilis Fisch. ex Turcz.
+3,animal,2431158,"Hynobius retardatus Dunn, 1923"
+4,animal,10091343,"Cercyon dux Sharp, 1873"
+5,plant,3189882,Acer palmatum Thunb.
+6,plant,7276652,Aconitum sachalinense F.Schmidt
+7,animal,2498167,"Anser caerulescens (Linnaeus, 1758)"
+8,animal,9761484,"Anas platyrhynchos Linnaeus, 1758"
+9,plant,7135308,Rhododendron brachycarpum D.Don ex G.Don
+10,plant,5394556,Taraxacum shinanense Koidz.
+11,animal,1991277,"Esakiopteryx volitans (Butler, 1878)"
+12,animal,1866568,"Antheraea yamamai Guérin-Méneville, 1861"
+13,plant,5361944,Broussonetia papyrifera (L.) L'Hér. ex Vent.
+14,plant,3188867,Oenothera laciniata Hill
+15,animal,2481819,"Gallinago gallinago (Linnaeus, 1758)"
+16,animal,1889765,"Palpita nigropunctalis Bremer, 1864"
+17,plant,7334050,Sedum japonicum Siebold ex Miq.
+18,plant,8146176,Daphniphyllum teijsmannii Zoll. ex Kurz
+19,animal,2495812,"Treron sieboldii (Temminck, 1835)"
+20,animal,1354076,"Lasioglossum duplex (Dalla Torre, 1896)"
+21,plant,7959696,Diplazium ×takamiyae Fraser-Jenk.
+22,plant,7309933,Schizocodon soldanelloides Siebold & Zucc.
+23,animal,8381387,"Reishia luteostoma (Holten, 1802)"
+24,animal,2490297,"Motacilla grandis Sharpe, 1885"
+25,plant,8047746,Sceptridium ternatum (Thunb.) Lyon
+26,plant,5289756,Phalaris arundinacea L.
+27,animal,2365991,"Hemibarbus longirostris (Regan, 1908)"
+28,animal,1704439,"Trilophidia annulata (Thunberg, 1815)"
+29,plant,7328514,Lyonia ovalifolia (Wall.) Drude
+30,plant,6711535,Rhododendron benhallii Craven
+31,animal,2494329,"Coccothraustes coccothraustes (Linnaeus, 1758)"
+32,animal,11807729,"Poecilocampa tamanukii (Matsumura, 1928)"
+33,plant,3149515,Ainsliaea uniflora Sch.Bip.
+34,plant,2729312,Carex insaniae Koidz.
+35,animal,10072587,"Sigara substriata (Uhler, 1897)"
+36,animal,5099473,"Acrida cinerea (Thunberg, 1815)"
+37,plant,8216229,Myrica rubra A.Chev.
+38,plant,3718199,Clethra barbinervis Siebold & Zucc.
+39,animal,5887934,"Tenodera sinensis Saussure, 1871"
+40,animal,5231198,"Passer montanus (Linnaeus, 1758)"
+41,plant,4256698,Asplenium prolongatum Hook.
+42,plant,4159594,Celtis sinensis Pers.
+43,animal,2374418,"Parapriacanthus ransonneti Steindachner, 1870"
+44,animal,2376146,"Eviota storthynx (Rofen, 1959)"
+45,plant,5550192,Turpinia ternata Nakai
+46,plant,5671249,Pilea brevicornuta Hayata
+47,animal,2475532,"Alcedo atthis (Linnaeus, 1758)"
+48,animal,2377769,"Fusigobius duospilus Hoese & Reader, 1985"
