@@ -1,0 +1,49 @@
+fresh_pair_id,taxon_group,speciesKey,scientific_name
+1,plant,2882446,Brasenia schreberi J.F.Gmel.
+2,plant,3926854,Anemone debilis Fisch. ex Turcz.
+3,animal,2431158,"Hynobius retardatus Dunn, 1923"
+4,animal,10091343,"Cercyon dux Sharp, 1873"
+5,plant,3189882,Acer palmatum Thunb.
+6,plant,7276652,Aconitum sachalinense F.Schmidt
+7,animal,2498167,"Anser caerulescens (Linnaeus, 1758)"
+8,animal,9761484,"Anas platyrhynchos Linnaeus, 1758"
+9,plant,7135308,Rhododendron brachycarpum D.Don ex G.Don
+10,plant,5394556,Taraxacum shinanense Koidz.
+11,animal,1991277,"Esakiopteryx volitans (Butler, 1878)"
+12,animal,1866568,"Antheraea yamamai Guérin-Méneville, 1861"
+13,plant,5361944,Broussonetia papyrifera (L.) L'Hér. ex Vent.
+14,plant,3188867,Oenothera laciniata Hill
+15,animal,2481819,"Gallinago gallinago (Linnaeus, 1758)"
+16,animal,1889765,"Palpita nigropunctalis Bremer, 1864"
+17,plant,7334050,Sedum japonicum Siebold ex Miq.
+18,plant,8146176,Daphniphyllum teijsmannii Zoll. ex Kurz
+19,animal,2495812,"Treron sieboldii (Temminck, 1835)"
+20,animal,1354076,"Lasioglossum duplex (Dalla Torre, 1896)"
+21,plant,7959696,Diplazium ×takamiyae Fraser-Jenk.
+22,plant,7309933,Schizocodon soldanelloides Siebold & Zucc.
+23,animal,8381387,"Reishia luteostoma (Holten, 1802)"
+24,animal,2490297,"Motacilla grandis Sharpe, 1885"
+25,plant,8047746,Sceptridium ternatum (Thunb.) Lyon
+26,plant,5289756,Phalaris arundinacea L.
+27,animal,2365991,"Hemibarbus longirostris (Regan, 1908)"
+28,animal,1704439,"Trilophidia annulata (Thunberg, 1815)"
+29,plant,7328514,Lyonia ovalifolia (Wall.) Drude
+30,plant,2877120,Hydrangea macrophylla (Thunb.) Ser.
+31,animal,2481470,"Scolopax rusticola Linnaeus, 1758"
+32,animal,1896583,"Catocala nivea Butler, 1877"
+33,plant,5294498,Ischaemum anthephoroides (Steud.) Miq.
+34,plant,5292240,Echinochloa crus-galli (L.) P.Beauv.
+35,animal,2480751,"Vanellus cinereus (Blyth, 1842)"
+36,animal,2498449,"Hypsipetes amaurotis (Temminck, 1830)"
+37,plant,3188985,Oenothera rosea L'Hér. ex Aiton
+38,plant,7303924,Persicaria capitata (Buch.-Ham. ex D.Don) H.Gross
+39,animal,1891822,"Spilarctia subcarnea (Walker, 1855)"
+40,animal,1890869,"Spilarctia seriatopunctata (Motschulsky, 1861)"
+41,plant,7327369,Rhododendron ×pulchrum Sweet
+42,plant,7328370,Rhododendron indicum (L.) Sweet
+43,animal,2393723,"Eviota abax (Jordan & Snyder, 1901)"
+44,animal,2393720,"Eviota storthynx (Rofen, 1959)"
+45,plant,7337821,Turpinia ternata Nakai
+46,plant,7307848,Pilea brevicornuta Hayata
+47,animal,2487925,"Alcedo atthis (Linnaeus, 1758)"
+48,animal,2393836,"Fusigobius duospilus Hoese & Reader, 1985"
