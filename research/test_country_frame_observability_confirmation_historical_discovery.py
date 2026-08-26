@@ -10,6 +10,22 @@ import predeclare_country_frame_observability_confirmation_historical_discovery 
 
 
 class HistoricalDiscoveryBoundaryTests(unittest.TestCase):
+    def test_boundary_correction_is_frozen_and_bound_to_parent_protocol(self) -> None:
+        corrected = mod.correction()
+        self.assertEqual(
+            corrected["parent_protocol_fingerprint"],
+            "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547",
+        )
+        self.assertEqual(
+            corrected["correction_fingerprint"],
+            "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e",
+        )
+        self.assertEqual(corrected["corrected_boundary"]["discovery_species_facet_years"], [1900, 2020])
+        self.assertFalse(
+            corrected["corrected_boundary"]["heldout_rows_or_country_facets_allowed_during_freeze"]
+        )
+        self.assertFalse(corrected["reason"]["frozen_country_heldout_endpoint_opened_before_correction"])
+
     def test_discovery_species_facet_is_explicitly_historical_only(self) -> None:
         payload = {
             "facets": [
@@ -68,9 +84,14 @@ class HistoricalDiscoveryBoundaryTests(unittest.TestCase):
             manifest["protocol_fingerprint"],
             "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547",
         )
+        self.assertEqual(manifest["parent_protocol_fingerprint"], manifest["protocol_fingerprint"])
         self.assertEqual(
             manifest["boundary_correction_id"],
-            "historical_discovery_species_facets_1900_2020_v1",
+            "acsp_country_frame_observability_confirmation_boundary_correction_v1",
+        )
+        self.assertEqual(
+            manifest["boundary_correction_fingerprint"],
+            "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e",
         )
         self.assertEqual(manifest["discovery_species_facet_years"], [1900, 2020])
         self.assertFalse(manifest["discovery_species_facets_include_heldout_years"])
