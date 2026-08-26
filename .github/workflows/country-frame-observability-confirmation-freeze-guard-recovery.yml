@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - validation/activate_country_frame_observability_confirmation_freeze_guard_recovery.marker
+  schedule:
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: read
