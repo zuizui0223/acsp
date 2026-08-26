@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_AUDIT = ROOT / "validation" / "acsp_country_framed_fresh_heterogeneity_confirmation_taxon_audit_v1.csv"
 EXPECTED_FRESH_PROTOCOL_FINGERPRINT = "65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01"
 EXPECTED_FRESH_EXECUTION_FINGERPRINT = "c8d8009ff692f71b1c076e1ee0e3c957527ea789c5c984011574ddd41f91095b"
+AUTHORITATIVE_RUN_ID = 32932865041
+FINAL_ARTIFACT_ID = 9605032549
+FINAL_ARTIFACT_DIGEST = "sha256:164e707058c76d46b4ec07fa4c3d6442939ef85cfbc69621a482ed8579dcd848"
 
 # Deliberately exclude recall/lift columns. This diagnosis addresses observation
 # availability and execution status only; it cannot be used to rescue the
@@ -134,10 +137,14 @@ def diagnose(audit_path: Path = DEFAULT_AUDIT) -> dict[str, object]:
         raise ValueError("fresh execution fingerprint drift")
 
     summary = _layer_summary(frame)
+    generated_zero = int(summary["joint_layer"]["candidate_generated_but_zero_recent_country_records"])
+    candidate_failed_evaluated = int(summary["joint_layer"]["candidate_generation_failed_but_temporally_evaluated"])
     return {
         "diagnostic_name": "country-framed fresh temporal evaluability observation-layer diagnosis",
         "source": {
-            "authoritative_run_id": 32932865041,
+            "authoritative_run_id": AUTHORITATIVE_RUN_ID,
+            "final_artifact_id": FINAL_ARTIFACT_ID,
+            "final_artifact_digest": FINAL_ARTIFACT_DIGEST,
             "fresh_protocol_fingerprint": EXPECTED_FRESH_PROTOCOL_FINGERPRINT,
             "fresh_execution_fingerprint": EXPECTED_FRESH_EXECUTION_FINGERPRINT,
             "terminal_primary_decision": "FAIL",
@@ -146,9 +153,11 @@ def diagnose(audit_path: Path = DEFAULT_AUDIT) -> dict[str, object]:
         "summary": summary,
         "interpretation": {
             "candidate_generation_failure_is_not_the_temporal_gate": True,
-            "generated_candidate_patches_without_recent_country_records_exist": summary["joint_layer"]["candidate_generated_but_zero_recent_country_records"] > 0,
-            "zero_recent_records_are_not_confined_to_negligible_historical_counts": summary["zero_recent_declared_taxa"]["three_largest_historical_training_row_counts"],
+            "generated_candidate_patches_without_recent_country_records_exist": generated_zero > 0,
+            "generated_but_temporally_unevaluable_taxa": generated_zero,
+            "candidate_failed_but_temporally_observable_taxa": candidate_failed_evaluated,
             "working_hypothesis": "an outcome-independent historical country frame can be computationally valid yet fail to remain observable in a later heldout window",
+            "scope": "observation-process portability, not a rescue of the failed country-framed scientific confirmation",
         },
         "guards": {
             "descriptive_post_outcome_only": True,
@@ -161,6 +170,7 @@ def diagnose(audit_path: Path = DEFAULT_AUDIT) -> dict[str, object]:
             "consumed_confirmation_rerun_allowed": False,
             "future_observability_rule_requires_separate_preregistration_and_fresh_identities": True,
         },
+        "next_research_question": "Can future temporal observability of a historically frozen taxon-country frame be predicted using pre-heldout information only, without conditioning on candidate-generation or lift outcomes?",
     }
 
 
