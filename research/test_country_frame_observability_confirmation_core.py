@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -42,6 +43,17 @@ def synthetic_rows(*, reverse: bool = False) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+_FAKE_BOOTSTRAP = {
+    "requested_replicates": 10000,
+    "valid_replicates": 10000,
+    "seed": 2026082702,
+    "mean_auc": 0.9,
+    "median_auc": 0.9,
+    "ci95_lower": 0.7,
+    "ci95_upper": 0.99,
+}
+
+
 class ObservabilityConfirmationCoreTests(unittest.TestCase):
     def test_validate_requires_exact_balanced_96_and_exact_score(self) -> None:
         frame = synthetic_rows()
@@ -72,31 +84,33 @@ class ObservabilityConfirmationCoreTests(unittest.TestCase):
         self.assertGreater(first["ci95_lower"], 0.5)
 
     def test_all_seven_gates_are_required(self) -> None:
-        summary = mod.summarize_confirmation(
-            synthetic_rows(),
-            fingerprints_match=True,
-            zero_overlap_verified=True,
-            preheldout_freeze_verified=True,
-        )
-        primary = summary["primary"]
-        self.assertEqual(primary["passed_gate_count"], 7)
-        self.assertTrue(primary["confirmation_passed"])
-        failed = mod.summarize_confirmation(
-            synthetic_rows(),
-            fingerprints_match=False,
-            zero_overlap_verified=True,
-            preheldout_freeze_verified=True,
-        )
+        with patch.object(mod, "bootstrap_auc", return_value=dict(_FAKE_BOOTSTRAP)):
+            summary = mod.summarize_confirmation(
+                synthetic_rows(),
+                fingerprints_match=True,
+                zero_overlap_verified=True,
+                preheldout_freeze_verified=True,
+            )
+            primary = summary["primary"]
+            self.assertEqual(primary["passed_gate_count"], 7)
+            self.assertTrue(primary["confirmation_passed"])
+            failed = mod.summarize_confirmation(
+                synthetic_rows(),
+                fingerprints_match=False,
+                zero_overlap_verified=True,
+                preheldout_freeze_verified=True,
+            )
         self.assertEqual(failed["primary"]["passed_gate_count"], 6)
         self.assertFalse(failed["primary"]["confirmation_passed"])
 
     def test_secondary_never_changes_primary_decision(self) -> None:
-        summary = mod.summarize_confirmation(
-            synthetic_rows(),
-            fingerprints_match=True,
-            zero_overlap_verified=True,
-            preheldout_freeze_verified=True,
-        )
+        with patch.object(mod, "bootstrap_auc", return_value=dict(_FAKE_BOOTSTRAP)):
+            summary = mod.summarize_confirmation(
+                synthetic_rows(),
+                fingerprints_match=True,
+                zero_overlap_verified=True,
+                preheldout_freeze_verified=True,
+            )
         self.assertFalse(summary["secondary_only"]["may_change_primary_decision"])
         self.assertIn("generic_record_count_stratum_auc", summary["secondary_only"])
         self.assertIn("by_taxon_group", summary["secondary_only"])
@@ -112,12 +126,13 @@ class ObservabilityConfirmationCoreTests(unittest.TestCase):
         )
         for token in forbidden_imports:
             self.assertNotIn(token, source)
-        guards = mod.summarize_confirmation(
-            synthetic_rows(),
-            fingerprints_match=True,
-            zero_overlap_verified=True,
-            preheldout_freeze_verified=True,
-        )["guards"]
+        with patch.object(mod, "bootstrap_auc", return_value=dict(_FAKE_BOOTSTRAP)):
+            guards = mod.summarize_confirmation(
+                synthetic_rows(),
+                fingerprints_match=True,
+                zero_overlap_verified=True,
+                preheldout_freeze_verified=True,
+            )["guards"]
         self.assertFalse(guards["candidate_generation_read"])
         self.assertFalse(guards["robust_support_read"])
         self.assertFalse(guards["random_baseline_read"])
