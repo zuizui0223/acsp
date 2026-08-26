@@ -81,6 +81,14 @@ The confirmation passed every predeclared gate without post-outcome retuning. Th
 
 This does not establish occupancy probability, calibrated suitability probability, exact-site precision, route efficiency, budget optimality, or universal optimality of 2.5% outside this ACSP candidate-generation contract.
 
+### Country-framed extension status
+
+A separate country-framed regional-lattice extension was developed to test whether the same frozen candidate-patch rule could be carried beyond the validated Japanese regional frame. Its development cohort was favorable, but the preregistered reserved 24-taxon replication did **not** pass all seven gates.
+
+The final replication retained positive mean lift overall (**+0.08961**), for plants (**+0.07515**), and for animals (**+0.11026**). Candidate generation succeeded for **20/24** taxa and temporal evaluation was available for **18/24**. However, the taxon-bootstrap 95% CI was **[-0.00248, +0.18243]**, so the preregistered positive-lower-bound gate failed.
+
+Therefore the country-framed/global extension remains **development evidence, not a validated global candidate-generation product**. No country-framed or global claim should replace the validated Japanese-domain claim above. The unfavorable replication result is preserved in `validation/acsp_country_framed_robust_integration_development_v2_replication_result_v1.json`; post-outcome descriptive diagnostics are kept separately and are not eligibility rules or retuned science.
+
 ## Install
 
 ```bash
@@ -161,4 +169,4 @@ No route, field-day, travel-mode, or budget optimizer belongs in the validated c
 
 ## Status
 
-**Alpha (0.1.0).** The robust candidate-patch rule has passed independent cross-taxon confirmation at the 10 km screening scale. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.
+**Alpha (0.1.0).** The robust candidate-patch rule has passed independent cross-taxon confirmation at the 10 km screening scale in the validated Japanese regional domain. The country-framed extension has not passed its reserved replication and remains development-only. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.

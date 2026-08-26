@@ -1,0 +1,75 @@
+{
+  "status": "post_outcome_descriptive_diagnostic_only",
+  "primary_result_file": "validation/acsp_country_framed_robust_integration_development_v2_replication_result_v1.json",
+  "retuning_allowed": false,
+  "new_validation_claim_allowed": false,
+  "evaluated_taxa": 17,
+  "lift_signs": {
+    "positive": 12,
+    "zero": 0,
+    "negative": 5
+  },
+  "lift_distribution": {
+    "mean": 0.08960843345273417,
+    "median": 0.0837234042553191,
+    "sample_sd": 0.20068772322842818
+  },
+  "by_taxon_group": {
+    "plant": {
+      "n": 10,
+      "mean": 0.07515267923368585,
+      "median": 0.06879566439181051,
+      "sample_sd": 0.24812893316923623,
+      "min": -0.1883333333333333,
+      "max": 0.5417857142857143,
+      "negative_taxa": 4
+    },
+    "animal": {
+      "n": 7,
+      "mean": 0.11025951090851749,
+      "median": 0.1,
+      "sample_sd": 0.11917936866436851,
+      "min": -0.07,
+      "max": 0.259,
+      "negative_taxa": 1
+    }
+  },
+  "by_record_count_stratum": {
+    "0": {"n": 5, "mean": 0.0417087419472004, "median": 0.0837234042553191},
+    "1": {"n": 4, "mean": -0.02079974623078073, "median": -0.07182676518883416},
+    "2": {"n": 5, "mean": 0.19501149348260272, "median": 0.259},
+    "3": {"n": 3, "mean": 0.14098039215686278, "median": 0.2179411764705883}
+  },
+  "negative_evaluable_pairs": [
+    {"pair_id": 3, "taxon_group": "plant", "scientific_name": "Ixeridium dentatum (Thunb.) Tzvelev", "country": "CN", "recent_rows": 3, "robust_recall": 0.0, "random_recall_mean": 0.1883333333333333, "lift": -0.1883333333333333},
+    {"pair_id": 5, "taxon_group": "plant", "scientific_name": "Reynoutria sachalinensis (F.Schmidt) Nakai", "country": "IT", "recent_rows": 5, "robust_recall": 0.0, "random_recall_mean": 0.18, "lift": -0.18},
+    {"pair_id": 7, "taxon_group": "plant", "scientific_name": "Solidago virgaurea L.", "country": "KZ", "recent_rows": 18, "robust_recall": 0.0555555555555555, "random_recall_mean": 0.2116666666666666, "lift": -0.1561111111111111},
+    {"pair_id": 21, "taxon_group": "plant", "scientific_name": "Equisetum ramosissimum Desf.", "country": "ID", "recent_rows": 29, "robust_recall": 0.0344827586206896, "random_recall_mean": 0.1905172413793103, "lift": -0.1560344827586206},
+    {"pair_id": 2, "taxon_group": "animal", "scientific_name": "Parus minor Temminck & Schlegel, 1848", "country": "LA", "recent_rows": 1, "robust_recall": 0.0, "random_recall_mean": 0.07, "lift": -0.07}
+  ],
+  "non_evaluable_or_nonintegrated_pairs": {
+    "candidate_generation_failures": [
+      {"pair_id": 8, "scientific_name": "Emberiza spodocephala Pallas, 1776", "reason": "fewer than five unique complete historical terrain prototypes: 4"},
+      {"pair_id": 18, "scientific_name": "Penilia avirostris Dana, 1849", "reason": "fewer than five unique complete historical terrain prototypes: 1"},
+      {"pair_id": 22, "scientific_name": "Apogon coccineus Rüppell, 1838", "reason": "fewer than five usable historical occurrence rows in TZ: 2"}
+    ],
+    "country_declaration_failures": [
+      {"pair_id": 13, "scientific_name": "Lophatherum gracile Brongn."}
+    ],
+    "generated_but_zero_recent_country_records": [10, 12, 17]
+  },
+  "descriptive_spearman_correlations_with_lift": {
+    "recent_heldout_occurrence_rows": 0.026993885350517905,
+    "candidate_patch_count": -0.22794117647058826,
+    "complete_terrain_surface_points": -0.21027497206868256,
+    "prototype_rows": -0.36891657563182273,
+    "historical_training_occurrence_rows": 0.006131209000359298
+  },
+  "interpretation": [
+    "The replication failure is not a sign reversal: overall, plant, and animal mean lifts remain positive.",
+    "The failed preregistered gate is uncertainty: between-taxon heterogeneity is large enough for the 95% bootstrap lower bound to cross zero slightly.",
+    "Negative outcomes are concentrated in plants in this cohort, but this is post-outcome descriptive evidence only and cannot define a new eligibility rule on these taxa.",
+    "Heldout record count alone does not explain lift variation in this cohort.",
+    "Any conditional or moderator-based generalization must be preregistered and tested on a genuinely fresh cohort rather than tuned on these 24 taxa."
+  ]
+}

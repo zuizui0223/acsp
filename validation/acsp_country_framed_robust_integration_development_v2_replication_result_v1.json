@@ -1,0 +1,76 @@
+{
+  "status": "scientific_fail_6_of_7_gates",
+  "decision": "do_not_promote_country_framed_global_candidate_generation_to_validated",
+  "source": {
+    "assembly_continuation_run_id": 32869860984,
+    "final_artifact_id": 9571713248,
+    "final_artifact_name": "country-framed-integration-development-v2-replication-results-ru-recovery",
+    "final_artifact_sha256": "d1cae61125914fd3e7ae58a827a0b7fdefbecb9e25932652b4110157e4765ef5"
+  },
+  "fingerprints": {
+    "replication_protocol": "66d5eba6d5e92e89bcf941b40aa0cec91f39479c25bb8c5e1a0f403b50d3a94c",
+    "replication_execution": "408acbf32ab2cb2d9d4ee802f599aa425185a6cf82c956173f4f53a1089fc63e",
+    "authoritative_v2_protocol": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
+    "exact_ru_recovery": "694e838b02717a20429070e291d7226c1b7c2c575d736020895f2676c1cbb504"
+  },
+  "results": {
+    "declared_taxa": 24,
+    "candidate_generation_success_taxa": 20,
+    "candidate_generation_success_rate": 0.8333333333333334,
+    "temporally_evaluable_taxa": 18,
+    "temporal_evaluability_rate": 0.75,
+    "integrated_evaluable_taxa": 17,
+    "mean_robust_minus_random_recall": 0.08960843345273417,
+    "taxon_bootstrap_95pct_ci": [
+      -0.0024797646968568506,
+      0.18242922703119302
+    ],
+    "plant_mean_robust_minus_random_recall": 0.07515267923368585,
+    "animal_mean_robust_minus_random_recall": 0.11025951090851749
+  },
+  "gate_checks": {
+    "declared_taxa": true,
+    "candidate_generation_success_rate": true,
+    "temporal_evaluability_rate": true,
+    "mean_lift_positive": true,
+    "bootstrap_lower_positive": false,
+    "plant_mean_nonnegative": true,
+    "animal_mean_nonnegative": true
+  },
+  "replication_gate_passed": false,
+  "scientific_contract": {
+    "lattice_step_deg": 2.0,
+    "points_per_regional_tile": 800,
+    "primary_support_fraction": 0.025,
+    "primary_radius_km": 10.0,
+    "random_baseline_repetitions": 200,
+    "change_from_authoritative_v2": "cohort_identity_rule_only",
+    "candidate_generation_preceded_recent_outcome_fetch": true,
+    "retuned_after_outcome_opening": false,
+    "country_representation_changed": false,
+    "country_geometry_provider_changed": false,
+    "robust_core_changed": false,
+    "endpoint_changed": false,
+    "random_baseline_changed": false,
+    "gate_changed": false,
+    "seed_changed": false,
+    "v1_or_v1_1_taxa_reused": false,
+    "v2_taxa_reused": false,
+    "confirmation_v1_taxa_consumed": false
+  },
+  "technical_recovery": {
+    "source_replication_run_id": 32811169261,
+    "recovered_pair_ids": [1, 4, 15, 19],
+    "assembly_layout_fix_only": true,
+    "world_recomputed_in_assembly_continuation": false,
+    "scientific_method_changed": false,
+    "cohort_refrozen": false,
+    "outcome_driven_tuning": false
+  },
+  "interpretation": {
+    "direction_replicated": true,
+    "uncertainty_gate_replicated": false,
+    "summary": "The country-framed regional-lattice extension replicated positive mean lift overall and within both plant and animal groups, but the preregistered taxon-bootstrap 95% lower bound crossed zero slightly. The extension therefore remains development evidence and is not a validated global candidate-generation claim.",
+    "unaffected_validated_scope": "The independently confirmed Japan regional robust candidate-patch core remains validated under its existing 96-pair, 480-fold contract."
+  }
+}
