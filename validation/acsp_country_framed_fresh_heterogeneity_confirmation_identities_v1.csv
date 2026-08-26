@@ -28,22 +28,22 @@ fresh_pair_id,taxon_group,speciesKey,scientific_name
 27,animal,2365991,"Hemibarbus longirostris (Regan, 1908)"
 28,animal,1704439,"Trilophidia annulata (Thunberg, 1815)"
 29,plant,7328514,Lyonia ovalifolia (Wall.) Drude
-30,plant,2877120,Hydrangea macrophylla (Thunb.) Ser.
-31,animal,2481470,"Scolopax rusticola Linnaeus, 1758"
-32,animal,1896583,"Catocala nivea Butler, 1877"
-33,plant,5294498,Ischaemum anthephoroides (Steud.) Miq.
-34,plant,5292240,Echinochloa crus-galli (L.) P.Beauv.
-35,animal,2480751,"Vanellus cinereus (Blyth, 1842)"
-36,animal,2498449,"Hypsipetes amaurotis (Temminck, 1830)"
-37,plant,3188985,Oenothera rosea L'Hér. ex Aiton
-38,plant,7303924,Persicaria capitata (Buch.-Ham. ex D.Don) H.Gross
-39,animal,1891822,"Spilarctia subcarnea (Walker, 1855)"
-40,animal,1890869,"Spilarctia seriatopunctata (Motschulsky, 1861)"
-41,plant,7327369,Rhododendron ×pulchrum Sweet
-42,plant,7328370,Rhododendron indicum (L.) Sweet
-43,animal,2393723,"Eviota abax (Jordan & Snyder, 1901)"
-44,animal,2393720,"Eviota storthynx (Rofen, 1959)"
-45,plant,7337821,Turpinia ternata Nakai
-46,plant,7307848,Pilea brevicornuta Hayata
-47,animal,2487925,"Alcedo atthis (Linnaeus, 1758)"
-48,animal,2393836,"Fusigobius duospilus Hoese & Reader, 1985"
+30,plant,6711535,Rhododendron benhallii Craven
+31,animal,2494329,"Coccothraustes coccothraustes (Linnaeus, 1758)"
+32,animal,11807729,"Poecilocampa tamanukii (Matsumura, 1928)"
+33,plant,3149515,Ainsliaea uniflora Sch.Bip.
+34,plant,2729312,Carex insaniae Koidz.
+35,animal,10072587,"Sigara substriata (Uhler, 1897)"
+36,animal,5099473,"Acrida cinerea (Thunberg, 1815)"
+37,plant,8216229,Myrica rubra A.Chev.
+38,plant,3718199,Clethra barbinervis Siebold & Zucc.
+39,animal,5887934,"Tenodera sinensis Saussure, 1871"
+40,animal,5231198,"Passer montanus (Linnaeus, 1758)"
+41,plant,4256698,Asplenium prolongatum Hook.
+42,plant,4159594,Celtis sinensis Pers.
+43,animal,2374418,"Parapriacanthus ransonneti Steindachner, 1870"
+44,animal,2376146,"Eviota storthynx (Rofen, 1959)"
+45,plant,5550192,Turpinia ternata Nakai
+46,plant,5671249,Pilea brevicornuta Hayata
+47,animal,2475532,"Alcedo atthis (Linnaeus, 1758)"
+48,animal,2377769,"Fusigobius duospilus Hoese & Reader, 1985"
