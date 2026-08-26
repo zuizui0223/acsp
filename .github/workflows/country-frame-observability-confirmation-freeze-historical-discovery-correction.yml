@@ -1,5 +1,6 @@
 name: Country-frame observability confirmation freeze historical discovery correction
 
+# Dormant until the dedicated corrected activation marker is created on main.
 on:
   push:
     branches: [main]
