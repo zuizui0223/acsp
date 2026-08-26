@@ -26,6 +26,23 @@ class HistoricalDiscoveryBoundaryTests(unittest.TestCase):
         )
         self.assertFalse(corrected["reason"]["frozen_country_heldout_endpoint_opened_before_correction"])
 
+    def test_preheldout_exposure_binding_is_identity_only_and_frozen(self) -> None:
+        bound, keys = mod.exposure_binding()
+        self.assertEqual(keys, {9775639})
+        self.assertEqual(bound["source_run_id"], 32991791263)
+        self.assertFalse(bound["source_run_authoritative"])
+        self.assertFalse(bound["source_run_freeze_completed"])
+        self.assertFalse(bound["source_run_artifact_created"])
+        self.assertFalse(bound["frozen_country_heldout_endpoint_opened"])
+        self.assertEqual(
+            bound["binding_fingerprint"],
+            "76e708dfbc45daa55c3a6d383c47e1b35074df5b206a1bc27e584ce7cf7ae638",
+        )
+        self.assertEqual(
+            bound["identity_file_sha256"],
+            "057485e27d7da9eccf08ac81cebe1fa996a4a58402299eaa5c70a2e853731602",
+        )
+
     def test_discovery_species_facet_is_explicitly_historical_only(self) -> None:
         payload = {
             "facets": [
@@ -68,16 +85,28 @@ class HistoricalDiscoveryBoundaryTests(unittest.TestCase):
         self.assertEqual(params["hasGeospatialIssue"], "false")
         self.assertEqual(params["occurrenceStatus"], "PRESENT")
 
-    def test_freeze_injects_historical_provider_and_records_boundary_on_abort(self) -> None:
+    def test_corrected_exclusions_union_original_and_visible_quarantine(self) -> None:
+        with patch.object(mod.base, "consumed_exclusion_sets", return_value=({101}, {"Consumed one"})):
+            keys, names = mod.corrected_exclusion_sets()
+        self.assertEqual(keys, {101, 9775639})
+        self.assertEqual(names, {"Consumed one"})
+
+    def test_freeze_injects_historical_provider_and_corrected_exclusions(self) -> None:
         aborted = mod.base.FreezeAborted("synthetic preidentity stop", [])
         with tempfile.TemporaryDirectory() as tmp, patch.object(
+            mod.base, "consumed_exclusion_sets", return_value=({101}, {"Consumed one"})
+        ), patch.object(
             mod.base, "select_observability_frames", side_effect=aborted
         ) as select:
             output = Path(tmp)
             with self.assertRaises(mod.base.FreezeAborted):
                 mod.freeze(output)
 
-            select.assert_called_once_with(frame_provider=mod.historical_taxon_frame)
+            select.assert_called_once()
+            kwargs = select.call_args.kwargs
+            self.assertIs(kwargs["frame_provider"], mod.historical_taxon_frame)
+            self.assertEqual(kwargs["excluded_keys"], {101, 9775639})
+            self.assertEqual(kwargs["excluded_names"], {"Consumed one"})
             manifest = json.loads((output / "cohort_manifest.json").read_text(encoding="utf-8"))
 
         self.assertEqual(
@@ -93,8 +122,13 @@ class HistoricalDiscoveryBoundaryTests(unittest.TestCase):
             manifest["boundary_correction_fingerprint"],
             "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e",
         )
+        self.assertEqual(
+            manifest["preheldout_exposure_binding_fingerprint"],
+            "76e708dfbc45daa55c3a6d383c47e1b35074df5b206a1bc27e584ce7cf7ae638",
+        )
         self.assertEqual(manifest["discovery_species_facet_years"], [1900, 2020])
         self.assertFalse(manifest["discovery_species_facets_include_heldout_years"])
+        self.assertEqual(manifest["preheldout_exposed_species_keys"], 1)
         self.assertFalse(manifest["recent_outcomes_opened"])
 
 
