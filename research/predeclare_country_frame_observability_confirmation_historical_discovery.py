@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Historical-only discovery wrapper for the prospective observability freeze.
 
-This module is a pre-identity boundary hardening of the issue #163 freeze.  It
-keeps the frozen protocol, exclusions, identity hash, country declaration,
-score, and output schema from ``predeclare_country_frame_observability_confirmation``
-but also bounds the *discovery species facet* to 1900--2020.  Therefore neither
-candidate-pool membership nor generic record-count strata can depend on records
-from the 2021--2025 held-out interval.
+This module applies the pre-heldout issue #163 boundary correction while
+preserving the parent protocol's identity hash, exclusions, country declaration,
+score, endpoint, and decision rule.  The correction additionally bounds the
+*discovery species facet* to 1900--2020, so candidate-pool membership and generic
+record-count strata cannot depend on the 2021--2025 held-out interval.
 """
 from __future__ import annotations
 
@@ -27,8 +26,40 @@ from benchmark_general_random_taxa_regions import (
 )
 import predeclare_country_frame_observability_confirmation as base
 
+ROOT = Path(__file__).resolve().parents[1]
+CORRECTION_PATH = (
+    ROOT / "validation" / "acsp_country_frame_observability_confirmation_boundary_correction_v1.json"
+)
+EXPECTED_CORRECTION_FINGERPRINT = "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e"
 DISCOVERY_YEARS = tuple(int(x) for x in base.HISTORICAL_YEARS)
-BOUNDARY_CORRECTION_ID = "historical_discovery_species_facets_1900_2020_v1"
+BOUNDARY_CORRECTION_ID = "acsp_country_frame_observability_confirmation_boundary_correction_v1"
+
+
+def correction() -> dict[str, object]:
+    """Load and cryptographically verify the pre-heldout boundary correction."""
+    payload = json.loads(CORRECTION_PATH.read_text(encoding="utf-8"))
+    stored = str(payload.pop("correction_fingerprint", ""))
+    calculated = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    if stored != EXPECTED_CORRECTION_FINGERPRINT or calculated != EXPECTED_CORRECTION_FINGERPRINT:
+        raise ValueError(
+            "observability boundary-correction fingerprint mismatch: "
+            f"file={stored}, calculated={calculated}, expected={EXPECTED_CORRECTION_FINGERPRINT}"
+        )
+    if payload["parent_protocol_fingerprint"] != base.EXPECTED_PROTOCOL_FINGERPRINT:
+        raise ValueError("boundary correction parent-protocol fingerprint drift")
+    boundary = payload["corrected_boundary"]
+    if tuple(int(x) for x in boundary["discovery_species_facet_years"]) != DISCOVERY_YEARS:
+        raise ValueError("boundary correction discovery-year drift")
+    if str(boundary["gbif_year_parameter"]) != "1900,2020":
+        raise ValueError("boundary correction GBIF year parameter drift")
+    if boundary["heldout_rows_or_country_facets_allowed_during_freeze"] is not False:
+        raise ValueError("boundary correction may not open heldout rows/facets during freeze")
+    if payload["reason"]["frozen_country_heldout_endpoint_opened_before_correction"] is not False:
+        raise ValueError("boundary correction was not frozen pre-heldout")
+    payload["correction_fingerprint"] = stored
+    return payload
 
 
 def historical_taxon_frame(
@@ -74,14 +105,22 @@ def historical_taxon_frame(
     return pd.DataFrame([row for row in rows if row is not None])
 
 
+def _boundary_manifest_fields() -> dict[str, object]:
+    return {
+        "parent_protocol_fingerprint": base.EXPECTED_PROTOCOL_FINGERPRINT,
+        "boundary_correction_id": BOUNDARY_CORRECTION_ID,
+        "boundary_correction_fingerprint": EXPECTED_CORRECTION_FINGERPRINT,
+        "discovery_species_facet_years": list(DISCOVERY_YEARS),
+        "discovery_species_facets_include_heldout_years": False,
+    }
+
+
 def _abort_manifest(exc: base.FreezeAborted, audit: pd.DataFrame) -> dict[str, object]:
     return {
         "status": "observability_confirmation_freeze_aborted_before_complete_cohort",
         "protocol_fingerprint": base.EXPECTED_PROTOCOL_FINGERPRINT,
         "issue": 163,
-        "boundary_correction_id": BOUNDARY_CORRECTION_ID,
-        "discovery_species_facet_years": list(DISCOVERY_YEARS),
-        "discovery_species_facets_include_heldout_years": False,
+        **_boundary_manifest_fields(),
         "attempt_rows": int(len(audit)),
         "recent_outcomes_opened": False,
         "candidate_generation_run": False,
@@ -93,10 +132,13 @@ def _abort_manifest(exc: base.FreezeAborted, audit: pd.DataFrame) -> dict[str, o
 
 
 def freeze(output: Path) -> dict[str, object]:
-    """Freeze the same preregistered cohort with historical-only discovery facets."""
+    """Freeze the corrected prospective cohort with historical-only discovery facets."""
     cfg = base.protocol()
+    amended = correction()
     if DISCOVERY_YEARS != tuple(int(x) for x in cfg["country_declaration"]["historical_years"]):
         raise ValueError("historical discovery years drift from frozen historical window")
+    if amended["parent_protocol_fingerprint"] != cfg["protocol_fingerprint"]:
+        raise ValueError("boundary correction is not bound to the loaded parent protocol")
 
     output.mkdir(parents=True, exist_ok=True)
     try:
@@ -119,9 +161,7 @@ def freeze(output: Path) -> dict[str, object]:
         "status": "observability_confirmation_96_frames_frozen_before_heldout",
         "protocol_fingerprint": base.EXPECTED_PROTOCOL_FINGERPRINT,
         "issue": 163,
-        "boundary_correction_id": BOUNDARY_CORRECTION_ID,
-        "discovery_species_facet_years": list(DISCOVERY_YEARS),
-        "discovery_species_facets_include_heldout_years": False,
+        **_boundary_manifest_fields(),
         "frozen_frames": int(len(selected)),
         "unique_species_keys": int(selected["speciesKey"].nunique()),
         "taxon_group_counts": {
