@@ -1,0 +1,135 @@
+{
+  "diagnostic_name": "country-framed fresh temporal evaluability observation-layer diagnosis",
+  "source": {
+    "authoritative_run_id": 32932865041,
+    "final_artifact_id": 9605032549,
+    "final_artifact_digest": "sha256:164e707058c76d46b4ec07fa4c3d6442939ef85cfbc69621a482ed8579dcd848",
+    "fresh_protocol_fingerprint": "65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01",
+    "fresh_execution_fingerprint": "c8d8009ff692f71b1c076e1ee0e3c957527ea789c5c984011574ddd41f91095b",
+    "terminal_primary_decision": "FAIL",
+    "terminal_failed_primary_gate": "temporal_evaluability_fraction_ge_0_75"
+  },
+  "summary": {
+    "row_count": 48,
+    "unique_species_keys": 48,
+    "declaration_layer": {
+      "status_counts": {
+        "declared": 46,
+        "country_declaration_failed": 2
+      },
+      "declared": 46,
+      "failed": 2
+    },
+    "candidate_layer": {
+      "status_counts": {
+        "generated": 40,
+        "candidate_generation_failed": 6,
+        "not_attempted_declaration_failed": 2
+      },
+      "generated": 40,
+      "generated_fraction": 0.8333333333333334
+    },
+    "temporal_observation_layer": {
+      "status_counts": {
+        "evaluated": 34,
+        "zero_recent_country_records": 12,
+        "not_attempted_no_declared_country": 2
+      },
+      "evaluated": 34,
+      "evaluated_fraction_of_all_frozen_taxa": 0.7083333333333334,
+      "zero_recent_country_records": 12,
+      "recent_provider_failed": 0
+    },
+    "joint_layer": {
+      "candidate_generated_and_temporally_evaluated": 32,
+      "fraction_of_all_frozen_taxa": 0.6666666666666666,
+      "candidate_generated_but_zero_recent_country_records": 8,
+      "candidate_generation_failed_but_temporally_evaluated": 2
+    },
+    "by_taxon_group": {
+      "plant": {
+        "total": 24,
+        "declared": 23,
+        "candidate_generated": 20,
+        "temporally_evaluated": 16,
+        "temporally_evaluable_fraction": 0.6666666666666666,
+        "zero_recent_country_records": 7,
+        "country_declaration_failed": 1,
+        "joint_candidate_generated_and_temporally_evaluated": 15
+      },
+      "animal": {
+        "total": 24,
+        "declared": 23,
+        "candidate_generated": 20,
+        "temporally_evaluated": 18,
+        "temporally_evaluable_fraction": 0.75,
+        "zero_recent_country_records": 5,
+        "country_declaration_failed": 1,
+        "joint_candidate_generated_and_temporally_evaluated": 17
+      }
+    },
+    "by_geographic_stratum": {
+      "north": {
+        "total": 12,
+        "temporally_evaluated": 10,
+        "zero_recent_country_records": 2,
+        "country_declaration_failed": 0
+      },
+      "east": {
+        "total": 12,
+        "temporally_evaluated": 7,
+        "zero_recent_country_records": 4,
+        "country_declaration_failed": 1
+      },
+      "west": {
+        "total": 12,
+        "temporally_evaluated": 10,
+        "zero_recent_country_records": 2,
+        "country_declaration_failed": 0
+      },
+      "south": {
+        "total": 12,
+        "temporally_evaluated": 7,
+        "zero_recent_country_records": 4,
+        "country_declaration_failed": 1
+      }
+    },
+    "zero_recent_declared_taxa": {
+      "count": 12,
+      "country_counts": {
+        "RU": 1,
+        "KP": 1,
+        "LV": 1,
+        "JP": 3,
+        "CN": 3,
+        "TW": 1,
+        "VN": 2
+      },
+      "historical_training_rows_min": 0,
+      "historical_training_rows_median": 15.5,
+      "historical_training_rows_mean": 35.916666666666664,
+      "historical_training_rows_max": 123,
+      "three_largest_historical_training_row_counts": [123, 96, 84]
+    }
+  },
+  "interpretation": {
+    "candidate_generation_failure_is_not_the_temporal_gate": true,
+    "generated_candidate_patches_without_recent_country_records_exist": true,
+    "generated_but_temporally_unevaluable_taxa": 8,
+    "candidate_failed_but_temporally_observable_taxa": 2,
+    "working_hypothesis": "an outcome-independent historical country frame can be computationally valid yet fail to remain observable in a later heldout window",
+    "scope": "observation-process portability, not a rescue of the failed country-framed scientific confirmation"
+  },
+  "guards": {
+    "descriptive_post_outcome_only": true,
+    "primary_decision_changed": false,
+    "taxa_or_countries_replaced": false,
+    "scientific_constants_changed": false,
+    "scientific_thresholds_tuned": false,
+    "lift_columns_read": false,
+    "new_eligibility_rule_created": false,
+    "consumed_confirmation_rerun_allowed": false,
+    "future_observability_rule_requires_separate_preregistration_and_fresh_identities": true
+  },
+  "next_research_question": "Can future temporal observability of a historically frozen taxon-country frame be predicted using pre-heldout information only, without conditioning on candidate-generation or lift outcomes?"
+}
