@@ -2,10 +2,11 @@
 """Historical-only discovery wrapper for the prospective observability freeze.
 
 This module applies the pre-heldout issue #163 boundary correction while
-preserving the parent protocol's identity hash, exclusions, country declaration,
-score, endpoint, and decision rule.  The correction additionally bounds the
-*discovery species facet* to 1900--2020, so candidate-pool membership and generic
-record-count strata cannot depend on the 2021--2025 held-out interval.
+preserving the parent protocol's identity hash, country declaration, score,
+endpoint, and decision rule.  It additionally excludes any identity that became
+human-visible during a quarantined pre-heldout technical run.  The corrected
+*discovery species facet* is bounded to 1900--2020, so candidate-pool membership
+and generic record-count strata cannot depend on the 2021--2025 held-out interval.
 """
 from __future__ import annotations
 
@@ -30,9 +31,18 @@ ROOT = Path(__file__).resolve().parents[1]
 CORRECTION_PATH = (
     ROOT / "validation" / "acsp_country_frame_observability_confirmation_boundary_correction_v1.json"
 )
+EXPOSURE_BINDING_PATH = (
+    ROOT / "validation" / "acsp_country_frame_observability_confirmation_preheldout_exposure_v1.json"
+)
+EXPOSED_IDENTITY_PATH = (
+    ROOT / "validation" / "acsp_country_frame_observability_confirmation_preheldout_exposed_identities_v1.csv"
+)
 EXPECTED_CORRECTION_FINGERPRINT = "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e"
+EXPECTED_EXPOSURE_BINDING_FINGERPRINT = "76e708dfbc45daa55c3a6d383c47e1b35074df5b206a1bc27e584ce7cf7ae638"
+EXPECTED_EXPOSED_IDENTITY_SHA256 = "057485e27d7da9eccf08ac81cebe1fa996a4a58402299eaa5c70a2e853731602"
 DISCOVERY_YEARS = tuple(int(x) for x in base.HISTORICAL_YEARS)
 BOUNDARY_CORRECTION_ID = "acsp_country_frame_observability_confirmation_boundary_correction_v1"
+EXPOSURE_BINDING_ID = "acsp_country_frame_observability_confirmation_preheldout_exposure_v1"
 
 
 def correction() -> dict[str, object]:
@@ -60,6 +70,52 @@ def correction() -> dict[str, object]:
         raise ValueError("boundary correction was not frozen pre-heldout")
     payload["correction_fingerprint"] = stored
     return payload
+
+
+def exposure_binding() -> tuple[dict[str, object], set[int]]:
+    """Verify the identity-only quarantine created by the failed technical run."""
+    payload = json.loads(EXPOSURE_BINDING_PATH.read_text(encoding="utf-8"))
+    stored = str(payload.pop("binding_fingerprint", ""))
+    calculated = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    if stored != EXPECTED_EXPOSURE_BINDING_FINGERPRINT or calculated != EXPECTED_EXPOSURE_BINDING_FINGERPRINT:
+        raise ValueError(
+            "observability exposure-binding fingerprint mismatch: "
+            f"file={stored}, calculated={calculated}, expected={EXPECTED_EXPOSURE_BINDING_FINGERPRINT}"
+        )
+    if payload["binding_id"] != EXPOSURE_BINDING_ID:
+        raise ValueError("unexpected observability exposure binding id")
+    if payload["parent_protocol_fingerprint"] != base.EXPECTED_PROTOCOL_FINGERPRINT:
+        raise ValueError("exposure binding parent-protocol fingerprint drift")
+    if payload["boundary_correction_fingerprint"] != EXPECTED_CORRECTION_FINGERPRINT:
+        raise ValueError("exposure binding correction fingerprint drift")
+    if payload["source_run_authoritative"] is not False or payload["source_run_freeze_completed"] is not False:
+        raise ValueError("quarantined run status drift")
+    if payload["source_run_artifact_created"] is not False:
+        raise ValueError("quarantined run unexpectedly created an artifact")
+    if payload["frozen_country_heldout_endpoint_opened"] is not False:
+        raise ValueError("quarantined run opened the heldout endpoint")
+    if payload["identity_file"] != str(EXPOSED_IDENTITY_PATH.relative_to(ROOT)):
+        raise ValueError("exposure identity path drift")
+
+    data = EXPOSED_IDENTITY_PATH.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    if digest != EXPECTED_EXPOSED_IDENTITY_SHA256 or digest != payload["identity_file_sha256"]:
+        raise ValueError("exposed identity-only file SHA256 mismatch")
+    frame = pd.read_csv(EXPOSED_IDENTITY_PATH, usecols=["speciesKey"])
+    keys = set(pd.to_numeric(frame["speciesKey"], errors="raise").astype(int))
+    if len(frame) != int(payload["identity_rows"]) or len(keys) != len(frame):
+        raise ValueError("exposed identity-only quarantine row/count drift")
+    payload["binding_fingerprint"] = stored
+    return payload, keys
+
+
+def corrected_exclusion_sets() -> tuple[set[int], set[str]]:
+    """Return original consumed identities plus pre-heldout human-visible exposure."""
+    keys, names = base.consumed_exclusion_sets()
+    _, exposed_keys = exposure_binding()
+    return set(keys) | exposed_keys, set(names)
 
 
 def historical_taxon_frame(
@@ -106,12 +162,18 @@ def historical_taxon_frame(
 
 
 def _boundary_manifest_fields() -> dict[str, object]:
+    exposure, exposed_keys = exposure_binding()
     return {
         "parent_protocol_fingerprint": base.EXPECTED_PROTOCOL_FINGERPRINT,
         "boundary_correction_id": BOUNDARY_CORRECTION_ID,
         "boundary_correction_fingerprint": EXPECTED_CORRECTION_FINGERPRINT,
         "discovery_species_facet_years": list(DISCOVERY_YEARS),
         "discovery_species_facets_include_heldout_years": False,
+        "preheldout_exposure_binding_id": EXPOSURE_BINDING_ID,
+        "preheldout_exposure_binding_fingerprint": EXPECTED_EXPOSURE_BINDING_FINGERPRINT,
+        "preheldout_exposed_identity_sha256": EXPECTED_EXPOSED_IDENTITY_SHA256,
+        "preheldout_exposed_identity_rows": int(exposure["identity_rows"]),
+        "preheldout_exposed_species_keys": len(exposed_keys),
     }
 
 
@@ -135,14 +197,22 @@ def freeze(output: Path) -> dict[str, object]:
     """Freeze the corrected prospective cohort with historical-only discovery facets."""
     cfg = base.protocol()
     amended = correction()
+    exposure, _ = exposure_binding()
     if DISCOVERY_YEARS != tuple(int(x) for x in cfg["country_declaration"]["historical_years"]):
         raise ValueError("historical discovery years drift from frozen historical window")
     if amended["parent_protocol_fingerprint"] != cfg["protocol_fingerprint"]:
         raise ValueError("boundary correction is not bound to the loaded parent protocol")
+    if exposure["boundary_correction_fingerprint"] != amended["correction_fingerprint"]:
+        raise ValueError("preheldout exposure binding is not bound to the loaded correction")
 
+    excluded_keys, excluded_names = corrected_exclusion_sets()
     output.mkdir(parents=True, exist_ok=True)
     try:
-        selected, audit = base.select_observability_frames(frame_provider=historical_taxon_frame)
+        selected, audit = base.select_observability_frames(
+            frame_provider=historical_taxon_frame,
+            excluded_keys=excluded_keys,
+            excluded_names=excluded_names,
+        )
     except base.FreezeAborted as exc:
         audit = pd.DataFrame(exc.audit_rows)
         audit_path = output / "pre_freeze_declaration_attempts.csv"
