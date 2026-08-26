@@ -1,0 +1,10 @@
+issue=155
+protocol_fingerprint=65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01
+protocol_merge_commit=cb39c1c7f625711b89df25847d674ddf6de40f00
+identities_opened_before_activation=false
+scientific_method_changed=false
+outcome_driven_tuning=false
+recent_outcomes_opened=false
+candidate_generation_run=false
+robust_support_run=false
+random_baseline_run=false
