@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+
 from diagnose_country_framed_fresh_temporal_evaluability import (
     DIAGNOSTIC_COLUMNS,
     FORBIDDEN_OUTCOME_COLUMNS,
+    ROOT,
     diagnose,
 )
 
@@ -68,8 +71,19 @@ def test_terminal_temporal_evaluability_decomposition_is_frozen() -> None:
     assert zero["historical_training_rows_max"] == 123
     assert zero["three_largest_historical_training_row_counts"] == [123, 96, 84]
 
+    assert payload["interpretation"]["generated_but_temporally_unevaluable_taxa"] == 8
+    assert payload["interpretation"]["candidate_failed_but_temporally_observable_taxa"] == 2
     assert payload["guards"]["descriptive_post_outcome_only"] is True
     assert payload["guards"]["primary_decision_changed"] is False
     assert payload["guards"]["scientific_thresholds_tuned"] is False
     assert payload["guards"]["lift_columns_read"] is False
     assert payload["guards"]["new_eligibility_rule_created"] is False
+
+
+def test_frozen_json_is_exact_regeneration() -> None:
+    frozen = json.loads(
+        (ROOT / "validation" / "acsp_country_framed_fresh_temporal_evaluability_diagnostic_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert diagnose() == frozen
