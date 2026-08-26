@@ -18,6 +18,8 @@ from country_framed_fresh_heterogeneity_execution import (
 from predeclare_country_framed_integration_development_v2 import EXPECTED_PROTOCOL_FINGERPRINT, _protocol
 from run_country_framed_integration_development_v1_1 import _finite_mean, taxon_bootstrap_mean_ci
 
+ROOT = Path(__file__).resolve().parents[1]
+FRESH_PROTOCOL_PATH = ROOT / "validation" / "acsp_country_framed_fresh_heterogeneity_confirmation_v1.json"
 PAIR_ARTIFACT_GLOB = "fresh-pair-*"
 
 
@@ -60,7 +62,11 @@ def _heterogeneity_bootstrap(
 def aggregate_fresh(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
     contract = execution_contract()
     authoritative = _protocol()
-    primary = contract["aggregate"]
+    aggregate_cfg = contract["aggregate"]
+    fresh_protocol = json.loads(FRESH_PROTOCOL_PATH.read_text(encoding="utf-8"))
+    if fresh_protocol["protocol_fingerprint"] != EXPECTED_FRESH_PROTOCOL_FINGERPRINT:
+        raise ValueError("fresh protocol fingerprint drift during aggregation")
+
     result_files = sorted(input_root.glob(f"{PAIR_ARTIFACT_GLOB}/taxon_country_results.csv"))
     manifest_files = sorted(input_root.glob(f"{PAIR_ARTIFACT_GLOB}/pair_manifest.json"))
     if len(result_files) != 48 or len(manifest_files) != 48:
@@ -109,8 +115,8 @@ def aggregate_fresh(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[
     lifts = lift_values.loc[integrated].to_numpy(float)
     mean, low, high = taxon_bootstrap_mean_ci(
         lifts,
-        repetitions=int(primary["bootstrap_repetitions"]),
-        seed=int(primary["bootstrap_seed"]),
+        repetitions=int(aggregate_cfg["bootstrap_repetitions"]),
+        seed=int(aggregate_cfg["bootstrap_seed"]),
     )
     plant_mask = integrated & results["taxon_group"].eq("plant")
     animal_mask = integrated & results["taxon_group"].eq("animal")
@@ -119,9 +125,7 @@ def aggregate_fresh(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[
     candidate_rate = float(generated.mean())
     temporal_rate = float(temporal.mean())
 
-    gates_cfg = json.loads(
-        (Path(__file__).resolve().parents[1] / "validation" / "acsp_country_framed_fresh_heterogeneity_confirmation_v1.json").read_text(encoding="utf-8")
-    )["primary_gates"]
+    gates_cfg = fresh_protocol["primary_gates"]
     gate_checks = {
         "declared_taxa": len(results) == int(gates_cfg["declared_unique_taxa"]),
         "candidate_generation_success_rate": candidate_rate >= float(gates_cfg["candidate_generation_fraction_min"]),
@@ -136,11 +140,16 @@ def aggregate_fresh(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[
     animal_lifts = lift_values.loc[animal_mask].to_numpy(float)
     plant_sd = _sample_sd(plant_lifts)
     animal_sd = _sample_sd(animal_lifts)
+    heterogeneity_cfg = fresh_protocol["heterogeneity"]
+    if heterogeneity_cfg["changes_primary_decision"] is not False or heterogeneity_cfg["permits_plant_exclusion"] is not False:
+        raise ValueError("fresh heterogeneity decision boundary drift")
+    heterogeneity_repetitions = int(heterogeneity_cfg["bootstrap_repetitions"])
+    heterogeneity_seed = int(heterogeneity_cfg["bootstrap_seed"])
     ratio, ratio_low, ratio_high = _heterogeneity_bootstrap(
         plant_lifts,
         animal_lifts,
-        repetitions=int(primary["heterogeneity_bootstrap"].split(";")[1].strip().split()[0]) if False else 10000,
-        seed=int(primary["heterogeneity_bootstrap_seed"]),
+        repetitions=heterogeneity_repetitions,
+        seed=heterogeneity_seed,
     )
 
     evalcfg = authoritative["evaluation"]
@@ -173,8 +182,8 @@ def aggregate_fresh(input_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[
             "plant_to_animal_sd_ratio": ratio,
             "plant_to_animal_sd_ratio_bootstrap_95pct_ci": [ratio_low, ratio_high],
             "directional_hypothesis_observed": bool(np.isfinite(plant_sd) and np.isfinite(animal_sd) and plant_sd > animal_sd),
-            "bootstrap_repetitions": 10000,
-            "bootstrap_seed": int(primary["heterogeneity_bootstrap_seed"]),
+            "bootstrap_repetitions": heterogeneity_repetitions,
+            "bootstrap_seed": heterogeneity_seed,
         },
         "scientific_method_changed": False,
         "retuned_after_outcome_opening": False,
