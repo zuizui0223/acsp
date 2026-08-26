@@ -1,0 +1,43 @@
+{
+  "name": "country_frame_observability_confirmation_freeze_execution_v1",
+  "issue": 163,
+  "protocol_fingerprint": "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547",
+  "scientific_method_changed": false,
+  "identities_opened_before_execution": false,
+  "heldout_outcomes_opened_before_execution": false,
+  "selection_seed": 2026082701,
+  "historical_years": [1900, 2020],
+  "target_frames": 96,
+  "plant_frames": 48,
+  "animal_frames": 48,
+  "score": "log1p(historical_selected_country_count)",
+  "score_cutoff_selected": false,
+  "replacement_after_freeze_allowed": false,
+  "heldout_allowed": false,
+  "source_code": "research/predeclare_country_frame_observability_confirmation.py",
+  "artifact_name": "country-frame-observability-confirmation-cohort",
+  "prior_non_authoritative_runs": [
+    {
+      "run_id": 32989400279,
+      "run_number": 1,
+      "event": "pull_request",
+      "freeze_job": "skipped",
+      "artifact_count": 0
+    },
+    {
+      "run_id": 32989401526,
+      "run_number": 2,
+      "event": "pull_request",
+      "freeze_job": "skipped"
+    },
+    {
+      "run_number": 3,
+      "event": "push",
+      "failure_stage": "one_shot_guard_before_identity_freeze"
+    }
+  ],
+  "technical_bug": "original workflow-wide run_number was consumed by PR contract runs",
+  "execution_fix": "new freeze-only workflow with no pull_request or schedule trigger",
+  "new_workflow_one_shot_run_number": 1,
+  "execution_fingerprint": "425aa13b6d7d75efcb2a0c6d35af31439b671afbe2dbf442c6953c7ae9970883"
+}
