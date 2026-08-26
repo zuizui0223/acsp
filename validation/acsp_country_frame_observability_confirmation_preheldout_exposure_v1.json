@@ -1,0 +1,19 @@
+{
+  "binding_id": "acsp_country_frame_observability_confirmation_preheldout_exposure_v1",
+  "status": "frozen_before_corrected_authoritative_cohort",
+  "parent_issue": 163,
+  "parent_protocol_fingerprint": "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547",
+  "boundary_correction_fingerprint": "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e",
+  "source_run_id": 32991791263,
+  "source_job_id": 98251050743,
+  "source_run_authoritative": false,
+  "source_run_freeze_completed": false,
+  "source_run_artifact_created": false,
+  "frozen_country_heldout_endpoint_opened": false,
+  "identity_file": "validation/acsp_country_frame_observability_confirmation_preheldout_exposed_identities_v1.csv",
+  "identity_file_sha256": "057485e27d7da9eccf08ac81cebe1fa996a4a58402299eaa5c70a2e853731602",
+  "identity_rows": 1,
+  "exclusion_scope": "human-visible preheldout identity only; no heldout outcome value was read",
+  "outcome_driven_tuning": false,
+  "binding_fingerprint": "76e708dfbc45daa55c3a6d383c47e1b35074df5b206a1bc27e584ce7cf7ae638"
+}
