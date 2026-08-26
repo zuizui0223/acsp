@@ -1,0 +1,54 @@
+{
+  "status": "country_framed_fresh_heterogeneity_confirmation_complete",
+  "fresh_protocol_fingerprint": "65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01",
+  "fresh_execution_fingerprint": "c8d8009ff692f71b1c076e1ee0e3c957527ea789c5c984011574ddd41f91095b",
+  "authoritative_v2_protocol_fingerprint": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
+  "declared_taxa": 48,
+  "candidate_generation_success_taxa": 40,
+  "candidate_generation_success_rate": 0.8333333333333334,
+  "temporally_evaluable_taxa": 34,
+  "temporal_evaluability_rate": 0.7083333333333334,
+  "integrated_evaluable_taxa": 32,
+  "primary_support_fraction": 0.025,
+  "primary_radius_km": 10.0,
+  "random_baseline_repetitions": 200,
+  "mean_robust_minus_random_recall": 0.1322978884579088,
+  "taxon_bootstrap_95pct_ci": [
+    0.04958001673771295,
+    0.21963529305496163
+  ],
+  "plant_mean_robust_minus_random_recall": 0.08583437838304346,
+  "animal_mean_robust_minus_random_recall": 0.17329510322984878,
+  "gate_checks": {
+    "declared_taxa": true,
+    "candidate_generation_success_rate": true,
+    "temporal_evaluability_rate": false,
+    "mean_lift_positive": true,
+    "bootstrap_lower_positive": true,
+    "plant_mean_nonnegative": true,
+    "animal_mean_nonnegative": true
+  },
+  "fresh_confirmation_gate_passed": false,
+  "secondary_heterogeneity": {
+    "decision_role": "secondary_only_cannot_change_primary_promotion_decision",
+    "plant_integrated_evaluable_taxa": 15,
+    "animal_integrated_evaluable_taxa": 17,
+    "plant_lift_sample_sd": 0.22460136256102894,
+    "animal_lift_sample_sd": 0.2729164223326131,
+    "plant_to_animal_sd_ratio": 0.8229675614291145,
+    "plant_to_animal_sd_ratio_bootstrap_95pct_ci": [
+      0.3404339666435078,
+      1.242224652236938
+    ],
+    "directional_hypothesis_observed": false,
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082602
+  },
+  "scientific_method_changed": false,
+  "retuned_after_outcome_opening": false,
+  "subset_rescue_used": false,
+  "failed_declarations_replaced": false,
+  "heterogeneity_changed_primary_decision": false,
+  "validated_japan_core_changed": false,
+  "global_candidate_generation_validated": false
+}
