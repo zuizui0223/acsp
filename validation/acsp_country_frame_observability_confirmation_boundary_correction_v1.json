@@ -1,0 +1,63 @@
+{
+  "correction_id": "acsp_country_frame_observability_confirmation_boundary_correction_v1",
+  "status": "preheldout_boundary_correction_before_authoritative_identity_freeze",
+  "parent_issue": 163,
+  "parent_protocol_fingerprint": "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547",
+  "reason": {
+    "audited_default_discovery_sampler": "research/benchmark_general_random_taxa_regions.py::taxon_frame",
+    "problem": "discovery speciesKey facet omitted an explicit year filter, so discovery membership and generic record-count strata could reflect heldout-year records",
+    "authoritative_cohort_accepted_before_correction": false,
+    "frozen_country_heldout_endpoint_opened_before_correction": false,
+    "outcome_driven_tuning": false
+  },
+  "corrected_boundary": {
+    "discovery_species_facet_years": [
+      1900,
+      2020
+    ],
+    "gbif_year_parameter": "1900,2020",
+    "historical_country_facet_years": [
+      1900,
+      2020
+    ],
+    "heldout_years": [
+      2021,
+      2025
+    ],
+    "heldout_rows_or_country_facets_allowed_during_freeze": false
+  },
+  "unchanged_scientific_contract": {
+    "target_frames": 96,
+    "plant_frames": 48,
+    "animal_frames": 48,
+    "regions": 12,
+    "record_count_strata_per_group": 4,
+    "identity_hash_rule": "SHA256(seed|region|group|stratum|speciesKey), lexicographic ascending",
+    "selection_seed": 2026082701,
+    "historical_country_min_count": 5,
+    "country_selection_seed": 2026082401,
+    "score_formula": "log1p(historical_selected_country_count)",
+    "score_cutoff_selected": false,
+    "replacement_after_authoritative_freeze_allowed": false,
+    "candidate_generation_run": false,
+    "robust_support_run": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false,
+    "primary_endpoint": "at least one qualifying 2021-2025 occurrence row in the same frozen country",
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082702
+  },
+  "quarantine": {
+    "late_unbounded_recovery_run_id": 32991791263,
+    "authoritative": false,
+    "heldout_activation_allowed_from_quarantined_run": false,
+    "attempted_or_selected_identities_excluded_if_quarantine_artifact_exists": true
+  },
+  "decision": {
+    "same_quarantined_cohort_retuning_allowed": false,
+    "subset_rescue_allowed": false,
+    "score_cutoff_creation_allowed": false,
+    "outcome_based_taxon_or_country_replacement_allowed": false
+  },
+  "correction_fingerprint": "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e"
+}
