@@ -30,7 +30,7 @@ from predeclare_country_framed_integration_development_v1 import (
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTOCOL_PATH = ROOT / "validation" / "acsp_country_framed_fresh_heterogeneity_confirmation_v1.json"
-EXPECTED_PROTOCOL_FINGERPRINT = "2ef792a09309008e0091cd9df70678b0719674352db95880c521d1f641a24520"
+EXPECTED_PROTOCOL_FINGERPRINT = "65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01"
 GROUP_ORDER = ("plant", "animal")
 
 
