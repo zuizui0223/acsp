@@ -1,6 +1,13 @@
 name: Country-frame observability confirmation freeze
 
 on:
+  pull_request:
+    paths:
+      - .github/workflows/country-frame-observability-confirmation-freeze.yml
+      - research/predeclare_country_frame_observability_confirmation.py
+      - research/test_country_frame_observability_confirmation.py
+      - validation/acsp_country_frame_observability_confirmation_v1.json
+      - validation/acsp_country_framed_fresh_heterogeneity_confirmation_identities_v1.csv
   push:
     branches: [main]
     paths:
@@ -13,7 +20,46 @@ env:
   PYTHONPATH: ${{ github.workspace }}/research
 
 jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify outcome-free protocol boundary
+        run: |
+          python - <<'PY'
+          from predeclare_country_frame_observability_confirmation import (
+              _terminal_fresh_identity_exclusions,
+              protocol,
+          )
+
+          expected = "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
+          cfg = protocol()
+          assert cfg["protocol_fingerprint"] == expected
+          assert cfg["cohort"]["target_frames"] == 96
+          assert cfg["cohort"]["plant"] == cfg["cohort"]["animal"] == 48
+          assert cfg["exclusions"]["freeze_reads_terminal_fresh_outcome_audit"] is False
+          assert cfg["execution"]["freeze_workflow_may_open_heldout"] is False
+          assert cfg["decision"]["retuning_allowed"] is False
+          assert cfg["decision"]["score_cutoff_creation_allowed"] is False
+          keys, names = _terminal_fresh_identity_exclusions()
+          assert len(keys) == len(names) == 48
+          PY
+
+      - name: Run outcome-free freeze contract tests
+        run: python -m unittest -v research/test_country_frame_observability_confirmation.py
+
   freeze-observability-frames:
+    if: github.event_name == 'push'
+    needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
@@ -26,15 +72,13 @@ jobs:
       - name: Install ACSP
         run: python -m pip install -e .
 
-      - name: Verify one-shot activation and outcome-free protocol
+      - name: Verify one-shot activation before identities
         env:
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
           import os
           from pathlib import Path
-
-          from predeclare_country_frame_observability_confirmation import protocol
 
           expected = "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
           assert int(os.environ["RUN_NUMBER"]) == 1, (
@@ -52,19 +96,7 @@ jobs:
               "outcome_driven_tuning=false",
           ):
               assert token in marker, f"missing activation token: {token}"
-
-          cfg = protocol()
-          assert cfg["protocol_fingerprint"] == expected
-          assert cfg["cohort"]["target_frames"] == 96
-          assert cfg["cohort"]["plant"] == cfg["cohort"]["animal"] == 48
-          assert cfg["exclusions"]["freeze_reads_terminal_fresh_outcome_audit"] is False
-          assert cfg["execution"]["freeze_workflow_may_open_heldout"] is False
-          assert cfg["decision"]["retuning_allowed"] is False
-          assert cfg["decision"]["score_cutoff_creation_allowed"] is False
           PY
-
-      - name: Run outcome-free freeze contract tests
-        run: python -m unittest -v research/test_country_frame_observability_confirmation.py
 
       - name: Freeze 96 fresh declared frames and continuous scores only
         run: |
@@ -122,7 +154,14 @@ jobs:
           assert not (set(frame["scientific_name"].astype(str)) & excluded_names)
           assert int(audit["selected"].astype(str).str.lower().eq("true").sum()) == 96
 
-          forbidden_fragments = ("recent", "heldout", "candidate_patch", "robust_recall", "random_recall", "lift")
+          forbidden_fragments = (
+              "recent",
+              "heldout",
+              "candidate_patch",
+              "robust_recall",
+              "random_recall",
+              "lift",
+          )
           for column in frame.columns:
               assert not any(fragment in column.lower() for fragment in forbidden_fragments), column
 
