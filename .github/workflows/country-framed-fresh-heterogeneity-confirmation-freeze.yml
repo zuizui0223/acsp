@@ -1,0 +1,100 @@
+name: Country-framed fresh heterogeneity confirmation freeze
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - validation/activate_country_framed_fresh_heterogeneity_confirmation.marker
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze-identities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify one-shot activation and frozen protocol before identities
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          expected = '2ef792a09309008e0091cd9df70678b0719674352db95880c521d1f641a24520'
+          assert int(os.environ['RUN_NUMBER']) == 1, 'fresh identity freeze is one-shot; do not re-freeze a new cohort'
+          marker = Path('validation/activate_country_framed_fresh_heterogeneity_confirmation.marker').read_text(encoding='utf-8')
+          for token in (
+              'issue=155',
+              f'protocol_fingerprint={expected}',
+              'identities_opened_before_activation=false',
+              'scientific_method_changed=false',
+              'outcome_driven_tuning=false',
+          ):
+              assert token in marker, f'missing activation token: {token}'
+          path = Path('validation/acsp_country_framed_fresh_heterogeneity_confirmation_v1.json')
+          payload = json.loads(path.read_text(encoding='utf-8'))
+          stored = payload.pop('protocol_fingerprint')
+          calculated = hashlib.sha256(
+              json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+          ).hexdigest()
+          assert stored == calculated == expected
+          assert payload['cohort']['target_taxa'] == 48
+          assert payload['method']['scientific_method_changed'] is False
+          assert payload['decision']['retuning_allowed'] is False
+          PY
+
+      - name: Run outcome-free freeze contract tests
+        run: python -m unittest -v research/test_country_framed_fresh_heterogeneity_confirmation.py
+
+      - name: Freeze 48 fresh taxa and historical country declarations only
+        run: |
+          python research/predeclare_country_framed_fresh_heterogeneity_confirmation.py \
+            --output fresh-country-framed-confirmation-cohort
+
+      - name: Re-audit frozen identities before candidate generation or heldout outcomes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('fresh-country-framed-confirmation-cohort')
+          manifest = json.loads((root / 'cohort_manifest.json').read_text(encoding='utf-8'))
+          frame = pd.read_csv(root / 'predeclared_fresh_taxon_country_pairs.csv')
+          assert manifest['protocol_fingerprint'] == '2ef792a09309008e0091cd9df70678b0719674352db95880c521d1f641a24520'
+          assert manifest['declared_taxa'] == manifest['unique_species_keys'] == len(frame) == 48
+          assert frame['taxon_group'].value_counts().to_dict() == {'plant': 24, 'animal': 24}
+          for group in ('plant', 'animal'):
+              counts = frame.loc[frame.taxon_group.eq(group), 'record_count_stratum'].astype(int).value_counts().sort_index().to_dict()
+              assert counts == {0: 6, 1: 6, 2: 6, 3: 6}
+          assert manifest['recent_outcomes_opened'] is False
+          assert manifest['candidate_generation_run'] is False
+          assert manifest['robust_support_run'] is False
+          assert manifest['random_baseline_run'] is False
+          assert manifest['replacement_after_freeze_allowed'] is False
+          assert manifest['scientific_method_changed'] is False
+          PY
+
+      - name: Upload frozen fresh confirmation cohort
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-framed-fresh-heterogeneity-confirmation-cohort
+          path: fresh-country-framed-confirmation-cohort/
+          if-no-files-found: error
+          retention-days: 90
