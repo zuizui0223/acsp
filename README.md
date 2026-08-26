@@ -85,9 +85,15 @@ This does not establish occupancy probability, calibrated suitability probabilit
 
 A separate country-framed regional-lattice extension was developed to test whether the same frozen candidate-patch rule could be carried beyond the validated Japanese regional frame. Its development cohort was favorable, but the preregistered reserved 24-taxon replication did **not** pass all seven gates.
 
-The final replication retained positive mean lift overall (**+0.08961**), for plants (**+0.07515**), and for animals (**+0.11026**). Candidate generation succeeded for **20/24** taxa and temporal evaluation was available for **18/24**. However, the taxon-bootstrap 95% CI was **[-0.00248, +0.18243]**, so the preregistered positive-lower-bound gate failed.
+The reserved replication retained positive mean lift overall (**+0.08961**), for plants (**+0.07515**), and for animals (**+0.11026**). Candidate generation succeeded for **20/24** taxa and temporal evaluation was available for **18/24**. However, the taxon-bootstrap 95% CI was **[-0.00248, +0.18243]**, so the preregistered positive-lower-bound gate failed.
 
-Therefore the country-framed/global extension remains **development evidence, not a validated global candidate-generation product**. No country-framed or global claim should replace the validated Japanese-domain claim above. The unfavorable replication result is preserved in `validation/acsp_country_framed_robust_integration_development_v2_replication_result_v1.json`; post-outcome descriptive diagnostics are kept separately and are not eligibility rules or retuned science.
+A completely fresh, disjoint **48-taxon** confirmation was then frozen before identities and outcomes were opened. The scientific method and seven primary gates were unchanged. It again produced a positive effect among integrated evaluable taxa: mean robust-minus-random lift was **+0.13230**, with taxon-bootstrap 95% CI **[+0.04958, +0.21964]**; plant mean lift was **+0.08583** and animal mean lift was **+0.17330**. Candidate generation succeeded for **40/48** taxa. However, temporal evaluation was available for only **34/48 = 0.7083**, below the preregistered **0.75** gate, so the fresh confirmation also failed overall (**6/7 gates passed**).
+
+The secondary heterogeneity hypothesis generated after the reserved replication did not reproduce: plant lift SD was **0.22460**, animal lift SD was **0.27292**, and the plant/animal SD ratio was **0.823** with bootstrap 95% CI **[0.340, 1.242]**. This secondary result was explicitly unable to change the primary promotion decision.
+
+Therefore the country-framed/global extension remains **development evidence, not a validated global candidate-generation product**. The repeated positive lift among evaluable taxa is not enough to override the preregistered generality/evaluability gates. No country-framed or global claim should replace the validated Japanese-domain claim above.
+
+The reserved-replication result is preserved in `validation/acsp_country_framed_robust_integration_development_v2_replication_result_v1.json`. The fresh confirmation is preserved in `validation/acsp_country_framed_fresh_heterogeneity_confirmation_result_v1.json`, with its 48-taxon compact audit in `validation/acsp_country_framed_fresh_heterogeneity_confirmation_taxon_audit_v1.csv`. Post-outcome diagnostics remain descriptive only and are not eligibility rules or retuned science.
 
 ## Install
 
@@ -169,4 +175,4 @@ No route, field-day, travel-mode, or budget optimizer belongs in the validated c
 
 ## Status
 
-**Alpha (0.1.0).** The robust candidate-patch rule has passed independent cross-taxon confirmation at the 10 km screening scale in the validated Japanese regional domain. The country-framed extension has not passed its reserved replication and remains development-only. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.
+**Alpha (0.1.0).** The robust candidate-patch rule has passed independent cross-taxon confirmation at the 10 km screening scale in the validated Japanese regional domain. The country-framed extension failed both its reserved replication and a completely fresh 48-taxon confirmation and remains development-only. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.
