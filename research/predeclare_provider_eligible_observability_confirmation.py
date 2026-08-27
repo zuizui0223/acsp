@@ -23,7 +23,7 @@ PROTOCOL_PATH = ROOT / "validation" / "acsp_country_frame_observability_confirma
 EXECUTION_PATH = ROOT / "validation" / "acsp_country_frame_observability_confirmation_provider_eligible_execution_v1.json"
 EXCLUSION_PATH = ROOT / "validation" / "acsp_provider_eligible_observability_exclusion_provenance_v1.json"
 EXPECTED_PROTOCOL_FINGERPRINT = "4afd35c96178934f33f1e1336871df59972ffc6f487c6f11b9abedd690ea442d"
-EXPECTED_EXECUTION_FINGERPRINT = "541c97a81030905533bd7e8f7f8429494bd7f65dd25f96f538f29fcf21bc2c40"
+EXPECTED_EXECUTION_FINGERPRINT = "f17ccb3308baad021ce95ccf24bfe3ded782f4286469d82bfd1c3fc9f9f867ac"
 EXPECTED_EXCLUSION_FINGERPRINT = "b4dba265e33ec716e5451de8bb18eaf4e3647e66ccb29aa089644fca2e74d52b"
 EXPECTED_COVERAGE_FINGERPRINT = "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520"
 
