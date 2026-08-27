@@ -1,0 +1,37 @@
+{
+  "recovery_id": "acsp_country_frame_observability_confirmation_hk_geometry_recovery_v1",
+  "issue": 163,
+  "parent_protocol_fingerprint": "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547",
+  "boundary_correction_fingerprint": "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e",
+  "run1_abort_prefix_binding_fingerprint": "ca89763bca9b62abd77c39592a39160112ab32f76419fb9f5da12e6b276491ff",
+  "failure_frame": {
+    "speciesKey": 5729409,
+    "selected_country_code": "HK",
+    "identity_or_country_may_change": false
+  },
+  "geometry_recovery": {
+    "provider": "geoBoundaries",
+    "release_tag": "v6.0.0",
+    "release_commit": "1289e40e366c7b320550be1ee0614a9472d572d4",
+    "license": "CC BY 4.0",
+    "failed_direct_object": "gbOpen/HKG/ADM0 simplified",
+    "recovery_container": "gbOpen/CHN/ADM1 simplified",
+    "feature_shapeName": "Hong Kong",
+    "feature_shapeGroup": "CHN",
+    "feature_shapeType": "ADM1",
+    "result_country_code": "HK",
+    "alternate_provider_allowed": false,
+    "country_substitution_allowed": false,
+    "taxon_replacement_allowed": false,
+    "exactly_one_matching_feature_required": true,
+    "live_preflight_before_identity_queries_required": true
+  },
+  "scientific_invariants": {
+    "score_changed": false,
+    "endpoint_changed": false,
+    "country_declaration_rule_changed": false,
+    "identity_hash_or_order_changed": false,
+    "heldout_outcomes_opened": false
+  },
+  "recovery_fingerprint": "f16ba90f1282ba2ed6fa8dd010ffda1f6a82b4bf8c2247efd35a640d5d9b6f4f"
+}
