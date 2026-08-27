@@ -1,0 +1,55 @@
+name: Geometry-provider coverage development
+
+on:
+  push:
+    branches:
+      - development/geometry-provider-coverage-contract-v1
+    paths:
+      - .github/workflows/geometry-provider-coverage-development.yml
+      - research/freeze_geoboundaries_v6_coverage.py
+      - research/test_geoboundaries_v6_coverage_contract.py
+      - validation/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
+  pull_request:
+    paths:
+      - .github/workflows/geometry-provider-coverage-development.yml
+      - research/freeze_geoboundaries_v6_coverage.py
+      - research/test_geoboundaries_v6_coverage_contract.py
+      - validation/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
+      - validation/acsp_geoboundaries_v6_adm0_coverage_v1.json
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  develop-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test outcome-free coverage extraction
+        run: python -m unittest -v research/test_geoboundaries_v6_coverage_contract.py
+
+      - name: Generate complete pinned provider coverage report
+        run: |
+          python research/freeze_geoboundaries_v6_coverage.py \
+            --output provider-coverage-development.json \
+            > provider-coverage-development.log.json
+          echo '===ACSP_PROVIDER_COVERAGE_JSON_BEGIN==='
+          cat provider-coverage-development.log.json
+          echo '===ACSP_PROVIDER_COVERAGE_JSON_END==='
+
+      - name: Upload provider-only development report
+        uses: actions/upload-artifact@v4
+        with:
+          name: geoboundaries-v6-adm0-coverage-development
+          path: provider-coverage-development.json
+          if-no-files-found: error
+          retention-days: 14
