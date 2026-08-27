@@ -1,0 +1,155 @@
+{
+  "protocol_id": "acsp_country_frame_observability_provider_eligible_confirmation_v1",
+  "status": "predeclared_before_any_new_candidate_identity_historical_facet_or_heldout_outcome",
+  "parent_issue": 169,
+  "scientific_position": {
+    "independent_new_confirmation": true,
+    "continuation_rescue_or_rerun_of_163": false,
+    "predecessor_163_status": "aborted_preheldout_not_evaluable",
+    "predecessor_163_heldout_opened": false,
+    "provider_coverage_issue": 167,
+    "provider_coverage_merge_commit": "3e2459096b6f37725af1b11d56efbd723962d94d"
+  },
+  "provider_eligibility": {
+    "coverage_contract_path": "validation/acsp_geoboundaries_v6_adm0_coverage_v1.json",
+    "coverage_contract_fingerprint": "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
+    "supported_alpha3_sha256": "34fd29a5b64baa9517c6a9b7d1211aa021fe0662680b16ed8bebe2c728503dab",
+    "unsupported_iso_alpha2_alpha3_sha256": "faedebf7157faacacfa08516f3d4ce0db1b32887cc8aedafd8becdd21608552d",
+    "iso_mapping_sha256": "f77ba13da1e25967d759805f5eda8562f577bf4dc70f9fd3519f2edafdd0f26e",
+    "supported_definition": "selected country alpha2 maps to an alpha3 with the exact pinned simplified ADM0 blob in frozen gbOpen coverage contract",
+    "coverage_rule_frozen_before_candidate_identities": true,
+    "country_rule_runs_before_coverage_check": true,
+    "unsupported_selected_country_handling": "record provider_ineligible_before_freeze for that candidate attempt; do not substitute another country; continue identity-hash traversal within the same cell because no scientific frame has yet been frozen",
+    "unsupported_country_is_runtime_provider_error": false,
+    "alternate_geometry_provider_allowed": false,
+    "country_substitution_allowed": false,
+    "post_freeze_replacement_allowed": false
+  },
+  "cohort": {
+    "target_frames": 96,
+    "regions": 12,
+    "region_cells_source": "benchmark_general_random_taxa_regions.REGION_CELLS",
+    "region_cells_sha256": "09e74f1fbaa517316e7f18baa405fc77a495eda27c781051fa2e18efdbd20a24",
+    "plant": 48,
+    "animal": 48,
+    "record_count_strata": 4,
+    "frames_per_region_group": 4,
+    "required_per_region_group_stratum": 1,
+    "facet_limit": 400,
+    "minimum_records": 20,
+    "discovery_years": [1900, 2020],
+    "discovery_species_facet_historical_only": true,
+    "iteration_order": "region 1..12; plant then animal; record_count_stratum 0..3",
+    "identity_seed_derivation": {
+      "token": "acsp_country_frame_observability_confirmation_provider_eligible_v1|identity-order",
+      "sha256": "298f467cd47b5297a5c8b6aaa39978b1b7abf555db9f161c9607327565f23ea1",
+      "rule": "int(first 16 hex digits of SHA256(token), 16) modulo 2147483647",
+      "selection_seed": 664395665
+    },
+    "identity_hash": "SHA256(seed|region|group|stratum|speciesKey), lexicographic ascending; speciesKey then scientific_name as deterministic tie-breakers",
+    "selection_rule": "within each fresh historical-discovery region-group-stratum pool, traverse identity-hash order; apply historical country declaration to each candidate; pass legitimate no-country and provider-ineligible selected-country attempts; freeze the first provider-supported successfully declared frame whose pinned geometry resolves; historical/provider/geometry API errors abort",
+    "historical_count_magnitude_used_to_rank_successful_candidates": false,
+    "no_replacement_after_freeze": true
+  },
+  "freshness": {
+    "base_exclusion_protocol_path": "validation/acsp_country_framed_fresh_heterogeneity_confirmation_v1.json",
+    "base_exclusion_protocol_fingerprint": "65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01",
+    "base_exclusion_includes_entire_geographic_framing_v4_96": true,
+    "terminal_fresh_identity_only_path": "validation/acsp_country_framed_fresh_heterogeneity_confirmation_identities_v1.csv",
+    "terminal_fresh_identity_only_sha256": "4dfe23ff32c2e3c3fd601afefabf733feab09f2c95db1def246ed793cd347cb9",
+    "terminal_fresh_identity_only_git_blob_sha": "b3519259d06a6d04ba05cae25975aed01fbe087c",
+    "exclude_species_keys_and_scientific_names": true,
+    "explicit_prefixes": ["Campanula microdonta", "Campanula punctata"],
+    "exclude_163_partial_abort_identities": false,
+    "reason_not_to_exclude_163_partial": "issue 163 produced no complete authoritative cohort; partial candidate identities are not replayed or reconstructed and are not special-cased",
+    "aborted_163_candidate_names_may_have_been_transiently_inspected": true,
+    "aborted_163_heldout_outcomes_opened": false
+  },
+  "country_declaration": {
+    "historical_years": [1900, 2020],
+    "historical_country_min_count": 5,
+    "country_selection_seed": 2026082401,
+    "country_rule": "same frozen rule as pre-fresh development: among countries with historical count>=5 choose hash-min non-JP if any, otherwise JP, otherwise no declaration",
+    "country_rule_filters_by_provider_support_before_selection": false,
+    "provider_support_is_checked_only_after_the_single_country_is_declared": true,
+    "score_formula": "log1p(historical_selected_country_count)",
+    "score_continuous": true,
+    "score_cutoff_selected": false,
+    "taxon_or_country_selected_by_score": false
+  },
+  "freeze_boundary": {
+    "allowed": [
+      "fixed Japanese discovery regions",
+      "GBIF species facets and species metadata restricted to 1900-2020 discovery counts",
+      "historical 1900-2020 focal-species country facets",
+      "offline frozen provider-coverage contract",
+      "pinned supported-country geometry metadata",
+      "historical selected-country count and its log1p score"
+    ],
+    "forbidden": [
+      "2021-2025 occurrence rows",
+      "2021-2025 country facets",
+      "candidate patches",
+      "robust worlds",
+      "random baseline",
+      "recall",
+      "lift",
+      "AUC or confirmation outcome"
+    ],
+    "legitimate_no_country": "record and continue before freeze",
+    "provider_ineligible_declared_country": "record and continue before freeze without changing that candidate's declared country",
+    "historical_or_discovery_provider_failure": "abort freeze",
+    "supported_geometry_provider_failure": "abort freeze",
+    "freeze_requires_exactly_96_successfully_declared_provider_supported_frames": true
+  },
+  "endpoint": {
+    "heldout_years": [2021, 2025],
+    "positive": "at least one qualifying 2021-2025 occurrence row in the exact frozen selected country",
+    "negative": "zero qualifying 2021-2025 occurrence rows in the exact frozen selected country",
+    "score_refit_on_new_cohort": false,
+    "candidate_generation_run": false,
+    "robust_support_run": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false
+  },
+  "primary_confirmation_gates": {
+    "all_required": true,
+    "exact_unique_frozen_frames": 96,
+    "protocol_and_execution_fingerprints_match": true,
+    "provider_coverage_fingerprint_matches": true,
+    "zero_overlap_with_consumed_identity_chain": true,
+    "all_frames_declared_provider_supported_and_scored_before_heldout_with_no_replacement": true,
+    "both_temporal_classes_present": true,
+    "auc_gt": 0.5,
+    "bootstrap_ci95_lower_gt": 0.5,
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082702
+  },
+  "secondary_only": {
+    "generic_record_count_stratum_auc": true,
+    "observability_score_minus_generic_auc": true,
+    "plant_auc": true,
+    "animal_auc": true,
+    "geographic_stratum_diagnostics": true,
+    "provider_ineligible_attempt_count": true,
+    "may_change_primary_decision": false
+  },
+  "execution": {
+    "two_stage_activation_required": true,
+    "pr_or_merge_may_generate_fresh_candidate_identities": false,
+    "pr_or_merge_may_query_focal_historical_country_facets": false,
+    "freeze_activation_opens_heldout": false,
+    "heldout_activation_requires_byte_pinned_frozen_cohort_artifact": true,
+    "technical_rerun_after_frozen_cohort_may_change_scientific_object": false,
+    "new_scientific_run_after_outcomes_opened": false
+  },
+  "decision": {
+    "if_pass": "validate the pre-heldout country-frame observability score within the provider-eligible prospective frame only",
+    "if_fail": "retain as failed independent observability confirmation; no subset rescue, same-cohort retuning, threshold creation, or second scientific run",
+    "retuning_allowed": false,
+    "subset_rescue_allowed": false,
+    "score_cutoff_creation_allowed": false,
+    "candidate_patch_method_promoted_by_this_result": false
+  },
+  "protocol_fingerprint": "91b8143f38abb173c3cdabc198bfcc5f113632f33b3c674b99374aac1efdd644"
+}
