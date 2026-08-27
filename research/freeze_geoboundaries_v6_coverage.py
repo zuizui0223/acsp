@@ -36,7 +36,7 @@ METADATA_URL = (
     f"{GEOBOUNDARIES_RELEASE_COMMIT}/releaseData/geoBoundariesOpen-meta.csv"
 )
 SIMPLIFIED_RE = re.compile(
-    r"^(?P<iso3>[A-Z]{3})/ADM0/geoBoundaries-(?P=iso3)-ADM0_simplified\\.geojson$"
+    r"^(?P<iso3>[A-Z]{3})/ADM0/geoBoundaries-(?P=iso3)-ADM0_simplified[.]geojson$"
 )
 ISO3_RE = re.compile(r"^[A-Z]{3}$")
 
