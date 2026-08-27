@@ -1,0 +1,186 @@
+name: Country-frame observability provider-eligible confirmation freeze
+
+# Dormant preregistration workflow. It can run only after the dedicated marker
+# is explicitly created on main after this preregistration is merged and green.
+on:
+  push:
+    branches: [main]
+    paths:
+      - validation/activate_country_frame_observability_provider_eligible_confirmation_v1.marker
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify exact one-shot activation before identities
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import predeclare_country_frame_observability_provider_eligible_confirmation as freeze
+          import observability_provider_eligible_confirmation_execution_contract as execution
+          from geoboundaries_v6_coverage_contract import load_contract as load_coverage
+
+          protocol = freeze.protocol()
+          run_contract = execution.load_contract()
+          coverage = load_coverage()
+
+          assert os.environ["RUN_NUMBER"] == "1", "provider-eligible freeze is one-shot"
+          assert os.environ["GITHUB_REF_VALUE"] == "refs/heads/main"
+          assert protocol["protocol_fingerprint"] == "91b8143f38abb173c3cdabc198bfcc5f113632f33b3c674b99374aac1efdd644"
+          assert run_contract["execution_fingerprint"] == "0bdc69f05fb1d8030c13f9ccea01676d2915a544846bda8c216362e9890adc34"
+          assert coverage["coverage_contract_fingerprint"] == "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520"
+          assert coverage["policy"]["parent_confirmation_163_may_be_resumed"] is False
+          assert coverage["policy"]["alternate_geometry_provider_fallback_allowed"] is False
+          assert coverage["policy"]["country_substitution_allowed"] is False
+          assert coverage["policy"]["taxon_replacement_after_unsupported_country_allowed"] is False
+          assert protocol["execution"]["freeze_activation_opens_heldout"] is False
+          assert run_contract["eligibility_semantics"]["candidate_is_scientifically_frozen_before_provider_eligibility"] is False
+
+          marker = Path(execution.ACTIVATION_MARKER_PATH).read_text(encoding="utf-8")
+          for token in (
+              "issue=169",
+              "protocol_fingerprint=91b8143f38abb173c3cdabc198bfcc5f113632f33b3c674b99374aac1efdd644",
+              "execution_fingerprint=0bdc69f05fb1d8030c13f9ccea01676d2915a544846bda8c216362e9890adc34",
+              "coverage_contract_fingerprint=377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
+              "independent_of_issue_163=true",
+              "fresh_identity_selection_seed=664395665",
+              "heldout_outcomes_opened=false",
+              "second_heldout_activation_required=true",
+          ):
+              assert token in marker, f"activation marker drift: {token}"
+          PY
+      - name: Re-run provider-eligible preregistration contracts
+        run: |
+          python -m unittest -v \
+            research/test_geoboundaries_v6_coverage_contract.py \
+            research/test_geoboundaries_v6_coverage_registry.py \
+            research/test_country_frame_observability_provider_eligible_confirmation.py \
+            research/test_observability_provider_eligible_confirmation_execution_contract.py
+
+  freeze-observability-frames:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Freeze provider-eligible 96-frame cohort
+        run: |
+          python research/predeclare_country_frame_observability_provider_eligible_confirmation.py \
+            --output provider-eligible-observability-confirmation-cohort
+      - name: Upload abort audit only if freeze fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-frame-observability-provider-eligible-confirmation-abort-audit
+          path: provider-eligible-observability-confirmation-cohort/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Verify complete frozen cohort before heldout activation
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import math
+          from pathlib import Path
+          import pandas as pd
+          import predeclare_country_frame_observability_provider_eligible_confirmation as freeze
+          import observability_provider_eligible_confirmation_execution_contract as execution
+          from geoboundaries_v6_coverage_contract import alpha2_to_alpha3_if_supported
+          from geoboundaries_v6_provider import GEOBOUNDARIES_RELEASE_COMMIT, GEOBOUNDARIES_SOURCE_ID
+
+          root = Path("provider-eligible-observability-confirmation-cohort")
+          frames_path = root / "predeclared_observability_frames.csv"
+          audit_path = root / "pre_freeze_declaration_attempts.csv"
+          manifest_path = root / "cohort_manifest.json"
+          frame = pd.read_csv(frames_path)
+          audit = pd.read_csv(audit_path)
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          run_contract = execution.load_contract()
+
+          assert manifest["status"] == "provider_eligible_observability_confirmation_96_frames_frozen_before_heldout"
+          assert manifest["protocol_fingerprint"] == "91b8143f38abb173c3cdabc198bfcc5f113632f33b3c674b99374aac1efdd644"
+          assert manifest["coverage_contract_fingerprint"] == "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520"
+          assert manifest["identity_selection_seed"] == 664395665
+          assert manifest["frozen_frames"] == manifest["unique_species_keys"] == len(frame) == 96
+          assert frame["speciesKey"].nunique() == 96
+          assert frame["scientific_name"].nunique() == 96
+          assert frame["taxon_group"].value_counts().to_dict() == {"plant": 48, "animal": 48}
+          for group in ("plant", "animal"):
+              counts = (
+                  frame.loc[frame["taxon_group"].eq(group), "record_count_stratum"]
+                  .astype(int).value_counts().sort_index().to_dict()
+              )
+              assert counts == {0: 12, 1: 12, 2: 12, 3: 12}
+          per_cell = frame.groupby(["region_cell_index", "taxon_group"]).size()
+          assert len(per_cell) == 24 and (per_cell == 4).all()
+          assert frame["declaration_status"].eq("declared_provider_eligible").all()
+          assert (frame["historical_selected_country_count"].astype(int) >= 5).all()
+          assert int(audit["selected"].astype(str).str.lower().eq("true").sum()) == 96
+
+          for row in frame.itertuples(index=False):
+              assert alpha2_to_alpha3_if_supported(str(row.selected_country_code)) == str(row.selected_country_alpha3)
+              assert math.isclose(
+                  float(row.country_frame_observability_score),
+                  math.log1p(int(row.historical_selected_country_count)),
+                  rel_tol=0.0,
+                  abs_tol=1e-12,
+              )
+              assert str(row.geometry_source_id) == GEOBOUNDARIES_SOURCE_ID
+              assert f"v6.0.0@{GEOBOUNDARIES_RELEASE_COMMIT}" in str(row.geometry_source_version)
+              digest = str(row.geometry_canonical_sha256)
+              assert len(digest) == 64 and all(c in "0123456789abcdef" for c in digest)
+
+          excluded_keys, excluded_names = freeze.consumed_exclusion_sets()
+          assert not (set(frame["speciesKey"].astype(int)) & excluded_keys)
+          assert not (set(frame["scientific_name"].astype(str)) & excluded_names)
+
+          forbidden_tokens = (
+              "recent", "heldout", "temporal_outcome", "candidate", "robust",
+              "random", "recall", "lift", "auc",
+          )
+          for column in list(frame.columns) + list(audit.columns):
+              lowered = str(column).lower()
+              assert not any(token in lowered for token in forbidden_tokens), column
+
+          assert manifest["frames_csv_sha256"] == hashlib.sha256(frames_path.read_bytes()).hexdigest()
+          assert manifest["attempt_audit_csv_sha256"] == hashlib.sha256(audit_path.read_bytes()).hexdigest()
+          assert manifest["recent_outcomes_opened"] is False
+          assert manifest["candidate_generation_run"] is False
+          assert manifest["robust_support_run"] is False
+          assert manifest["random_baseline_run"] is False
+          assert manifest["recall_or_lift_read"] is False
+          assert manifest["replacement_after_freeze_allowed"] is False
+          assert manifest["score_cutoff_selected"] is False
+          assert manifest["scientific_candidate_method_changed"] is False
+          assert run_contract["heldout_stage"]["heldout_execution_may_start_in_this_workflow"] is False
+          assert run_contract["heldout_stage"]["separate_explicit_one_shot_activation_required"] is True
+          PY
+      - name: Upload authoritative provider-eligible observability cohort
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-frame-observability-provider-eligible-confirmation-cohort
+          path: provider-eligible-observability-confirmation-cohort/
+          if-no-files-found: error
+          retention-days: 90
