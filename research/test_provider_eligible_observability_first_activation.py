@@ -15,7 +15,7 @@ MARKER = ROOT / "validation/activate_provider_eligible_observability_first_v1.ma
 
 
 class ProviderEligibleFirstActivationTests(unittest.TestCase):
-    def test_workflow_is_dormant_marker_only_and_run_one_guarded(self) -> None:
+    def test_workflow_is_marker_only_run_one_guarded_and_consumed_marker_exact(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("name: Provider-eligible observability first activation", text)
         self.assertIn("branches: [main]", text)
@@ -31,7 +31,29 @@ class ProviderEligibleFirstActivationTests(unittest.TestCase):
             "preregistration_merge_commit=91ff432e3da7cf3b26efa16a5c60219715feff89",
             text,
         )
-        self.assertFalse(MARKER.exists(), "implementation PR must not contain activation marker")
+
+        # Before first activation the marker was absent. After the one-shot activation
+        # has been consumed, its presence on main is legitimate and should remain as
+        # provenance. Never require deleting it merely to make later unrelated PRs
+        # green; instead require the consumed marker to preserve the exact pre-heldout
+        # authorization identities and safety statements.
+        if MARKER.exists():
+            marker = MARKER.read_text(encoding="utf-8")
+            required = (
+                "issue=169",
+                "activation=first_preheldout_freeze",
+                "protocol_fingerprint=4afd35c96178934f33f1e1336871df59972ffc6f487c6f11b9abedd690ea442d",
+                "execution_contract_fingerprint=f17ccb3308baad021ce95ccf24bfe3ded782f4286469d82bfd1c3fc9f9f867ac",
+                "coverage_contract_fingerprint=377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
+                "exclusion_provenance_fingerprint=b4dba265e33ec716e5451de8bb18eaf4e3647e66ccb29aa089644fca2e74d52b",
+                "preregistration_merge_commit=91ff432e3da7cf3b26efa16a5c60219715feff89",
+                "identities_opened_before_activation=false",
+                "focal_species_historical_facets_opened_before_activation=false",
+                "heldout_outcomes_opened_before_activation=false",
+                "outcome_driven_tuning=false",
+            )
+            for token in required:
+                self.assertIn(token, marker)
 
     def test_runner_is_bound_to_authoritative_preregistration(self) -> None:
         self.assertEqual(
