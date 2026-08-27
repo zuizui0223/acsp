@@ -1,0 +1,206 @@
+name: Provider-eligible observability first activation
+
+# Scientific run: dormant until the dedicated marker is created on main.
+# No PR, schedule, workflow_dispatch, or cron trigger is permitted.
+on:
+  push:
+    branches: [main]
+    paths:
+      - validation/activate_provider_eligible_observability_confirmation_first.marker
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Verify marker-only one-shot activation before identities
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          marker_path = Path(
+              "validation/activate_provider_eligible_observability_confirmation_first.marker"
+          )
+          assert os.environ["GITHUB_REF_VALUE"] == "refs/heads/main"
+          assert int(os.environ["RUN_NUMBER"]) == 1, (
+              "provider-eligible first activation is one-shot; do not refreeze"
+          )
+          assert int(os.environ["RUN_ATTEMPT"]) == 1, (
+              "full workflow rerun would regenerate live stage-1 candidates and is forbidden"
+          )
+
+          marker = marker_path.read_text(encoding="utf-8")
+          required = (
+              "activation_kind=provider_eligible_observability_first_preheldout",
+              "protocol_fingerprint=4afd35c96178934f33f1e1336871df59972ffc6f487c6f11b9abedd690ea442d",
+              "execution_contract_fingerprint=f17ccb3308baad021ce95ccf24bfe3ded782f4286469d82bfd1c3fc9f9f867ac",
+              "coverage_contract_fingerprint=377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
+              "exclusion_provenance_fingerprint=b4dba265e33ec716e5451de8bb18eaf4e3647e66ccb29aa089644fca2e74d52b",
+              "preregistration_merge_commit=91ff432e3da7cf3b26efa16a5c60219715feff89",
+              "identities_opened_before_activation=false",
+              "focal_species_historical_facets_opened_before_activation=false",
+              "heldout_outcomes_opened_before_activation=false",
+              "outcome_driven_tuning=false",
+          )
+          for token in required:
+              assert token in marker, f"missing activation token: {token}"
+
+          implementation_line = next(
+              (
+                  line
+                  for line in marker.splitlines()
+                  if line.startswith("implementation_merge_commit=")
+              ),
+              None,
+          )
+          assert implementation_line is not None
+          implementation_commit = implementation_line.split("=", 1)[1].strip()
+          assert len(implementation_commit) == 40
+
+          parent = subprocess.check_output(
+              ["git", "rev-parse", f"{os.environ['GITHUB_SHA_VALUE']}^"],
+              text=True,
+          ).strip()
+          assert parent == implementation_commit, (
+              "activation marker must be the immediate child of the reviewed implementation merge"
+          )
+          changed = subprocess.check_output(
+              [
+                  "git",
+                  "diff-tree",
+                  "--no-commit-id",
+                  "--name-only",
+                  "-r",
+                  os.environ["GITHUB_SHA_VALUE"],
+              ],
+              text=True,
+          ).splitlines()
+          assert changed == [str(marker_path)], (
+              f"activation commit must change only the marker; changed={changed}"
+          )
+          PY
+
+      - name: Re-verify frozen preregistration and synthetic first-activation runner
+        run: |
+          python -m unittest -v research/test_provider_eligible_observability_preregistration.py
+          python -m unittest -v research/test_provider_eligible_observability_first_activation.py
+
+  freeze:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ACSP
+        run: python -m pip install -e .
+
+      - name: Stage 1 - freeze historical-only discovery candidate snapshot
+        run: |
+          python research/provider_eligible_observability_first_activation.py \
+            stage1 \
+            --output-dir provider-eligible-observability-first-activation
+
+      - name: Upload exact stage-1 candidate snapshot before focal historical facets
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-eligible-observability-stage1-candidate-snapshot
+          path: |
+            provider-eligible-observability-first-activation/stage1_candidate_snapshot.csv
+            provider-eligible-observability-first-activation/stage1_candidate_snapshot_manifest.json
+            provider-eligible-observability-first-activation/stage1_region_group_audit.csv
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Stage 2 - freeze historical country/provider eligibility for every candidate
+        run: |
+          python research/provider_eligible_observability_first_activation.py \
+            stage2 \
+            --output-dir provider-eligible-observability-first-activation \
+            --workers 4
+
+      - name: Upload exact stage-2 historical/provider eligibility snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-eligible-observability-stage2-historical-eligibility
+          path: |
+            provider-eligible-observability-first-activation/stage2_historical_provider_eligibility_snapshot.csv
+            provider-eligible-observability-first-activation/stage2_historical_provider_eligibility_manifest.json
+            provider-eligible-observability-first-activation/stage2_historical_provider_audit.csv
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Stage 3 - select final 96 offline with no network
+        run: |
+          python research/provider_eligible_observability_first_activation.py \
+            stage3 \
+            --output-dir provider-eligible-observability-first-activation
+
+      - name: Upload exact stage-3 final pregeometry scientific object
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-eligible-observability-stage3-final-pregeometry
+          path: |
+            provider-eligible-observability-first-activation/stage3_final_96_pregeometry.csv
+            provider-eligible-observability-first-activation/stage3_final_96_pregeometry_manifest.json
+            provider-eligible-observability-first-activation/stage3_offline_selection_audit.csv
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Stage 4 - freeze commit-pinned geometry for exact final 96
+        run: |
+          python research/provider_eligible_observability_first_activation.py \
+            stage4 \
+            --output-dir provider-eligible-observability-first-activation \
+            --activation-marker validation/activate_provider_eligible_observability_confirmation_first.marker
+
+      - name: Verify authoritative pre-heldout cohort
+        run: |
+          python research/provider_eligible_observability_first_activation.py \
+            verify \
+            --output-dir provider-eligible-observability-first-activation
+
+      - name: Upload authoritative first-activation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-eligible-observability-first-activation-authoritative
+          path: provider-eligible-observability-first-activation/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload abort audit if first activation fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-eligible-observability-first-activation-abort-audit
+          path: provider-eligible-observability-first-activation/
+          if-no-files-found: warn
+          retention-days: 90
