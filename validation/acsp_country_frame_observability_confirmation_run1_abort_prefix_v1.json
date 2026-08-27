@@ -1,0 +1,54 @@
+{
+  "binding_id": "acsp_country_frame_observability_confirmation_run1_abort_prefix_v1",
+  "issue": 163,
+  "source_workflow_run": {
+    "run_id": 33028727560,
+    "run_number": 1,
+    "head_sha": "0ca5e23b6e0fcfc6b6f8530ba23567ce276273ae",
+    "authoritative_for_corrected_freeze_attempt": true,
+    "contract_passed": true,
+    "freeze_completed": false,
+    "heldout_outcomes_opened": false
+  },
+  "source_abort_artifact": {
+    "artifact_id": 9629491740,
+    "name": "country-frame-observability-confirmation-corrected-abort-audit",
+    "artifact_digest": "sha256:d1be257442605ec6e91006177de3991c9c6aa7e173a39516f92622e39d2ec3dd",
+    "cohort_manifest_sha256": "e212c38f488f506bb3f4bab2e724b67a4c1088af16f089b7d3f2655e84a508a3",
+    "pre_freeze_declaration_attempts_csv_sha256": "1607259c59fa90b3fcf419a5b3508842adb667ed2c7d951081fc54b6083a42b0"
+  },
+  "prefix_contract": {
+    "attempt_rows": 77,
+    "successful_selected_frames_before_failure": 76,
+    "selection_core_columns": [
+      "region_cell_index",
+      "taxon_group",
+      "record_count_stratum",
+      "attempt_rank",
+      "identity_selection_hash",
+      "speciesKey",
+      "scientific_name",
+      "coordinate_records",
+      "selected_country_code",
+      "country_selection_basis",
+      "historical_selected_country_count",
+      "country_frame_observability_score",
+      "historical_country_counts_json"
+    ],
+    "selection_core_canonicalization": "each row is JSON with sorted keys and compact separators; integer fields normalized to integers; score normalized with Python format(value,'.17g') or null; historical_country_counts_json parsed to a JSON object; UTF-8 NDJSON with final newline",
+    "selection_core_sha256": "03ebbf776202e2a435f2049aa1a93855f72243dab610b4c14bed53d0ef14c77d",
+    "failure_row_selection_core_sha256": "e83443496822a3f554757f284bdae29e62b69e0ba3de5b889b63e46b3899595d",
+    "failure_row_speciesKey": 5729409,
+    "failure_row_selected_country_code": "HK",
+    "failure_kind": "geometry_provider_error_abort"
+  },
+  "technical_continuation_scope": {
+    "may_change_identity_or_country": false,
+    "may_skip_failure_row": false,
+    "may_open_2021_2025": false,
+    "may_change_score_or_endpoint": false,
+    "required_geometry_fix": "represent the already-selected HK frame using a Hong Kong feature from the same pinned geoBoundaries v6.0.0 release rather than substituting a country or taxon",
+    "prefix_mismatch_action": "abort before continuing beyond the source 77-attempt prefix"
+  },
+  "binding_fingerprint": "ca89763bca9b62abd77c39592a39160112ab32f76419fb9f5da12e6b276491ff"
+}
