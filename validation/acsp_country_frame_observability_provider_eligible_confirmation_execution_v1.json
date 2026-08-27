@@ -1,0 +1,67 @@
+{
+  "contract_id": "acsp_country_frame_observability_provider_eligible_confirmation_execution_v1",
+  "status": "predeclared_before_any_new_candidate_identity_historical_facet_or_heldout_outcome",
+  "parent_issue": 169,
+  "protocol_fingerprint": "91b8143f38abb173c3cdabc198bfcc5f113632f33b3c674b99374aac1efdd644",
+  "coverage_contract_fingerprint": "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
+  "workflow": {
+    "path": ".github/workflows/country-frame-observability-provider-eligible-confirmation-freeze.yml",
+    "name": "Country-frame observability provider-eligible confirmation freeze",
+    "event": "push",
+    "branch": "main",
+    "activation_marker_path": "validation/activate_country_frame_observability_provider_eligible_confirmation_v1.marker",
+    "schedule_present": false,
+    "pull_request_trigger_present": false,
+    "workflow_dispatch_present": false,
+    "required_run_number": 1
+  },
+  "scientific_object": {
+    "target_frames": 96,
+    "plant": 48,
+    "animal": 48,
+    "regions": 12,
+    "record_count_strata": 4,
+    "frames_per_region_group": 4,
+    "identity_selection_seed": 664395665,
+    "score_formula": "log1p(historical_selected_country_count)",
+    "heldout_years": [2021, 2025],
+    "freeze_opens_heldout": false,
+    "replacement_after_freeze_allowed": false
+  },
+  "eligibility_semantics": {
+    "country_declaration_precedes_provider_coverage_check": true,
+    "unsupported_declared_country_is_pre_freeze_candidate_ineligibility": true,
+    "unsupported_declared_country_may_be_substituted": false,
+    "candidate_is_scientifically_frozen_before_provider_eligibility": false,
+    "continuing_to_next_hash_ordered_candidate_after_pre_freeze_ineligibility_is_post_selection_replacement": false,
+    "supported_geometry_provider_error_aborts": true,
+    "historical_or_discovery_provider_error_aborts": true
+  },
+  "artifacts": {
+    "authoritative_name": "country-frame-observability-provider-eligible-confirmation-cohort",
+    "abort_audit_name": "country-frame-observability-provider-eligible-confirmation-abort-audit",
+    "required_files": [
+      "predeclared_observability_frames.csv",
+      "pre_freeze_declaration_attempts.csv",
+      "cohort_manifest.json"
+    ]
+  },
+  "verification": {
+    "exact_96_unique_frames": true,
+    "plant_animal_48_48": true,
+    "twelve_per_record_count_stratum_within_each_group": true,
+    "four_frames_per_region_group": true,
+    "all_final_declarations_provider_supported": true,
+    "historical_selected_country_count_minimum": 5,
+    "stored_score_exact_log1p_count": true,
+    "zero_consumed_identity_overlap": true,
+    "forbidden_recent_candidate_robust_random_recall_lift_fields": true,
+    "manifest_preheldout_flags_required": true
+  },
+  "heldout_stage": {
+    "separate_explicit_one_shot_activation_required": true,
+    "heldout_execution_may_start_in_this_workflow": false,
+    "authoritative_freeze_artifact_must_be_byte_pinned_before_heldout": true
+  },
+  "execution_fingerprint": "0bdc69f05fb1d8030c13f9ccea01676d2915a544846bda8c216362e9890adc34"
+}
