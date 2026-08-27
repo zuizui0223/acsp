@@ -1,0 +1,198 @@
+name: Country-frame observability confirmation run-1 technical continuation
+
+# Dormant until the dedicated continuation marker is created on main.
+on:
+  push:
+    branches: [main]
+    paths:
+      - validation/activate_country_frame_observability_confirmation_run1_technical_continuation.marker
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  continuation-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Verify exact run-1 technical continuation contract before identities
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import predeclare_country_frame_observability_confirmation_run1_technical_continuation as cont
+
+          assert os.environ["RUN_NUMBER"] == "1", "technical continuation is one-shot"
+          assert os.environ["GITHUB_REF_VALUE"] == "refs/heads/main"
+          parent = "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
+          correction = "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e"
+          exposure = "76e708dfbc45daa55c3a6d383c47e1b35074df5b206a1bc27e584ce7cf7ae638"
+          prefix = "ca89763bca9b62abd77c39592a39160112ab32f76419fb9f5da12e6b276491ff"
+          geometry = "f16ba90f1282ba2ed6fa8dd010ffda1f6a82b4bf8c2247efd35a640d5d9b6f4f"
+
+          assert cont.corrected.base.protocol()["protocol_fingerprint"] == parent
+          assert cont.corrected.correction()["correction_fingerprint"] == correction
+          assert cont.corrected.exposure_binding()[0]["binding_fingerprint"] == exposure
+          assert cont.prefix_binding()["binding_fingerprint"] == prefix
+          assert cont.geometry_recovery()["recovery_fingerprint"] == geometry
+
+          marker = Path(
+              "validation/activate_country_frame_observability_confirmation_run1_technical_continuation.marker"
+          ).read_text(encoding="utf-8")
+          for token in (
+              "issue=163",
+              "source_corrected_run_id=33028727560",
+              "source_corrected_run_number=1",
+              "source_abort_artifact_id=9629491740",
+              f"source_prefix_binding_fingerprint={prefix}",
+              f"hk_geometry_recovery_fingerprint={geometry}",
+              "failure_speciesKey=5729409",
+              "failure_selected_country_code=HK",
+              "identity_or_country_changed=false",
+              "source_prefix_must_match_before_continuation=true",
+              "score_or_endpoint_changed=false",
+              "heldout_outcomes_opened=false",
+              "second_heldout_activation_required=true",
+          ):
+              assert token in marker, f"technical continuation activation drift: {token}"
+          PY
+      - name: Preflight pinned Hong Kong geometry before identity queries
+        run: |
+          python - <<'PY'
+          from geoboundaries_v6_hk_technical_recovery import (
+              HK_RECOVERY_SOURCE_ID,
+              fetch_country_geometry_with_hk_recovery,
+          )
+          geom = fetch_country_geometry_with_hk_recovery("HK")
+          assert geom.country_code == "HK"
+          assert geom.source_id == HK_RECOVERY_SOURCE_ID
+          assert "v6.0.0@1289e40e366c7b320550be1ee0614a9472d572d4" in geom.source_version
+          assert "iso3=HKG" in geom.source_version
+          assert "container_iso3=CHN" in geom.source_version
+          assert "container_adm=ADM1" in geom.source_version
+          assert "shapeName=Hong Kong" in geom.source_version
+          assert "canonical_geojson_sha256=" in geom.source_version
+          PY
+      - name: Run frozen continuation and geometry recovery tests
+        run: |
+          python -m unittest -v research/test_geoboundaries_v6_hk_technical_recovery.py
+          python -m unittest -v research/test_country_frame_observability_confirmation_run1_technical_continuation.py
+          python -m unittest -v research/test_country_frame_observability_confirmation_historical_discovery.py
+
+  freeze-observability-frames:
+    needs: continuation-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ACSP
+        run: python -m pip install -e .
+      - name: Continue exact run-1 freeze after bound HK geometry abort
+        run: |
+          python research/predeclare_country_frame_observability_confirmation_run1_technical_continuation.py \
+            --output observability-confirmation-cohort
+      - name: Upload continuation abort audit if freeze remains incomplete
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-frame-observability-confirmation-run1-continuation-abort-audit
+          path: observability-confirmation-cohort/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Verify complete run-1-bound cohort before heldout activation
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+          import pandas as pd
+          import predeclare_country_frame_observability_confirmation_run1_technical_continuation as cont
+          from geoboundaries_v6_hk_technical_recovery import HK_RECOVERY_SOURCE_ID
+
+          root = Path("observability-confirmation-cohort")
+          frame = pd.read_csv(root / "predeclared_observability_frames.csv")
+          audit = pd.read_csv(root / "pre_freeze_declaration_attempts.csv")
+          manifest = json.loads((root / "cohort_manifest.json").read_text(encoding="utf-8"))
+
+          assert manifest["status"] == "observability_confirmation_96_frames_frozen_before_heldout_run1_technical_continuation"
+          assert manifest["protocol_fingerprint"] == "f90f5f614bc370dd2fed40973ac11a3edcb3d88dfd6afebae8ce5de5a4bec547"
+          assert manifest["boundary_correction_fingerprint"] == "f218782451f7a3a3b248ce8a886a0ccab838eedafd752d8475a9b6682e4fdb1e"
+          assert manifest["preheldout_exposure_binding_fingerprint"] == "76e708dfbc45daa55c3a6d383c47e1b35074df5b206a1bc27e584ce7cf7ae638"
+          assert manifest["run1_abort_prefix_binding_fingerprint"] == "ca89763bca9b62abd77c39592a39160112ab32f76419fb9f5da12e6b276491ff"
+          assert manifest["hk_geometry_recovery_fingerprint"] == "f16ba90f1282ba2ed6fa8dd010ffda1f6a82b4bf8c2247efd35a640d5d9b6f4f"
+          assert manifest["source_corrected_run_id"] == 33028727560
+          assert manifest["source_abort_artifact_id"] == 9629491740
+          assert manifest["source_prefix_attempt_rows"] == 77
+          assert manifest["source_prefix_selected_frames"] == 76
+          assert manifest["source_prefix_reproduced_before_continuation"] is True
+          assert manifest["source_prefix_selection_core_sha256_reproduced"] == "03ebbf776202e2a435f2049aa1a93855f72243dab610b4c14bed53d0ef14c77d"
+          assert manifest["identity_or_country_replaced_for_recovery"] is False
+          assert manifest["technical_continuation_of_run1"] is True
+          assert manifest["new_scientific_cohort"] is False
+
+          assert manifest["frozen_frames"] == manifest["unique_species_keys"] == len(frame) == 96
+          assert frame["speciesKey"].nunique() == frame["scientific_name"].nunique() == 96
+          assert frame["taxon_group"].value_counts().to_dict() == {"plant": 48, "animal": 48}
+          for group in ("plant", "animal"):
+              counts = frame.loc[frame["taxon_group"].eq(group), "record_count_stratum"].astype(int).value_counts().sort_index().to_dict()
+              assert counts == {0: 12, 1: 12, 2: 12, 3: 12}
+          per_cell = frame.groupby(["region_cell_index", "taxon_group"]).size()
+          assert len(per_cell) == 24 and (per_cell == 4).all()
+          assert frame["declaration_status"].eq("declared").all()
+          assert (frame["historical_selected_country_count"].astype(int) >= 5).all()
+          for row in frame.itertuples(index=False):
+              assert math.isclose(
+                  float(row.country_frame_observability_score),
+                  cont.corrected.base.observability_score(int(row.historical_selected_country_count)),
+                  rel_tol=0.0,
+                  abs_tol=1e-12,
+              )
+
+          assert cont.verify_source_prefix(audit) == "03ebbf776202e2a435f2049aa1a93855f72243dab610b4c14bed53d0ef14c77d"
+          recovered = frame.loc[frame["speciesKey"].astype(int).eq(5729409)]
+          assert len(recovered) == 1
+          recovered_row = recovered.iloc[0]
+          assert recovered_row["selected_country_code"] == "HK"
+          assert recovered_row["geometry_source_id"] == HK_RECOVERY_SOURCE_ID
+          assert "container_iso3=CHN" in recovered_row["geometry_source_version"]
+          assert "shapeName=Hong Kong" in recovered_row["geometry_source_version"]
+
+          excluded_keys, excluded_names = cont.corrected.corrected_exclusion_sets()
+          assert not (set(frame["speciesKey"].astype(int)) & excluded_keys)
+          assert not (set(frame["scientific_name"].astype(str)) & excluded_names)
+          assert int(audit["selected"].astype(str).str.lower().eq("true").sum()) == 96
+
+          forbidden = {"recent_count", "recent_records", "temporal_status", "temporal_outcome", "candidate", "robust", "random", "recall", "lift"}
+          assert not (forbidden & set(frame.columns))
+          assert not (forbidden & set(audit.columns))
+          assert manifest["recent_outcomes_opened"] is False
+          assert manifest["candidate_generation_run"] is False
+          assert manifest["robust_support_run"] is False
+          assert manifest["random_baseline_run"] is False
+          assert manifest["recall_or_lift_read"] is False
+          assert manifest["replacement_after_freeze_allowed"] is False
+          assert manifest["score_cutoff_selected"] is False
+          assert manifest["scientific_candidate_method_changed"] is False
+          PY
+      - name: Upload authoritative run-1 technical continuation cohort
+        uses: actions/upload-artifact@v4
+        with:
+          name: country-frame-observability-confirmation-cohort-run1-technical-continuation
+          path: observability-confirmation-cohort/
+          if-no-files-found: error
+          retention-days: 90
