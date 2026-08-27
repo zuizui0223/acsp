@@ -1,0 +1,138 @@
+{
+  "coverage_contract_fingerprint": "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
+  "coverage_contract_path": "validation/acsp_geoboundaries_v6_adm0_coverage_v1.json",
+  "execution_contract_fingerprint": "541c97a81030905533bd7e8f7f8429494bd7f65dd25f96f538f29fcf21bc2c40",
+  "execution_contract_id": "acsp_country_frame_observability_confirmation_provider_eligible_execution_v1",
+  "exclusion_provenance_fingerprint": "b4dba265e33ec716e5451de8bb18eaf4e3647e66ccb29aa089644fca2e74d52b",
+  "exclusion_provenance_path": "validation/acsp_provider_eligible_observability_exclusion_provenance_v1.json",
+  "first_activation_failure_semantics": {
+    "before_complete_stage_1": "abort_not_evaluable",
+    "fewer_than_one_provider_eligible_candidate_in_any_required_stratum": "abort_not_evaluable",
+    "new_seed_or_replacement_after_abort_allowed": false,
+    "second_activation_after_abort_allowed": false,
+    "stage_2_provider_error": "abort_not_evaluable",
+    "stage_3_validation_failure": "abort_not_evaluable",
+    "stage_4_pinned_geometry_mismatch": "abort_not_evaluable"
+  },
+  "first_activation_pipeline": [
+    {
+      "artifact_required": true,
+      "artifact_upload_if_failure": true,
+      "heldout_allowed": false,
+      "historical_focal_species_facets_allowed": false,
+      "inputs": "fixed regions, frozen exclusion provenance, GBIF species facets/metadata only",
+      "name": "freeze_discovery_candidate_snapshot",
+      "outputs": "complete exclusion-filtered candidate rows with fixed record-count strata for every region-group",
+      "selection_occurs": false,
+      "stage": 1
+    },
+    {
+      "artifact_required_if_complete": true,
+      "candidate_patch_allowed": false,
+      "heldout_allowed": false,
+      "historical_provider_error_action": "abort activation; no complete scientific cohort exists",
+      "inputs": "exact stage-1 candidate snapshot bytes",
+      "name": "freeze_historical_provider_eligibility_snapshot",
+      "no_historical_country_action": "mark preselection ineligible",
+      "outputs": "historical 1900-2020 country counts, unchanged selected country, provider-eligibility status, continuous score for every candidate",
+      "partial_abort_audit_upload_if_always": true,
+      "provider_unsupported_action": "mark preselection ineligible; do not substitute country",
+      "selection_occurs": false,
+      "stage": 2
+    },
+    {
+      "exact_unique_frames": 96,
+      "historical_count_used_for_ranking": false,
+      "inputs": "exact complete stage-2 eligibility snapshot bytes",
+      "name": "select_final_96_offline",
+      "network_allowed": false,
+      "outputs": "identity-hash-min provider-eligible candidate per region-group-stratum",
+      "post_selection_replacement_allowed": false,
+      "score_used_for_ranking": false,
+      "stage": 3
+    },
+    {
+      "alternate_provider_allowed": false,
+      "country_substitution_allowed": false,
+      "geometry_failure_action": "abort; no replacement",
+      "inputs": "exact stage-3 final cohort and frozen provider coverage",
+      "name": "freeze_pinned_geometry",
+      "outputs": "pinned geometry source/version/canonical digest for every final frame",
+      "stage": 4,
+      "technical_rerun_allowed": "only with unchanged stage-3 bytes because geometry source is commit-pinned"
+    },
+    {
+      "heldout_opened": false,
+      "inputs": "exact stage-1 through stage-4 artifacts",
+      "name": "publish_authoritative_first_activation_artifact",
+      "outputs": "complete 96-frame cohort, candidate snapshot, eligibility audit, manifest and byte digests",
+      "required_status": "provider_eligible_observability_96_frames_frozen_before_heldout",
+      "second_activation_allowed_only_if_success": true,
+      "stage": 5
+    }
+  ],
+  "first_activation_workflow_contract": {
+    "activation_marker_created_only_after_preregistration_merge": true,
+    "activation_marker_must_pin": [
+      "protocol_fingerprint",
+      "execution_contract_fingerprint",
+      "coverage_contract_fingerprint",
+      "exclusion_provenance_fingerprint",
+      "preregistration_merge_commit",
+      "identities_opened_before_activation=false",
+      "focal_species_historical_facets_opened_before_activation=false",
+      "heldout_outcomes_opened_before_activation=false",
+      "outcome_driven_tuning=false"
+    ],
+    "dedicated_workflow_required": true,
+    "no_cron_fallback": true,
+    "only_trigger": "push to main changing a dedicated first-activation marker",
+    "run_number_one_is_valid_only_because_workflow_has_no_other_triggers": true,
+    "workflow_dispatch_allowed": false,
+    "workflow_must_not_have_pull_request_trigger": true,
+    "workflow_must_not_have_schedule_trigger": true
+  },
+  "forbidden": {
+    "candidate_patches": true,
+    "outcome_driven_taxon_or_country_selection": true,
+    "random_baseline": true,
+    "recall_or_lift": true,
+    "replay_lost_163_partial_audit": true,
+    "robust_worlds": true,
+    "score_cutoff_creation": true,
+    "score_refit": true,
+    "special_case_9775639_or_HK": true
+  },
+  "parent_issue": 169,
+  "protocol_fingerprint": "4afd35c96178934f33f1e1336871df59972ffc6f487c6f11b9abedd690ea442d",
+  "protocol_path": "validation/acsp_country_frame_observability_confirmation_provider_eligible_v1.json",
+  "second_activation_workflow_contract": {
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026082702,
+    "dedicated_workflow_required": true,
+    "heldout_years": [2021, 2025],
+    "marker_requires_authoritative_first_activation_artifact_id_and_hash": true,
+    "may_not_regenerate_or_replace_identity_country_geometry_or_score": true,
+    "must_consume_exact_complete_96_frame_bytes": true,
+    "only_trigger": "push to main changing a dedicated heldout-activation marker",
+    "primary_endpoint": "same-country qualifying 2021-2025 occurrence presence versus zero",
+    "same_cohort_retuning_allowed": false,
+    "workflow_dispatch_allowed": false,
+    "workflow_must_not_have_pull_request_trigger": true,
+    "workflow_must_not_have_schedule_trigger": true
+  },
+  "static_preregistration": {
+    "activation_marker_allowed": false,
+    "focal_species_historical_query_allowed": false,
+    "fresh_candidate_generation_allowed": false,
+    "heldout_query_allowed": false,
+    "may_read_only": [
+      "protocol/execution JSON",
+      "frozen provider coverage registry",
+      "already-consumed identity exclusion files and their byte hashes",
+      "source code and tests"
+    ],
+    "network_provider_calls_allowed": false,
+    "workflow": ".github/workflows/provider-eligible-observability-preregistration.yml"
+  }
+}
