@@ -1,0 +1,69 @@
+{
+  "schema_id": "acsp_prospective_gate_taxonomy_v1",
+  "status": "prospective_only_not_authoritative_for_existing_runs",
+  "purpose": "separate evidence-supply/evaluability conditions from scientific effect/hypothesis conditions before future confirmation contracts are frozen",
+  "historical_boundary": {
+    "rewrite_prior_terminal_decisions": false,
+    "reclassify_prior_failures": false,
+    "recompute_prior_evidence": false,
+    "current_provider_eligible_v1_contract_changed": false,
+    "current_or_prior_cohort_rescue_allowed": false,
+    "allowed_use_on_prior_results": "descriptive decomposition only; the original frozen terminal status remains authoritative"
+  },
+  "status_axes": {
+    "supply_status": [
+      "sufficient",
+      "insufficient",
+      "protocol_abort",
+      "unavailable"
+    ],
+    "hypothesis_status": [
+      "supported",
+      "not_supported",
+      "unavailable"
+    ],
+    "promotion_rule": "promotion requires supply_status=sufficient AND hypothesis_status=supported under the same prospectively frozen contract",
+    "no_single_all_gates_label": true
+  },
+  "country_framed_candidate_patch_confirmation": {
+    "supply_gates": [
+      "declared_taxa",
+      "candidate_generation_success_rate",
+      "temporal_evaluability_rate"
+    ],
+    "hypothesis_gates": [
+      "mean_lift_positive",
+      "bootstrap_lower_positive",
+      "plant_mean_nonnegative",
+      "animal_mean_nonnegative"
+    ],
+    "interpretation": "an effect estimate may be positive while the transport/evaluability denominator is insufficient; this distinction does not retroactively promote a run that failed its original all-gates contract"
+  },
+  "provider_eligible_observability_successor": {
+    "supply_gates": [
+      "protocol_execution_coverage_and_exclusion_fingerprints_match",
+      "zero_overlap_with_completed_consumed_identities",
+      "exact_unique_frozen_frames",
+      "all_frames_provider_eligible_declared_and_scored_before_heldout",
+      "both_temporal_classes_present"
+    ],
+    "hypothesis_gates": [
+      "auc_gt_0_5",
+      "bootstrap_ci95_lower_gt_0_5"
+    ],
+    "interpretation": "provider/data availability determines whether the observability hypothesis is evaluable; only the AUC gates test the frozen observability effect"
+  },
+  "terminal_reporting": {
+    "required_fields": [
+      "original_contract_id",
+      "supply_status",
+      "supply_gate_checks",
+      "hypothesis_status",
+      "hypothesis_gate_checks",
+      "promotion_status"
+    ],
+    "if_supply_not_sufficient": "hypothesis_status must be unavailable unless the prospectively frozen contract explicitly defines an estimand on the available denominator",
+    "technical_abort_is_scientific_negative": false,
+    "unavailable_is_scientific_negative": false
+  }
+}
