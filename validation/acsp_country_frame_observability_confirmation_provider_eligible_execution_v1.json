@@ -1,7 +1,7 @@
 {
   "coverage_contract_fingerprint": "377f6374e077cc38ea7fc026de6dc289abc2716aca8c83d66ddcd42826139520",
   "coverage_contract_path": "validation/acsp_geoboundaries_v6_adm0_coverage_v1.json",
-  "execution_contract_fingerprint": "541c97a81030905533bd7e8f7f8429494bd7f65dd25f96f538f29fcf21bc2c40",
+  "execution_contract_fingerprint": "f17ccb3308baad021ce95ccf24bfe3ded782f4286469d82bfd1c3fc9f9f867ac",
   "execution_contract_id": "acsp_country_frame_observability_confirmation_provider_eligible_execution_v1",
   "exclusion_provenance_fingerprint": "b4dba265e33ec716e5451de8bb18eaf4e3647e66ccb29aa089644fca2e74d52b",
   "exclusion_provenance_path": "validation/acsp_provider_eligible_observability_exclusion_provenance_v1.json",
