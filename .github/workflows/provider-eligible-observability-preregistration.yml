@@ -1,0 +1,69 @@
+name: Provider-eligible observability preregistration
+
+on:
+  push:
+    branches:
+      - research/provider-eligible-observability-confirmation-v1
+    paths:
+      - .github/workflows/provider-eligible-observability-preregistration.yml
+      - research/freeze_provider_eligible_observability_exclusion_provenance.py
+      - research/predeclare_provider_eligible_observability_confirmation.py
+      - research/test_provider_eligible_observability_preregistration.py
+      - validation/acsp_provider_eligible_observability_exclusion_provenance_v1.json
+      - validation/acsp_country_frame_observability_confirmation_provider_eligible_v1.json
+      - validation/acsp_geoboundaries_v6_adm0_coverage_v1.json
+      - validation/acsp_country_framed_fresh_heterogeneity_confirmation_v1.json
+      - validation/acsp_country_framed_fresh_heterogeneity_confirmation_identities_v1.csv
+  pull_request:
+    paths:
+      - .github/workflows/provider-eligible-observability-preregistration.yml
+      - research/freeze_provider_eligible_observability_exclusion_provenance.py
+      - research/predeclare_provider_eligible_observability_confirmation.py
+      - research/test_provider_eligible_observability_preregistration.py
+      - validation/acsp_provider_eligible_observability_exclusion_provenance_v1.json
+      - validation/acsp_country_frame_observability_confirmation_provider_eligible_v1.json
+      - validation/acsp_geoboundaries_v6_adm0_coverage_v1.json
+
+permissions:
+  contents: read
+
+jobs:
+  static-preregistration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Inventory already-consumed exclusion bytes only
+        run: |
+          python research/freeze_provider_eligible_observability_exclusion_provenance.py \
+            --output exclusion-provenance-development.json \
+            > exclusion-provenance-development.log.json
+          echo '===ACSP_EXCLUSION_PROVENANCE_BEGIN==='
+          cat exclusion-provenance-development.log.json
+          echo '===ACSP_EXCLUSION_PROVENANCE_END==='
+
+      - name: Run static preregistration tests if present
+        run: |
+          if [ -f research/test_provider_eligible_observability_preregistration.py ]; then
+            PYTHONPATH=research python -m unittest -v research/test_provider_eligible_observability_preregistration.py
+          fi
+
+      - name: Assert preregistration tree contains no activation marker
+        run: |
+          if find validation -maxdepth 1 -type f -name '*provider_eligible*activate*' -o -name '*activate*provider_eligible*' | grep -q .; then
+            echo 'provider-eligible activation marker is forbidden in preregistration PR' >&2
+            exit 1
+          fi
+
+      - name: Upload local-only provenance development report
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-eligible-observability-exclusion-provenance-development
+          path: exclusion-provenance-development.json
+          if-no-files-found: error
+          retention-days: 14
