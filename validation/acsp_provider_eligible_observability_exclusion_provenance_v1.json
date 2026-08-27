@@ -1,0 +1,148 @@
+{
+  "aborted_163_partial_audit_replayed": false,
+  "base_exclusion_protocol": "validation/acsp_country_framed_fresh_heterogeneity_confirmation_v1.json",
+  "base_exclusion_protocol_fingerprint": "65ba06f174f4bdc9a49c24e54e8f7c67958757ab527fc23e4ccf427bf2d91a01",
+  "exclusion_provenance_fingerprint": "b4dba265e33ec716e5451de8bb18eaf4e3647e66ccb29aa089644fca2e74d52b",
+  "files": [
+    {
+      "byte_count": 11049,
+      "git_blob_sha": "0b0475065a4b222bb79550a35297e53051d5714e",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "validation/geographic_framing_development_v4/predeclared_taxon_region_pairs.csv",
+      "row_count": 96,
+      "sha256": "04342b9c06f6bdf109ea4a684945acdbba8a7063cd11b29b563f80e701de485f",
+      "unique_scientific_names": 96,
+      "unique_species_keys": 96
+    },
+    {
+      "byte_count": 6207,
+      "git_blob_sha": "02022e1d0a6847ad2ad2f61186ba7389f99a40ae",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "validation/geographic_framing_confirmation_v1/confirmation_taxa.csv",
+      "row_count": 96,
+      "sha256": "07089a73909474ebd0e29d1582461d11b91ff2a0d42d0e4e708d6702add067ab",
+      "unique_scientific_names": 96,
+      "unique_species_keys": 96
+    },
+    {
+      "byte_count": 897,
+      "git_blob_sha": "50d27b78a53cf446192b3e03c0263a44d1da405a",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+      "row_count": 20,
+      "sha256": "48b3f495e73f5ed782f4c59ae44d3f20f637aa5323f93a5ce4fe94371874c1ee",
+      "unique_scientific_names": 20,
+      "unique_species_keys": 20
+    },
+    {
+      "byte_count": 1005,
+      "git_blob_sha": "f926f49ccf2e9f059f840dc89b69435d3cd4a7c6",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+      "row_count": 20,
+      "sha256": "9707fa18d00afbf339a25f5083dbd1068c554af1fcd7a5ddbcc420e0793d21ad",
+      "unique_scientific_names": 20,
+      "unique_species_keys": 20
+    },
+    {
+      "byte_count": 2766,
+      "git_blob_sha": "ba3deff31479e7931bdb7d53f003c2ae5847be45",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+      "row_count": 24,
+      "sha256": "2d62827e83748636f20ff4efe20c78983af04a74b26b23724a64e8c8fe7d2875",
+      "unique_scientific_names": 24,
+      "unique_species_keys": 24
+    },
+    {
+      "byte_count": 2742,
+      "git_blob_sha": "a971425eb9f8b97af1248a50106b15beedf45f04",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+      "row_count": 24,
+      "sha256": "3a2feef51ad2c0be2bee0ebbc126e6cf049cfe638e698910b66e201a181fb0bc",
+      "unique_scientific_names": 24,
+      "unique_species_keys": 24
+    },
+    {
+      "byte_count": 2807,
+      "git_blob_sha": "fd869ca5848fb1daf5f20c0a119d83e78aeb3dad",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+      "row_count": 24,
+      "sha256": "a5a3e0213119904b81e8fe8960f3993d353a14e9acd6f1149df756ee6da1bac9",
+      "unique_scientific_names": 24,
+      "unique_species_keys": 24
+    },
+    {
+      "byte_count": 2795,
+      "git_blob_sha": "bf88df40b747fc3685d90ce42e02919a315baa26",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+      "row_count": 24,
+      "sha256": "6369c1842e32c7a3bf4e7033099b1e930f369f00afd5d8b8452c565dbad586fe",
+      "unique_scientific_names": 24,
+      "unique_species_keys": 24
+    },
+    {
+      "byte_count": 2734,
+      "git_blob_sha": "4402985ea005b11bd808e81f71e3a5ee41cfa9ea",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv",
+      "row_count": 24,
+      "sha256": "9094b90db944c7602d1a94c9bc21554e613635c5cbe2a61769a7442c752c09bb",
+      "unique_scientific_names": 24,
+      "unique_species_keys": 24
+    },
+    {
+      "byte_count": 22140,
+      "git_blob_sha": "733d56a7783d7e9cbc89bf7af40c4151e0b2313c",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv",
+      "row_count": 192,
+      "sha256": "fe20fbe02c85af344133cd0feb62a1319ff5285ede84ccaebc3fd23c779cc02d",
+      "unique_scientific_names": 192,
+      "unique_species_keys": 192
+    },
+    {
+      "byte_count": 11176,
+      "git_blob_sha": "8dcc19c673e6c4b0ea38d197fe79ea3fd12208a3",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "validation/geographic_framing_development_v3/predeclared_taxon_region_pairs.csv",
+      "row_count": 96,
+      "sha256": "8e8eebf56b071572ad4eb84d6fe5dbe9ec12c4cd561e84dfca22abd398bede4d",
+      "unique_scientific_names": 96,
+      "unique_species_keys": 96
+    },
+    {
+      "byte_count": 2528,
+      "git_blob_sha": "b3519259d06a6d04ba05cae25975aed01fbe087c",
+      "has_scientific_name_column": true,
+      "has_species_key_column": true,
+      "path": "validation/acsp_country_framed_fresh_heterogeneity_confirmation_identities_v1.csv",
+      "row_count": 48,
+      "sha256": "4dfe23ff32c2e3c3fd601afefabf733feab09f2c95db1def246ed793cd347cb9",
+      "unique_scientific_names": 48,
+      "unique_species_keys": 48
+    }
+  ],
+  "focal_species_historical_facet_opened": false,
+  "fresh_candidate_identity_opened": false,
+  "heldout_2021_2025_opened": false,
+  "manifest_id": "acsp_provider_eligible_observability_exclusion_provenance_v1",
+  "network_access": false,
+  "parent_issue": 169,
+  "source_file_count": 12,
+  "terminal_fresh_identity_only": "validation/acsp_country_framed_fresh_heterogeneity_confirmation_identities_v1.csv"
+}
