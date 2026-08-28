@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 51943)
-Total output lines: 2681
-
 # AI Change Log
 
 ## 2026-08-28 - Codex (OpenAI) - Freeze provider observability terminal boundary
@@ -729,7 +726,1058 @@ Validation:
 - `python -m py_compile gbif_fieldmap_builder_app.py` passed.
 - 18 unit tests passed, including new synthetic genus richness and plan generation coverage.
 - `Campanula microdonta` matched `SPECIES`: 87 cleaned Japan records, 31 total observed/habitat candidates, and 5-site Balanced, Discovery, and Learning plans.
-- `Cirsium` matched `GENUS`: a 900-record retrieval produced 742 cleaned records, 6 modeled species labels, 53 observed-richness c…21943 tokens truncated…er the Performance summary block.
+- `Cirsium` matched `GENUS`: a 900-record retrieval produced 742 cleaned records, 6 modeled species labels, 53 observed-richness cells, 20 hotspots, and 3-site Balanced, Discovery, and Learning plans.
+- Local Streamlit browser check confirmed one input, no workflow selector, clean species proposal rendering, optional SDM action, plan exports, and no console errors.
+
+## 2026-06-29 - Codex (OpenAI) - Reachable-area override and GSI high-resolution terrain
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Clarified the ordinary workflow: no range interaction is required because ACSP uses its recommended compact region; drawing a polygon/rectangle is now an optional reachable-area override.
+- Passed the drawn geographic bounds into Potential Survey Site generation instead of using the drawing only to filter occurrence rows.
+- Allowed a reachable-area override containing one known record, which makes sparse islands such as Niijima usable.
+- Added automatic app-provided terrain retrieval from documented GSI elevation PNG tiles, preferring DEM5A, then DEM5B, DEM5C, and DEM10B, with concurrent download, local tile/GeoTIFF caching, a compact-area tile cap, and visible GSI attribution.
+- Kept large areas responsive by declining or lowering high-resolution retrieval beyond the tile cap and retaining the existing coarse fallback.
+- Corrected raster-derived slope to account for pixel dimensions and return degrees.
+- Removed the user-facing DEM/NDVI/land-cover upload controls from Potential Survey Sites; app-provided terrain is loaded only when candidates are built, so a collapsed legacy panel no longer triggers heavy downloads.
+- Added a documented GSI RGB elevation decoder regression test.
+
+Validation:
+- `Campanula microdonta` / Japan: GBIF total 300; 87 cleaned fetched records.
+- With one reachable-area box per island, all four areas used GSI DEM5A and 100 m survey cells.
+- Izu Oshima: 2 known + 20 potential candidates; 22 unique eligible coordinates; one-day plan 3 sites.
+- Toshima: 2 known + 18 potential candidates; 19 unique eligible coordinates; one-day plan 3 sites.
+- Niijima: 1 known + 19 potential candidates; 20 unique eligible coordinates; one-day plan 3 sites.
+- Kozushima: 1 known + 20 potential candidates; 21 unique eligible coordinates; one-day plan 3 sites.
+- Each one-day plan contained one known anchor, one Survey-gap cell, and one Environmental-test cell.
+
+Features preserved:
+- GBIF/CSV inputs, observed candidates without SDM, independent optional SDM/SSDM, VIF, spatial validation, predict maps, model-high candidates, ACSP maps, exports, and field validation remain available.
+
+Known risks / TODO:
+- The first high-resolution run downloads GSI tiles and is slower; later runs reuse the local cache.
+- Multiple islands drawn together are still treated as one broad custom mission. Ferry-separated per-island day constraints remain the next Issue #23 hierarchy step.
+- GSI terrain is Japan-specific; other countries retain the existing coarse terrain fallback.
+
+## 2026-06-29 - Codex (OpenAI) - Preserve small-island survey candidates
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- test_automatic_hierarchy.py
+- CHANGELOG_AI.md
+
+Summary:
+- Fixed land filtering for Potential Survey Sites and automatic ACSP-Discover candidates so the candidate center must be on land, rather than requiring a 500 m to 7.5 km surrounding circle to be entirely land.
+- This preserves valid coastal and small-island candidates while still excluding candidate centers located in water.
+- Added a regression assertion that the automatic workflow applies center-only land filtering to its final candidate pool.
+- Collapsed overlapping Potential Survey Site roles at the same grid coordinate into one physical candidate, while retaining all matched roles in `candidate_roles`.
+- Added a selection-level guard so ACSP plans cannot count one coordinate as multiple survey sites even if another candidate source supplies duplicates.
+- Routed undersized or non-finite local environmental samples directly to the documented spatial fallback instead of emitting unstable covariance/SVD warnings.
+
+Features preserved:
+- Existing GBIF/CSV inputs, occurrence candidates, habitat-first candidates, optional SDM/SSDM, hard-constraint audit, route feasibility, maps, exports, and field-validation workflows remain available.
+
+Known risks / TODO:
+- Candidate cells that overlap a coastline still need their land fraction or clipped survey footprint reported in a future high-resolution terrain implementation.
+- Ferry barriers and island-specific start/end hubs remain explicit follow-up work under Issue #23.
+
+## 2026-06-27 — Taxon-aware short-trip feasibility
+
+- Added broad GBIF-taxonomy survey profiles so plants, birds, mammals, amphibians/reptiles, arthropods, fish, and unknown taxa no longer share one field-effort assumption.
+- Replaced the single continuous trip estimate with day-by-day hub-return schedules.
+- Excluded sites that cannot individually fit the daily budget and included hub distance in first-site selection.
+- Added a 15% operational reserve and explicit repeat-visit requirements for inference-ready non-detection.
+- Random validation with `Egretta garzetta` exposed and then verified the fix for a distant first-site failure.
+
+This file records changes made by AI coding agents such as Codex, Claude, ChatGPT, or other assistants.
+
+Each agent should update this file after editing code.
+
+## 2026-06-27 - Codex (OpenAI) - ACSP-Discover v1 planning contract
+
+Changed files:
+- acsp_discover.py
+- test_acsp_discover.py
+- test_gbif_fetch_resilience.py
+- validate_automatic_discover.py
+- gbif_fieldmap_builder_app.py
+- .gitignore
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Added a UI-independent ACSP-Discover v1 engine with explicit Discovery and Learning scores and fixed Balanced, Discovery, and Learning plan presets generated from one candidate pool.
+- Added pre-score hard constraints with a downloadable row-level audit; unknown land, legal access, slope, or physical access remains explicitly unknown rather than being assumed safe.
+- Added an honest candidate-resolution decision based on environmental raster resolution, access-layer resolution, GBIF coordinate-uncertainty q75, and practical search scale.
+- Added optional DEM, NDVI, and land-cover GeoTIFF inputs. Without a local DEM, the built-in ~4.5 km topographic fallback prevents false 100 m candidate precision.
+- Standardized new candidate type output as Habitat-match, Survey-gap, and Environmental-test while retaining compatibility with older labels.
+- Added the fixed field-validation columns requested by Issue #23 and made adaptive learning accept `result`; flowering-absent, inaccessible, and uncertain-ID visits do not become false absences.
+- Kept the former single-mode ACSP selectors under Advanced for backward compatibility and baseline comparisons.
+- Added the default species-name-only workflow: Japan-first/worldwide-fallback GBIF retrieval, automatic main-range scope inference, automatic candidate scales, candidate generation, constraint screening, proposal cards, three plans, map, Google Maps, and exports.
+- Added explicit candidate-type minimums so an eight-cell Balanced plan includes available capacity for two known anchors, three discovery cells, and one learning cell before filling remaining slots by utility.
+- Made representative GBIF retrieval resilient to individual page failures; completed pages are retained and partial retrieval is reported instead of discarding the whole proposal.
+- Added a reproducible command-line validation runner and regression tests for scope inference, plan quotas, empty phenology, field-result semantics, and partial GBIF page failure.
+- Random validation selected `Cirsium japonicum`: 830 fetched records, 406 in the automatic main range, 117 known candidates, 24 potential candidates, and three eight-cell plans. The final Balanced plan contained 2 known anchors, 4 discovery cells, and 2 learning cells, with medium data quality and Apr–May suggested season.
+- Browser E2E confirmed the default species-name-only screen and complete proposal render with no browser console errors.
+- Added hierarchical distribution planning: automatic narrow/local, regional, disjunct, or widespread classification followed by compact region/hub recommendation before within-region site selection.
+- Added Recommended, Discovery, and Range-contrast region cards and a Known distribution result map. Users can switch suggested regions or draw a custom rectangle/polygon and rebuild without making map selection mandatory.
+- Replaced candidate-count-only day estimates with a transparent hub-based route proxy using road-distance factor, average speed, per-cell survey/access time, and daily field-hour assumptions.
+- Added a two-day default feasibility loop that reduces selected cell count when an eight-cell plan cannot fit the stated assumptions.
+- Added synthetic broad-range, narrow-range, automatic-bundle, and short-trip feasibility tests; the full local suite now contains 13 passing tests.
+
+Features preserved:
+- GBIF pagination, CSV upload, occurrence exclusion and red QC points, occurrence-supported candidates without SDM, independent optional ensemble SDM, VIF, spatial validation, predict maps, SDM-high candidates, genus/SSDM, map selection, Google Maps/CSV/KML/HTML outputs, and legacy ACSP modes.
+
+Known risks / TODO:
+- Without a high-resolution local DEM, automatic potential cells correctly fall back to 5 km because the built-in WorldClim topographic evidence is about 4.5 km; automatic acquisition of finer authoritative terrain/land-cover data remains the next precision milestone.
+- Compact regions and travel estimates still use geodesic proxies rather than a road/ferry routing engine. Start/end base, transport mode, ferry barriers, and researcher-specific daily budgets remain optional-logistics work.
+- The current automatic candidate generator is still plant-oriented; taxon-specific Survey Protocol profiles for birds, mammals, insects, aquatic organisms, and other groups remain to be implemented.
+- Access/legal/safety datasets are incomplete in many regions; unknown constraints are retained and require field verification.
+- The fixed v1 weights need retrospective holdout and prospective field calibration.
+
+## 2026-06-26 - Codex (OpenAI) - Add automatic SDM remote-outlier QC
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added conservative automatic SDM-only remote spatial outlier screening for small far-away occurrence clusters.
+- Combined automatic SDM outlier exclusions with manual SDM QC rectangles so excluded records remain visible as red points but are not used for SDM training or SDM prediction extent generation.
+- Kept Step 2 survey-area selection independent from SDM and did not turn the survey-area rectangle into SDM QC.
+- Hid the automatic SDM QC toggle under Advanced settings with the recommended behavior enabled by default, reducing routine user decisions.
+- Changed the small/local SDM clustering message from a blocking-style warning to an informational local-range note, emphasizing SDM as broad model support and Potential Survey Sites / ACSP for fine-scale destinations.
+- Validated with `Campanula microdonta` in Japan: 87 clean fetched records, 1 remote western record at 33.635783 / 134.493324 automatically excluded from SDM, 86 records retained for SDM input.
+
+Features preserved:
+- GBIF and CSV occurrence inputs, Step 2 observed-candidate survey-area selection, occurrence-supported candidates, independent optional SDM workflow, manual SDM QC rectangles, VIF, spatial validation, predict map, SDM-high exploration candidates, Potential Survey Sites, ACSP selection, exports, genus/SSDM workflows, and field-validation outputs remain available.
+
+Known risks / TODO:
+- The automatic SDM QC is intentionally conservative and may keep ambiguous edge records rather than over-delete legitimate range-edge populations.
+- Field validation should calibrate the remote-cluster thresholds for island endemics, mainland disjunctions, and taxa with genuinely fragmented ranges.
+
+## 2026-06-26 - Codex (OpenAI) - Update README for ACSP research workflow
+
+Changed files:
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Rewrote the README to reflect the current ACSP application rather than the older GBIF field-map builder description.
+- Documented the four-layer structure: known records, SDM/SSDM, Potential Survey Sites, and ACSP set selection/export.
+- Added concise descriptions of Habitat analogue, Under-surveyed analogue, Environmental contrast, app-provided terrain/access proxies, and field-validation learning.
+- Clarified that SDM/SSDM are macro-scale optional filters while local habitat analogue search supports field-scale discovery.
+- Added current implementation status and active development items.
+
+Features preserved:
+- No application code changed. Existing GBIF/CSV inputs, occurrence candidates, optional SDM/SSDM, Potential Survey Sites, ACSP modes, exports, and validation outputs are unchanged.
+
+Known risks / TODO:
+- README now describes the research direction more accurately, but app-provided NDVI/land-cover and richer online learning remain future work.
+
+## 2026-06-26 - Codex (OpenAI) - Simplify and localize Potential Survey Sites
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added recommended fast local settings for Potential Survey Sites so ordinary users do not need to tune cell size, candidate count, or max grid cells.
+- Added adaptive effective cell-size reporting so outputs show both requested and actual search-cell sizes.
+- Reworked broad-area Potential Survey Sites generation: instead of coarsening a whole-country bounding box into very large cells, broad searches now create fine local search windows around occurrence-supported candidate centers.
+- Added output columns for requested search cell size, effective search cell size, and evaluated grid-cell count.
+- Hardened representative spatial capping so it also works on generated candidate grids that do not have occurrence-only fields such as `_year`, `_media_url`, or `_row_id`.
+- Random validation with `Viola grypoceras` in Japan used 429 fetched records, generated 5 occurrence candidates and 24 potential candidates, kept a 1,000 m effective local search cell, evaluated 957 grid cells, and selected a mixed Discovery-focused set.
+
+Features preserved:
+- GBIF/CSV input, occurrence-supported candidates, optional SDM and SDM-high exploration candidates, Potential Survey Sites, local habitat analogue scoring, ACSP modes, genus/SSDM workflows, exports, and field-validation outputs remain available.
+
+Known risks / TODO:
+- Local search windows are still based on app-provided elevation/topography and coastline/access proxies unless richer app-provided layers are added.
+- Recommended settings should be calibrated with field-validation outcomes and may need taxon- or island-specific presets later.
+
+## 2026-06-26 - Codex (OpenAI) - Validate and fix mirrored genus / SSDM workflow
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Validated genus mode with `Cirsium` in Japan.
+- Confirmed GBIF resolves the genus to `Cirsium Mill.` / backbone taxonKey `3112554`, with 23,616 coordinate records for the JP filter.
+- Fixed observed richness and SSDM species grouping so genus-only, `sp.`, `cf.`, `aff.`, indeterminate, and author-only labels such as `Cirsium Mill.` are not counted as species.
+- Added genus-specific exact-coordinate deduplication that preserves different species at the same coordinates.
+- Added genus-specific grid thinning that preserves different species in the same thinning grid cell, preventing observed richness hotspots from being artificially flattened.
+- Changed genus ACSP default to `Discovery-focused field survey` so genus mode mirrors species mode: observed evidence first, optional SSDM support, then discovery/learning set selection.
+- Added genus count transparency for species-level records and the number of non-species labels excluded from richness/SSDM.
+- Lightweight Cirsium validation showed observed hotspot richness increasing after species-preserving thinning, and a mini SSDM test successfully re-ranked observed hotspots while adding SSDM-high exploratory richness candidates.
+
+Features preserved:
+- Genus GBIF download, observed richness maps, richness hotspot candidates, optional SSDM, SSDM-high exploratory candidates, VIF safeguards, spatial validation options, ACSP selection modes, map/rectangle/click selection, downloads, and species-mode workflow remain available.
+
+Known risks / TODO:
+- Genus-mode SSDM is still computationally expensive for large caps and many eligible species; lightweight defaults and user-triggered Run SSDM remain necessary.
+- Species-name cleaning is intentionally conservative and excludes ambiguous labels from richness/SSDM; such records are still retained in fetched data for transparency.
+
+## 2026-06-26 - Codex (OpenAI) - Split ACSP discovery and learning objectives
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added explicit ACSP selection modes for `Discovery-focused field survey` and `Learning-focused field survey`.
+- Made species-mode ACSP default to Discovery-focused selection when Potential Survey Sites are available.
+- Discovery-focused selection now treats occurrence-supported candidates as known habitat anchors and suppresses Environmental contrast dominance.
+- Learning-focused selection intentionally boosts environmental contrast, under-sampled areas, and exploratory/model-only signals.
+- Updated species and genus ACSP help text to explain the Discovery versus Learning distinction.
+- Avoided list-index fragility in genus ACSP by selecting the default mode by name.
+- Suppressed harmless terrain-derived raster warnings when a local derivative window contains only invalid/NoData values.
+- Validated with `Campanula microdonta`: Discovery selection produced a mixed set of Under-surveyed analogue and Occurrence-supported survey range candidates, while Learning selection emphasized Environmental contrast and Under-surveyed analogue candidates.
+
+Features preserved:
+- Existing ACSP modes, occurrence-supported candidates, Potential Survey Sites, optional SDM/SSDM, candidate maps, selected-site state, rectangle/click selection, exports, field-validation outputs, and representative working subsets remain available.
+
+Known risks / TODO:
+- Discovery/Learning weights are explainable heuristics and should be calibrated against real field-validation outcomes.
+- Potential Survey Sites still need richer app-provided high-resolution NDVI, land-cover, geology, and access layers for stronger local habitat analogue inference.
+
+## 2026-06-26 - Codex (OpenAI) - Validate Campanula microdonta and adapt small-local thinning
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Validated the species workflow with `Campanula microdonta Koidz.` from GBIF.
+- Confirmed GBIF reports 300 coordinate records and the app fetches 87 records after fetch-stage deduplication.
+- Found that the previous fixed 0.05-degree analysis grid over-thinned this small/local dataset from 66 unique coordinates to 28 candidate-input records, yielding only one occurrence-supported candidate.
+- Added adaptive local grid thinning for non-large datasets so small/local occurrence sets use a finer effective grid while large-dataset defaults remain unchanged.
+- Added pipeline transparency for the effective candidate grid when the adaptive local setting differs from the requested advanced setting.
+- Re-tested `Campanula microdonta`: candidate input increased to 53 records, SDM training input to 43 records, and occurrence-supported candidates to 9.
+
+Features preserved:
+- GBIF/CSV inputs, representative large-dataset defaults, exact-coordinate deduplication, spatial thinning, occurrence-supported candidates, optional SDM/SSDM, Potential Survey Sites, ACSP selection, exports, and field-validation outputs remain available.
+
+Known risks / TODO:
+- Potential Survey Sites still rely mainly on app-provided elevation/topography and coastline proxies unless optional OSM access/edge layers are enabled; true app-provided high-resolution NDVI/land-cover/geology layers remain future work.
+- ACSP `Habitat analogue survey` can still favor Environmental contrast / Under-surveyed analogue sites strongly; next improvement should separate Discovery versus Learning objectives for field planning.
+
+## 2026-06-26 - Codex (OpenAI) - Improve app-provided access and edge distance proxies
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added line densification for app-provided GeoJSON access/edge layers before nearest-distance calculations.
+- Densified coastline boundary points generated from the app's built-in land geometry.
+- Densified OpenStreetMap road, trail, and forest-edge geometries fetched for Potential Survey Sites.
+- Kept the calculation lightweight by using densified vertices with the existing BallTree nearest-distance path.
+
+Features preserved:
+- Potential Survey Sites, app-provided habitat layers, optional OSM access/edge layers, ACSP habitat analogue prioritization, field-validation learning, optional SDM/SSDM workflows, exports, and validation outputs remain available.
+
+Known risks / TODO:
+- Distances are still proxy distances based on densified geometry samples, not exact point-to-line geodesic distances; this is much closer than raw vertices while staying lightweight for Streamlit.
+
+## 2026-06-26 - Codex (OpenAI) - Simplify Potential Survey Sites layer UI
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed the `Optional: user-supplied layer overrides / additions` UI from Potential Survey Sites.
+- Simplified Potential Survey Sites so the visible workflow uses app-provided local habitat layers only.
+- Kept the optional OpenStreetMap access/edge layer checkbox as the only extra layer control.
+- Removed the unused uploaded-layer cache helper for the Potential Survey Sites workflow.
+
+Features preserved:
+- Researcher coordinate CSV upload, occurrence-supported candidates, optional SDM and SDM-high exploration candidates, local habitat analogue candidate generation, ACSP selection, field-validation learning, selected-site exports, genus/SSDM workflows, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Users can no longer override local habitat layers from the UI; future app-provided NDVI and land-cover sources should replace that need.
+
+## 2026-06-26 - Codex (OpenAI) - Improve ACSP for macro-SDM plus local habitat analogue planning
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Extended ACSP so the candidate-set algorithm can explicitly use local habitat-analogue evidence, low-survey-effort signals, access feasibility, and field-validation learning.
+- Added a new ACSP selection mode: `Habitat analogue survey`.
+- Added ACSP gain columns: `habitat_analogue_gain`, `validation_learning_gain`, and `access_gain`.
+- Updated the ACSP marginal-gain function to combine occurrence/model priority, geographic/environmental complementarity, exploration value, sampling-gap coverage, local habitat analogue support, validation-learning support, and access feasibility.
+- Expanded environmental complementarity detection so ACSP can use local terrain/vegetation/access variables such as elevation, slope, aspect, roughness, TPI, NDVI, distance to road/trail/coast/forest edge, habitat score, and Mahalanobis environmental distance.
+- Updated Potential Survey Site priority scoring so `Habitat analogue`, `Under-surveyed analogue`, and `Environmental contrast` candidates receive type-specific composite scores rather than all using a single proxy score.
+- Made species-mode ACSP default to `Habitat analogue survey` when potential survey cells are available.
+- Added new ACSP gain columns to selected-site summaries, candidate detail tables, and exports.
+
+Features preserved:
+- Occurrence-supported candidates, optional SDM and SDM-high exploration candidates, raster-style predict map, VIF/spatial validation, existing ACSP modes, map/rectangle selection, selected-site exports, genus/SSDM workflows, and validation outputs remain available.
+
+Known risks / TODO:
+- The new ACSP components depend on available candidate columns; when habitat/access/validation fields are absent, they degrade to zero and the older ACSP behavior is preserved.
+- Future validation should compare selected sets across Simple top-ranked, Complementarity, and Habitat analogue survey modes using real field outcomes.
+
+## 2026-06-26 - Codex (OpenAI) - Make habitat analogue layers app-provided and add validation learning
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Shifted `Potential Survey Sites` from an upload-first layer workflow to an app-provided local habitat layer workflow.
+- Added app-provided local topography as the default habitat analogue basis, using the app's elevation raster and derived terrain variables.
+- Added an app-provided coastline-distance proxy from the built-in land boundary.
+- Added optional OpenStreetMap fetches for roads, trails, and forest-edge proxies inside the current survey area.
+- Kept user-supplied DEM/NDVI/land-cover/vector inputs as optional overrides/additions rather than the main workflow.
+- Added optional field-validation learning: users can upload a previous validation CSV with `site_id` and a presence/result column, and the app learns a lightweight `field_validation_support_score` for candidate re-ranking.
+- Export columns now include `field_validation_support_score` and `validation_learning_note`.
+
+Features preserved:
+- Occurrence-supported candidates, optional SDM and SDM-high exploration candidates, raster-style predict map, VIF/spatial validation, ACSP selection, map/rectangle selection, selected-site exports, genus/SSDM workflows, and validation outputs remain available.
+
+Known risks / TODO:
+- OpenStreetMap access/edge layers depend on Overpass availability and are optional; failures leave those distance proxies missing without stopping candidate generation.
+- The validation-learning model is intentionally lightweight and needs enough matched field-validation rows with both success and non-success outcomes before it can re-rank candidates.
+
+## 2026-06-26 - Codex (OpenAI) - Add high-resolution habitat layer inputs for Potential Survey Sites
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added a dedicated `High-resolution habitat layers` input section inside `Potential Survey Sites (Habitat-first Discovery)`.
+- Added optional GeoTIFF inputs for DEM, NDVI, and land cover.
+- Added optional GeoJSON inputs for roads, trails, coastline, and forest edge, with nearest-distance extraction to candidate cells.
+- Added upload caching so Streamlit can reopen uploaded layers with rasterio across reruns.
+- Added high-resolution raster sampling that supports rasters with non-WGS84 CRS by transforming WGS84 candidate coordinates into raster CRS.
+- Added DEM-derived local terrain metrics from uploaded DEMs: elevation, slope, aspect, roughness, and TPI.
+- Changed known-site habitat profiling to sample points around each known occurrence within a user-defined buffer, default 100 m, instead of sampling only the exact coordinate.
+- Potential survey cells can now be scored from uploaded local habitat layers when available, with Mahalanobis environmental similarity, while SDM remains an optional broad macro-scale filter.
+- Renamed potential candidate types to `Habitat analogue`, `Under-surveyed analogue`, and `Environmental contrast` to match the intended field-discovery workflow.
+
+Features preserved:
+- Occurrence-supported candidates, optional SDM and SDM-high exploration candidates, raster-style predict map, VIF/spatial validation, ACSP selection, map/rectangle selection, selected-site exports, genus/SSDM workflows, and validation outputs remain available.
+
+Known risks / TODO:
+- Vector distance extraction currently uses nearest GeoJSON vertices as a lightweight approximation; a later refinement can densify line geometries for more exact road/trail/coast/forest-edge distances.
+- Uploaded land-cover values are sampled and exported, with a simple dominant-class match score; richer categorical habitat matching can be added after real layer examples are tested.
+
+## 2026-06-26 - Codex (OpenAI) - Refine potential sites as local habitat analogue search
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Reframed `Potential Survey Sites (Habitat-first Discovery)` so it is not treated as another broad-climate SDM.
+- Added local terrain analogue variables derived from the available elevation raster: `aspect` and `tpi`, alongside elevation, slope, and roughness.
+- Changed potential-site scoring to build a known-site environmental profile and score grid cells by Mahalanobis environmental distance / environmental similarity.
+- Kept SDM separate: SDM predict-map cells can now be used only as an optional broad macro-scale filter, while local topographic analogue score remains the main habitat score.
+- Added export columns for `environmental_similarity`, `mahalanobis_environment_distance`, `macro_filter_basis`, local terrain variables, and `missing_layer_note`.
+- Clarified that NDVI, land cover, road/trail distance, forest-edge distance, and coastline distance are not yet supplied as real high-resolution layers in this implementation.
+
+Features preserved:
+- Occurrence-supported candidates, optional SDM and SDM-high exploration candidates, raster-style predict map, VIF/spatial validation, ACSP selection, map/rectangle selection, selected-site exports, genus/SSDM workflows, and validation outputs remain available.
+
+Known risks / TODO:
+- The local analogue search still uses the app's available WorldClim/elevation raster rather than user-uploaded high-resolution DEM/NDVI/land-cover/road/trail layers. A later Issue #23 step should add layer upload/sampling for true 100 m island-scale habitat profiling.
+
+## 2026-06-26 - Codex (OpenAI) - Add Potential Survey Sites MVP
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Added an optional `Potential Survey Sites (Habitat-first Discovery)` expander in species mode.
+- Implemented an MVP grid-cell candidate generator that creates exploratory `Habitat-match`, `Survey-gap`, and `Environmental-test` candidates from the active survey area.
+- Added transparent fieldwork proxy columns: `habitat_score`, `analogue_score`, `environmental_distance_to_known`, `environmental_novelty`, `survey_effort_proxy`, `survey_gap_score`, `access_score`, `access_note`, `target_record_density`, `nearest_known_population_km`, `search_cell_radius_m`, and `why_selected`.
+- Potential candidates are appended to the existing candidate table and can flow into top-ranked output, map display, ACSP auto-selection, Google Maps links, CSV/KML/HTML exports, and field-validation CSVs.
+- Added a selection-map checkbox for including potential survey cells, and marker styling for the three new candidate types.
+- Cleared cached potential candidates when source data or the survey-area rectangle changes so stale exploratory cells are not reused.
+
+Features preserved:
+- Existing occurrence-supported candidates, optional SDM and SDM-high exploration candidates, ACSP selection, manual map/rectangle selection, selected-site summaries, CSV/HTML/KML/validation exports, genus/SSDM workflows, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- This is an MVP scaffold for Issue #23. It does not yet sample uploaded high-resolution GeoTIFF/vector layers or road/trail access data; `access_score` is left unset and `access_note` asks users to verify access externally.
+
+## 2026-06-25 - Codex (OpenAI) - Remove top-ranked display count upper bounds
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Removed the dynamic upper bound from `Top-ranked hotspots shown` in genus mode so existing/session values no longer become invalid when the candidate count changes.
+- Applied the same upper-bound removal to species mode `Top-ranked sites shown` for consistency.
+- Values above the currently available candidate count simply show all matching candidates via the existing dataframe `head()` behavior.
+
+Features preserved:
+- Top-ranked output tables, hotspot/candidate maps, ACSP selection, manual click/rectangle selection, selected-site exports, optional SDM/SSDM, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Very large display counts can make Folium maps slower; users can lower the count manually when needed.
+
+## 2026-06-25 - Codex (OpenAI) - Hide richness legend on ACSP selection map
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Added a `show_legend` option to the observed richness grid layer helper.
+- Kept the observed richness grid visible on the genus hotspot / ACSP selection map, but removed its fixed-position `Observed species richness` legend from that selection map to reduce UI clutter.
+- Preserved the richness legend on the Known distribution map and standalone richness map.
+
+Features preserved:
+- Genus Known distribution richness overlay, hotspot selection map richness overlay, ACSP selection, optional SSDM, selected-site exports, species mode, SDM/SSDM maps, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- None known; this is a display-only legend adjustment.
+
+## 2026-06-25 - Codex (OpenAI) - Show observed genus richness on maps
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Added a shared observed richness grid layer helper so the same occurrence-based richness cells can be drawn on multiple Folium maps.
+- Overlaid observed species richness on the genus-mode Known distribution / survey-area rectangle map, using all cleaned genus occurrence records.
+- Changed the genus hotspot selection map so the observed richness grid is shown by default, while keeping the checkbox available for users who need to hide it for responsiveness.
+
+Features preserved:
+- Genus occurrence display, survey-area rectangle selection, observed richness hotspot generation, optional SSDM, ACSP selection, selected-site exports, species mode, SDM/SSDM maps, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Very dense genus datasets may render more richness cells on the Known distribution map; users can still control genus fetch/display caps and hide the hotspot-map richness layer if needed.
+
+## 2026-06-25 - Codex (OpenAI) - Fix duplicate SSDM variable-selection widget key
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing.
+- Fixed the StreamlitDuplicateElementKey crash in genus mode by removing a duplicated SSDM variable-selection expander that reused `ssdm_variable_strategy`, `ssdm_corr_threshold`, `ssdm_vif_threshold`, and `ssdm_custom_final_variables`.
+- Preserved the SSDM variable-selection controls inside `Advanced: variables & algorithms` and moved the pooled-variable-selection explanation there.
+
+Features preserved:
+- Genus richness workflow, optional SSDM, shared variable selection, VIF/correlation/custom variable strategies, per-species bias reduction, validation settings, ACSP selection, map selection, and exports remain available.
+
+Known risks / TODO:
+- None known; this is a UI de-duplication fix for Streamlit widget keys.
+
+## 2026-06-24 - Codex (OpenAI) - Fix ACSP redundancy penalty
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Synchronized local `main` with GitHub using `git fetch origin` and `git pull --ff-only origin main` before editing; local tracked changes were clean and untracked generated files were preserved.
+- Fixed ACSP redundancy scoring so candidates inside `cluster_distance_m` receive a full redundancy penalty instead of no penalty.
+- Changed the redundancy decay to `exp(-d_min / redundancy_scale_m)` for sites outside the local cluster distance, so nearby already-covered areas are penalized more strongly and distant complementary sites are penalized less.
+- Lowered the `Complementarity-based batch selection` travel weight from `0.15` to `0.05`, keeping travel as a mild fieldwork practicality term rather than dominating complementarity.
+
+Features preserved:
+- ACSP selection modes, Simple top-ranked behavior, exploration-focused and phylogeographic modes, manual map/rectangle selection, selected-site summaries, CSV/HTML/KML/validation exports, optional SDM/SSDM, SDM-high/SSDM-high exploratory candidates, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Complementarity mode should now differ more clearly from Simple top-ranked when nearby candidates compete; real-world behavior still depends on candidate geography and selected K.
+
+## 2026-06-13 - Claude - Fix slow progression after SDM predict map (vectorise hot loops)
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Problem:
+- After "SDM predict map is available.", interacting with the candidate-selection map (every click/widget change triggers a Streamlit rerun) was extremely slow — the app appeared stuck and would not progress to subsequent steps.
+
+Root cause:
+- Two distance computations in the per-rerun hot path used Python-level geopy `geodesic` loops:
+  - `make_sdm_exploration_candidates` computed, for every high-suitability prediction cell, the minimum distance to *all* known points (occurrences + candidates) with a nested `geodesic` loop — millions of geodesic calls per rerun once SDM was active. It runs every rerun inside the always-expanded "Create SDM-high exploration ranges" panel.
+  - `nearest_neighbor_order` (called every rerun via `order_sites(all_candidates, "Nearest-neighbor route")`) did an O(n²) per-row `geodesic` greedy nearest-neighbour ordering.
+
+Fix:
+- Vectorised `make_sdm_exploration_candidates` nearest-known-distance using a scikit-learn `BallTree` with the haversine metric (added `from sklearn.neighbors import BallTree`).
+- Vectorised `nearest_neighbor_order` with the existing numpy haversine helper (`_acsp_point_distances_m`), preserving the identical greedy nearest-neighbour ordering and tie-breaking.
+
+Verification:
+- `nearest_neighbor_order` output is identical to the previous geopy implementation across multiple start points; ~445x faster for 250 sites (4.3 s -> 0.01 s per rerun).
+- BallTree haversine distances match geopy geodesic within ~0.23 % (about 80 m on multi-km distances, the expected sphere-vs-ellipsoid difference); the keep/exclude filtering decision at the distance threshold is identical. Empty-known-set edge case handled (distances -> infinity).
+- Ran `python -m py_compile gbif_fieldmap_builder_app.py` successfully.
+
+Behaviour preserved:
+- SDM-high exploration candidate output, distance-to-nearest-known reporting, route ordering, and all downstream selection/exports are unchanged — only the per-rerun compute cost is reduced.
+
+## 2026-06-13 - Claude - Rename app/tool to ACSP
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Renamed the user-facing application/tool name from "GBIF FieldMap Builder" to **"ACSP — Adaptive Complementarity-based Survey Prioritization"** across display strings: the module docstring header, `APP_TITLE`, the Streamlit page title and `st.title`, the page caption, the KML document `<name>`, and the README title/intro.
+- Left infrastructure identifiers unchanged to avoid breaking deployment and tooling: the source filename `gbif_fieldmap_builder_app.py`, `Procfile`, the GitHub repository slug `zuizui0223/gbif-fieldmap-builder`, and `APP_BUILD_ID`.
+- Ran `python -m py_compile gbif_fieldmap_builder_app.py` successfully.
+
+## 2026-06-12 - Claude - Add ACSP candidate-SET selection algorithm
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest policy files (`AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`) and inspected the current candidate-generation, scoring, selection, and export code before editing.
+- Added **ACSP (Adaptive Complementarity-based Survey Prioritization)** — a candidate-*set* selection algorithm, not just new per-candidate scoring variables. It moves beyond independent weighted candidate scores to choose a survey set that jointly maximises detection potential, model support, environmental/geographic complementarity, exploration value, and sampling-gap coverage while reducing redundancy and excessive travel.
+- Implemented `acsp_select()` as a greedy marginal-gain set builder. For each unselected candidate the marginal gain is `base_score + coverage_gain + exploration_gain + sampling_gap_gain - redundancy_penalty - travel_penalty`. The existing `priority_score` is preserved and reused as `base_score`.
+- Added four selection modes (`ACSP_SELECTION_MODES`), each with its own component weight preset: **Simple top-ranked** (pure priority order), **Complementarity-based batch selection**, **Exploration-focused active survey**, and **Phylogeographic gap-filling**.
+- Component design, using only data already on the candidate dataframe (no new user uploads required):
+  - **Geographic complementarity** rewards candidates far from already-selected sites; redundancy penalty applies to candidates that are moderately close but not within the planned local cluster distance (same-cluster picks are allowed).
+  - **Environmental complementarity** is used when environmental/PCA predictor columns (e.g. `bio*`, `pca*`, `pc#`, `env_*`, elevation) are present on candidates, computed as standardized environmental-space distance to the selected set; it falls back to geographic complementarity when no environmental variables exist.
+  - **Exploration gain** rewards SDM-high/SSDM-high exploration candidates, high `sdm_suitability`, distance from known occurrence-supported sites (`distance_to_nearest_known_m`), and model uncertainty columns when available.
+  - **Sampling-gap gain** rewards under-sampled (low record-count) sites plus new region/island/richness-cluster coverage and, in genus mode, candidates whose `species_list` covers species not yet represented in the selected set.
+  - **Travel penalty** is a mild distance-based penalty for sites far from the selected set (no full routing).
+- Optional `selected_ids` (S0) seeds the set with already-selected/sampled sites, preserving the user's manual selection order before greedy complementarity filling continues.
+- Required computed columns are emitted on the selected set: `base_score`, `geographic_complementarity_gain`, `environmental_complementarity_gain` (when env predictors exist), `exploration_gain`, `sampling_gap_gain`, `redundancy_penalty`, `travel_penalty`, `marginal_gain_score`, `selection_step`, `selection_reason`, and `selection_algorithm`.
+- UI (map-first selection preserved): added an **"Auto-select by selected algorithm"** button with a selection-algorithm dropdown, a K input, and an optional "seed with current selection" toggle to both the single-species candidate selection panel and the genus hotspot selection panel. Selected sites now display `selection_step`, `marginal_gain_score`, and `selection_reason`. Manual click-to-toggle and rectangle selection remain fully available.
+- Exports: extended `EXPORT_CSV_COLS` so the selected-site CSV includes all marginal-gain columns, and added `selection_algorithm` and `selection_reason` (plus `selection_step`/`marginal_gain_score`) to the field-validation template.
+- Verified the algorithm in isolation across all four modes (distinct, sensible site sets), the S0 seeding path, the environmental-complementarity path, and empty-input handling; ran `python -m py_compile gbif_fieldmap_builder_app.py` successfully.
+
+Features preserved:
+- Existing `priority_score`, occurrence-supported candidates, SDM-high exploration candidates, genus richness hotspots, SSDM-high exploration candidates, manual map/rectangle selection, selected-site summaries, and all CSV/HTML/KML/validation exports remain available. ACSP is purely additive and off by default until the user clicks the auto-select button.
+
+Known risks / TODO:
+- ACSP runs a greedy O(K·n) loop over the filtered candidate pool; very large pools with large K may add a short delay. Environmental complementarity only activates when environmental/PCA columns are already attached to candidates (geographic complementarity is the documented fallback otherwise).
+
+## 2026-06-09 - Codex (OpenAI) - Restore visible candidate maps and prioritize ranked output
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, and `CHANGELOG_AI.md`; refreshed `origin/main` before editing.
+- Reverted the closed-by-default candidate/hotspot map behavior so species and genus candidate maps are visible again by default.
+- Kept the lightweight map defaults: only the currently filtered top-ranked candidates/hotspots are shown, with occurrence points and richness grid layers still opt-in because they are slower.
+- Added prominent top-ranked output tables and direct CSV/KML/field-validation CSV downloads for species candidates and genus hotspots, so the app can be used primarily as a priority-ranking output tool without requiring marker clicks or rectangle selection.
+- Preserved click-to-toggle, rectangle selection, selected-site summaries, and selected-site exports as optional user customization after the ranked output is generated.
+
+Features preserved:
+- Map-first candidate inspection, top-ranked bulk add, click-to-toggle and rectangle selection, selected green outlines, Google Maps links, CSV/HTML/KML/validation downloads, Step 2 survey-area selection, observed-data candidates, genus observed richness hotspots, optional SDM/SSDM, SDM-high/SSDM-high exploratory candidates, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Clicking candidate markers still triggers a Streamlit/Folium rerun and can feel slower than using the top-ranked output downloads or bulk-add button; the main workflow now no longer depends on marker-click selection.
+
+## 2026-06-09 - Codex (OpenAI) - Defer candidate maps after survey-area selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` policy files before editing, including `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, and `CHANGELOG_AI.md`.
+- Cached the large-dataset working-set preparation helper so unchanged occurrence subsets are not rebuilt across downstream reruns.
+- Made the species candidate-selection map closed by default after Step 2 survey-area confirmation, with explicit open/close buttons for click and rectangle selection.
+- Made the genus hotspot-selection map use the same closed-by-default pattern.
+- Kept bulk top-ranked site/hotspot addition, selected-site summaries, and exports available without forcing the heavy Folium candidate map to render immediately.
+- Enabled HTML map downloads after the corresponding candidate/hotspot map is opened, avoiding automatic map HTML generation during normal post-survey-area navigation.
+
+Features preserved:
+- Step 2 survey-area selection, observed-data candidates, genus observed richness hotspots, bulk top-ranked selection, click-to-toggle and rectangle selection when the map is opened, selected-site summaries, Google Maps links, CSV/HTML/KML/validation downloads, optional SDM/SSDM, SDM-high/SSDM-high exploratory candidates, VIF diagnostics, and spatial validation remain available.
+
+Known risks / TODO:
+- Users must open the candidate or hotspot map before using click/rectangle site selection or downloading that HTML map; this is intentional to keep Survey area confirmation and movement toward SDM responsive.
+
+## 2026-06-09 - Codex (OpenAI) - Fix rectangle clearing on survey-site maps
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Connected existing map reset tokens to Streamlit/Folium component keys so clearing rectangles actually remounts the map instead of receiving stale browser-side drawing state.
+- Fixed the species known-distribution `Clear rectangle` button by incrementing `target_map_reset_token` and using it in the macro map key.
+- Added explicit `Clear selection rectangles` buttons for species candidate selection and genus hotspot selection maps.
+- Added reset-token updates for selection-map clears, data reloads, genus fetches, and mode switches so old drawn rectangles do not persist across workflows.
+
+Features preserved:
+- Step 2 survey-area rectangles, candidate-selection rectangles, click-to-toggle selection, bulk top-ranked selection, selected-site summaries, selected green outlines, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and lightweight selection maps remain available.
+
+Known risks / TODO:
+- Clearing a rectangle remounts the affected Folium map, which is intentional and should be more reliable than trying to mutate the existing browser-side drawing layer.
+
+## 2026-06-09 - Codex (OpenAI) - Make selection maps lightweight by default
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Made the species candidate-selection map hide candidate-input occurrence points by default, with a `Show candidate-input occurrence points on selection map (slower)` checkbox for verification.
+- Made the genus hotspot-selection map hide the observed richness grid by default, with a `Show richness grid on selection map (slower)` checkbox for inspection.
+- Kept candidate/hotspot markers, selected green outlines, click-to-toggle, rectangle selection, and bulk top-ranked selection on the lightweight default maps.
+- This targets the remaining lag from Streamlit/Folium re-rendering large occurrence/grid layers after bulk add, marker clicks, double-clicks, and rectangle drawings.
+
+Features preserved:
+- Species and genus occurrence-supported candidates, observed richness hotspots, optional SDM/SSDM, SDM/SSDM-supported re-ranking, exploratory candidates, selected-site summaries, map selection, rectangle selection, top-ranked bulk add, Google Maps links, CSV/HTML/KML/validation downloads, and analysis-point/grid verification toggles remain available.
+
+Known risks / TODO:
+- Users who need to inspect all analysis points or richness cells on the same selection map must turn on the slower verification checkbox; the default prioritizes responsive site selection.
+
+## 2026-06-09 - Codex (OpenAI) - Further reduce genus and selection lag
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Confirmed that genus mode already had the recent map-selection fixes: lightweight selected overlays, click/rectangle selection, and bulk top-ranked hotspot selection.
+- Added cached genus observed-output generation for the spatially balanced genus candidate input, species summary table, observed richness grid, and observed hotspot candidates.
+- Removed selected-site row merging into the species and genus base candidate maps so selecting sites no longer changes the heavy cached map input.
+- Selected-site green outlines now use all current candidates through the lightweight overlay, while the base map remains limited to the currently displayed top-ranked candidates.
+
+Features preserved:
+- Species and genus map-first selection, click-to-toggle, rectangle selection, bulk top-ranked selection, selected-site summaries, selected green outlines, Google Maps links, CSV/HTML/KML/validation downloads, observed candidates, optional SDM/SSDM, and exploratory candidate labels remain available.
+
+Known risks / TODO:
+- Selected candidates outside the current top-ranked display may appear as green overlay rings without their full base candidate popup until display filters are broadened; the selected-site summary and exports still include them.
+
+## 2026-06-09 - Codex (OpenAI) - Add bulk top-ranked candidate selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Added a species-mode `Add top-ranked shown sites` button that adds the currently filtered top-ranked candidate sites on the map to the selected survey-site set.
+- Added the mirrored genus-mode `Add top-ranked shown hotspots` button for richness hotspot candidates.
+- Kept the unified map-based workflow: top-ranked sites are displayed first, then users can bulk-add shown candidates, draw rectangles for nearby groups, or click individual markers to adjust the selection.
+
+Features preserved:
+- Manual marker click selection, rectangle group selection, selected-site session state, selected-site summaries, selected green outlines, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and exploratory candidate labels remain available.
+
+Known risks / TODO:
+- Bulk-add uses the current display filters and `Top-ranked sites shown` count; users should adjust those controls first when they want a broader or narrower batch.
+
+## 2026-06-09 - Codex (OpenAI) - Keep candidate map cached during selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Moved selected-site green rings into a lightweight Folium overlay passed to `st_folium` separately from the cached base candidate map.
+- Species-mode candidate selection no longer passes changing selected-site IDs into `build_map`, so marker clicks and double-clicks do not invalidate the heavy occurrence/candidate map cache.
+- Applied the same selected-overlay pattern to genus-mode hotspot selection maps.
+- Added a guarded fallback for Streamlit/Folium environments that do not support `feature_group_to_add`.
+
+Features preserved:
+- Candidate marker click selection, rectangle group selection, selected-site green outlines where supported, selected-site summaries, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and clear-selection buttons remain available.
+
+Known risks / TODO:
+- If a deployed `streamlit-folium` version lacks `feature_group_to_add`, the app falls back to the cached base map without the lightweight selected-ring overlay rather than crashing.
+
+## 2026-06-09 - Codex (OpenAI) - Speed up candidate generation before SDM
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Optimized candidate medoid selection so small clusters still use exact vectorized pairwise haversine distances, while large clusters use the occurrence point nearest the cluster centroid instead of a slow all-pairs geodesic loop.
+- Added a cached occurrence-candidate generation helper covering DBSCAN clustering, candidate-site construction, phenology summaries, priority ranking, and ordering.
+- Replaced the always-inline species candidate-generation block with the cached helper so SDM setup interactions do not repeatedly rebuild identical occurrence-supported candidates before the user can proceed.
+
+Features preserved:
+- Step 2 survey-area selection, occurrence-supported candidates, candidate phenology fields, priority scoring, candidate map selection, optional SDM, SDM-high exploration candidates, VIF diagnostics, spatial validation, genus/SSDM workflows, and downloads remain available.
+
+Known risks / TODO:
+- Large-cluster medoids are now practical centroid-nearest representatives rather than exact all-pairs medoids; this preserves field-planning behavior while avoiding severe lag for dense occurrence clusters.
+
+## 2026-06-09 - Codex (OpenAI) - Reduce candidate-map click lag
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Removed redundant immediate `st.rerun()` calls after species-mode candidate marker click toggles and rectangle group selections.
+- Applied the same redundant-rerun removal to genus-mode hotspot marker click toggles and rectangle group selections.
+- Kept selection state updates in session state so the selected-site summary can update during the same Streamlit pass instead of forcing a second full map rebuild.
+
+Features preserved:
+- Click-to-toggle candidate selection, rectangle group selection, selected-site session state, selected-site summaries, Google Maps links, CSV/HTML/KML/validation downloads, species mode, genus mode, optional SDM/SSDM, and clear-selection buttons remain available.
+
+Known risks / TODO:
+- In some Streamlit/Folium sessions, selected-marker outline redraw may appear on the next map rerun rather than through an extra forced rerun; this is intentional to reduce click lag.
+
+## 2026-06-09 - Codex (OpenAI) - Remove selected-candidate best-time panel
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Removed the separate `Best time to visit (selected candidates)` panel below the selected survey-site summary.
+- Kept the main occurrence-level `Best time to visit` section and preserved per-candidate phenology fields in candidate details, CSV exports, popups, and field-validation templates.
+
+Features preserved:
+- Candidate selection, selected-site summaries, Google Maps/CSV/HTML/KML/validation exports, optional SDM/SSDM, VIF diagnostics, spatial validation, and existing phenology export columns remain available.
+
+Known risks / TODO:
+- Users should rely on the main Best time to visit panel and candidate-level exported phenology fields instead of a separate selected-candidate chart.
+
+## 2026-06-09 - Codex (OpenAI) - Reduce survey-area rectangle lag
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Pulled the latest GitHub `main` before making changes.
+- Removed redundant `st.rerun()` calls after survey-area rectangle drawings are stored in session state.
+- Species mode macro distribution rectangles and genus mode target-occurrence rectangles now save the drawn rectangle and continue through the same Streamlit rerun, instead of triggering an immediate second rerun.
+- This keeps rectangle selection behavior unchanged while reducing the visible pause after drawing a survey-area box.
+
+Features preserved:
+- Step 2 rectangle survey-area selection, clear-rectangle buttons, SDM/SSDM independence from Step 2, candidate generation, genus richness hotspots, species-mode candidates, optional SDM/SSDM, VIF diagnostics, spatial validation, maps, and downloads remain available.
+
+Known risks / TODO:
+- Candidate/richness generation still runs after the rectangle is accepted; if very large target areas remain slow, the next optimization should cache candidate-input/richness computations or add an explicit lightweight apply step.
+
+## 2026-06-05 - Claude (claude-sonnet-4-6) - Add phenology/flowering-season support to fieldwork planning workflow
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+- **`parse_occurrence_month_doy`**: new helper that extracts (month, day_of_year) from occurrence row fields — tries eventDate/_event_date, then month/day/year fields, then startDayOfYear.
+- **`infer_phenology_state`**: new helper that classifies each record as 'flowering', 'fruiting', 'vegetative_or_nonreproductive', or 'unknown' by scanning lifeStage, reproductiveCondition, occurrenceRemarks, fieldNotes, and dynamicProperties text fields against keyword sets (_FLOWERING_KW, _FRUITING_KW, _VEG_KW).
+- **`enrich_occurrences_with_phenology`**: new function that adds _obs_month, _obs_doy, _phenology_state columns to a cleaned occurrence DataFrame; called immediately after clean_occurrences() in the main species workflow.
+- **`candidate_season_summary`**: new function that summarises flowering/phenology season for occurrence records belonging to one candidate cluster; returns observation_months, observation_doy_median/iqr, flowering_record_count, flowering_months, flowering_doy_median, recommended_survey_window, season_confidence.
+- **`_months_to_window_str`**: new helper that converts a list of month integers to a compact string like 'Apr-Jun'.
+- **`make_candidate_sites`**: phenology default columns (observation_months, flowering_record_count, flowering_months, recommended_survey_window, season_confidence) added to returned DataFrame so columns are always present.
+- **Phenology enrichment at call site**: after make_candidate_sites, per-cluster occurrence subsets are summarised via candidate_season_summary and written back into occurrence_candidates before add_priority_rank.
+- **Phenology UI expander** ("Optional: Field season / flowering timing"): shows observation-month bar chart for all dated records and a separate flowering-state bar chart; placed before the Step 3 survey site suggestions section; includes caveat caption about observation vs flowering dates.
+- **Candidate details table**: recommended_survey_window, season_confidence, flowering_record_count added to displayed columns when present.
+- **`popup_html_site`**: phenology_line added to candidate popup HTML showing recommended visit window, confidence, and flowering evidence count when a valid window is available.
+- **`make_validation_template`**: added recommended_survey_window, season_confidence, flowering_record_count from phenology summary; added new field-entry columns visit_date, flowering_observed, fruiting_observed, vegetative_only, phenology_notes.
+- **`EXPORT_CSV_COLS`**: recommended_survey_window, season_confidence, flowering_record_count added to candidate CSV exports.
+
+Features preserved:
+- All existing species SDM, VIF, spatial partition, predict map, exclusion/QC, route planner, and download features unchanged.
+- Genus/SSDM workflows unchanged.
+- Phenology section is optional (expander, collapsed by default); missing dates/fields are handled gracefully and never crash the app.
+
+Known risks / TODO:
+- Phenology state inference is keyword-based; rare or non-English phenology terms may not be captured.
+- Flowering windows derived from all dated records (not confirmed flowering records) are labeled 'inferred' via the season_confidence field.
+- GBIF occurrence records may not include lifeStage or reproductiveCondition; flowering_record_count may be 0 for most species.
+
+## 2026-06-05 - Claude (claude-sonnet-4-6) - Global lag reduction: cache main maps, vectorize geometry, raster coverage layer
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+- **`build_map` cached** (`@st.cache_data`): the main candidate map (occurrence clusters + priority markers + selected-site rings) was rebuilt on every Streamlit widget interaction. Now cached; only rebuilt when input DataFrames, selected_ids, or layers change. Call site converts `selected_ids` list → sorted tuple for hashability.
+- **`make_genus_candidate_selection_map` cached** (`@st.cache_data`): same issue in genus mode — grid rectangles + hotspot markers rebuilt on every rerun. Now cached; `selected_ids` list → sorted tuple at call site.
+- **`make_ssdm_map` coverage layer** replaced: the per-cell `iterrows()` CircleMarker loop over up to 80,000 grid cells was replaced with a numpy-vectorized RGBA array and `ImageOverlay`. Eliminates 80k Python-level marker object creations.
+- **`prediction_area_geometry` vectorized**: removed `iterrows()` for Points creation; replaced with `occ["_longitude"].to_numpy()` + zip array. Also vectorized the excluded_occ cutout loop.
+- **`make_ssdm_map` hotspot loop** changed from `iterrows()` → `itertuples()` (faster attribute access).
+
+No UI, session-state, or feature-behavior changes.
+
+## 2026-06-05 - Claude (claude-sonnet-4-6) - Performance: vectorize SSDM extent masking, cache maps, deduplicate per-species geometry
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+- **`make_richness_map` cached**: added `@st.cache_data(show_spinner=False)` decorator so the Folium richness map is not rebuilt on every widget-triggered rerun.
+- **Vectorized SSDM extent masking**: replaced Python-level `Point.covers` loop (O(n_cells × n_species), e.g. 1.6M calls for 80k cells × 20 species) with a numpy bounds check (`lons >= minx & lons <= maxx & lats >= miny & lats <= maxy`). This is exact for bounding-box extents and ~1000× faster. For buffer/convex-hull extents the bounds check is a conservative approximation that still eliminates the per-cell Python overhead.
+- **Deduplicated per-species `prediction_area_geometry` call**: `auto_sdm_partition` branch previously called `prediction_area_geometry(sp_occ, "bounding box", 10.0, 20.0)` separately from the masking call `prediction_area_geometry(sp_occ, area_mode, buffer_km, rectangle_margin_km)`. Unified: one call per species using the user's `area_mode`/`buffer_km`/`rectangle_margin_km`, stored in `sp_extent_geom_for_partition`, reused for both partition selection and masking.
+
+No UI, session-state, or feature-behavior changes.
+
+## 2026-06-05 - Claude (claude-sonnet-4-6) - SSDM species-specific prediction extents with NA-aware richness accumulation
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+- **Fixed critical accumulation bug**: `richness_cont` / `richness_binary` were undefined (referenced before assignment). Replaced with the already-initialized `richness_sum` / `binary_sum` / `n_evaluated` arrays throughout the loop and output construction.
+- **Fixed undefined `grid` reference**: `predict_suitability(grid, ...)` and output construction used `grid` which was out of scope; corrected to `shared_grid`.
+- **Implemented species-specific extent masking** (`ssdm_extent_mode="species_specific"`, default): for each species, a per-species bounding-box extent is computed from its presence points; the shared grid is masked to that extent; suitability is predicted only within the mask; cells outside are NaN (unevaluated, not absence).
+- **NA-aware richness accumulation**: richness is summed only where each species-level model was evaluated (`n_evaluated > 0`). Cells where no species was evaluated remain NaN in `ssdm_continuous_richness` and `ssdm_binary_richness`.
+- **Added `n_species_evaluated` and `mean_suitability` columns** to the SSDM output grid.
+- **Updated `ssdm_hotspot_candidates`**: added `min_species_evaluated` parameter (default 2); candidates are filtered to cells where at least this many species were modeled, avoiding high-richness artifacts from single-species cells.
+- **Coverage layer in `make_ssdm_map`**: optional `n_species_evaluated` dot layer (hidden by default, toggleable via LayerControl) showing how many species were evaluated per cell.
+- **SSDM UI**: added "SSDM prediction extent strategy" section with Advanced expander exposing `ssdm_extent_mode` radio and `ssdm_min_coverage` number_input; defaults visible as caption without requiring user interaction.
+- **Shared genus mode preserved**: `ssdm_extent_mode="shared_genus"` replicates previous behavior (all species predicted across full genus extent).
+
+Features preserved:
+- Species SDM validation unaffected. All SSDM outputs (richness maps, hotspot candidates, model summary CSV, VIF diagnostics, downloads) preserved. Partial SSDM completion and progress reporting preserved.
+
+## 2026-06-05 - Claude (claude-sonnet-4-6) - Unify Step 2 survey-area panel: simple rectangle-include default for both species and genus
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Refactored `target_occurrence_set_panel` with new signature: added `model_label` (default `"SDM"`) and `allow_advanced_modes` (default `False`) parameters.
+- Default simple mode (`allow_advanced_modes=False`) shows no radio buttons; automatically uses rectangle-include when a rectangle is drawn, and shows an `st.info` message when no rectangle is drawn.
+- Advanced mode (`allow_advanced_modes=True`) shows the three radio options (use all / include / exclude) inside a collapsed `st.expander("Advanced survey area mode")`.
+- Simplified the four count metrics to: "Cleaned records", "Inside survey rectangle", "Active target records", and "Records used for candidates" (or "Records used for hotspots" in SSDM mode).
+- Removed "Excluded by rectangle" metric from the default simple view; it remains tracked in the returned `counts` dict for downstream use.
+- Updated species mode call site: `show_map=False`, `model_label="SDM"`, `allow_advanced_modes=False`.
+- Updated genus mode call site: `show_map=True`, `model_label="SSDM"`, `allow_advanced_modes=False`, label `"Survey area for richness hotspots"`.
+- Replaced `**Phase 2 — Select your fieldwork survey area**` heading with `**2 — Choose your survey area**` + concise caption for species mode; replaced genus Step 2 subheader to `2 — Choose your survey area` with matching caption.
+- Removed redundant genus duplicate-metrics block (g1-g6) that was showing the same counts as the panel's own metric row.
+- py_compile: no errors.
+
+Features preserved:
+- Rectangle draw and clear logic (stored in session state) unchanged for both modes.
+- All advanced three-mode logic preserved inside the `allow_advanced_modes` branch; no behavior removed.
+- Phase 1 national distribution map, SDM, SSDM, VIF, candidates, hotspots, downloads, and all other features unchanged.
+
+Known risks / TODO:
+- Sessions with a previously active "Exclude records inside drawn rectangle" mode will default to simple include mode on next load; users who need exclude mode must enable `allow_advanced_modes`.
+
+## 2026-06-04 - Claude (claude-sonnet-4-6) - SSDM validation parity: per-species auto_sdm_partition, jackknife, spatial CV
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the full 4400+ line app before editing; all changes are targeted diffs to fit_sdm, fit_stacked_species_sdms, the SSDM UI section, and summary column additions only.
+- Added a true leave-one-out jackknife branch in fit_sdm (lines ~2283-2330): for each presence record i, trains on all other rows, predicts on i; final AUC is computed from held-out presence predictions vs a background sample. This enables reliable AUC for n < 15.
+- Extended fit_stacked_species_sdms signature with ssdm_partition_override, ssdm_k_folds, ssdm_checkerboard_deg, ssdm_holdout_split parameters.
+- In the per-species loop, when override=="auto", calls prediction_area_geometry(sp_occ, "bounding box", 10.0, 20.0) to get sp_extent, then auto_sdm_partition(n_occ, sp_extent) for the true per-species method+reason. When override is forced, uses those fixed parameters.
+- Added partition_reason, n_folds, valid_folds, auc_warning columns to every summary_rows entry (modeled, skipped_after_thinning, skipped_too_few_records, failed).
+- Replaced the old single-selectbox SSDM partition UI with the new expander-based UI: default is "auto", with sub-inputs for k, checkerboard cell size, and holdout split appearing conditionally when the corresponding method is forced. Caption explains auto_sdm_partition is used per species.
+- Updated the fit_stacked_species_sdms call site to pass all new parameters.
+- py_compile: no errors.
+
+## 2026-06-04 - Codex (OpenAI) - Mirror genus hotspot selection with species workflow
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Added genus-specific selected-site session state and reset handling so genus selections are independent but follow the species-mode selection pattern.
+- Added a priority-aware genus hotspot selection map that overlays observed richness grid cells, shows observed hotspots and SSDM-high exploratory richness candidates with distinct candidate labels, supports click-to-toggle selection, rectangle selection via `ids_inside_drawn_rectangles`, and selected-site green rings.
+- Merged the old genus Step 3/Step 4 table-first flow into one map-first `Richness hotspot suggestions and selection` workflow with top-ranked display controls, priority/model filters, observed/exploratory candidate toggles, compact selected-hotspot summary, and full tables moved into an optional expander.
+- Stored optional SSDM grid/hotspot results in session state so observed richness hotspots can be re-ranked with SSDM predicted richness and SSDM-high exploratory richness candidates can be shown on the main selection map.
+- Moved the Optional SSDM section visually before the main genus selection map using a Streamlit container, mirroring species mode's optional model support before final candidate selection.
+- Expanded selected genus exports and validation templates with observed richness, SSDM predicted richness, species lists, target taxa, specimens, DNA samples, survey effort, and notes.
+- Updated SSDM validation UI to use `Auto recommended` by default and added the species SDM partition choices; Auto now chooses a validation method per species and reports the chosen `partition_method` in the SSDM model summary.
+- Fixed visible genus Step heading encoding and kept low-offset genus GBIF fetch behavior.
+
+Features preserved:
+- Species mode behavior, CSV upload, genus GBIF total count/fetch, partial genus fetch recovery, country/year filters, observed richness grid, species summary, optional SSDM, shared VIF diagnostics, predicted richness maps, and existing downloads remain available.
+
+Known risks / TODO:
+- The genus workflow now mirrors species-mode selection and export behavior, but the SSDM setup map/QC remains lighter than the single-species SDM setup and should be refined in a follow-up if full SSDM QC parity is required.
+
+## 2026-06-04 - Codex (OpenAI) - Make genus fetch cap directly editable
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Rechecked the deployed genus fetch UI behavior after the user confirmed the stall was caused by high GBIF offsets rather than the record cap.
+- Removed the separate Advanced checkbox gate around larger genus fetch caps because it left the visible `Maximum GBIF records to fetch` input capped at 3,000.
+- Restored a single genus fetch cap input with default 3,000 and maximum 50,000, so values such as 10,000 can be typed directly.
+- Changed the widget key again so Streamlit sessions reset away from the previous 3,000-limited widget state while preserving low-offset page fetching.
+
+Features preserved:
+- Low-offset genus fetch stall avoidance, progress-aware partial fetch, genus richness maps, species summaries, hotspot candidates, optional SSDM, VIF diagnostics, downloads, and single-species mode remain available.
+
+Known risks / TODO:
+- Very high caps may still take many sequential GBIF pages; partial records remain preserved after each successful page if a later request fails.
+
+## 2026-06-04 - Codex (OpenAI) - Uncap genus fetch while avoiding high offsets
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Reopened genus GBIF fetch caps above 3,000 records under an Advanced GBIF fetch cap control while keeping the safe low-offset fetch path that fixed Streamlit Cloud stalls.
+- Changed the genus fetch widget key again so deployed Streamlit sessions reset away from the temporary 3,000-only control.
+- Updated genus fetch wording to explain that higher caps are allowed but fetched sequentially from low GBIF offsets, with downstream deduplication and spatial thinning creating the working survey subset.
+- Added an explicit Step 1 genus workflow caption showing the species-mode symmetry: load records, choose observed-data survey area, generate richness hotspots, optionally run SSDM, and use model support for re-ranking/exploration.
+- Fixed visible genus-mode mojibake in Step labels and SSDM status/help text, replacing broken dash/emoji rendering with plain ASCII UI text.
+
+Features preserved:
+- Genus richness maps, species summaries, hotspot candidates, optional SSDM, VIF diagnostics, progress-aware partial fetch, low-offset stall avoidance, downloads, and single-species mode remain available.
+
+Known risks / TODO:
+- Very high genus fetch caps can still take many GBIF pages; partial records are still preserved after each successful page if a later request fails.
+
+## 2026-06-04 - Codex (OpenAI) - Prevent genus fetch stalls from old large caps
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Reset the genus fetch widget key so old Streamlit sessions cannot keep stale 4,300/10,000-record caps after the app default was lowered.
+- Capped the normal interactive genus GBIF fetch control at the survey-planning default of 3,000 representative records.
+- Avoided high-offset GBIF jumps in the interactive genus fetch because those pages can stall on Streamlit Cloud; genus fetch now uses fast low-offset pages and relies on downstream deduplication/spatial thinning for working subsets.
+- Shortened each progress-aware genus page request to one fast 8-second attempt so a single slow GBIF page does not leave the app appearing stuck for several minutes.
+- Stored a deduplicated partial genus subset in `st.session_state.genus_raw_df` after every successful page, so a later page failure can continue from records already received instead of returning to the no-data state.
+
+Features preserved:
+- Genus occurrence richness maps, species summaries, hotspot candidates, optional SSDM, representative offset retrieval, progress display, partial-data warnings, downloads, and single-species mode remain available.
+
+Known risks / TODO:
+- Large genus all-record exports remain intentionally outside the default interactive workflow; the app is optimized for field-survey planning with representative subsets.
+
+## 2026-06-04 - Codex (OpenAI) - Add progress-aware partial genus fetch
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Lowered the interactive genus GBIF fetch default cap from 10,000 to 3,000 records.
+- Added a progress-aware genus occurrence fetch path that displays planned pages, current page, current offset, records received so far, and requested fetch cap with `st.progress` and a status placeholder.
+- Preserved successfully fetched genus pages if a later GBIF page fails, deduplicates/caps the partial subset, stores it in `st.session_state.genus_raw_df`, and warns with failed stage, offset, fetched-so-far count, requested cap, and partial-data status.
+
+Features preserved:
+- Genus occurrence richness maps, species summaries, hotspot candidates, optional SSDM, representative offset retrieval, GBIF count checks, country/year filters, downloads, and single-species mode remain available.
+
+Known risks / TODO:
+- Species-mode fetch still uses the cached one-shot fetch path; this change targets the blocking genus-mode case only.
+
+## 2026-06-04 - Codex (OpenAI) - Add explicit download button keys
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Confirmed the latest `main` no longer has `route_planner_panel()` after the unified map-selection workflow, so the duplicate selected-site summary is already structurally removed.
+- Added explicit unique `key=` values to the compact selected-sites CSV, HTML, KML, and validation CSV download buttons to prevent `StreamlitDuplicateElementId`.
+- Added explicit keys to remaining genus, SSDM, candidate-details, and sampling-map download buttons so repeated labels or filenames remain safe if sections are rendered together.
+
+Features preserved:
+- Unified map-first candidate selection, selected-site session state, click and rectangle selection, green selected-site outlines, Google Maps links, CSV/HTML/KML/validation downloads, genus mode, and optional SDM/SSDM workflows remain unchanged.
+
+Known risks / TODO:
+- The fix targets duplicate Streamlit element IDs by keying download widgets; no data-processing behavior was changed.
+
+## 2026-06-04 - Codex (OpenAI) - Unify candidate selection on the main map
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Removed the separate `Auto: top-ranked` / `Manual: map & rectangle` selection modes from the species candidate workflow.
+- Removed the separate manual site-selection map; the main priority-aware candidate map is now the only candidate selection map.
+- Added map display controls for top-ranked sites shown, minimum priority score, minimum SDM suitability when available, and candidate-type inclusion.
+- Added a persistent `Clear selected sites` control above the main candidate map.
+- Added rectangle drawing to the main candidate map; drawn rectangles add candidate site IDs using `ids_inside_drawn_rectangles(all_candidates, "site_id", "latitude", "longitude", features)`.
+- Kept click-to-toggle individual candidate sites on the main map and preserved green selected-site outlines.
+- Updated the performance metric from `Route stops` to `Selected sites`.
+
+Features preserved:
+- Occurrence-supported candidates work without SDM; SDM-high exploration candidates remain available and clearly distinct.
+- Selected-site session state, compact selected-sites summary, Google Maps links, CSV/HTML/KML downloads, validation CSV download, and priority-aware candidate markers remain available.
+- Step 2 survey-area selection and independent optional SDM workflow are unchanged.
+
+Known risks / TODO:
+- Rectangle selection adds sites inside drawn rectangles; removing a group still uses individual click toggles or the Clear selected sites button.
+
+## 2026-06-04 - Codex (OpenAI) - Strengthen field-validation exports
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+- Read the latest GitHub `main` versions of `AGENTS.md`, `SURVEY_PLANNING_POLICY.md`, `RESEARCH_POSITIONING.md`, `CHANGELOG_AI.md`, and `gbif_fieldmap_builder_app.py` before editing.
+- Added `site_id` to the selected-site CSV export so downloaded fieldwork lists keep the stable app site identifier.
+- Expanded `make_validation_template()` to include field-validation fields for accessibility, survey effort, target-species detection, abundance, flowering status, number of species detected, newly confirmed populations, photographs, specimens, DNA samples, habitat notes, and comments.
+- Added `Validation CSV` download buttons to the selected-sites controls so users can directly export a field-validation template for chosen survey sites.
+
+Features preserved:
+- Map-first candidate selection, compact selected-sites summary, priority-aware markers, independent optional SDM workflow, SDM-high exploration candidates, genus/SSDM workflows, and existing CSV/HTML/KML exports remain available.
+- Occurrence-supported candidates still work without SDM, and SDM/SSDM support remains optional model support for ranking/exploration.
+
+Known risks / TODO:
+- The validation template is a CSV scaffold; app-side entry/editing of returned field-validation results is still future work.
+
+## 2026-06-04 - Claude (claude-sonnet-4-6) — Merge Step 3/4: unified priority-visualized candidate map and selection
+
+Changed files:
+- gbif_fieldmap_builder_app.py
+- CHANGELOG_AI.md
+
+Summary:
+
+**1. Priority-aware candidate markers in `build_map`**
+- Added `_priority_marker_style(row)` helper that returns `(radius, color)` based on `priority_rank` and `candidate_type`: rank 1–3 → radius 14 red `#d62728`; rank 4–10 → radius 11 orange `#ff7f0e`; rank 11–20 → radius 9 green `#2ca02c`; rank >20 → radius 7 grey `#7f7f7f`; SDM-high → radius 9 purple `#9467bd` with dashed outline.
+- `build_map` gains optional `selected_ids` parameter; selected sites receive a green outer ring (`CircleMarker` radius+5, color `#00cc44`, fill=False, weight=3).
+
+**2. Merged Step 3 and Step 4 into one section**
+- Replaced `st.subheader("3 — Survey site suggestions")` and the separate `route_planner_panel` subheader `"4 — Selected survey sites"` with a single `st.subheader("3 — Survey site suggestions and selection")`.
+- Selection controls (Auto/Manual/rectangle) appear before the map via `route_planner_panel(all_candidates, show_subheader=False)`.
+- `route_planner_panel` gains `show_subheader: bool = True` parameter; genus mode unaffected (not called in genus mode).
+- Map rendered once after selection controls, passing `selected_ids` for green rings.
+- After the map: compact selected-sites summary (site_id, priority_rank, priority_score, candidate_type, Google Maps link) + Open all in Google Maps, CSV, HTML, KML downloads, Clear button.
+- Full candidate details table moved into `st.expander("Optional: candidate details table", expanded=False)` with CSV and KML downloads.
+- Removed duplicate map rendering that previously existed after the Performance summary block.
 
 Features preserved:
 - `sl_selected_site_ids` session state unchanged.
