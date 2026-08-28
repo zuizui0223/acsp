@@ -1,0 +1,74 @@
+{
+  "schema_id": "acsp_provider_eligible_observability_first_activation_terminal_v1",
+  "recorded_on": "2026-08-28",
+  "original_contract_id": "acsp_country_frame_observability_confirmation_provider_eligible_execution_v1",
+  "parent_issue": 169,
+  "authoritative_run": {
+    "workflow_run_id": 33031292325,
+    "workflow_run_number": 1,
+    "head_sha": "9f189d4cc7a6f5b9aa9b259c3c0a622e800bca11",
+    "conclusion": "failure",
+    "terminal_stage": 2
+  },
+  "frozen_artifacts": {
+    "stage_1": {
+      "name": "provider-eligible-observability-stage1-candidate-snapshot",
+      "artifact_id": 9630421872,
+      "digest": "sha256:a3745c060dae360172b8a707d075997e6ee86153784f0f76bfb1322000f59f88"
+    },
+    "stage_2": {
+      "name": "provider-eligible-observability-stage2-eligibility",
+      "artifact_id": 9630678281,
+      "digest": "sha256:8101251eda4415ab3cf898ba5d842cea849dfb23c8187c3a11c28d9ad213b4e5",
+      "partial_eligibility_snapshot_sha256": "ba70a04bd18379a4f42d969eb74deafcff69a2ed42b968d8f10001d62c3501ff"
+    }
+  },
+  "observed_execution": {
+    "stage_1_complete": true,
+    "candidate_rows": 6147,
+    "historical_unique_species_queries": 3161,
+    "historical_provider_error_count": 29,
+    "historical_provider_success_count": 3132,
+    "provider_error_type": "HTTP_429_too_many_requests",
+    "complete_authoritative_96_frame_artifact_created": false,
+    "focal_species_historical_facets_opened": true,
+    "heldout_2021_2025_opened": false,
+    "candidate_generation_run": false,
+    "robust_support_run": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false,
+    "outcome_driven_tuning": false
+  },
+  "original_terminal_status": {
+    "status": "abort_not_evaluable",
+    "reason": "one or more historical provider queries failed",
+    "second_activation_after_abort_allowed": false,
+    "new_seed_or_replacement_after_abort_allowed": false
+  },
+  "two_axis_description": {
+    "historical_status_reclassified": false,
+    "supply_status": "protocol_abort",
+    "supply_gate_checks": {
+      "protocol_execution_coverage_and_exclusion_fingerprints_match": true,
+      "zero_overlap_with_completed_consumed_identities": true,
+      "exact_unique_frozen_frames": false,
+      "all_frames_provider_eligible_declared_and_scored_before_heldout": false,
+      "both_temporal_classes_present": false
+    },
+    "hypothesis_status": "unavailable",
+    "hypothesis_gate_checks": {
+      "auc_gt_0_5": null,
+      "bootstrap_ci95_lower_gt_0_5": null
+    },
+    "promotion_status": "not_promoted"
+  },
+  "claim_boundary": {
+    "technical_abort_is_scientific_negative": false,
+    "observability_hypothesis_tested": false,
+    "validated_japan_product_changed": false,
+    "country_framed_or_global_product_promoted": false,
+    "current_publication_route": "Ecological Informatics",
+    "allowed_role": "auditable provider-supply and evaluability boundary",
+    "forbidden_role": "evidence that the observability hypothesis is null or adverse"
+  }
+}

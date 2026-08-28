@@ -1,5 +1,26 @@
 # AI Change Log
 
+## 2026-08-28 - Codex (OpenAI) - Freeze provider observability terminal boundary
+
+Changed files:
+- validation/acsp_provider_eligible_observability_first_activation_terminal_v1.json
+- docs/provider_eligible_observability_terminal_2026-08-27.md
+- tests/test_provider_eligible_observability_terminal.py
+- CHANGELOG_AI.md
+
+Summary:
+- Recorded authoritative first-activation run 33031292325 and its stage-1/stage-2 artifact identities.
+- Preserved the original `abort_not_evaluable` result after 29 of 3,161 historical provider queries returned HTTP 429.
+- Described the terminal result on the prospective two-axis vocabulary as supply `protocol_abort`, hypothesis `unavailable`, and not promoted, without retroactively changing the frozen protocol.
+- Fixed the publication consequence at the validated Japanese product plus an auditable global observability/evaluability limit for the Ecological Informatics route.
+
+Features preserved:
+- The validated Japanese 2.5% support tier, 1 km candidate-patch aggregation, non-ranked planner-free core, app, optional SDM/SSDM, maps, exports, and field-planning layers are unchanged.
+- The 2021–2025 heldout observability outcomes remain unopened, and no candidate patches, robust support, random comparator, recall, or lift were run for the aborted activation.
+
+Known risks / TODO:
+- No global or country-framed ACSP product is promoted. MEE still requires a separately frozen end-to-end ordinary-use confirmation; JAE still requires prospective field-utility evidence.
+
 ## 2026-08-22 - ChatGPT (OpenAI) - Artifact-derived operational coverage scale
 
 Changed files:
