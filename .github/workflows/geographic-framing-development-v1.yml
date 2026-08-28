@@ -1,7 +1,6 @@
 name: Geographic framing development v1
 
 on:
-  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -24,6 +23,10 @@ env:
 
 jobs:
   framing-development:
+    # This consumed development cohort is retained for provenance, not rerun by
+    # publication/package maintenance. Only the original dedicated branch may
+    # execute it; all later workflow repairs must resolve as skipped.
+    if: github.head_ref == 'agent/geographic-framing-development-v1'
     name: 96-pair training-only framing diagnostic
     runs-on: ubuntu-latest
     timeout-minutes: 300

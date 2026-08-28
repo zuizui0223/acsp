@@ -16,7 +16,7 @@ Summary:
 - Added a frozen evidence-availability table and two dependency-free SVG figures from existing reviewed results.
 - Removed legacy Campanula tables from the paper output directory and manifest boundary.
 - Made the validated-Japan plus failed/conditional generalization and provider-abstention hard stop explicit; no new scientific analysis or claim expansion was introduced.
-- Repaired invalid YAML indentation in an embedded historical changelog string so the development workflow parses again.
+- Repaired invalid YAML indentation in an embedded historical changelog string and restricted the consumed development workflow to its original dedicated branch, so maintenance PRs cannot rerun the 96-pair cohort.
 
 Features preserved:
 - The validated Japanese 12-region candidate-patch product and all frozen scientific constants are unchanged.
