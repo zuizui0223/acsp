@@ -108,6 +108,9 @@ jobs:
         run: |
           python paper/build_paper_outputs.py --output-dir paper-generated
           test -s paper-generated/table_1_retrospective_validation.csv
+          test -s paper-generated/table_2_evidence_availability.csv
+          test -s paper-generated/figure_1_primary_recovery.svg
+          test -s paper-generated/figure_2_evidence_boundary.svg
           test -s paper-generated/table_s1_seed_sensitivity.csv
           test -s paper-generated/table_s2_claim_matrix.csv
           test -s paper-generated/table_s3_standard_baseline_comparison.csv
@@ -126,6 +129,9 @@ jobs:
           assert manifest["post_baseline_algorithms_read"] is False
           assert manifest["primary_recovery_radius_km"] == 10.0
           assert manifest["top_k"] == 5
+          assert "table_2_evidence_availability.csv" in manifest["outputs"]
+          assert "figure_1_primary_recovery.svg" in manifest["outputs"]
+          assert "figure_2_evidence_boundary.svg" in manifest["outputs"]
           PY
       - name: Upload validation and paper outputs
         uses: actions/upload-artifact@v4

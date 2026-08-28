@@ -1,5 +1,30 @@
 # AI Change Log
 
+## 2026-08-28 - Codex (OpenAI) - Close the bounded ACSP paper package
+
+Changed files:
+- README.md
+- paper/build_paper_outputs.py
+- paper/README.md
+- paper/MANUSCRIPT_DRAFT.md
+- paper/generated/*
+- tests/test_paper_publication_closure.py
+- .github/workflows/geographic-framing-development-v1.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Added a frozen evidence-availability table and two dependency-free SVG figures from existing reviewed results.
+- Removed legacy Campanula tables from the paper output directory and manifest boundary.
+- Made the validated-Japan plus failed/conditional generalization and provider-abstention hard stop explicit; no new scientific analysis or claim expansion was introduced.
+- Repaired invalid YAML indentation in an embedded historical changelog string and restricted the consumed development workflow to its original dedicated branch, so maintenance PRs cannot rerun the 96-pair cohort.
+
+Features preserved:
+- The validated Japanese 12-region candidate-patch product and all frozen scientific constants are unchanged.
+- Country/global non-promotion, provider `protocol_abort` / hypothesis `unavailable`, unopened heldout data, and the existing claim ceiling are unchanged.
+
+Known risks / TODO:
+- Journal formatting and reference-style conversion remain editorial tasks; they do not authorize further scientific development.
+
 ## 2026-08-28 - Codex (OpenAI) - Add global observability boundary to paper outputs
 
 Changed files:

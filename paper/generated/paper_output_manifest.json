@@ -29,6 +29,9 @@
   "validated_japan_product_changed_by_global_abort": false,
   "outputs": [
     "table_1_retrospective_validation.csv",
+    "table_2_evidence_availability.csv",
+    "figure_1_primary_recovery.svg",
+    "figure_2_evidence_boundary.svg",
     "table_s1_seed_sensitivity.csv",
     "table_s2_claim_matrix.csv",
     "table_s3_standard_baseline_comparison.csv",

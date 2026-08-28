@@ -95,6 +95,14 @@ Therefore the country-framed/global extension remains **development evidence, no
 
 The reserved-replication result is preserved in `validation/acsp_country_framed_robust_integration_development_v2_replication_result_v1.json`. The fresh confirmation is preserved in `validation/acsp_country_framed_fresh_heterogeneity_confirmation_result_v1.json`, with its 48-taxon compact audit in `validation/acsp_country_framed_fresh_heterogeneity_confirmation_taxon_audit_v1.csv`. Post-outcome diagnostics remain descriptive only and are not eligibility rules or retuned science.
 
+### Publication closure and development hard stop
+
+The later provider-eligible observability first activation terminated at the historical provider gate as supply `protocol_abort`, hypothesis `unavailable`, and promotion `not_promoted`. The 2021–2025 heldout data remained unopened. This is an evaluability boundary, not a null or adverse global result, and it does not alter the validated Japanese product.
+
+The current paper is complete at the following boundary: **validated Japanese 12-region candidate patches + failed/conditional country generalization + explicit provider-supply abstention**. Stop same-cohort rescue and stop waiting for a global positive before submission. Close the Ecological Informatics manuscript and package now. Any later observability study must begin with a prospectively new contract and cohort; it cannot rescue the aborted activation or expand the present paper's claim.
+
+Publication ladder: [`docs/publication_decision_ladder.md`](docs/publication_decision_ladder.md). Paper package: [`paper/README.md`](paper/README.md).
+
 ## Install
 
 ```bash

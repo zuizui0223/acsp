@@ -22,6 +22,10 @@ The 2026 *C. microdonta* island application, area-balanced post-baseline update,
 
 The island field application remains in `field_validation/` as development provenance. It is not read by the paper builder.
 
+## Publication hard stop
+
+The manuscript-development condition is satisfied by the validated Japanese product plus the frozen failed/conditional generalization and provider-supply/evaluability boundaries. Do not delay submission for a global positive, reopen the provider-aborted cohort, substitute failed candidates, or add a new scientific extension to this paper. Any successor observability experiment is a separate prospectively frozen study.
+
 ## Rebuild paper outputs
 
 ```bash
@@ -34,6 +38,9 @@ The publication builder produces the retrospective, reviewed standard-comparator
 Primary and supplementary outputs:
 
 - `table_1_retrospective_validation.csv`
+- `table_2_evidence_availability.csv`
+- `figure_1_primary_recovery.svg`
+- `figure_2_evidence_boundary.svg`
 - `table_s1_seed_sensitivity.csv`
 - `table_s2_claim_matrix.csv`
 - `table_s3_standard_baseline_comparison.csv`
@@ -45,6 +52,8 @@ Primary and supplementary outputs:
 - `standard_baseline_results_manifest.json`
 - `sdm_decision_results_manifest.json`
 - `paper_output_manifest.json`
+
+The builder also removes legacy *Campanula* tables from its output directory so an old local build cannot contaminate the submission package.
 
 ## Standard comparator stage
 
