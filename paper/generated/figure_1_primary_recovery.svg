@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650">
+<rect width="1200" height="650" fill="#ffffff"/>
+<style>text{font-family:Arial,sans-serif;fill:#222831}.title{font-size:30px;font-weight:700}.sub{font-size:17px;fill:#59636e}.axis{font-size:15px;fill:#59636e}.group{font-size:23px;font-weight:700}.value{font-size:16px;font-weight:700}.note{font-size:14px;fill:#59636e}</style>
+<text x="70" y="62" class="title">Held-out recovery within 10 km</text>
+<text x="70" y="94" class="sub">Frozen ACSP Top-5 versus same-pool random Top-5; intention-to-evaluate pair means</text>
+<line x1="255.0" y1="150" x2="255.0" y2="525" stroke="#d9dee4" stroke-width="1"/>
+<text x="255.0" y="552" text-anchor="middle" class="axis">0.00</text>
+<line x1="463.8" y1="150" x2="463.8" y2="525" stroke="#d9dee4" stroke-width="1"/>
+<text x="463.8" y="552" text-anchor="middle" class="axis">0.03</text>
+<line x1="672.5" y1="150" x2="672.5" y2="525" stroke="#d9dee4" stroke-width="1"/>
+<text x="672.5" y="552" text-anchor="middle" class="axis">0.06</text>
+<line x1="881.2" y1="150" x2="881.2" y2="525" stroke="#d9dee4" stroke-width="1"/>
+<text x="881.2" y="552" text-anchor="middle" class="axis">0.09</text>
+<line x1="1090.0" y1="150" x2="1090.0" y2="525" stroke="#d9dee4" stroke-width="1"/>
+<text x="1090.0" y="552" text-anchor="middle" class="axis">0.12</text>
+<line x1="255" y1="525" x2="1090" y2="525" stroke="#59636e" stroke-width="1.5"/>
+<text x="70" y="288" class="group">Animals</text>
+<text x="70" y="314" class="note">n = 12 taxon-region pairs</text>
+<line x1="653.2" y1="280" x2="937.3" y2="280" stroke="#59636e" stroke-width="4"/>
+<circle cx="653.2" cy="280" r="11" fill="#ffffff" stroke="#c28a18" stroke-width="4"/>
+<circle cx="937.3" cy="280" r="12" fill="#2f6da5" stroke="#1f4d75" stroke-width="2"/>
+<text x="653.2" y="257" text-anchor="middle" class="value">0.057</text>
+<text x="937.3" y="315" text-anchor="middle" class="value">0.098</text>
+<text x="795.2" y="257" text-anchor="middle" class="note">lift +0.041</text>
+<text x="70" y="463" class="group">Plants</text>
+<text x="70" y="489" class="note">n = 36 taxon-region pairs</text>
+<line x1="889.5" y1="455" x2="1019.2" y2="455" stroke="#59636e" stroke-width="4"/>
+<circle cx="889.5" cy="455" r="11" fill="#ffffff" stroke="#c28a18" stroke-width="4"/>
+<circle cx="1019.2" cy="455" r="12" fill="#2f6da5" stroke="#1f4d75" stroke-width="2"/>
+<text x="889.5" y="432" text-anchor="middle" class="value">0.091</text>
+<text x="1019.2" y="490" text-anchor="middle" class="value">0.110</text>
+<text x="954.4" y="432" text-anchor="middle" class="note">lift +0.019</text>
+<circle cx="760" cy="600" r="8" fill="#2f6da5" stroke="#1f4d75" stroke-width="2"/><text x="778" y="606" class="axis">Frozen ACSP</text>
+<circle cx="930" cy="600" r="8" fill="#ffffff" stroke="#c28a18" stroke-width="3"/><text x="948" y="606" class="axis">Same-pool random</text>
+</svg>

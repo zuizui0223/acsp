@@ -16,6 +16,7 @@ integrated evidence are not read by this builder.
 from __future__ import annotations
 
 import argparse
+from html import escape
 import json
 from pathlib import Path
 import sys
@@ -48,6 +49,14 @@ EXPECTED_SDM_RECOVERY_ARTIFACT_SHA256 = "560b4e46b4c9b961bba21558ba897632ea1edf8
 EXPECTED_SDM_DECISION_ARTIFACT_SHA256 = "98a927bc5a48f7c59300c955fa0ba464a560498bb3048c84b4f60470f5907eb6"
 OBSERVABILITY_TERMINAL = (
     ROOT / "validation/acsp_provider_eligible_observability_first_activation_terminal_v1.json"
+)
+COUNTRY_FRESH_RESULT = (
+    ROOT / "validation/acsp_country_framed_fresh_heterogeneity_confirmation_result_v1.json"
+)
+LEGACY_EXCLUDED_OUTPUTS = (
+    "table_3_campanula_baseline_validation.csv",
+    "table_4_campanula_area_balanced_update.csv",
+    "table_5_campanula_area_balanced_top5.csv",
 )
 
 
@@ -268,6 +277,158 @@ def _load_global_observability_boundary() -> tuple[pd.DataFrame, dict[str, objec
     return pd.DataFrame([row]), terminal
 
 
+def _evidence_availability_table(
+    retrospective: pd.DataFrame,
+    observability_terminal: dict[str, object],
+) -> pd.DataFrame:
+    country = json.loads(COUNTRY_FRESH_RESULT.read_text(encoding="utf-8"))
+    if country.get("fresh_confirmation_gate_passed") is not False:
+        raise ValueError("Country-framed fresh result no longer records a failed promotion gate.")
+    if country.get("global_candidate_generation_validated") is not False:
+        raise ValueError("Country-framed fresh result unexpectedly promotes a global product.")
+    if country.get("validated_japan_core_changed") is not False:
+        raise ValueError("Country-framed fresh result changed the validated Japan core.")
+
+    observed = observability_terminal["observed_execution"]
+    axes = observability_terminal["two_axis_description"]
+    return pd.DataFrame(
+        [
+            {
+                "scope": "validated_japan_12_region_core",
+                "declared_denominator": int(retrospective["declared_taxon_region_pairs"].sum()),
+                "evaluable_or_completed": int(retrospective["declared_taxon_region_pairs"].sum()),
+                "heldout_or_response_status": "opened_under_frozen_spatial_holdout",
+                "terminal_status": "validated_supported_at_10km",
+                "promotion_status": "validated_product",
+                "paper_role": "primary_confirmatory_anchor",
+                "development_stop": "close_manuscript_without_global_rescue",
+            },
+            {
+                "scope": "country_framed_fresh_extension",
+                "declared_denominator": int(country["declared_taxa"]),
+                "evaluable_or_completed": int(country["temporally_evaluable_taxa"]),
+                "heldout_or_response_status": "opened_once_under_frozen_contract",
+                "terminal_status": "failed_6_of_7_preregistered_gates",
+                "promotion_status": "not_promoted",
+                "paper_role": "failed_or_conditional_generalization_boundary",
+                "development_stop": "no_consumed_cohort_rescue_or_same_method_promotion_attempt",
+            },
+            {
+                "scope": "provider_eligible_observability_first_activation",
+                "declared_denominator": int(observed["historical_unique_species_queries"]),
+                "evaluable_or_completed": int(observed["historical_provider_success_count"]),
+                "heldout_or_response_status": "2021_2025_heldout_unopened",
+                "terminal_status": f"{axes['supply_status']}__hypothesis_{axes['hypothesis_status']}",
+                "promotion_status": axes["promotion_status"],
+                "paper_role": "provider_supply_and_evaluability_boundary_only",
+                "development_stop": "no_aborted_cohort_rescue; successor_requires_new_contract",
+            },
+        ]
+    )
+
+
+def _write_recovery_figure(retrospective: pd.DataFrame, path: Path) -> None:
+    """Write a dependency-free, journal-ready paired comparison as SVG."""
+    width, height = 1200, 650
+    left, right = 255, 1090
+    x_max = 0.12
+    rows = [("Animals", retrospective.iloc[0], 280), ("Plants", retrospective.iloc[1], 455)]
+
+    def sx(value: float) -> float:
+        return left + (right - left) * value / x_max
+
+    svg = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="1200" height="650" fill="#ffffff"/>',
+        '<style>text{font-family:Arial,sans-serif;fill:#222831}.title{font-size:30px;font-weight:700}.sub{font-size:17px;fill:#59636e}.axis{font-size:15px;fill:#59636e}.group{font-size:23px;font-weight:700}.value{font-size:16px;font-weight:700}.note{font-size:14px;fill:#59636e}</style>',
+        '<text x="70" y="62" class="title">Held-out recovery within 10 km</text>',
+        '<text x="70" y="94" class="sub">Frozen ACSP Top-5 versus same-pool random Top-5; intention-to-evaluate pair means</text>',
+    ]
+    for tick in (0.00, 0.03, 0.06, 0.09, 0.12):
+        x = sx(tick)
+        svg.extend(
+            [
+                f'<line x1="{x:.1f}" y1="150" x2="{x:.1f}" y2="525" stroke="#d9dee4" stroke-width="1"/>',
+                f'<text x="{x:.1f}" y="552" text-anchor="middle" class="axis">{tick:.2f}</text>',
+            ]
+        )
+    svg.append(f'<line x1="{left}" y1="525" x2="{right}" y2="525" stroke="#59636e" stroke-width="1.5"/>')
+    for label, row, y in rows:
+        random_value = float(row["same_pool_random_ite_recall_10km"])
+        acsp_value = float(row["acsp_ite_recall_10km"])
+        n_pairs = int(row["declared_taxon_region_pairs"])
+        x_random, x_acsp = sx(random_value), sx(acsp_value)
+        svg.extend(
+            [
+                f'<text x="70" y="{y + 8}" class="group">{escape(label)}</text>',
+                f'<text x="70" y="{y + 34}" class="note">n = {n_pairs} taxon-region pairs</text>',
+                f'<line x1="{x_random:.1f}" y1="{y}" x2="{x_acsp:.1f}" y2="{y}" stroke="#59636e" stroke-width="4"/>',
+                f'<circle cx="{x_random:.1f}" cy="{y}" r="11" fill="#ffffff" stroke="#c28a18" stroke-width="4"/>',
+                f'<circle cx="{x_acsp:.1f}" cy="{y}" r="12" fill="#2f6da5" stroke="#1f4d75" stroke-width="2"/>',
+                f'<text x="{x_random:.1f}" y="{y - 23}" text-anchor="middle" class="value">{random_value:.3f}</text>',
+                f'<text x="{x_acsp:.1f}" y="{y + 35}" text-anchor="middle" class="value">{acsp_value:.3f}</text>',
+                f'<text x="{(x_random + x_acsp) / 2:.1f}" y="{y - 23}" text-anchor="middle" class="note">lift +{acsp_value-random_value:.3f}</text>',
+            ]
+        )
+    svg.extend(
+        [
+            '<circle cx="760" cy="600" r="8" fill="#2f6da5" stroke="#1f4d75" stroke-width="2"/><text x="778" y="606" class="axis">Frozen ACSP</text>',
+            '<circle cx="930" cy="600" r="8" fill="#ffffff" stroke="#c28a18" stroke-width="3"/><text x="948" y="606" class="axis">Same-pool random</text>',
+            '</svg>',
+        ]
+    )
+    path.write_text("\n".join(svg), encoding="utf-8")
+
+
+def _write_evidence_boundary_figure(table: pd.DataFrame, path: Path) -> None:
+    width, height = 1400, 650
+    cards = [
+        (75, "Validated Japan core", "SUPPORTED", "48 taxon-region pairs", "Frozen 10-km heldout endpoint", "#2f6da5", "#eaf2f8"),
+        (500, "Country-framed extension", "NOT PROMOTED", "34 / 48 temporally evaluable", "Fresh run failed 1 of 7 gates", "#9a6b12", "#fff6df"),
+        (925, "Provider first activation", "UNAVAILABLE", "3,132 / 3,161 queries succeeded", "29 HTTP 429; heldout unopened", "#6b7280", "#f1f3f5"),
+    ]
+    svg = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="1400" height="650" fill="#ffffff"/>',
+        '<style>text{font-family:Arial,sans-serif;fill:#222831}.title{font-size:30px;font-weight:700}.sub{font-size:17px;fill:#59636e}.cardtitle{font-size:22px;font-weight:700}.status{font-size:17px;font-weight:700}.line{font-size:16px}.note{font-size:15px;fill:#59636e}</style>',
+        '<text x="70" y="62" class="title">Evidence and generalization boundary</text>',
+        '<text x="70" y="94" class="sub">Each extension keeps its frozen denominator and terminal semantics; later technical failure does not revise the validated core</text>',
+    ]
+    for index, (x, title, status, denominator, detail, color, fill) in enumerate(cards):
+        svg.extend(
+            [
+                f'<rect x="{x}" y="175" width="350" height="280" rx="18" fill="{fill}" stroke="{color}" stroke-width="3"/>',
+                f'<text x="{x+28}" y="222" class="cardtitle">{escape(title)}</text>',
+                f'<text x="{x+28}" y="264" class="status" fill="{color}" style="fill:{color}">{escape(status)}</text>',
+                f'<text x="{x+28}" y="318" class="line">{escape(denominator)}</text>',
+                f'<text x="{x+28}" y="352" class="line">{escape(detail)}</text>',
+            ]
+        )
+        if index == 0:
+            svg.append(f'<text x="{x+28}" y="407" class="note">Primary paper anchor</text>')
+        elif index == 1:
+            svg.append(f'<text x="{x+28}" y="407" class="note">Generality/evaluability boundary</text>')
+        else:
+            svg.append(f'<text x="{x+28}" y="397" class="note">Supply protocol abort</text><text x="{x+28}" y="422" class="note">Not a null/adverse hypothesis result</text>')
+    for x1, x2 in ((425, 500), (850, 925)):
+        svg.extend(
+            [
+                f'<line x1="{x1}" y1="315" x2="{x2-14}" y2="315" stroke="#59636e" stroke-width="3"/>',
+                f'<path d="M {x2-14} 306 L {x2} 315 L {x2-14} 324 Z" fill="#59636e"/>',
+            ]
+        )
+    svg.extend(
+        [
+            '<line x1="75" y1="530" x2="1275" y2="530" stroke="#222831" stroke-width="2"/>',
+            '<text x="75" y="568" class="status">MANUSCRIPT HARD STOP</text>',
+            '<text x="300" y="568" class="line">Close at the validated Japan + failed/conditional extension + explicit abstention boundary.</text>',
+            '<text x="300" y="598" class="note">No global-positive rescue; any successor observability test requires a prospectively new contract and cohort.</text>',
+            '</svg>',
+        ]
+    )
+    path.write_text("\n".join(svg), encoding="utf-8")
+
+
 def build(args: argparse.Namespace) -> dict[str, object]:
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -279,18 +440,24 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     comparator, comparator_manifest = _load_secondary_comparator()
     sdm_performance, sdm_decisions, sdm_manifest = _load_sdm_decision_contrast()
     observability, observability_terminal = _load_global_observability_boundary()
+    availability = _evidence_availability_table(retrospective, observability_terminal)
     policies = {
         group: ValidatedCorePolicy.for_taxon_group(group).manifest()
         for group in ("plant", "animal")
     }
 
     retrospective.to_csv(output / "table_1_retrospective_validation.csv", index=False)
+    availability.to_csv(output / "table_2_evidence_availability.csv", index=False)
     seed_sensitivity.to_csv(output / "table_s1_seed_sensitivity.csv", index=False)
     claims.to_csv(output / "table_s2_claim_matrix.csv", index=False)
     comparator.to_csv(output / "table_s3_standard_baseline_comparison.csv", index=False)
     sdm_performance.to_csv(output / "table_s4_fitted_sdm_performance_contrast.csv", index=False)
     sdm_decisions.to_csv(output / "table_s5_sdm_decision_differences.csv", index=False)
     observability.to_csv(output / "table_s6_global_observability_boundary.csv", index=False)
+    _write_recovery_figure(retrospective, output / "figure_1_primary_recovery.svg")
+    _write_evidence_boundary_figure(availability, output / "figure_2_evidence_boundary.svg")
+    for legacy_name in LEGACY_EXCLUDED_OUTPUTS:
+        (output / legacy_name).unlink(missing_ok=True)
     (output / "retrospective_stability.json").write_text(
         json.dumps(stability, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -328,6 +495,9 @@ def build(args: argparse.Namespace) -> dict[str, object]:
         "validated_japan_product_changed_by_global_abort": observability_terminal["claim_boundary"]["validated_japan_product_changed"],
         "outputs": [
             "table_1_retrospective_validation.csv",
+            "table_2_evidence_availability.csv",
+            "figure_1_primary_recovery.svg",
+            "figure_2_evidence_boundary.svg",
             "table_s1_seed_sensitivity.csv",
             "table_s2_claim_matrix.csv",
             "table_s3_standard_baseline_comparison.csv",

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="650" viewBox="0 0 1400 650">
+<rect width="1400" height="650" fill="#ffffff"/>
+<style>text{font-family:Arial,sans-serif;fill:#222831}.title{font-size:30px;font-weight:700}.sub{font-size:17px;fill:#59636e}.cardtitle{font-size:22px;font-weight:700}.status{font-size:17px;font-weight:700}.line{font-size:16px}.note{font-size:15px;fill:#59636e}</style>
+<text x="70" y="62" class="title">Evidence and generalization boundary</text>
+<text x="70" y="94" class="sub">Each extension keeps its frozen denominator and terminal semantics; later technical failure does not revise the validated core</text>
+<rect x="75" y="175" width="350" height="280" rx="18" fill="#eaf2f8" stroke="#2f6da5" stroke-width="3"/>
+<text x="103" y="222" class="cardtitle">Validated Japan core</text>
+<text x="103" y="264" class="status" fill="#2f6da5" style="fill:#2f6da5">SUPPORTED</text>
+<text x="103" y="318" class="line">48 taxon-region pairs</text>
+<text x="103" y="352" class="line">Frozen 10-km heldout endpoint</text>
+<text x="103" y="407" class="note">Primary paper anchor</text>
+<rect x="500" y="175" width="350" height="280" rx="18" fill="#fff6df" stroke="#9a6b12" stroke-width="3"/>
+<text x="528" y="222" class="cardtitle">Country-framed extension</text>
+<text x="528" y="264" class="status" fill="#9a6b12" style="fill:#9a6b12">NOT PROMOTED</text>
+<text x="528" y="318" class="line">34 / 48 temporally evaluable</text>
+<text x="528" y="352" class="line">Fresh run failed 1 of 7 gates</text>
+<text x="528" y="407" class="note">Generality/evaluability boundary</text>
+<rect x="925" y="175" width="350" height="280" rx="18" fill="#f1f3f5" stroke="#6b7280" stroke-width="3"/>
+<text x="953" y="222" class="cardtitle">Provider first activation</text>
+<text x="953" y="264" class="status" fill="#6b7280" style="fill:#6b7280">UNAVAILABLE</text>
+<text x="953" y="318" class="line">3,132 / 3,161 queries succeeded</text>
+<text x="953" y="352" class="line">29 HTTP 429; heldout unopened</text>
+<text x="953" y="397" class="note">Supply protocol abort</text><text x="953" y="422" class="note">Not a null/adverse hypothesis result</text>
+<line x1="425" y1="315" x2="486" y2="315" stroke="#59636e" stroke-width="3"/>
+<path d="M 486 306 L 500 315 L 486 324 Z" fill="#59636e"/>
+<line x1="850" y1="315" x2="911" y2="315" stroke="#59636e" stroke-width="3"/>
+<path d="M 911 306 L 925 315 L 911 324 Z" fill="#59636e"/>
+<line x1="75" y1="530" x2="1275" y2="530" stroke="#222831" stroke-width="2"/>
+<text x="75" y="568" class="status">MANUSCRIPT HARD STOP</text>
+<text x="300" y="568" class="line">Close at the validated Japan + failed/conditional extension + explicit abstention boundary.</text>
+<text x="300" y="598" class="note">No global-positive rescue; any successor observability test requires a prospectively new contract and cohort.</text>
+</svg>
