@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-08-28 - Codex (OpenAI) - Add global observability boundary to paper outputs
+
+Changed files:
+- paper/build_paper_outputs.py
+- paper/README.md
+- paper/MANUSCRIPT_DRAFT.md
+- paper/generated/table_s6_global_observability_boundary.csv
+- paper/generated/paper_output_manifest.json
+- tests/test_paper_global_observability_boundary.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added a separately validated supplementary export for the one-shot provider-supply/evaluability terminal.
+- Updated the manuscript to report the global attempt as supply `protocol_abort`, hypothesis `unavailable`, and not promoted, without treating HTTP 429 failures as a scientific effect.
+- Fixed the documented root-level paper build command to import the stability audit through its `research` package path.
+- Preserved the Japanese confirmation estimates, fitted-SDM decision contrast, and pre-Campanula paper core unchanged.
+
+Features preserved:
+- The 2021–2025 heldout observability facets remain unopened and no global candidate, recall, or lift result is added.
+- The validated Japanese 2.5% support tier, 1 km aggregation, non-ranked planner-free core, and all existing paper effect estimates are unchanged.
+
+Known risks / TODO:
+- The paper remains bounded to the validated Japanese frame. Automatic geographic framing and global name-only use remain unpromoted.
+
 ## 2026-08-28 - Codex (OpenAI) - Freeze provider observability terminal boundary
 
 Changed files:
