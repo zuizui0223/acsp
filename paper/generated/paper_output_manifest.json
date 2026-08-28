@@ -1,0 +1,43 @@
+{
+  "paper_scope": "pre_campanula_cross_taxon_retrospective",
+  "retrospective_status": "complete",
+  "retrospective_endpoint": "Top-5 held-out occurrence recovery within 10 km",
+  "retrospective_baseline": "200 random Top-5 draws from the identical fold-specific candidate pool",
+  "validated_taxon_groups": [
+    "animals",
+    "plants"
+  ],
+  "primary_recovery_radius_km": 10.0,
+  "top_k": 5,
+  "field_data_read": false,
+  "post_baseline_algorithms_read": false,
+  "method_comparator_status": "complete_secondary_predeclared_reconstruction",
+  "method_comparator_protocol_fingerprint": "23773fd0b94f69f96813eb00a49aba3cae25849de27b0dfb5f729a355d61fbce",
+  "method_comparator_boundary": {
+    "frozen": "taxon-region cohort membership, ACSP plant and animal policies, comparator protocol, Top-k budget, recovery radius, comparator definitions",
+    "regenerated": "GBIF occurrence records, candidate surfaces, and spatial-block holdout assignments on 2026-07-24",
+    "interpretation": "Secondary predeclared reconstruction benchmark. It is not a reanalysis of the exact candidate pools used in the original 2026-07-05/06 confirmatory results and does not replace Table 1."
+  },
+  "sdm_decision_contrast_status": "complete_secondary_matched_pool",
+  "sdm_decision_contrast_protocol_fingerprint": "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5a38022652",
+  "sdm_decision_contrast_interpretation": "decision differentiation first; held-out superiority is not a manuscript claim",
+  "global_observability_status": "abort_not_evaluable",
+  "global_observability_supply_status": "protocol_abort",
+  "global_observability_hypothesis_status": "unavailable",
+  "global_observability_heldout_opened": false,
+  "global_product_promoted": false,
+  "validated_japan_product_changed_by_global_abort": false,
+  "outputs": [
+    "table_1_retrospective_validation.csv",
+    "table_s1_seed_sensitivity.csv",
+    "table_s2_claim_matrix.csv",
+    "table_s3_standard_baseline_comparison.csv",
+    "table_s4_fitted_sdm_performance_contrast.csv",
+    "table_s5_sdm_decision_differences.csv",
+    "table_s6_global_observability_boundary.csv",
+    "retrospective_stability.json",
+    "validated_core_policies.json",
+    "standard_baseline_results_manifest.json",
+    "sdm_decision_results_manifest.json"
+  ]
+}

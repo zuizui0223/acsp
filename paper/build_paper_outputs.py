@@ -6,7 +6,9 @@ comparisons are reported separately as secondary evidence and never replace the
 original confirmatory estimates. The 2026-08-08 fitted-SDM benchmark is treated
 primarily as a matched-pool decision-object contrast; its held-out recovery
 comparison is secondary, while the outcome-free set-difference table documents
-whether the two methods make the same field decision.
+whether the two methods make the same field decision. The later one-shot global
+observability attempt is exported only as a provider-supply/evaluability boundary,
+not as a held-out effect estimate.
 
 Field GPS data, post-baseline allocation rules, ODSP exports, and production-only
 integrated evidence are not read by this builder.
@@ -25,7 +27,7 @@ if str(ROOT) not in sys.path:
 import pandas as pd
 
 from acsp import StandardBaselineProtocol, ValidatedCorePolicy, claim_status_table
-from audit_random_validation_stability import run as run_stability_audit
+from research.audit_random_validation_stability import run as run_stability_audit
 
 DEFAULT_OUTPUT = ROOT / "paper/generated"
 COMPARATOR_DIR = ROOT / "validation/standard_baseline_results_20260724"
@@ -44,6 +46,9 @@ EXPECTED_SDM_PROTOCOL = "cea7ba04d53d6af7be5d642746539e46ff924435fd683aa43479ea5
 EXPECTED_SDM_CONTRACT = "1627009619716726e4af2e1ac7dc5ce47fa50dcfefa3bb042364c84b00884bd1"
 EXPECTED_SDM_RECOVERY_ARTIFACT_SHA256 = "560b4e46b4c9b961bba21558ba897632ea1edf8f178625c086357a8fc478e461"
 EXPECTED_SDM_DECISION_ARTIFACT_SHA256 = "98a927bc5a48f7c59300c955fa0ba464a560498bb3048c84b4f60470f5907eb6"
+OBSERVABILITY_TERMINAL = (
+    ROOT / "validation/acsp_provider_eligible_observability_first_activation_terminal_v1.json"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -210,6 +215,59 @@ def _load_sdm_decision_contrast() -> tuple[pd.DataFrame, pd.DataFrame, dict[str,
     return performance, decision_summary, manifest
 
 
+def _load_global_observability_boundary() -> tuple[pd.DataFrame, dict[str, object]]:
+    terminal = json.loads(OBSERVABILITY_TERMINAL.read_text(encoding="utf-8"))
+    if terminal.get("schema_id") != "acsp_provider_eligible_observability_first_activation_terminal_v1":
+        raise ValueError("Global observability terminal schema changed.")
+    run = terminal["authoritative_run"]
+    observed = terminal["observed_execution"]
+    original = terminal["original_terminal_status"]
+    axes = terminal["two_axis_description"]
+    boundary = terminal["claim_boundary"]
+    if int(run.get("workflow_run_id", -1)) != 33031292325 or int(run.get("workflow_run_number", -1)) != 1:
+        raise ValueError("Global observability authoritative one-shot run changed.")
+    if original.get("status") != "abort_not_evaluable":
+        raise ValueError("Global observability original terminal status changed.")
+    if axes.get("supply_status") != "protocol_abort" or axes.get("hypothesis_status") != "unavailable":
+        raise ValueError("Global observability two-axis status changed.")
+    for key in (
+        "heldout_2021_2025_opened",
+        "candidate_generation_run",
+        "robust_support_run",
+        "random_baseline_run",
+        "recall_or_lift_read",
+        "outcome_driven_tuning",
+    ):
+        if observed.get(key) is not False:
+            raise ValueError(f"Global observability boundary crossed: {key}")
+    if boundary.get("observability_hypothesis_tested") is not False:
+        raise ValueError("Global observability abort was reclassified as a hypothesis test.")
+    if boundary.get("validated_japan_product_changed") is not False:
+        raise ValueError("Global observability abort changed the validated Japan product.")
+    row = {
+        "scope": "country_framed_global_extension",
+        "workflow_run_id": int(run["workflow_run_id"]),
+        "workflow_run_number": int(run["workflow_run_number"]),
+        "terminal_stage": int(run["terminal_stage"]),
+        "candidate_rows": int(observed["candidate_rows"]),
+        "historical_unique_species_queries": int(observed["historical_unique_species_queries"]),
+        "historical_provider_success_count": int(observed["historical_provider_success_count"]),
+        "historical_provider_error_count": int(observed["historical_provider_error_count"]),
+        "provider_error_type": observed["provider_error_type"],
+        "supply_status": axes["supply_status"],
+        "hypothesis_status": axes["hypothesis_status"],
+        "promotion_status": axes["promotion_status"],
+        "heldout_2021_2025_opened": observed["heldout_2021_2025_opened"],
+        "complete_authoritative_96_frame_artifact_created": observed[
+            "complete_authoritative_96_frame_artifact_created"
+        ],
+        "observability_hypothesis_tested": boundary["observability_hypothesis_tested"],
+        "validated_japan_product_changed": boundary["validated_japan_product_changed"],
+        "interpretation": boundary["allowed_role"],
+    }
+    return pd.DataFrame([row]), terminal
+
+
 def build(args: argparse.Namespace) -> dict[str, object]:
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -220,6 +278,7 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     claims = claim_status_table()
     comparator, comparator_manifest = _load_secondary_comparator()
     sdm_performance, sdm_decisions, sdm_manifest = _load_sdm_decision_contrast()
+    observability, observability_terminal = _load_global_observability_boundary()
     policies = {
         group: ValidatedCorePolicy.for_taxon_group(group).manifest()
         for group in ("plant", "animal")
@@ -231,6 +290,7 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     comparator.to_csv(output / "table_s3_standard_baseline_comparison.csv", index=False)
     sdm_performance.to_csv(output / "table_s4_fitted_sdm_performance_contrast.csv", index=False)
     sdm_decisions.to_csv(output / "table_s5_sdm_decision_differences.csv", index=False)
+    observability.to_csv(output / "table_s6_global_observability_boundary.csv", index=False)
     (output / "retrospective_stability.json").write_text(
         json.dumps(stability, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -260,6 +320,12 @@ def build(args: argparse.Namespace) -> dict[str, object]:
         "sdm_decision_contrast_status": "complete_secondary_matched_pool",
         "sdm_decision_contrast_protocol_fingerprint": sdm_manifest["protocol_fingerprint"],
         "sdm_decision_contrast_interpretation": "decision differentiation first; held-out superiority is not a manuscript claim",
+        "global_observability_status": observability_terminal["original_terminal_status"]["status"],
+        "global_observability_supply_status": observability_terminal["two_axis_description"]["supply_status"],
+        "global_observability_hypothesis_status": observability_terminal["two_axis_description"]["hypothesis_status"],
+        "global_observability_heldout_opened": observability_terminal["observed_execution"]["heldout_2021_2025_opened"],
+        "global_product_promoted": observability_terminal["claim_boundary"]["country_framed_or_global_product_promoted"],
+        "validated_japan_product_changed_by_global_abort": observability_terminal["claim_boundary"]["validated_japan_product_changed"],
         "outputs": [
             "table_1_retrospective_validation.csv",
             "table_s1_seed_sensitivity.csv",
@@ -267,6 +333,7 @@ def build(args: argparse.Namespace) -> dict[str, object]:
             "table_s3_standard_baseline_comparison.csv",
             "table_s4_fitted_sdm_performance_contrast.csv",
             "table_s5_sdm_decision_differences.csv",
+            "table_s6_global_observability_boundary.csv",
             "retrospective_stability.json",
             "validated_core_policies.json",
             "standard_baseline_results_manifest.json",
