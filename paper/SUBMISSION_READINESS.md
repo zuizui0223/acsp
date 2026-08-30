@@ -56,9 +56,10 @@ Run from the repository root:
 
 ```bash
 python paper/validate_submission_alignment.py
+python -m unittest tests/test_robust_patch_submission_alignment.py
 ```
 
-The validator is network-free and checks:
+Both checks are network-free. The validator checks:
 
 - authoritative constants in `acsp/validated_robust.py`;
 - exact values in the primary robust confirmation table;
@@ -67,7 +68,7 @@ The validator is network-free and checks:
 - bounded manuscript language;
 - separation and preservation of the historical Top-5 package.
 
-Repository CI also runs `tests/test_robust_patch_submission_alignment.py`.
+Repository CI runs the same alignment test as part of the ordinary test suite.
 
 ## Files ready for scientific review
 
