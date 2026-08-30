@@ -1,0 +1,2 @@
+analysis_scope,product,declared_taxon_region_pairs,declared_folds,primary_endpoint_km,comparator,mean_lift_over_comparator,bootstrap_ci95_lower,bootstrap_ci95_upper,sign_flip_p,plant_mean_lift,animal_mean_lift,confirmation_status
+validated_japan_12_region_frame,non-ranked robust candidate patches,96,480,10,same-size random candidate-patch sets,0.08558708102617191,0.051186296271122624,0.12165096941745603,3.333222225925803e-05,0.057023839246432256,0.11415032280591153,untouched_confirmation_passed
