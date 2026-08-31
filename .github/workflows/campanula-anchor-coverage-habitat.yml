@@ -7,8 +7,6 @@ on:
       - "research/test_campanula_anchor_coverage_habitat.py"
       - "research/evaluate_campanula_anchor_selector_comparison.py"
       - "research/test_campanula_anchor_selector_comparison.py"
-      - "research/evaluate_campanula_anchor_ndvi_filter.py"
-      - "research/evaluate_campanula_anchor_spatial_balance.py"
       - ".github/workflows/campanula-anchor-coverage-habitat.yml"
   workflow_dispatch:
 
@@ -55,6 +53,15 @@ jobs:
           repository: ${{ github.repository }}
           run-id: 31856717236
 
+      - name: Download exact current-head spatial and NDVI baselines
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-anchor-compression-baselines
+          path: baseline-results
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 33412591850
+
       - name: Download pinned NDVI composite
         run: |
           set -euo pipefail
@@ -84,22 +91,43 @@ jobs:
           assert report['gbif_rows_in_islands'] == 56
           PY
 
-      - name: Run exact matched selector comparison
+      - name: Evaluate coverage-constrained habitat selector only
         run: |
-          python research/evaluate_campanula_anchor_selector_comparison.py \
+          python research/evaluate_campanula_anchor_coverage_habitat.py \
             --universe microterrain-results/microterrain_universe.csv \
             --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
             --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
             --ndvi public-layers/ndvi.tif \
-            --out-dir campanula-anchor-selector-comparison
+            --out-dir campanula-anchor-coverage-habitat
+
+      - name: Compare against pinned exact-count baselines
+        run: |
           python - <<'PY'
           import json
           from pathlib import Path
           import pandas as pd
+          from evaluate_campanula_anchor_selector_comparison import compare_selector_aggregates
 
-          root = Path('campanula-anchor-selector-comparison')
-          summary = json.loads((root / 'summary.json').read_text())
-          comparison = pd.read_csv(root / 'matched_selector_comparison.csv')
+          spatial = pd.read_csv(
+              'baseline-results/campanula-anchor-spatial-balance/anchor_spatial_balance_aggregate.csv'
+          )
+          ndvi = pd.read_csv(
+              'baseline-results/campanula-anchor-ndvi-filter/anchor_ndvi_filter_aggregate.csv'
+          )
+          coverage = pd.read_csv(
+              'campanula-anchor-coverage-habitat/anchor_coverage_habitat_aggregate.csv'
+          )
+          comparison, summary = compare_selector_aggregates(spatial, ndvi, coverage)
+          summary['baseline_workflow_run_id'] = 33412591850
+          summary['baseline_artifact_id'] = 9765765509
+          summary['baseline_artifact_digest'] = 'sha256:4cb8fb3b9dbf2d7461c711f25bba91ef1bb442d3c125fe19e933875a96ed2a4f'
+          summary['baseline_head_sha'] = '55ca4f5b7552f82bf82579814d9914b60951cba9'
+          out = Path('campanula-anchor-selector-comparison')
+          out.mkdir(parents=True, exist_ok=True)
+          comparison.to_csv(out / 'matched_selector_comparison.csv', index=False)
+          (out / 'summary.json').write_text(
+              json.dumps(summary, indent=2) + '\n', encoding='utf-8'
+          )
           assert summary['scientific_role'] == 'development_internal_exact_matched_selector_comparison_only'
           assert summary['independent_validation'] is False
           assert summary['reads_2026_field_outcomes'] is False
@@ -116,6 +144,7 @@ jobs:
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
+            campanula-anchor-coverage-habitat/
             campanula-anchor-selector-comparison/
           if-no-files-found: error
           retention-days: 90
