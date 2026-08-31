@@ -19,12 +19,12 @@ class CoverageConstrainedHabitatTests(unittest.TestCase):
     def test_selector_preserves_coverage_strata_and_prefers_habitat_within_each(self):
         frame = pd.DataFrame(
             [
-                {"island": "alpha", "lat": 0.0, "lon": 0.001, "candidate_cell_id": 1, "environment_distance": 5.0},
-                {"island": "alpha", "lat": 0.0, "lon": 0.002, "candidate_cell_id": 2, "environment_distance": 1.0},
-                {"island": "alpha", "lat": 0.0, "lon": 0.003, "candidate_cell_id": 3, "environment_distance": 4.0},
-                {"island": "alpha", "lat": 0.0, "lon": 0.020, "candidate_cell_id": 4, "environment_distance": 6.0},
-                {"island": "alpha", "lat": 0.0, "lon": 0.021, "candidate_cell_id": 5, "environment_distance": 0.5},
-                {"island": "alpha", "lat": 0.0, "lon": 0.022, "candidate_cell_id": 6, "environment_distance": 3.0},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.001, "candidate_cell_id": 1, "environment_distance": 5.0},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.002, "candidate_cell_id": 2, "environment_distance": 1.0},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.003, "candidate_cell_id": 3, "environment_distance": 4.0},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.020, "candidate_cell_id": 4, "environment_distance": 6.0},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.021, "candidate_cell_id": 5, "environment_distance": 0.5},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.022, "candidate_cell_id": 6, "environment_distance": 3.0},
             ]
         )
         selected = coverage_constrained_habitat_sample(frame, 2)
@@ -94,8 +94,8 @@ class CoverageConstrainedHabitatTests(unittest.TestCase):
     def test_invalid_environment_distance_fails_closed(self):
         frame = pd.DataFrame(
             [
-                {"island": "alpha", "lat": 0.0, "lon": 0.001, "candidate_cell_id": 1, "environment_distance": float("nan")},
-                {"island": "alpha", "lat": 0.0, "lon": 0.002, "candidate_cell_id": 2, "environment_distance": 1.0},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.001, "candidate_cell_id": 1, "environment_distance": float("nan")},
+                {"island": "alpha", "latitude": 0.0, "longitude": 0.002, "candidate_cell_id": 2, "environment_distance": 1.0},
             ]
         )
         with self.assertRaises(ValueError):
