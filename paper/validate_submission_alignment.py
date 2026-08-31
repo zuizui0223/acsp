@@ -301,6 +301,20 @@ def _validate_text_boundaries(constants: dict[str, object], support_world_dtype:
     for token in required_manuscript_tokens:
         _require(token in manuscript, f"Submission manuscript lost required boundary: {token}")
 
+    method_value_counts = {
+        f"{support_percent:g}%": 4,
+        f"{float(constants['VALIDATED_ROBUST_SUPPORT_FRACTION']):.3f}": 2,
+        f"`{support_world_dtype}`": 2,
+        f"{merge_distance_km:g}-km": 2,
+        f"{float(constants['VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M']):,.0f} m": 1,
+    }
+    for value, expected_count in method_value_counts.items():
+        _require(
+            manuscript.count(value) == expected_count,
+            f"Submission manuscript method value count changed for {value}: "
+            f"{manuscript.count(value)} != {expected_count}",
+        )
+
     claim_text = manuscript
     for boundary in allowed_negated_boundaries:
         _require(boundary in manuscript, f"Submission manuscript lost required negated boundary: {boundary}")

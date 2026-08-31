@@ -57,6 +57,10 @@ class RobustPatchSubmissionAlignmentTests(unittest.TestCase):
                 "deterministic 1-km same-area complete-link rule",
                 "deterministic 5-km same-area complete-link rule",
             ),
+            ("The 2.5% quantity is a frozen method parameter", "The 5% quantity is a frozen method parameter"),
+            ("U_{0.025}=\\{u_i:r_i\\le 0.025\\}", "U_{0.05}=\\{u_i:r_i\\le 0.05\\}"),
+            ("at most 1,000 m", "at most 5,000 m"),
+            ("`float32` leave-one-out worlds", "`float64` leave-one-out worlds"),
         )
         with tempfile.TemporaryDirectory() as directory:
             mutated_path = Path(directory) / "manuscript.md"

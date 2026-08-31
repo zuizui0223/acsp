@@ -15,6 +15,7 @@ Summary:
 - Required exactly four transfer rows and locked the provider row's promotion, heldout, and unavailable-not-negative interpretation to the frozen terminal record.
 - Bound the manuscript's 2.5% tier, `float32` support worlds, and 1-km same-area complete-link statement to parsed source semantics, with fail-closed mutation tests.
 - Locked the fresh transfer row to its frozen 6-of-7 gate failure, temporal-evaluability failed gate, and scientific-fail terminal status, with mutation tests.
+- Required every claim-bearing occurrence of the frozen method values in Abstract, Methods, transfer, provenance, and conclusion prose, preventing internally contradictory rewrites from passing.
 
 Features preserved:
 - No manuscript result, generated table, validated constant, candidate-generation code, consumed cohort, or scientific terminal status changed.
