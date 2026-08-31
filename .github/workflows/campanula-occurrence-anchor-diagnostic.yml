@@ -7,6 +7,7 @@ on:
       - "research/test_campanula_occurrence_anchor_diagnostic.py"
       - "research/OCCURRENCE_ANCHORED_LOCAL_DISCOVERY.md"
       - "validation/acsp_occurrence_anchored_local_discovery_development_v1.json"
+      - "validation/campanula_occurrence_anchor_diagnostic_v1/**"
       - "field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv"
       - "field_validation/campanula_microdonta/development_data/detection_clusters.csv"
       - "field_validation/campanula_microdonta/development_data/manifest.json"
@@ -41,6 +42,12 @@ jobs:
           assert sum(summary["anchor_regime_counts"].values()) == 19
           print(json.dumps(summary, indent=2, ensure_ascii=False))
           PY
+          cmp \
+            campanula-occurrence-anchor-diagnostic/summary.json \
+            validation/campanula_occurrence_anchor_diagnostic_v1/summary.json
+          cmp \
+            campanula-occurrence-anchor-diagnostic/cluster_anchor_distances.csv \
+            validation/campanula_occurrence_anchor_diagnostic_v1/cluster_anchor_distances.csv
       - name: Upload diagnostic artifact
         uses: actions/upload-artifact@v4
         with:
