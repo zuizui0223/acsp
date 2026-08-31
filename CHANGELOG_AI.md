@@ -13,6 +13,7 @@ Summary:
 - Allowed the manuscript's exact negated global-validation boundary while continuing to reject any additional affirmative global-validation claim.
 - Converted the new alignment checks into `unittest.TestCase` tests and added explicit `tests/` discovery to package CI so the checks actually execute.
 - Required exactly four transfer rows and locked the provider row's promotion, heldout, and unavailable-not-negative interpretation to the frozen terminal record.
+- Bound the manuscript's 2.5% tier, `float32` support worlds, and 1-km same-area complete-link statement to parsed source semantics, with fail-closed mutation tests.
 
 Features preserved:
 - No manuscript result, generated table, validated constant, candidate-generation code, consumed cohort, or scientific terminal status changed.

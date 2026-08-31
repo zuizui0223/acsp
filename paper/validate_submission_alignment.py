@@ -52,6 +52,21 @@ def _load_literal_constants(path: Path) -> dict[str, object]:
     return values
 
 
+def _load_call_keyword_literal(path: Path, *, function: str, callee: str, keyword: str) -> object:
+    module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    definitions = [node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function]
+    _require(len(definitions) == 1, f"Expected exactly one {function} definition")
+    values = []
+    for node in ast.walk(definitions[0]):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name) or node.func.id != callee:
+            continue
+        for argument in node.keywords:
+            if argument.arg == keyword:
+                values.append(ast.literal_eval(argument.value))
+    _require(len(values) == 1, f"Expected exactly one literal {callee}(..., {keyword}=...) value")
+    return values[0]
+
+
 def _read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
@@ -242,9 +257,11 @@ def _validate_transfer_table(constants: dict[str, object]) -> None:
     )
 
 
-def _validate_text_boundaries() -> None:
+def _validate_text_boundaries(constants: dict[str, object], support_world_dtype: str) -> None:
     manuscript = MANUSCRIPT.read_text(encoding="utf-8")
     readme = PAPER_README.read_text(encoding="utf-8")
+    support_percent = 100.0 * float(constants["VALIDATED_ROBUST_SUPPORT_FRACTION"])
+    merge_distance_km = float(constants["VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M"]) / 1000.0
     allowed_negated_boundaries = (
         (
             "The supported conclusion is therefore neither “ACSP works only in Japan” nor “ACSP is globally "
@@ -268,6 +285,9 @@ def _validate_text_boundaries() -> None:
         "not occupancy probability",
         "*Campanula microdonta* is used only as transparent method-development provenance",
         "hypothesis status was unavailable rather than negative",
+        f"frozen {support_percent:g}% consensus tier",
+        f"stored the resulting world as `{support_world_dtype}`",
+        f"deterministic {merge_distance_km:g}-km same-area complete-link rule",
     )
     for token in required_manuscript_tokens:
         _require(token in manuscript, f"Submission manuscript lost required boundary: {token}")
@@ -301,6 +321,12 @@ def _validate_text_boundaries() -> None:
 
 def run() -> dict[str, object]:
     constants = _load_literal_constants(VALIDATED_SOURCE)
+    support_world_dtype = _load_call_keyword_literal(
+        VALIDATED_SOURCE,
+        function="validated_robust_candidate_patches",
+        callee="leave_one_out_consensus_support",
+        keyword="support_world_dtype",
+    )
     required_constants = {
         "VALIDATED_ROBUST_SUPPORT_FRACTION",
         "VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M",
@@ -326,9 +352,10 @@ def run() -> dict[str, object]:
         1000.0,
         name="validated patch merge distance",
     )
+    _require(support_world_dtype == "float32", "Validated support-world dtype changed")
     _validate_primary_table(constants)
     _validate_transfer_table(constants)
-    _validate_text_boundaries()
+    _validate_text_boundaries(constants, str(support_world_dtype))
     return {
         "status": "submission_alignment_passed",
         "authoritative_product": "non-ranked robust candidate patches",
