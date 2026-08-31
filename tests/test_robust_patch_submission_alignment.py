@@ -98,6 +98,33 @@ class RobustPatchSubmissionAlignmentTests(unittest.TestCase):
                     with self.assertRaises(AssertionError):
                         validator.run()
 
+    def test_transfer_table_claims_and_required_blanks_fail_closed(self):
+        with validator.TABLE_2.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = list(reader.fieldnames or ())
+            original_rows = list(reader)
+        row_indexes = {row["experiment_id"]: index for index, row in enumerate(original_rows)}
+        mutations = (
+            ("japan_robust_confirmation", "geographic_scope", "globally validated product"),
+            ("japan_robust_confirmation", "ci95_lower", "-999"),
+            ("country_framed_reserved_replication", "failed_gate", "none"),
+            ("country_framed_fresh_confirmation", "interpretation", "global confirmation passed"),
+            ("provider_eligible_observability_first_activation", "failed_gate", "none"),
+            ("provider_eligible_observability_first_activation", "mean_robust_minus_random_recall", "0.5"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            mutated_path = Path(directory) / "transfer.csv"
+            for experiment_id, field, value in mutations:
+                rows = [dict(row) for row in original_rows]
+                rows[row_indexes[experiment_id]][field] = value
+                with mutated_path.open("w", encoding="utf-8", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                with mock.patch.object(validator, "TABLE_2", mutated_path):
+                    with self.assertRaises(AssertionError):
+                        validator.run()
+
 
 if __name__ == "__main__":
     unittest.main()

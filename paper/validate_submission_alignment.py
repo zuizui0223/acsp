@@ -143,7 +143,30 @@ def _validate_primary_table(constants: dict[str, object]) -> None:
 
 
 def _validate_transfer_table(constants: dict[str, object]) -> None:
-    table_rows = _read_csv(TABLE_2)
+    expected_header = [
+        "experiment_id",
+        "geographic_scope",
+        "declared_units",
+        "unit_type",
+        "candidate_generation_success",
+        "temporally_evaluable",
+        "integrated_evaluable",
+        "provider_candidate_rows",
+        "provider_historical_queries",
+        "provider_errors",
+        "mean_robust_minus_random_recall",
+        "ci95_lower",
+        "ci95_upper",
+        "failed_gate",
+        "terminal_status",
+        "promotion_status",
+        "heldout_status",
+        "interpretation",
+    ]
+    with TABLE_2.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        _require(reader.fieldnames == expected_header, "Transfer table schema changed")
+        table_rows = list(reader)
     _require(len(table_rows) == 4, "Transfer table must contain exactly four declared experiments")
     rows = {row["experiment_id"]: row for row in table_rows}
     expected_ids = {
@@ -264,6 +287,90 @@ def _validate_transfer_table(constants: dict[str, object]) -> None:
         == "HTTP 429 provider failures stopped the one-shot freeze; the observability hypothesis remained unavailable rather than negative.",
         "Provider table interpretation changed",
     )
+
+    expected_rows = [
+        {
+            "experiment_id": "japan_robust_confirmation",
+            "geographic_scope": "fixed Japanese 12-region frame",
+            "declared_units": str(constants["VALIDATED_ROBUST_CONFIRMATION_PAIRS"]),
+            "unit_type": "taxon-region pairs",
+            "candidate_generation_success": "",
+            "temporally_evaluable": "",
+            "integrated_evaluable": "",
+            "provider_candidate_rows": "",
+            "provider_historical_queries": "",
+            "provider_errors": "",
+            "mean_robust_minus_random_recall": str(constants["VALIDATED_ROBUST_MEAN_LIFT_OVER_RANDOM"]),
+            "ci95_lower": str(constants["VALIDATED_ROBUST_BOOTSTRAP_CI"][0]),
+            "ci95_upper": str(constants["VALIDATED_ROBUST_BOOTSTRAP_CI"][1]),
+            "failed_gate": "",
+            "terminal_status": str(constants["VALIDATED_ROBUST_STATUS"]),
+            "promotion_status": "validated_product",
+            "heldout_status": "opened under frozen five-fold spatial holdout",
+            "interpretation": "Candidate patches enriched held-out occurrences over same-size random sets at 10 km.",
+        },
+        {
+            "experiment_id": "country_framed_reserved_replication",
+            "geographic_scope": "country-framed 2-degree regional lattice",
+            "declared_units": str(reserved_results["declared_taxa"]),
+            "unit_type": "taxa",
+            "candidate_generation_success": str(reserved_results["candidate_generation_success_taxa"]),
+            "temporally_evaluable": str(reserved_results["temporally_evaluable_taxa"]),
+            "integrated_evaluable": str(reserved_results["integrated_evaluable_taxa"]),
+            "provider_candidate_rows": "",
+            "provider_historical_queries": "",
+            "provider_errors": "",
+            "mean_robust_minus_random_recall": str(reserved_results["mean_robust_minus_random_recall"]),
+            "ci95_lower": str(reserved_results["taxon_bootstrap_95pct_ci"][0]),
+            "ci95_upper": str(reserved_results["taxon_bootstrap_95pct_ci"][1]),
+            "failed_gate": "bootstrap 95% lower bound greater than zero",
+            "terminal_status": str(reserved_record["status"]),
+            "promotion_status": "not_promoted",
+            "heldout_status": "opened once under frozen contract",
+            "interpretation": "The positive direction replicated, but uncertainty crossed zero under the preregistered gate.",
+        },
+        {
+            "experiment_id": "country_framed_fresh_confirmation",
+            "geographic_scope": "country-framed 2-degree regional lattice",
+            "declared_units": str(fresh_record["declared_taxa"]),
+            "unit_type": "taxa",
+            "candidate_generation_success": str(fresh_record["candidate_generation_success_taxa"]),
+            "temporally_evaluable": str(fresh_record["temporally_evaluable_taxa"]),
+            "integrated_evaluable": str(fresh_record["integrated_evaluable_taxa"]),
+            "provider_candidate_rows": "",
+            "provider_historical_queries": "",
+            "provider_errors": "",
+            "mean_robust_minus_random_recall": str(fresh_record["mean_robust_minus_random_recall"]),
+            "ci95_lower": str(fresh_record["taxon_bootstrap_95pct_ci"][0]),
+            "ci95_upper": str(fresh_record["taxon_bootstrap_95pct_ci"][1]),
+            "failed_gate": "temporal evaluability at least 0.75",
+            "terminal_status": "scientific_fail_6_of_7_gates",
+            "promotion_status": "not_promoted",
+            "heldout_status": "opened once under frozen contract",
+            "interpretation": "Lift was positive among integrated-evaluable taxa, but only 34 of 48 taxa had evaluable recent-country outcomes.",
+        },
+        {
+            "experiment_id": "provider_eligible_observability_first_activation",
+            "geographic_scope": "country-framed provider-eligible observability contract",
+            "declared_units": "",
+            "unit_type": "frames",
+            "candidate_generation_success": "",
+            "temporally_evaluable": "",
+            "integrated_evaluable": "",
+            "provider_candidate_rows": str(observed["candidate_rows"]),
+            "provider_historical_queries": str(observed["historical_unique_species_queries"]),
+            "provider_errors": str(observed["historical_provider_error_count"]),
+            "mean_robust_minus_random_recall": "",
+            "ci95_lower": "",
+            "ci95_upper": "",
+            "failed_gate": "complete authoritative 96-frame pre-heldout freeze",
+            "terminal_status": str(terminal_record["original_terminal_status"]["status"]),
+            "promotion_status": str(statuses["promotion_status"]),
+            "heldout_status": "2021-2025 heldout unopened",
+            "interpretation": "HTTP 429 provider failures stopped the one-shot freeze; the observability hypothesis remained unavailable rather than negative.",
+        },
+    ]
+    _require(table_rows == expected_rows, "Transfer table rows or required blank cells changed")
 
 
 def _validate_text_boundaries(constants: dict[str, object], support_world_dtype: str) -> None:

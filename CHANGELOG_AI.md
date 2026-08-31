@@ -16,6 +16,7 @@ Summary:
 - Bound the manuscript's 2.5% tier, `float32` support worlds, and 1-km same-area complete-link statement to parsed source semantics, with fail-closed mutation tests.
 - Locked the fresh transfer row to its frozen 6-of-7 gate failure, temporal-evaluability failed gate, and scientific-fail terminal status, with mutation tests.
 - Required every claim-bearing occurrence of the frozen method values in Abstract, Methods, transfer, provenance, and conclusion prose, preventing internally contradictory rewrites from passing.
+- Locked Table 2's exact schema and all cells for all four evidence rows, including required blanks that prevent a provider STOP from acquiring invented scientific outcomes.
 
 Features preserved:
 - No manuscript result, generated table, validated constant, candidate-generation code, consumed cohort, or scientific terminal status changed.
