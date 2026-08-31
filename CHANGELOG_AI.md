@@ -1,5 +1,58 @@
 # AI Change Log
 
+## 2026-08-31 - Codex (OpenAI) - Make submission alignment guard executable in ordinary CI
+
+Changed files:
+- .github/workflows/package-checks.yml
+- paper/SUBMISSION_READINESS.md
+- paper/validate_submission_alignment.py
+- tests/test_robust_patch_submission_alignment.py
+- CHANGELOG_AI.md
+
+Summary:
+- Allowed the manuscript's exact negated global-validation boundary while continuing to reject any additional affirmative global-validation claim.
+- Converted the new alignment checks into `unittest.TestCase` tests and added explicit `tests/` discovery to package CI so the checks actually execute.
+- Required exactly four transfer rows and locked the provider row's promotion, heldout, and unavailable-not-negative interpretation to the frozen terminal record.
+- Bound the manuscript's 2.5% tier, `float32` support worlds, and 1-km same-area complete-link statement to parsed source semantics, with fail-closed mutation tests.
+- Locked the fresh transfer row to its frozen 6-of-7 gate failure, temporal-evaluability failed gate, and scientific-fail terminal status, with mutation tests.
+- Required every claim-bearing occurrence of the frozen method values in Abstract, Methods, transfer, provenance, and conclusion prose, preventing internally contradictory rewrites from passing.
+- Locked Table 2's exact schema and all cells for all four evidence rows, including required blanks that prevent a provider STOP from acquiring invented scientific outcomes.
+
+Features preserved:
+- No manuscript result, generated table, validated constant, candidate-generation code, consumed cohort, or scientific terminal status changed.
+- The non-ranked Japanese robust-patch claim, failed/conditional transfer results, provider abort/unavailable status, heldout closure, and historical Top-5 provenance remain unchanged.
+
+Known risks / TODO:
+- Journal-specific formatting and editorial work remain outside this mechanical CI correction.
+
+## 2026-08-30 - ChatGPT (OpenAI) - Align submission manuscript with robust candidate patches
+
+Changed files:
+- paper/MANUSCRIPT_ROBUST_PATCH_DRAFT.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- paper/generated/table_1_robust_patch_confirmation.csv
+- paper/generated/table_2_robust_patch_transfer_boundary.csv
+- paper/validate_submission_alignment.py
+- tests/test_robust_patch_submission_alignment.py
+- CHANGELOG_AI.md
+
+Summary:
+- Added a submission-facing manuscript centered on the authoritative non-ranked robust candidate-patch product rather than the preserved historical finite Top-5 policy.
+- Bound the primary confirmation table to the exact constants in `acsp/validated_robust.py` and added a transfer-boundary table that retains both failed country-framed confirmations and the provider-aborted observability attempt.
+- Added a network-free alignment validator and repository test that compare the manuscript and tables with authoritative code constants and frozen result JSONs.
+- Updated `paper/README.md` to keep the historical Top-5 manuscript and outputs as explicit provenance rather than silently redefining or deleting them.
+
+Features preserved:
+- The frozen 2.5% leave-one-prototype-out support tier, float32 worlds, 1 km same-area complete-link aggregation, candidate membership, and 96-pair/480-fold confirmation evidence are unchanged.
+- No global product, occupancy probability, exact-site prediction, ranking, routing, field-efficiency, or SDM/GRTS/biosurvey superiority claim is added.
+- `Campanula microdonta` remains development and freeze-regression evidence, and consumed global cohorts are not reopened or rescued.
+- The application, optional SDM/SSDM, maps, exports, operational layers, historical manuscript, and historical generated tables remain available.
+
+Known risks / TODO:
+- Journal formatting, immutable release DOI/GBIF citations, CRediT contributions, competing-interest text, and final figure placement remain editorial tasks.
+- The current independent validation remains limited to the fixed Japanese 12-region frame; a future global claim requires a separately frozen end-to-end experiment with fresh identities and a complete provider/evaluability object.
+
 ## 2026-08-28 - Codex (OpenAI) - Close the bounded ACSP paper package
 
 Changed files:

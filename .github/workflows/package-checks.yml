@@ -71,7 +71,9 @@ jobs:
           research/run_standard_baseline_benchmark.py
           paper/build_paper_outputs.py
       - name: Run survey-tool tests
-        run: python -m unittest discover -v
+        run: |
+          python -m unittest discover -v
+          python -m unittest discover -s tests -p "test_*.py" -v
       - name: Run research pipeline tests
         run: python -m unittest discover -s research -t research -v
       - name: Build Python wheel

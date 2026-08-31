@@ -1,3 +1,42 @@
+# ACSP paper packages
+
+## Current submission-facing robust candidate-patch package
+
+The current authoritative ACSP paper object is the **non-ranked robust candidate-patch set** defined by `VALIDATED_PRODUCT_CONTRACT.md` and `acsp/validated_robust.py`.
+
+Use these files for the next scientific review and journal-formatting pass:
+
+- `MANUSCRIPT_ROBUST_PATCH_DRAFT.md` — submission-facing manuscript aligned to the frozen 2.5% leave-one-prototype-out support tier, float32 support worlds, 1 km same-area complete-link aggregation, and the 96-pair / 480-fold untouched confirmation;
+- `generated/table_1_robust_patch_confirmation.csv` — primary Japanese confirmation bound to authoritative implementation constants;
+- `generated/table_2_robust_patch_transfer_boundary.csv` — reserved and fresh country-framed failures plus the provider-aborted observability boundary;
+- `validate_submission_alignment.py` — network-free cross-check against code constants and frozen result JSONs;
+- `SUBMISSION_READINESS.md` — completed scientific boundary and remaining editorial tasks.
+
+Run the alignment guard from the repository root:
+
+```bash
+python paper/validate_submission_alignment.py
+```
+
+The current paper supports independently validated enrichment over same-size random candidate-patch sets in the fixed Japanese 12-region frame. It does not promote a global product, occupancy probability, exact-site prediction, ranking, routing, field-efficiency, or superiority over SDM/GRTS/biosurvey. *Campanula microdonta* remains development and freeze-regression evidence.
+
+## Historical finite Top-5 package — preserved provenance
+
+The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:
+
+- `MANUSCRIPT_DRAFT.md`;
+- `generated/table_1_retrospective_validation.csv`;
+- `generated/table_s1_seed_sensitivity.csv`;
+- `generated/table_s2_claim_matrix.csv`;
+- `generated/table_s3_standard_baseline_comparison.csv`;
+- `generated/table_s4_fitted_sdm_performance_contrast.csv`;
+- `generated/table_s5_sdm_decision_differences.csv`;
+- the legacy-output path in `build_paper_outputs.py`.
+
+The remainder of this document records that historical finite-set package exactly as its publication boundary was closed.
+
+---
+
 # ACSP methods paper
 
 This paper is scoped to the pre-*Campanula microdonta* cross-taxon validation program.
