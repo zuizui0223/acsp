@@ -70,12 +70,24 @@ jobs:
           assert summary["scientific_role"] == "development_internal_baseline_only"
           assert summary["independent_validation"] is False
           assert summary["reads_2026_field_outcomes"] is False
-          assert summary["historical_rows_inside_five_islands"] > 0
+          assert summary["historical_rows_inside_five_islands"] == 56
           assert summary["primary_cluster_policy"] == "single_link"
           assert summary["sensitivity_cluster_policy"] == "complete_link"
           assert set(summary["policy_summaries"]) == {"single_link", "complete_link"}
+          assert summary["policy_summaries"]["single_link"]["clusters"] == 17
+          assert summary["policy_summaries"]["complete_link"]["clusters"] == 18
           print(json.dumps(summary, indent=2, ensure_ascii=False))
           PY
+          for file in \
+            summary.json \
+            historical_occurrence_clusters.csv \
+            leave_one_cluster_out_folds.csv \
+            annular_baseline_curve.csv
+          do
+            cmp \
+              "campanula-occurrence-anchor-loco/$file" \
+              "validation/campanula_occurrence_anchor_loco_v1/$file"
+          done
       - name: Upload development diagnostics
         uses: actions/upload-artifact@v4
         with:
