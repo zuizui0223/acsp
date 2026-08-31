@@ -5,6 +5,8 @@ on:
     paths:
       - "research/evaluate_campanula_anchor_coverage_habitat.py"
       - "research/test_campanula_anchor_coverage_habitat.py"
+      - "research/run_campanula_anchor_coverage_habitat_cached.py"
+      - "research/test_campanula_anchor_coverage_habitat_cached.py"
       - "research/evaluate_campanula_anchor_selector_comparison.py"
       - "research/test_campanula_anchor_selector_comparison.py"
       - ".github/workflows/campanula-anchor-coverage-habitat.yml"
@@ -40,6 +42,7 @@ jobs:
       - name: Run focused selector tests
         run: |
           python -m unittest research.test_campanula_anchor_coverage_habitat -v
+          python -m unittest research.test_campanula_anchor_coverage_habitat_cached -v
           python -m unittest research.test_campanula_anchor_selector_comparison -v
           python -m unittest research.test_campanula_anchor_spatial_balance -v
           python -m unittest research.test_campanula_anchor_ndvi_filter -v
@@ -93,7 +96,7 @@ jobs:
 
       - name: Evaluate coverage-constrained habitat selector only
         run: |
-          python research/evaluate_campanula_anchor_coverage_habitat.py \
+          python research/run_campanula_anchor_coverage_habitat_cached.py \
             --universe microterrain-results/microterrain_universe.csv \
             --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
             --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
@@ -122,6 +125,7 @@ jobs:
           summary['baseline_artifact_id'] = 9765765509
           summary['baseline_artifact_digest'] = 'sha256:4cb8fb3b9dbf2d7461c711f25bba91ef1bb442d3c125fe19e933875a96ed2a4f'
           summary['baseline_head_sha'] = '55ca4f5b7552f82bf82579814d9914b60951cba9'
+          summary['runtime_only_cached_morton_order'] = True
           out = Path('campanula-anchor-selector-comparison')
           out.mkdir(parents=True, exist_ok=True)
           comparison.to_csv(out / 'matched_selector_comparison.csv', index=False)
