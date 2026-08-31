@@ -1,3 +1,4 @@
+import csv
 import json
 from pathlib import Path
 import subprocess
@@ -65,6 +66,33 @@ class RobustPatchSubmissionAlignmentTests(unittest.TestCase):
                 with mock.patch.object(validator, "MANUSCRIPT", mutated_path):
                     with self.assertRaises(AssertionError):
                         validator._validate_text_boundaries(constants, "float32")
+
+    def test_fresh_transfer_decision_drift_fails_closed(self):
+        with validator.TABLE_2.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = list(reader.fieldnames or ())
+            original_rows = list(reader)
+        fresh_index = next(
+            index
+            for index, row in enumerate(original_rows)
+            if row["experiment_id"] == "country_framed_fresh_confirmation"
+        )
+        mutations = {
+            "terminal_status": "globally_validated",
+            "failed_gate": "none",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            mutated_path = Path(directory) / "transfer.csv"
+            for field, value in mutations.items():
+                rows = [dict(row) for row in original_rows]
+                rows[fresh_index][field] = value
+                with mutated_path.open("w", encoding="utf-8", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                with mock.patch.object(validator, "TABLE_2", mutated_path):
+                    with self.assertRaises(AssertionError):
+                        validator.run()
 
 
 if __name__ == "__main__":

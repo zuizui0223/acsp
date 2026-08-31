@@ -231,6 +231,15 @@ def _validate_transfer_table(constants: dict[str, object]) -> None:
         name="Fresh CI upper",
     )
     _require(fresh_record["fresh_confirmation_gate_passed"] is False, "Fresh result was reclassified")
+    fresh_gates = fresh_record["gate_checks"]
+    _require(len(fresh_gates) == 7, "Fresh gate denominator changed")
+    _require(sum(bool(value) for value in fresh_gates.values()) == 6, "Fresh gate count changed")
+    _require(
+        [name for name, passed in fresh_gates.items() if not passed] == ["temporal_evaluability_rate"],
+        "Fresh failed gate changed",
+    )
+    _require(fresh["failed_gate"] == "temporal evaluability at least 0.75", "Fresh table failed gate changed")
+    _require(fresh["terminal_status"] == "scientific_fail_6_of_7_gates", "Fresh table terminal status changed")
     _require(fresh["promotion_status"] == "not_promoted", "Fresh extension was promoted")
 
     terminal_record = json.loads(OBSERVABILITY_TERMINAL.read_text(encoding="utf-8"))
