@@ -56,7 +56,7 @@ Run from the repository root:
 
 ```bash
 python paper/validate_submission_alignment.py
-python -m unittest tests/test_robust_patch_submission_alignment.py
+python -m unittest discover -s tests -p "test_robust_patch_submission_alignment.py" -v
 ```
 
 Both checks are network-free. The validator checks:

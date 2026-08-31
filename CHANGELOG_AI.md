@@ -1,5 +1,26 @@
 # AI Change Log
 
+## 2026-08-31 - Codex (OpenAI) - Make submission alignment guard executable in ordinary CI
+
+Changed files:
+- .github/workflows/package-checks.yml
+- paper/SUBMISSION_READINESS.md
+- paper/validate_submission_alignment.py
+- tests/test_robust_patch_submission_alignment.py
+- CHANGELOG_AI.md
+
+Summary:
+- Allowed the manuscript's exact negated global-validation boundary while continuing to reject any additional affirmative global-validation claim.
+- Converted the new alignment checks into `unittest.TestCase` tests and added explicit `tests/` discovery to package CI so the checks actually execute.
+- Required exactly four transfer rows and locked the provider row's promotion, heldout, and unavailable-not-negative interpretation to the frozen terminal record.
+
+Features preserved:
+- No manuscript result, generated table, validated constant, candidate-generation code, consumed cohort, or scientific terminal status changed.
+- The non-ranked Japanese robust-patch claim, failed/conditional transfer results, provider abort/unavailable status, heldout closure, and historical Top-5 provenance remain unchanged.
+
+Known risks / TODO:
+- Journal-specific formatting and editorial work remain outside this mechanical CI correction.
+
 ## 2026-08-30 - ChatGPT (OpenAI) - Align submission manuscript with robust candidate patches
 
 Changed files:

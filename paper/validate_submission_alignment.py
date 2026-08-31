@@ -128,7 +128,9 @@ def _validate_primary_table(constants: dict[str, object]) -> None:
 
 
 def _validate_transfer_table(constants: dict[str, object]) -> None:
-    rows = {row["experiment_id"]: row for row in _read_csv(TABLE_2)}
+    table_rows = _read_csv(TABLE_2)
+    _require(len(table_rows) == 4, "Transfer table must contain exactly four declared experiments")
+    rows = {row["experiment_id"]: row for row in table_rows}
     expected_ids = {
         "japan_robust_confirmation",
         "country_framed_reserved_replication",
@@ -231,11 +233,28 @@ def _validate_transfer_table(constants: dict[str, object]) -> None:
     _require(statuses["hypothesis_status"] == "unavailable", "Unavailable hypothesis was reclassified")
     _require(statuses["promotion_status"] == "not_promoted", "Provider experiment was promoted")
     _require(observed["heldout_2021_2025_opened"] is False, "Provider heldout was opened")
+    _require(provider["promotion_status"] == statuses["promotion_status"], "Provider table promotion status changed")
+    _require(provider["heldout_status"] == "2021-2025 heldout unopened", "Provider table heldout status changed")
+    _require(
+        provider["interpretation"]
+        == "HTTP 429 provider failures stopped the one-shot freeze; the observability hypothesis remained unavailable rather than negative.",
+        "Provider table interpretation changed",
+    )
 
 
 def _validate_text_boundaries() -> None:
     manuscript = MANUSCRIPT.read_text(encoding="utf-8")
     readme = PAPER_README.read_text(encoding="utf-8")
+    allowed_negated_boundaries = (
+        (
+            "The supported conclusion is therefore neither “ACSP works only in Japan” nor “ACSP is globally "
+            "validated.”"
+        ),
+        (
+            "Conversely, this study does not establish that ACSP is superior to SDM, GRTS, biosurvey, or all "
+            "survey-design methods."
+        ),
+    )
     required_manuscript_tokens = (
         "non-ranked set of bounded robust candidate patches",
         "96 taxon–region pairs",
@@ -253,6 +272,11 @@ def _validate_text_boundaries() -> None:
     for token in required_manuscript_tokens:
         _require(token in manuscript, f"Submission manuscript lost required boundary: {token}")
 
+    claim_text = manuscript
+    for boundary in allowed_negated_boundaries:
+        _require(boundary in manuscript, f"Submission manuscript lost required negated boundary: {boundary}")
+        claim_text = claim_text.replace(boundary, "")
+
     forbidden_sentences = (
         "ACSP is globally validated",
         "ACSP is superior to SDM",
@@ -260,7 +284,7 @@ def _validate_text_boundaries() -> None:
         "Campanula microdonta is an independent confirmation",
     )
     for sentence in forbidden_sentences:
-        _require(sentence not in manuscript, f"Submission manuscript contains forbidden claim: {sentence}")
+        _require(sentence not in claim_text, f"Submission manuscript contains forbidden claim: {sentence}")
 
     required_readme_tokens = (
         "Current submission-facing robust candidate-patch package",
