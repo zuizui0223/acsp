@@ -1,0 +1,18 @@
+{
+  "program_id": "niche-to-survey-four-chapter-v1",
+  "chapter_number": 4,
+  "repository": "zuizui0223/acsp",
+  "chapter_title": "Survey action",
+  "core_question": "Given information available before a survey, where should field effort be directed next?",
+  "primary_output": "Bounded candidate survey patches or survey priorities",
+  "estimates_niche_drivers": false,
+  "estimates_historical_route": false,
+  "validated_japanese_candidate_patch_product_unchanged": true,
+  "current_paper_scientifically_closed": true,
+  "chapter_order": [
+    "1:sdmr:environmental_niche_driver_selection",
+    "2:odsp:multidimensional_niche_geometry",
+    "3:eog:distributional_worlds_and_reachability",
+    "4:acsp:survey_action"
+  ]
+}
