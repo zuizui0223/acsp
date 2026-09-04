@@ -1,0 +1,57 @@
+{
+  "schema_version": "cirsium-aza3-prospective-validation-cohort-contract-v1",
+  "status": "FROZEN_PRE_PATCH_PRE_FIELD",
+  "source_occurrence_audit": "validation/cirsium_aza3_occurrence_audit_result_v1.json",
+  "cohort_table": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "cohort_size": 13,
+  "field_outcomes_opened": false,
+  "candidate_patches_built": false,
+  "selection_principle": "Stratify prospectively across occurrence-evidence regime, source-backed structural habitat family, geography and aza3 biological reuse; do not choose taxa by future field success.",
+  "regime_counts": {
+    "LOCAL_CONTINUATION": 9,
+    "SENTINEL": 4
+  },
+  "structural_family_counts": {
+    "WETLAND_MOISTURE_STRUCTURE": 2,
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": 4,
+    "OPEN_GRASSLAND_STRUCTURE": 3,
+    "COASTAL_ISLAND_STRUCTURE": 2,
+    "FOREST_EDGE_STRUCTURE": 1,
+    "GENERAL_SPATIAL_BASELINE_ONLY": 1
+  },
+  "paired_regime_tests": {
+    "WETLAND_MOISTURE_STRUCTURE": {
+      "local": ["Cirsium sieboldii"],
+      "sentinel": ["Cirsium inundatum"]
+    },
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": {
+      "local": ["Cirsium ugoense", "Cirsium otayae", "Cirsium nambuense"],
+      "sentinel": ["Cirsium yezoalpinum"]
+    },
+    "OPEN_GRASSLAND_STRUCTURE": {
+      "local": ["Cirsium pendulum"],
+      "sentinel": ["Cirsium dipsacolepis", "Cirsium lineare"]
+    }
+  },
+  "slot_selection": {
+    "rule_for_independent_A_B_slots": "SHA256(species_binomial UTF-8), first hexadecimal nibble parity: even=A, odd=B.",
+    "relational_slot_fallback": "If the selected B definition is relational to A or cannot be interpreted independently before outcomes, use A; this pre-outcome fallback is used for Cirsium hachijoense.",
+    "P6_rule": "Use the already-declared OWN complement slot; do not invent A/B.",
+    "outcome_dependent_replacement_allowed": false
+  },
+  "method_arms": {
+    "STRUCTURAL_LOCAL": "source-backed structural candidate selector versus annular nearest-known and deterministic spatial balance",
+    "STRUCTURAL_SENTINEL": "source-backed structural sentinel selector versus validated broad robust support and deterministic spatial balance",
+    "SPATIAL_BASELINE_ONLY": "no added ecological feature family; retain spatial controls as a negative design/control lane"
+  },
+  "promotion_boundary": {
+    "matched_field_effort_required": true,
+    "failures_and_abstentions_retained": true,
+    "access_failure_is_nondetection": false,
+    "permission_block_is_nondetection": false,
+    "structural_added_value_must_recur_beyond_one_taxon_or_radius": true,
+    "P02_population_discovery_can_be_biologically_reused_but_cannot_be_relabelled_after_outcome": true
+  },
+  "sensitive_location_policy": "Exact candidate/current-occurrence coordinates remain private in aza3; the public cohort freezes only range sectors and deidentified IDs.",
+  "claim_boundary": "The cohort freezes a prospective method test. Inclusion in the cohort is not evidence of occupancy, collectability, or ACSP superiority."
+}
