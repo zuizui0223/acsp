@@ -34,6 +34,15 @@
       ],
       "forbidden_shortcut": "treating all cells on the same island as one local continuation"
     },
+    "FOREST_EDGE_STRUCTURE": {
+      "evidence_required": "source explicitly identifies forest interior, forest edge, woodland margin or comparable forest-boundary habitat",
+      "candidate_structure": [
+        "forest/nonforest edge continuity",
+        "canopy/opening transition structure",
+        "terrain and component barriers"
+      ],
+      "forbidden_shortcut": "generic greenness similarity without explicit forest-edge structure"
+    },
     "CALCAREOUS_SUBSTRATE_STRUCTURE": {
       "evidence_required": "source explicitly identifies limestone/calcareous substrate",
       "candidate_structure": [
