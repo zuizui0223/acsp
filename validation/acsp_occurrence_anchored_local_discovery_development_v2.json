@@ -1,0 +1,197 @@
+{
+  "schema_version": "acsp-occurrence-anchored-local-discovery-development-v2",
+  "status": "PRE_CIRSIUM_OCCURRENCE_RETRIEVAL_FROZEN",
+  "supersedes_for_new_development": "validation/acsp_occurrence_anchored_local_discovery_development_v1.json",
+  "preserves": {
+    "validated_robust_candidate_patch_product": true,
+    "validated_robust_support_fraction": 0.025,
+    "validated_robust_primary_radius_km": 10.0,
+    "campanula_role": "development_only_not_independent_confirmation",
+    "nonretroactivity": "No Cirsium result can retune or rescue the frozen Ecological Informatics product."
+  },
+  "external_bridge": {
+    "system": "zuizui0223/aza3 Japan-wide Cirsium sampling",
+    "acsp_issue": 186,
+    "aza3_issue": 12,
+    "operational_core_species": 128,
+    "required_tree_representation_slots": 228,
+    "aza3_active_minimum_unique_sources": 314,
+    "question": "For a declared aza3 taxon x range-sector slot, which bounded candidate patches are scientifically justified for current-occurrence verification before exact-site freezing?",
+    "acsp_does_not_choose": [
+      "phylogenetic sampling priority",
+      "collection permission",
+      "private exact locality",
+      "field campaign order",
+      "target-capture or RAD allocation"
+    ]
+  },
+  "occurrence_input_freeze": {
+    "country": "Japan",
+    "event_date_max": "2025-12-31",
+    "focal_universe": "aza3 current 128-species operational core only",
+    "taxon_matching": "exact operational concept or explicitly reviewed synonym/concept crosswalk; no fuzzy substitution",
+    "provider_occurrence_id_required": true,
+    "provider_failures_retained": true,
+    "zero_record_taxa_retained": true,
+    "records_from_2026_or_later_allowed_in_first_pass": false
+  },
+  "occurrence_evidence_typing": {
+    "spatial_classes": [
+      "EXACT_OR_DECLARED_PRECISE_COORDINATE",
+      "COORDINATE_UNCERTAIN",
+      "COORDINATE_OBSCURED",
+      "REGION_ONLY",
+      "NO_LOCALITY"
+    ],
+    "temporal_classes": {
+      "RECENT": "2000-2025",
+      "LEGACY": "1950-1999",
+      "HISTORICAL": "before 1950",
+      "DATE_UNKNOWN": "event year unavailable"
+    },
+    "provenance_fields_required": [
+      "source_provider",
+      "source_occurrence_id",
+      "basis_of_record",
+      "taxon_match_status",
+      "event_year",
+      "coordinate_uncertainty_m",
+      "geospatial_issue_status",
+      "data_generalization_or_obscuring_status"
+    ],
+    "primary_local_anchor_gate": {
+      "taxon_match": "accepted_or_explicitly_reviewed",
+      "decimal_coordinates_required": true,
+      "provider_geospatial_issue_allowed": false,
+      "maximum_declared_coordinate_uncertainty_m": 1000,
+      "unknown_coordinate_uncertainty_is_precise": false,
+      "event_year_min": 2000,
+      "event_year_max": 2025,
+      "range_sector_match_required": true,
+      "precision_override": "source-backed manual precision review frozen before field outcomes only"
+    },
+    "legacy_coordinate_sensitivity": {
+      "event_year_min": 1950,
+      "event_year_max": 1999,
+      "maximum_declared_coordinate_uncertainty_m": 1000,
+      "can_define_primary_local_kernel": false
+    },
+    "historical_or_region_only_rule": "May constrain taxon/range context or sentinel construction but cannot be converted into a pseudo-exact current-population anchor."
+  },
+  "graph_architecture": {
+    "ecological_support_graph": {
+      "id": "G_E",
+      "built_before_accessibility_filter": true,
+      "candidate_feature_families": [
+        "terrain/topographic continuity",
+        "substrate/geology when source-supported",
+        "moisture/wetland structure when source-supported",
+        "coastal/island/cliff structure when source-supported",
+        "vegetation/open-ground structure when source-supported",
+        "ecological barriers/discontinuities"
+      ],
+      "generic_feature_stack_required": false,
+      "human_accessibility_can_create_ecological_support": false
+    },
+    "survey_feasibility_graph_or_mask": {
+      "id": "G_F",
+      "applied_after_ecological_candidate_construction": true,
+      "layers": [
+        "roads/trails or declared movement mode",
+        "land access",
+        "protected-area and conservation restrictions",
+        "permission state",
+        "physical/safety accessibility"
+      ],
+      "inaccessible_means_biological_absence": false
+    }
+  },
+  "discovery_regimes": {
+    "LOCAL_CONTINUATION": "Eligible recent anchor exists in the declared ecological component; known-point exclusion remains mandatory.",
+    "DETACHED_COMPONENT": "Eligible anchor exists but a structurally similar ecological component is disconnected by an ecological gap/barrier; reported separately from local continuation.",
+    "SENTINEL": "No eligible local anchor exists; use broad robust support plus spatially balanced exploration and report separately.",
+    "ABSTAIN_LOCAL_PATCH": "Available occurrence/structure evidence cannot justify a bounded local patch without false precision."
+  },
+  "current_algorithm_output": [
+    "candidate_patch_id",
+    "discovery_regime",
+    "target_range_sector",
+    "anchor_count_by_evidence_class",
+    "ecological_support_status",
+    "survey_feasibility_status",
+    "known_point_exclusion_status",
+    "abstention_reason",
+    "prospective_comparator_assignment"
+  ],
+  "not_currently_identified": [
+    "optimal field days",
+    "optimal total budget",
+    "expected new-cluster yield per hour",
+    "automatic stopping threshold"
+  ],
+  "effort_layer_rule": "Develop budget/day/stopping only in a separately frozen successor after standardized prospective detection and non-detection data with effort exist.",
+  "comparators": {
+    "anchor_conditioned": [
+      "annular nearest-known",
+      "deterministic spatial balance on the same candidate frame",
+      "matched-effort random or proportional spatial sampling where feasible"
+    ],
+    "sentinel": [
+      "validated broad robust-support envelope",
+      "deterministic spatial balance",
+      "matched-effort random or proportional spatial sampling where feasible"
+    ],
+    "campanula_ndvi_hybrid_revival_allowed": false
+  },
+  "prospective_field_endpoint": {
+    "primary_success": "taxonomically verified current occurrence of the declared focal taxon after a completed evaluable search",
+    "tissue_acquisition_is_primary_acsp_endpoint": false,
+    "allowed_states": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED",
+      "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED",
+      "ACCESS_FAILED",
+      "PERMISSION_BLOCKED",
+      "PHENOLOGY_NOT_EVALUABLE",
+      "SEARCH_INCOMPLETE_OTHER"
+    ],
+    "biological_detection_denominator": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED",
+      "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED"
+    ],
+    "access_failure_is_nondetection": false,
+    "permission_blocked_is_nondetection": false,
+    "minimum_effort_fields": [
+      "search_minutes",
+      "observer_count"
+    ],
+    "additional_effort_fields_when_defensible": [
+      "traversed_length_m",
+      "searched_area_m2"
+    ]
+  },
+  "validation_cohort_boundary": {
+    "primary_method_denominator_excludes": [
+      "extinct/historical-only slots",
+      "sites where standardized current-occurrence search is not ethically/legalistically possible",
+      "post-outcome substitute taxa or patches"
+    ],
+    "conservation_sensitive_slots_role": "operational application reported separately from the primary method-performance denominator",
+    "failures_and_abstentions_retained": true,
+    "no_post_outcome_taxon_or_site_substitution": true
+  },
+  "public_data_safety": {
+    "exact_sensitive_coordinates_in_repository": false,
+    "public_field_log_uses_deidentified_patch_and_locality_ids": true,
+    "private_exact_site_ledger_owner": "aza3"
+  },
+  "promotion_rule": [
+    "freeze provider/query/taxon/precision/temporal rules before Cirsium field outcomes",
+    "freeze ecological graph, candidate construction, exclusion and abstention rules before Cirsium field outcomes",
+    "retain complete detection/non-detection and operational failure states with effort",
+    "beat annular nearest-known and deterministic spatial balance at matched effort on the predeclared endpoint",
+    "retain failures and abstentions in declared denominators",
+    "no outcome-driven taxon/site/feature substitution"
+  ]
+}
