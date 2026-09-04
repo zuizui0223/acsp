@@ -1,0 +1,44 @@
+{
+  "schema_version": "cirsium-candidate-frame-contract-v1",
+  "status": "LOCAL_FRAME_FROZEN_SENTINEL_SUBREGIME_PENDING_V2_AUDIT",
+  "field_outcomes_opened": false,
+  "grid": {
+    "target_spacing_m": 100,
+    "reason": "Matches the outcome-blind Campanula microterrain development grid and is fine enough to represent local structural heterogeneity without treating a raster cell as a field-effort unit."
+  },
+  "range_sector_rule": "Every candidate frame is clipped to the predeclared aza3 range sector for the frozen cohort unit; records outside that sector cannot silently expand the frame.",
+  "local_continuation": {
+    "anchor_eligibility": "frozen primary anchors only: reconciled taxon, event year 2000-2025, coordinates, no serious geospatial issue, declared uncertainty <=1000 m, sector compatible",
+    "known_point_exclusion_km": 0.5,
+    "primary_outer_radius_km": 2.0,
+    "sensitivity_outer_radius_km": 5.0,
+    "primary_frame": "union of 0.5-2.0 km annuli around eligible anchors inside the declared range sector, clipped to the sector",
+    "sensitivity_frame": "union of 0.5-5.0 km annuli around the same frozen anchors, reported separately and not substituted after outcome",
+    "development_basis": {
+      "campanula_single_link_recall_at_2km": 0.875,
+      "campanula_complete_link_recall_at_2km": 0.8823529411764706,
+      "campanula_recall_at_5km": 1.0,
+      "campanula_median_unclipped_annulus_area_km2_at_2km": 106.02875205865551,
+      "campanula_median_unclipped_annulus_area_km2_at_5km": 699.7897635871265,
+      "interpretation": "2 km is frozen as the primary local frame because development recovery was already high while 5 km expanded nominal annular area about 6.6-fold. Cirsium field outcomes did not choose this radius."
+    },
+    "anchor_replication_reporting": "ZERO/SINGLE/MULTIPLE remains explicit; multiple anchors generate a union frame, not a fitted density surface.",
+    "comparators_same_frame": [
+      "STRUCTURAL_SUPPORT_TOP_K",
+      "ANNULAR_NEAREST_KNOWN",
+      "DETERMINISTIC_SPATIAL_BALANCE"
+    ]
+  },
+  "sentinel": {
+    "status": "SUBREGIME_PENDING_UNCERTAINTY_AUDIT_V2",
+    "rule": "Do not force the local annulus when primary anchors are absent. v2 occurrence evidence will decide whether declared-uncertainty kernels, coarse sector context, legacy context, or abstention is justified.",
+    "known_point_local_kernel_allowed": false,
+    "forced_pseudo_exact_coordinate_allowed": false
+  },
+  "selection_count": {
+    "status": "RANKING_FREEZE_FIRST",
+    "rule": "Generate a deterministic full ranking/token order per method before field outcomes. The field campaign may use a predeclared equal prefix across methods; no outcome-driven prefix extension or method-specific k is allowed.",
+    "reason": "Avoid hard-coding field days/cost into the ecological algorithm before prospective effort data exist."
+  },
+  "boundary": "Candidate-cell count and geometry are not field effort. Matched field search time/observer effort remains a prospective validation requirement."
+}
