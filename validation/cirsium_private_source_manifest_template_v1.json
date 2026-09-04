@@ -1,0 +1,54 @@
+{
+  "schema_version": "cirsium-private-source-manifest-v1",
+  "cohort_unit_id": "REPLACE_PRIVATE",
+  "species_binomial": "REPLACE_PRIVATE",
+  "field_outcomes_opened": false,
+  "aza3_slot_id": "REPLACE_PRIVATE",
+  "range_sector_id": "REPLACE_PRIVATE",
+  "range_sector_geometry_sha256": "REPLACE_PRIVATE",
+  "occurrence_input": {
+    "event_date_max": "2025-12-31",
+    "audit_v1_artifact_digest": "sha256:fe1971d5547b4741fdcfc568fe568193007398afca6dd0aa316c2713d8d6e430",
+    "eligible_primary_anchor_private_table_sha256": "REPLACE_IF_LOCAL",
+    "sentinel_broad_evidence_private_table_sha256": "REPLACE_IF_SENTINEL"
+  },
+  "candidate_grid": {
+    "target_spacing_m": 100,
+    "geometry_rule": "cirsium-candidate-frame-contract-v1",
+    "private_raw_grid_sha256": "REPLACE_PRIVATE"
+  },
+  "gsi_dem": {
+    "required": false,
+    "source": "Geospatial Information Authority of Japan elevation data / frozen unit snapshot",
+    "source_release_or_tile_ids": [],
+    "private_snapshot_sha256": ""
+  },
+  "esa_worldcover": {
+    "required": false,
+    "source": "ESA WorldCover 2021 v200 10 m",
+    "tile_ids": [],
+    "private_snapshot_sha256": ""
+  },
+  "gsi_coastline": {
+    "required": false,
+    "source": "GSI Fundamental Geospatial Data, Basic Items, coastline",
+    "observed_service_release_before_freeze": "2026-07-31",
+    "private_snapshot_sha256": ""
+  },
+  "target_ecological_component": {
+    "required": false,
+    "component_id": "",
+    "definition_sha256": ""
+  },
+  "broad_sentinel_support": {
+    "required": false,
+    "evidence_class": "PENDING_AUDIT_V2",
+    "private_support_input_sha256": ""
+  },
+  "private_salt": {
+    "committed": false,
+    "sha256_recorded_publicly": false
+  },
+  "authorization_access_layers_in_G_E": false,
+  "notes": "Copy this template outside the public repository and fill source identifiers/digests before building a coordinate-bearing private candidate frame."
+}
