@@ -1,0 +1,76 @@
+{
+  "schema_version": "cirsium-structural-selector-execution-freeze-v1",
+  "status": "ALGORITHM_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED",
+  "scientific_role": "prospective Cirsium structural-continuity test under issue 192",
+  "field_outcomes_opened": false,
+  "private_candidate_frames_built": false,
+  "public_patch_manifest_built": false,
+  "cohort_table": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "cohort_size": 13,
+  "family_contract": "validation/cirsium_structural_selector_family_contract_v1.json",
+  "selector_core": "acsp/structural_selector.py",
+  "support_composer": "acsp/structural_support.py",
+  "public_freeze_generator": "research/freeze_cirsium_candidate_patch_manifest_v1.py",
+  "support_composition_rule": "ROW_MIN_CONJUNCTIVE_SUPPORT",
+  "feature_weights_fitted": false,
+  "field_outcome_columns_allowed_in_generation": false,
+  "post_outcome_family_switch_allowed": false,
+  "family_components": {
+    "WETLAND_MOISTURE_STRUCTURE": [
+      "wetland_water_adjacent_score",
+      "topographic_moisture_score",
+      "terrain_continuity_score"
+    ],
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": [
+      "relative_relief_score",
+      "landform_continuity_score",
+      "ridge_valley_continuity_score"
+    ],
+    "OPEN_GRASSLAND_STRUCTURE": [
+      "open_land_score",
+      "fragment_continuity_score",
+      "terrain_context_score"
+    ],
+    "COASTAL_ISLAND_STRUCTURE": [
+      "shore_position_score",
+      "shore_landform_continuity_score",
+      "island_component_score"
+    ],
+    "FOREST_EDGE_STRUCTURE": [
+      "forest_edge_score",
+      "canopy_opening_transition_score",
+      "terrain_component_score"
+    ],
+    "GENERAL_SPATIAL_BASELINE_ONLY": []
+  },
+  "method_sets": {
+    "STRUCTURAL_LOCAL": [
+      "STRUCTURAL_SUPPORT_TOP_K",
+      "ANNULAR_NEAREST_KNOWN",
+      "DETERMINISTIC_SPATIAL_BALANCE"
+    ],
+    "STRUCTURAL_SENTINEL": [
+      "STRUCTURAL_SUPPORT_TOP_K",
+      "VALIDATED_BROAD_ROBUST_SUPPORT",
+      "DETERMINISTIC_SPATIAL_BALANCE"
+    ],
+    "SPATIAL_BASELINE_ONLY": [
+      "ANNULAR_NEAREST_KNOWN",
+      "DETERMINISTIC_SPATIAL_BALANCE"
+    ]
+  },
+  "matched_candidate_count_within_unit": true,
+  "matched_field_effort_claim": false,
+  "public_sensitive_coordinate_policy": {
+    "exact_coordinates_written": false,
+    "raw_candidate_ids_written": false,
+    "public_patch_identifier": "HMAC-SHA256 token using execution-time private salt",
+    "private_salt_committed": false
+  },
+  "remaining_pre_field_execution_steps": [
+    "implement and pin raw-layer-to-component adapters for each source-backed structural family",
+    "build private candidate frames for the frozen 13 validation units from pre-2026 evidence only",
+    "run the public-safe freeze generator and write method patch tokens before opening any field outcome"
+  ],
+  "claim_boundary": "The selection mechanics and support-composition rule are frozen, but real Cirsium candidate patches are not yet built. This file does not establish occupancy, accessibility, field efficiency, or structural-selector superiority."
+}
