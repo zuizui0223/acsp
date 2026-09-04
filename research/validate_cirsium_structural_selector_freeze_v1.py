@@ -13,6 +13,9 @@ EXECUTION = ROOT / "validation" / "cirsium_structural_selector_execution_freeze_
 FAMILY_CONTRACT = ROOT / "validation" / "cirsium_structural_selector_family_contract_v1.json"
 RAW_ADAPTER_CONTRACT = ROOT / "validation" / "cirsium_structural_raw_adapter_contract_v1.json"
 GRAPH_CONTRACT = ROOT / "validation" / "cirsium_structural_graph_contract_v1.json"
+FRAME_CONTRACT = ROOT / "validation" / "cirsium_candidate_frame_contract_v1.json"
+SOURCE_REQUIREMENTS = ROOT / "validation" / "cirsium_private_frame_source_requirements_v1.csv"
+SOURCE_TEMPLATE = ROOT / "validation" / "cirsium_private_source_manifest_template_v1.json"
 COHORT = ROOT / "validation" / "cirsium_aza3_prospective_validation_cohort_v1.csv"
 
 
@@ -21,21 +24,31 @@ def validate() -> dict[str, object]:
     family_contract = json.loads(FAMILY_CONTRACT.read_text(encoding="utf-8"))
     raw_contract = json.loads(RAW_ADAPTER_CONTRACT.read_text(encoding="utf-8"))
     graph_contract = json.loads(GRAPH_CONTRACT.read_text(encoding="utf-8"))
+    frame_contract = json.loads(FRAME_CONTRACT.read_text(encoding="utf-8"))
+    source_template = json.loads(SOURCE_TEMPLATE.read_text(encoding="utf-8"))
     with COHORT.open(encoding="utf-8", newline="") as handle:
         cohort = list(csv.DictReader(handle))
+    with SOURCE_REQUIREMENTS.open(encoding="utf-8", newline="") as handle:
+        source_rows = list(csv.DictReader(handle))
 
-    assert execution["status"] == "ALGORITHM_ADAPTERS_GRAPH_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED"
+    assert execution["status"] == "ALGORITHM_ADAPTERS_GRAPH_RANKING_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED"
     assert execution["field_outcomes_opened"] is False
     assert execution["private_candidate_frames_built"] is False
     assert execution["public_patch_manifest_built"] is False
-    assert execution["cohort_size"] == len(cohort) == 13
+    assert execution["public_full_ranking_built"] is False
+    assert execution["field_prefix_selected"] is False
+    assert execution["cohort_size"] == len(cohort) == len(source_rows) == 13
     assert execution["feature_weights_fitted"] is False
     assert execution["field_outcome_columns_allowed_in_generation"] is False
     assert execution["post_outcome_family_switch_allowed"] is False
     assert execution["ecological_graph_uses_human_access"] is False
     assert execution["raw_adapter_uses_human_access"] is False
-    assert execution["matched_candidate_count_within_unit"] is True
+    assert execution["full_ranking_before_field_prefix"] is True
+    assert execution["outcome_dependent_prefix_extension_allowed"] is False
+    assert execution["same_candidate_frame_full_ranking_within_unit"] is True
     assert execution["matched_field_effort_claim"] is False
+    assert execution["legacy_fixed_k_generator_authoritative_for_new_execution"] is False
+    assert execution["public_full_ranking_generator"].endswith("freeze_cirsium_candidate_patch_ranking_v2.py")
 
     code_components = {family: list(columns) for family, columns in FAMILY_COMPONENTS.items()}
     code_components[BASELINE_FAMILY] = []
@@ -61,12 +74,28 @@ def validate() -> dict[str, object]:
         "Geospatial Information Authority of Japan"
     )
 
+    assert frame_contract["status"] == "LOCAL_FRAME_FROZEN_SENTINEL_SUBREGIME_PENDING_V2_AUDIT"
+    assert frame_contract["grid"]["target_spacing_m"] == 100
+    assert frame_contract["local_continuation"]["known_point_exclusion_km"] == 0.5
+    assert frame_contract["local_continuation"]["primary_outer_radius_km"] == 2.0
+    assert frame_contract["local_continuation"]["sensitivity_outer_radius_km"] == 5.0
+    assert frame_contract["selection_count"]["status"] == "RANKING_FREEZE_FIRST"
+
+    assert source_template["field_outcomes_opened"] is False
+    assert source_template["candidate_grid"]["target_spacing_m"] == 100
+    assert source_template["authorization_access_layers_in_G_E"] is False
+    assert all(row["private_source_manifest_status"] == "NOT_BUILT" for row in source_rows)
+    assert all(row["private_frame_status"] == "NOT_BUILT" for row in source_rows)
+    assert all(row["public_full_ranking_status"] == "NOT_FROZEN" for row in source_rows)
+    assert {row["cohort_unit_id"] for row in source_rows} == {row["cohort_unit_id"] for row in cohort}
+
     source_state = execution["source_layer_state"]
     assert source_state["terrain_semantics"] == "PINNED_GSI_DEM_DERIVED"
     assert source_state["worldcover_semantics"] == "PINNED_ESA_WORLDCOVER_2021_NEIGHBOURHOOD"
     assert source_state["coastline_source_of_record"] == "GSI_FUNDAMENTAL_GEOSPATIAL_DATA_BASIC_ITEMS_COASTLINE"
     assert source_state["coastline_private_snapshot_sha256_recorded"] is False
     assert source_state["private_unit_source_snapshots_built"] is False
+    assert source_state["sentinel_uncertainty_audit_v2_completed"] is False
 
     method_counts = Counter(row["method_arm"] for row in cohort)
     assert method_counts == Counter(
@@ -76,7 +105,7 @@ def validate() -> dict[str, object]:
         family = row["structural_feature_family"]
         arm = row["method_arm"]
         assert family in execution["family_components"]
-        assert arm in execution["method_sets"]
+        assert arm in execution["ranking_method_sets"]
         if arm == "SPATIAL_BASELINE_ONLY":
             assert family == BASELINE_FAMILY
         else:
@@ -88,7 +117,7 @@ def validate() -> dict[str, object]:
     assert policy["exact_coordinates_written"] is False
     assert policy["raw_candidate_ids_written"] is False
     assert policy["private_salt_committed"] is False
-    assert "HMAC-SHA256" in policy["public_patch_identifier"]
+    assert "HMAC-SHA256" in policy["public_candidate_identifier"]
 
     return {
         "status": "OK",
@@ -98,6 +127,9 @@ def validate() -> dict[str, object]:
         "algorithm_frozen": True,
         "raw_adapters_frozen": True,
         "ecological_graph_frozen": True,
+        "local_candidate_frame_frozen": True,
+        "full_ranking_mechanics_frozen": True,
+        "sentinel_subregime_pending_v2": True,
         "real_candidate_patches_built": False,
         "field_outcomes_opened": False,
     }
