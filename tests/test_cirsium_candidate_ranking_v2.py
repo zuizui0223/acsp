@@ -26,12 +26,18 @@ class CirsiumCandidateRankingV2Tests(unittest.TestCase):
             }
         )
 
-    def cohort(self, regime: str = "LOCAL_CONTINUATION", arm: str = "STRUCTURAL_LOCAL") -> dict[str, str]:
+    def cohort(
+        self,
+        regime: str = "LOCAL_CONTINUATION",
+        arm: str = "STRUCTURAL_LOCAL",
+        sentinel_subregime: str = "NOT_APPLICABLE",
+    ) -> dict[str, str]:
         return {
             "cohort_unit_id": "TEST01",
             "aza3_slot_id": "P0_TEST",
             "species_binomial": "Cirsium testii",
             "occurrence_problem_class": regime,
+            "sentinel_subregime": sentinel_subregime,
             "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE" if arm != "SPATIAL_BASELINE_ONLY" else "GENERAL_SPATIAL_BASELINE_ONLY",
             "anchor_replication_class": "MULTIPLE_PRIMARY_ANCHORS" if regime == "LOCAL_CONTINUATION" else "ZERO_PRIMARY_ANCHOR",
             "method_arm": arm,
@@ -49,23 +55,49 @@ class CirsiumCandidateRankingV2Tests(unittest.TestCase):
         self.assertEqual(set(result["frozen_method"]), {"STRUCTURAL_SUPPORT", "ANNULAR_NEAREST_KNOWN", "DETERMINISTIC_SPATIAL_BALANCE"})
         for _, group in result.groupby("frozen_method"):
             self.assertEqual(sorted(group["decision_rank"].tolist()), [1, 2, 3])
-        annular = result[result["frozen_method"].eq("ANNULAR_NEAREST_KNOWN")].sort_values("decision_rank")
-        self.assertEqual(len(annular), 3)
+        self.assertTrue(result["sentinel_subregime"].eq("NOT_APPLICABLE").all())
         self.assertFalse(any("latitude" in c.lower() or "longitude" in c.lower() for c in result.columns))
         self.assertEqual(result["candidate_token"].nunique(), len(result))
 
-    def test_sentinel_ranking_uses_broad_support_not_nearest_anchor(self) -> None:
+    def test_uncertainty_sentinel_uses_frozen_footprint_support(self) -> None:
         frame = self.structural_local_frame().drop(columns=["nearest_anchor_km"])
-        frame["broad_robust_support"] = [0.2, 0.9, 0.5]
+        frame["broad_sentinel_support"] = [0.2, 0.9, 0.5]
         rows = rank_unit(
             frame,
-            cohort_row=self.cohort(regime="SENTINEL", arm="STRUCTURAL_SENTINEL"),
+            cohort_row=self.cohort(
+                regime="SENTINEL",
+                arm="STRUCTURAL_SENTINEL",
+                sentinel_subregime="UNCERTAINTY_FOOTPRINT",
+            ),
             support_provenance_id="sha256:demo",
             salt=b"0123456789abcdef",
         )
         result = pd.DataFrame(rows)
-        self.assertIn("BROAD_SENTINEL_SUPPORT", set(result["frozen_method"]))
-        self.assertNotIn("ANNULAR_NEAREST_KNOWN", set(result["frozen_method"]))
+        self.assertEqual(
+            set(result["frozen_method"]),
+            {"STRUCTURAL_SUPPORT", "UNCERTAINTY_FOOTPRINT_SUPPORT", "DETERMINISTIC_SPATIAL_BALANCE"},
+        )
+        self.assertTrue(result["sentinel_subregime"].eq("UNCERTAINTY_FOOTPRINT").all())
+        self.assertNotIn("BROAD_SENTINEL_SUPPORT", set(result["frozen_method"]))
+
+    def test_context_only_sentinel_does_not_invent_broad_support(self) -> None:
+        frame = self.structural_local_frame().drop(columns=["nearest_anchor_km"])
+        rows = rank_unit(
+            frame,
+            cohort_row=self.cohort(
+                regime="SENTINEL",
+                arm="STRUCTURAL_SENTINEL",
+                sentinel_subregime="LEGACY_RANGE_CONTEXT",
+            ),
+            support_provenance_id="sha256:demo",
+            salt=b"0123456789abcdef",
+        )
+        result = pd.DataFrame(rows)
+        self.assertEqual(
+            set(result["frozen_method"]),
+            {"STRUCTURAL_SUPPORT", "DETERMINISTIC_SPATIAL_BALANCE"},
+        )
+        self.assertNotIn("UNCERTAINTY_FOOTPRINT_SUPPORT", set(result["frozen_method"]))
 
     def test_baseline_lane_has_two_rankings(self) -> None:
         frame = self.structural_local_frame().drop(
@@ -79,6 +111,16 @@ class CirsiumCandidateRankingV2Tests(unittest.TestCase):
         )
         result = pd.DataFrame(rows)
         self.assertEqual(set(result["frozen_method"]), {"ANNULAR_NEAREST_KNOWN", "DETERMINISTIC_SPATIAL_BALANCE"})
+
+    def test_unknown_sentinel_subregime_fails_closed(self) -> None:
+        frame = self.structural_local_frame().drop(columns=["nearest_anchor_km"])
+        with self.assertRaisesRegex(ValueError, "unsupported frozen sentinel subregime"):
+            rank_unit(
+                frame,
+                cohort_row=self.cohort(regime="SENTINEL", arm="STRUCTURAL_SENTINEL", sentinel_subregime="UNKNOWN"),
+                support_provenance_id="sha256:demo",
+                salt=b"0123456789abcdef",
+            )
 
     def test_field_outcome_column_fails_closed(self) -> None:
         frame = self.structural_local_frame().assign(field_outcome_state="SEARCH_COMPLETED_DETECTED_VERIFIED")
