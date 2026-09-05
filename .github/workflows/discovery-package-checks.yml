@@ -10,6 +10,7 @@ on:
       - "acsp/structural_selector.py"
       - "tests/test_discovery_package.py"
       - "tests/test_discovery_providers.py"
+      - "tests/test_discovery_workflow.py"
       - "pyproject.toml"
       - ".github/workflows/discovery-package-checks.yml"
   workflow_dispatch:
@@ -31,6 +32,14 @@ jobs:
         run: |
           python tests/test_discovery_package.py -v
           python tests/test_discovery_providers.py -v
+          python tests/test_discovery_workflow.py -v
+      - name: Smoke test installed CLI
+        run: |
+          acsp-discovery families > /tmp/families.json
+          acsp-discovery template --out-dir /tmp/discovery-template
+          acsp-discovery assess /tmp/discovery-template/occurrences.csv --out-dir /tmp/discovery-assessment > /tmp/assessment.json
+          test -s /tmp/families.json
+          test -s /tmp/assessment.json
       - name: Verify validation-boundary imports
         run: |
           python - <<'PY'
