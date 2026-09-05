@@ -9,6 +9,9 @@
   "occurrence_input": {
     "event_date_max": "2025-12-31",
     "audit_v1_artifact_digest": "sha256:fe1971d5547b4741fdcfc568fe568193007398afca6dd0aa316c2713d8d6e430",
+    "audit_v2_artifact_digest": "sha256:5e908fecb625f2f8e4e87e758a0a9d0ace63c14e63fce19cf7bf87c0c7fe8147",
+    "sentinel_evidence_class": "REPLACE_FROM_FROZEN_COHORT",
+    "sentinel_subregime": "REPLACE_FROM_FROZEN_COHORT",
     "eligible_primary_anchor_private_table_sha256": "REPLACE_IF_LOCAL",
     "sentinel_broad_evidence_private_table_sha256": "REPLACE_IF_SENTINEL"
   },
@@ -42,7 +45,7 @@
   },
   "broad_sentinel_support": {
     "required": false,
-    "evidence_class": "PENDING_AUDIT_V2",
+    "evidence_class": "REPLACE_FROM_FROZEN_SENTINEL_SUBREGIME",
     "private_support_input_sha256": ""
   },
   "private_salt": {
@@ -50,5 +53,5 @@
     "sha256_recorded_publicly": false
   },
   "authorization_access_layers_in_G_E": false,
-  "notes": "Copy this template outside the public repository and fill source identifiers/digests before building a coordinate-bearing private candidate frame."
+  "notes": "Copy this template outside the public repository and fill source identifiers/digests before building a coordinate-bearing private candidate frame. Sentinel evidence class/subregime must match the frozen cohort; do not reinterpret it after field outcomes."
 }
