@@ -7,6 +7,7 @@ on:
       - "acsp/structural_support.py"
       - "acsp/structural_raw_adapters.py"
       - "acsp/structural_graph.py"
+      - "research/build_cirsium_private_alpine_local_grid_v1.py"
       - "research/prepare_cirsium_private_candidate_frame_v1.py"
       - "research/build_cirsium_private_source_manifest_v1.py"
       - "research/preflight_cirsium_private_frame_archetypes_v1.py"
@@ -27,6 +28,7 @@ on:
       - "tests/test_structural_support.py"
       - "tests/test_structural_raw_adapters.py"
       - "tests/test_structural_graph.py"
+      - "tests/test_cirsium_private_alpine_local_grid.py"
       - "tests/test_cirsium_private_frame_builder.py"
       - "tests/test_cirsium_private_source_manifest_builder.py"
       - "tests/test_cirsium_private_frame_archetype_preflight.py"
@@ -48,16 +50,17 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install package
-        run: python -m pip install -e .
+        run: python -m pip install -e . pyproj scipy
       - name: Validate graph and component pipeline
         run: |
           python tests/test_structural_graph.py -v
           python tests/test_structural_raw_adapters.py -v
           python tests/test_structural_support.py -v
           python tests/test_structural_selector.py -v
-      - name: Validate private-source, private-frame and public-freeze mechanics
+      - name: Validate private-source, raw-grid, private-frame and public-freeze mechanics
         run: |
           python tests/test_cirsium_private_source_manifest_builder.py -v
+          python tests/test_cirsium_private_alpine_local_grid.py -v
           python tests/test_cirsium_private_frame_builder.py -v
           python tests/test_cirsium_candidate_patch_freeze.py -v
           python tests/test_cirsium_candidate_ranking_v2.py -v
