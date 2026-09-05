@@ -36,6 +36,7 @@
     "release": "2021 v200 Map",
     "source": "official 3-degree HTTPS Cloud Optimized GeoTIFF",
     "crop_margin_m": 3000,
+    "neighbourhood_half_width_m": 250,
     "land_definition": "valid WorldCover class other than permanent water class 80",
     "component_rule": "8-neighbour connected components on the WorldCover land raster crop",
     "target_component_rule": "all strict historical medoids must resolve to the same positive land component; otherwise abstain",
