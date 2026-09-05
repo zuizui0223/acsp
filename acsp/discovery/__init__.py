@@ -1,4 +1,4 @@
-"""Experimental N4 discovery primitives.
+"""Experimental N4 discovery primitives and high-level workflow.
 
 This subpackage generalizes the current occurrence-to-next-observation development
 line without broadening the independently validated robust candidate-patch claim.
@@ -26,6 +26,7 @@ from .evidence import (
     complete_link_clusters,
     haversine_km,
 )
+from .families import StructuralFamilySpec, get_structural_family_spec, list_structural_families
 from .frames import AnnularFrameAudit, AnnularFrameSpec, build_annular_candidate_frame
 from .regimes import DiscoveryEvidenceProfile, DiscoveryRegime, RegimeDecision, resolve_discovery_regime
 from .schemas import (
@@ -37,8 +38,17 @@ from .schemas import (
     validate_source_manifest,
 )
 from .structural import StructuralOrderAudit, build_structural_support_order
+from .workflow import (
+    DiscoveryAssessment,
+    DiscoveryContext,
+    DiscoveryRankingAudit,
+    EvidencePolicy,
+    assess_occurrence_evidence,
+    rank_discovery_frame,
+    summarize_rankings,
+)
 
-DISCOVERY_API_VERSION = "0.1.0-development"
+DISCOVERY_API_VERSION = "0.2.0-development"
 DISCOVERY_VALIDATION_STATUS = "experimental_not_independently_validated"
 
 __all__ = [
@@ -59,6 +69,9 @@ __all__ = [
     "resolve_discovery_regime",
     "StructuralOrderAudit",
     "build_structural_support_order",
+    "StructuralFamilySpec",
+    "get_structural_family_spec",
+    "list_structural_families",
     "ComparatorAudit",
     "rank_nearest_anchor",
     "select_stable_start_maximin",
@@ -69,4 +82,11 @@ __all__ = [
     "normalize_occurrence_evidence",
     "validate_candidate_frame_schema",
     "validate_source_manifest",
+    "EvidencePolicy",
+    "DiscoveryContext",
+    "DiscoveryAssessment",
+    "DiscoveryRankingAudit",
+    "assess_occurrence_evidence",
+    "rank_discovery_frame",
+    "summarize_rankings",
 ]
