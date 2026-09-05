@@ -65,11 +65,21 @@
       "ANNULAR_NEAREST_KNOWN",
       "DETERMINISTIC_SPATIAL_BALANCE"
     ],
-    "STRUCTURAL_SENTINEL": [
-      "STRUCTURAL_SUPPORT",
-      "BROAD_SENTINEL_SUPPORT",
-      "DETERMINISTIC_SPATIAL_BALANCE"
-    ],
+    "STRUCTURAL_SENTINEL": {
+      "UNCERTAINTY_FOOTPRINT": [
+        "STRUCTURAL_SUPPORT",
+        "UNCERTAINTY_FOOTPRINT_SUPPORT",
+        "DETERMINISTIC_SPATIAL_BALANCE"
+      ],
+      "LEGACY_RANGE_CONTEXT": [
+        "STRUCTURAL_SUPPORT",
+        "DETERMINISTIC_SPATIAL_BALANCE"
+      ],
+      "COARSE_RANGE_CONTEXT": [
+        "STRUCTURAL_SUPPORT",
+        "DETERMINISTIC_SPATIAL_BALANCE"
+      ]
+    },
     "SPATIAL_BASELINE_ONLY": [
       "ANNULAR_NEAREST_KNOWN",
       "DETERMINISTIC_SPATIAL_BALANCE"
@@ -106,5 +116,5 @@
     "run the full-ranking HMAC freeze before opening any field outcome",
     "declare an equal field prefix across methods from logistical capacity before outcomes; never extend a method prefix because of observed success/failure"
   ],
-  "claim_boundary": "The problem gates, LOCAL frame geometry, sentinel uncertainty-provenance audit, structural families, raw-layer adapters, G_E graph mechanics, support composition, full deterministic ranking mechanics and HMAC public-freeze semantics are frozen. Real Cirsium candidate frames/rankings and the field prefix are not yet built, so this file does not establish occupancy, accessibility, field efficiency, or structural-selector superiority."
+  "claim_boundary": "The problem gates, LOCAL frame geometry, sentinel uncertainty-provenance audit and subregime-specific comparators, structural families, raw-layer adapters, G_E graph mechanics, support composition, full deterministic ranking mechanics and HMAC public-freeze semantics are frozen. Real Cirsium candidate frames/rankings and the field prefix are not yet built, so this file does not establish occupancy, accessibility, field efficiency, or structural-selector superiority."
 }
