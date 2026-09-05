@@ -1,0 +1,57 @@
+{
+  "schema_version": "public-japan-96pair-environment-vs-distance-development-v1",
+  "status": "DEVELOPMENT_ONLY_METHOD_FROZEN_BEFORE_COMPARATIVE_EXECUTION",
+  "parent_temporal_result": "validation/public_japan_96pair_temporal_anchor_benchmark_result_v1.json",
+  "cohort_role": "already_opened_and_consumed_development_only",
+  "new_independent_confirmation_claim": false,
+  "validated_product_changed": false,
+  "question": "Within the same fixed Japanese regional frame, does the already validated occurrence-conditioned environmental-support representation recover later novel occurrence clusters better than direct nearest-known distance or deterministic spatial balance?",
+  "scientific_methods": {
+    "environmental_support": {
+      "identity": "validated_robust_core_unchanged",
+      "support_fraction": 0.025,
+      "support_world_dtype": "float32",
+      "patch_merge_distance_m": 1000.0,
+      "features": ["elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi"],
+      "candidate_surface_rule": "same frozen 800-point regional surface semantics used by the validated Japan core",
+      "prototype_period": [2000, 2020],
+      "prototype_thinning_rule": "reuse validated core semantics; no temporal-outcome-driven tuning"
+    },
+    "nearest_known": {
+      "identity": "distance_baseline_only",
+      "historical_period": [2000, 2020],
+      "known_reobservation_exclusion_km": 0.5,
+      "selection_count": "exactly match environmental-support candidate count on the same regional candidate universe"
+    },
+    "spatial_balance": {
+      "identity": "deterministic_spatial_balance",
+      "selection_count": "exactly match environmental-support candidate count on the same regional candidate universe"
+    },
+    "random": {
+      "identity": "same_region_same_count_random",
+      "repetitions": 200
+    }
+  },
+  "outcome": {
+    "period": [2021, 2025],
+    "strict_declared_coordinate_uncertainty_m_max": 1000,
+    "cluster_rule": "deterministic_complete_link_greedy_max_0.5km",
+    "exclude_reobserved_recent_clusters_within_km": 0.5,
+    "primary_recovery_radius_km": 10.0,
+    "secondary_descriptive_radii_km": [2.0, 5.0]
+  },
+  "decision_rule": {
+    "primary": "compare pair-level environmental-support minus nearest-known and environmental-support minus spatial-balance at 10 km; retain failures as zero/no replacement",
+    "development_success_requires": "positive mean difference against both strong baselines with direction not confined to one taxon group; this may nominate a method but cannot confirm it",
+    "if_success": "freeze nominated method unchanged and sample a new disjoint public confirmation cohort before any external local-discovery claim",
+    "if_fail": "do not tune radii, precision, support fraction or feature weights on these 96 opened pairs"
+  },
+  "forbidden": [
+    "retune 0.025 support fraction",
+    "change six validated terrain features because of temporal outcomes",
+    "choose radius after seeing results",
+    "drop failed pairs",
+    "replace taxa",
+    "claim new independent confirmation from these 96 pairs"
+  ]
+}
