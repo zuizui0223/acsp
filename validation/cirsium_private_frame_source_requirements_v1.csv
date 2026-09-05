@@ -4,11 +4,11 @@ CIR02,Cirsium inundatum,SENTINEL,WETLAND_MOISTURE_STRUCTURE,青森県側の確�
 CIR03,Cirsium ugoense,LOCAL_CONTINUATION,ALPINE_TOPOGRAPHIC_STRUCTURE,秋田県側の確認済み野生集団,true,true,false,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR04,Cirsium otayae,LOCAL_CONTINUATION,ALPINE_TOPOGRAPHIC_STRUCTURE,妙高山系の確認済み野生集団,true,true,false,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR05,Cirsium nambuense,LOCAL_CONTINUATION,ALPINE_TOPOGRAPHIC_STRUCTURE,飯豊山地または朝日山地側の確認済み野生集団,true,true,false,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
-CIR06,Cirsium yezoalpinum,SENTINEL,ALPINE_TOPOGRAPHIC_STRUCTURE,知床山系の確認済み野生集団,false,true,false,false,true,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
+CIR06,Cirsium yezoalpinum,SENTINEL,ALPINE_TOPOGRAPHIC_STRUCTURE,知床山系の確認済み野生集団,false,true,false,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR07,Cirsium pendulum,LOCAL_CONTINUATION,OPEN_GRASSLAND_STRUCTURE,北海道の確認済み野生集団,true,true,true,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR08,Cirsium brevicaule,LOCAL_CONTINUATION,COASTAL_ISLAND_STRUCTURE,沖縄島のM01対象・確認済み野生集団,true,false,true,true,false,true,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR09,Cirsium spinosum,LOCAL_CONTINUATION,COASTAL_ISLAND_STRUCTURE,鹿児島県大隅半島側の確認済み野生集団,true,false,true,true,false,true,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR10,Cirsium hachijoense,LOCAL_CONTINUATION,FOREST_EDGE_STRUCTURE,伊豆七島内の確認済み島嶼集団A,true,true,true,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR11,Cirsium tamastoloniferum,LOCAL_CONTINUATION,GENERAL_SPATIAL_BASELINE_ONLY,東京都八王子市内の確認済み野生集団A,true,false,false,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
 CIR12,Cirsium dipsacolepis,SENTINEL,OPEN_GRASSLAND_STRUCTURE,P02で最初に検証される野生集団セクター,false,true,true,false,true,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
-CIR13,Cirsium lineare,SENTINEL,OPEN_GRASSLAND_STRUCTURE,P02で最初に検証される野生集団セクター,false,true,true,false,true,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
+CIR13,Cirsium lineare,SENTINEL,OPEN_GRASSLAND_STRUCTURE,P02で最初に検証される野生集団セクター,false,true,true,false,false,false,NOT_BUILT,NOT_BUILT,NOT_FROZEN
