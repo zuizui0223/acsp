@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Freeze full public-safe method rankings for prospective Cirsium patches.
 
-Unlike v1, this does not make ACSP choose a field-budget k. Every method produces a
-full deterministic ranking on the identical private candidate frame. The public
-artifact contains only HMAC-SHA256 candidate tokens and ranks. A later field plan
-may declare the same prefix length across methods before outcomes are opened.
+Unlike v1, this does not make ACSP choose a field-budget k. Every frozen method
+produces a full deterministic ranking on the identical private candidate frame.
+Sentinel comparators follow the prospectively frozen sentinel subregime rather
+than forcing all zero-anchor units through one broad-support rule.
 """
 from __future__ import annotations
 
@@ -77,6 +77,7 @@ def rank_unit(
     family = cohort_row["structural_feature_family"]
     arm = cohort_row["method_arm"]
     regime = cohort_row["occurrence_problem_class"]
+    sentinel_subregime = str(cohort_row.get("sentinel_subregime", "")).strip()
     methods: list[tuple[str, pd.DataFrame, str]] = []
 
     if arm in {"STRUCTURAL_LOCAL", "STRUCTURAL_SENTINEL"}:
@@ -99,9 +100,28 @@ def rank_unit(
         raise ValueError(f"unknown method arm: {arm}")
 
     if regime == "LOCAL_CONTINUATION":
-        methods.append(("ANNULAR_NEAREST_KNOWN", _sort_full(frame, column="nearest_anchor_km", ascending=True), ""))
+        if sentinel_subregime not in {"", "NOT_APPLICABLE"}:
+            raise ValueError("local unit cannot declare a sentinel subregime")
+        methods.append(
+            ("ANNULAR_NEAREST_KNOWN", _sort_full(frame, column="nearest_anchor_km", ascending=True), "")
+        )
     elif regime == "SENTINEL":
-        methods.append(("BROAD_SENTINEL_SUPPORT", _sort_full(frame, column="broad_robust_support", ascending=False), ""))
+        if arm != "STRUCTURAL_SENTINEL":
+            raise ValueError("sentinel units must use the frozen STRUCTURAL_SENTINEL arm")
+        if sentinel_subregime == "UNCERTAINTY_FOOTPRINT":
+            methods.append(
+                (
+                    "UNCERTAINTY_FOOTPRINT_SUPPORT",
+                    _sort_full(frame, column="broad_sentinel_support", ascending=False),
+                    "",
+                )
+            )
+        elif sentinel_subregime in {"LEGACY_RANGE_CONTEXT", "COARSE_RANGE_CONTEXT"}:
+            # No coordinate-like sentinel support is justified. The structural method
+            # is compared directly with spatial balance on the same declared sector.
+            pass
+        else:
+            raise ValueError(f"unsupported frozen sentinel subregime: {sentinel_subregime}")
     else:
         raise ValueError(f"unsupported frozen regime for ranking: {regime}")
 
@@ -116,9 +136,14 @@ def rank_unit(
     )
     methods.append(("DETERMINISTIC_SPATIAL_BALANCE", spatial, ""))
 
-    expected = 2 if arm == "SPATIAL_BASELINE_ONLY" else 3
+    if regime == "LOCAL_CONTINUATION":
+        expected = 2 if arm == "SPATIAL_BASELINE_ONLY" else 3
+    elif sentinel_subregime == "UNCERTAINTY_FOOTPRINT":
+        expected = 3
+    else:
+        expected = 2
     if len(methods) != expected:
-        raise AssertionError("unexpected method count")
+        raise AssertionError("unexpected method count for frozen regime/subregime")
     if any(len(ranked) != len(frame) for _, ranked, _ in methods):
         raise AssertionError("every method must rank the complete identical candidate frame")
 
@@ -131,11 +156,17 @@ def rank_unit(
                     "aza3_slot_id": cohort_row["aza3_slot_id"],
                     "species_binomial": cohort_row["species_binomial"],
                     "occurrence_problem_class": regime,
+                    "sentinel_subregime": sentinel_subregime if regime == "SENTINEL" else "NOT_APPLICABLE",
                     "structural_feature_family": family,
                     "anchor_replication_class": cohort_row["anchor_replication_class"],
                     "frozen_method": method,
                     "decision_rank": rank,
-                    "candidate_token": _token(salt, unit=cohort_row["cohort_unit_id"], method=method, record=record),
+                    "candidate_token": _token(
+                        salt,
+                        unit=cohort_row["cohort_unit_id"],
+                        method=method,
+                        record=record,
+                    ),
                     "candidate_frame_rows": len(frame),
                     "support_provenance_id": provenance,
                     "field_prefix_selected": "false",
@@ -198,7 +229,8 @@ def freeze_rankings(*, cohort_csv: Path, unit_inputs_csv: Path, salt_file: Path)
         "raw_candidate_ids_written": False,
         "same_frame_full_ranking": True,
         "matched_field_effort_claim": False,
-        "rule": "A later pre-field campaign plan may choose one equal prefix length per comparison unit; no outcome-dependent prefix extension is allowed."
+        "sentinel_subregime_specific_methods": True,
+        "rule": "A later pre-field campaign plan may choose one equal prefix length per comparison unit; no outcome-dependent prefix extension is allowed.",
     }
     return manifest, summary
 
