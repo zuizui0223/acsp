@@ -1,0 +1,86 @@
+name: Public Japan 96-pair environment vs distance development v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/public_japan_96pair_environment_vs_distance_development_v1.json"
+      - "research/compare_public_japan_96pair_environment_vs_distance_v1.py"
+      - "tests/test_public_japan_96pair_environment_vs_distance.py"
+      - ".github/workflows/public-japan-96pair-environment-vs-distance-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run deterministic comparator tests
+        run: python tests/test_public_japan_96pair_environment_vs_distance.py -v
+      - name: Download frozen 96-pair cohort artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: frozen-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+      - name: Verify frozen cohort and pre-execution comparator contract
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          cohort = pd.read_csv('frozen-cohort/predeclared_taxon_region_pairs.csv')
+          cohort = cohort[cohort['status'].eq('predeclared')]
+          contract = json.loads(Path('validation/public_japan_96pair_environment_vs_distance_development_v1.json').read_text())
+          assert len(cohort) == 96
+          assert cohort['scientific_name'].nunique() == 96
+          assert contract['status'] == 'DEVELOPMENT_ONLY_METHOD_FROZEN_BEFORE_COMPARATIVE_EXECUTION'
+          assert contract['comparative_execution_opened'] is False
+          assert contract['scientific_methods']['environmental_support']['support_fraction'] == 0.025
+          assert contract['scientific_methods']['spatial_balance']['identity'] == 'stable_start_maximin_farthest_point'
+          assert contract['shared_historical_evidence']['strict_declared_coordinate_uncertainty_m_max'] == 1000
+          assert contract['outcome']['primary_recovery_radius_km'] == 10.0
+          PY
+      - name: Run frozen development comparison
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/public-japan-96pair-environment-vs-distance-v1
+          python research/compare_public_japan_96pair_environment_vs_distance_v1.py \
+            --sample-file frozen-cohort/predeclared_taxon_region_pairs.csv \
+            --out-dir /tmp/public-japan-96pair-environment-vs-distance-v1
+      - name: Guard aggregate public output
+        run: |
+          if head -n 1 /tmp/public-japan-96pair-environment-vs-distance-v1/*.csv | grep -E '(^|,)(latitude|longitude|decimalLatitude|decimalLongitude|private_exact_site_record_id)(,|$)'; then
+            echo 'coordinate/private column leaked into public comparison artifact'
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('/tmp/public-japan-96pair-environment-vs-distance-v1')
+          summary = json.loads((root/'summary.json').read_text())
+          table = pd.read_csv(root/'pair_method_comparison.csv')
+          assert summary['declared_pairs'] == 96
+          assert len(table) == 96
+          assert summary['validated_product_changed'] is False
+          assert summary['new_independent_confirmation_claim'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-japan-96pair-environment-vs-distance-v1
+          path: /tmp/public-japan-96pair-environment-vs-distance-v1/
+          if-no-files-found: error
+          retention-days: 90
