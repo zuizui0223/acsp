@@ -1,0 +1,71 @@
+{
+  "schema_version": "public-japan-96pair-environment-vs-distance-development-result-v1",
+  "status": "DEVELOPMENT_ONLY_COMPARISON_COMPLETE",
+  "decision": "DO_NOT_NOMINATE_OR_RETUNE_ON_THESE_96_OPENED_PAIRS",
+  "protocol": "validation/public_japan_96pair_environment_vs_distance_development_v1.json",
+  "workflow_run_id": 33939270157,
+  "artifact_id": 9961281898,
+  "artifact_digest": "sha256:88f8f78c092bfec80a4292ab285d98c23acba47d3f532194c1a1b29af0406cf6",
+  "validated_product_changed": false,
+  "new_independent_confirmation_claim": false,
+  "declared_pairs": 96,
+  "compared_pairs": 12,
+  "status_counts": {
+    "no_novel_recent_target_zero": 56,
+    "insufficient_historical_evidence_zero": 24,
+    "compared": 12,
+    "comparative_generation_failure_zero": 4
+  },
+  "novel_recent_clusters_in_declared_denominator": 511,
+  "primary_10km_all96": {
+    "mean_environment_recall": 0.046227159511488335,
+    "mean_nearest_recall": 0.04997707991242475,
+    "mean_spatial_balance_recall": 0.021900800462992576,
+    "mean_random_recall": 0.023234945717881372,
+    "mean_environment_minus_nearest": -0.0037499204009364107,
+    "mean_environment_minus_spatial_balance": 0.02432635904849575,
+    "mean_environment_minus_random": 0.02299221379360696
+  },
+  "secondary_5km_all96": {
+    "mean_environment_recall": 0.0316387599754287,
+    "mean_nearest_recall": 0.03604472104933928,
+    "mean_spatial_balance_recall": 0.0030601249120337792,
+    "mean_random_recall": 0.006430970029730805,
+    "mean_environment_minus_nearest": -0.0044059610739105816,
+    "mean_environment_minus_spatial_balance": 0.02857863506339492,
+    "mean_environment_minus_random": 0.02520778994569789
+  },
+  "secondary_2km_all96": {
+    "mean_environment_recall": 0.008069552773216566,
+    "mean_nearest_recall": 0.014145432598326686,
+    "mean_spatial_balance_recall": 0.0020833333333333333,
+    "mean_random_recall": 0.000865942350359684,
+    "mean_environment_minus_nearest": -0.006075879825110121,
+    "mean_environment_minus_spatial_balance": 0.005986219439883232,
+    "mean_environment_minus_random": 0.0072036104228568815
+  },
+  "subgroup_primary_10km": {
+    "plant": {
+      "declared_pairs": 48,
+      "compared_pairs": 5,
+      "mean_environment_minus_nearest": 0.0009163148017827827,
+      "mean_environment_minus_spatial_balance": 0.012694625263898663,
+      "mean_environment_minus_random": 0.006002793538392369
+    },
+    "animal": {
+      "declared_pairs": 48,
+      "compared_pairs": 7,
+      "mean_environment_minus_nearest": -0.008416155603655604,
+      "mean_environment_minus_spatial_balance": 0.035958092833092835,
+      "mean_environment_minus_random": 0.03998163404882155
+    }
+  },
+  "development_nomination_gate": {
+    "overall_environment_minus_nearest_positive": false,
+    "overall_environment_minus_spatial_balance_positive": true,
+    "plant_and_animal_positive_against_both": false,
+    "passed": false
+  },
+  "interpretation": "The unchanged validated environmental-support representation carries information beyond deterministic spatial balance and same-count random placement, but it did not outperform direct nearest-known distance for later novel occurrence recovery under the frozen local-discovery comparison. The method is therefore not nominated as a universal fine-scale local selector from these opened 96 pairs, and no radius, precision rule, support fraction, feature set, comparator, or taxon subset may be retuned on this cohort.",
+  "claim_boundary": "This result does not weaken the independently validated 2.5% / 10-km regional candidate-patch product, which answered a different regional enrichment question. It only rejects repurposing the unchanged regional environmental-support representation as a universal local-discovery selector under this development contract."
+}
