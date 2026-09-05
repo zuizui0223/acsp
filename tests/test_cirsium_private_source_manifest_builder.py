@@ -1,10 +1,14 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 import pandas as pd
 
-from research.build_cirsium_private_source_manifest_v1 import build_manifest
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from research.build_cirsium_private_source_manifest_v1 import build_manifest  # noqa: E402
 
 
 def _write(path: Path, text: str) -> Path:
