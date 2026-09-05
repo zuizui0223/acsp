@@ -6,26 +6,57 @@
 
 It is deliberately separate from the independently validated Japanese 2.5% / 10-km candidate-patch product.
 
-## 1. Make templates
+## Fast path: species name to auditable search lanes
+
+```bash
+# 1. Public occurrence evidence. Coordinate uncertainty is preserved, not pre-filtered.
+acsp-discovery fetch-gbif "Species name" --country JP --out occurrences.csv
+
+# 2. Collapse records to bounded population evidence and diagnose what is justified.
+acsp-discovery assess occurrences.csv --out-dir assessment
+
+# 3A. LOCAL only when an external study contract/source already justifies its outer radius.
+acsp-discovery build-frame local \
+  --anchors assessment/population_anchors.csv \
+  --outer-radius-km 5 \
+  --out local_frame.csv
+
+# 3B. Or declare a BROAD geographic frame when LOCAL is insufficient/unsupported.
+acsp-discovery build-frame broad \
+  --bounds WEST SOUTH EAST NORTH \
+  --anchors assessment/population_anchors.csv \
+  --out broad_frame.csv
+
+# 4. For terrestrial broad frames, attach ESA WorldCover land components and
+#    automatically split components represented by historical populations from others.
+acsp-discovery prepare-components \
+  --candidate-frame broad_frame.csv \
+  --anchors assessment/population_anchors.csv \
+  --out-dir components
+```
+
+`components/` contains:
+
+- `candidate_components_all_land.csv`;
+- `candidate_components_anchored.csv` — physical land components represented by historical populations;
+- `candidate_components_other.csv` — other physical land components in the same declared broad frame;
+- `worldcover_component_snapshot.tif`;
+- `component_audit.json`;
+- `source_manifest.json` with pinned WorldCover release and SHA-256.
+
+WorldCover land components are **physical source-backed components, not proof of suitable habitat**. They are a reusable way to stop LOCAL distance from silently defining the entire candidate universe. A biological DETACHED lane still needs ecological justification or a prospective test.
+
+## Template path
 
 ```bash
 acsp-discovery template --out-dir my-discovery
 ```
 
-This creates:
+This creates example occurrence/candidate tables and a source-manifest template.
 
-- `occurrences.csv` — provider-neutral occurrence evidence;
-- `candidate_frame.csv` — a minimal frozen candidate frame example;
-- `source_manifest.json` — source/provenance template;
-- `README.txt` — the next commands.
+## Evidence states
 
-## 2. Assess occurrence evidence first
-
-```bash
-acsp-discovery assess my-discovery/occurrences.csv
-```
-
-The command collapses coordinate records into bounded population evidence and returns a safe state:
+`acsp-discovery assess` returns a safe state:
 
 - `READY_FOR_DECLARED_LOCAL_FRAME` — a separately justified local component has exact-enough population anchors;
 - `READY_FOR_DETACHED_COMPONENT_FRAME` — a detached ecological component is justified;
@@ -44,25 +75,22 @@ acsp-discovery assess occurrences.csv \
 
 `--regime local` is not a way to make weak data pass. The note is saved with the assessment so the decision remains auditable.
 
-## 3. Rank one already frozen candidate frame
+## Rank a frozen candidate frame
 
-Comparator-only run:
+Comparator-only LOCAL run:
 
 ```bash
 acsp-discovery run \
   --occurrences occurrences.csv \
-  --candidate-frame candidate_frame.csv \
+  --candidate-frame local_frame.csv \
   --regime local \
   --context-note "Predeclared source-backed local component" \
   --out-dir discovery-output
 ```
 
-This returns separate full rankings, not one blended score:
+This returns **separate** orders, not one blended score. Depending on the declared regime/input, these can include deterministic spatial balance, nearest-known and a structural/process ranking.
 
-- deterministic spatial balance;
-- nearest-known when LOCAL and `nearest_anchor_km` is available.
-
-For a structural/process model, first inspect the available families:
+Inspect structural families first:
 
 ```bash
 acsp-discovery families
@@ -81,13 +109,7 @@ acsp-discovery run \
   --out-dir discovery-output
 ```
 
-For `COASTAL_ISLAND_STRUCTURE`, also declare the ecological component that was fixed before outcome scoring:
-
-```bash
---target-component-id WORLDCOVER_LAND_COMPONENT_1
-```
-
-The structural ranking is kept separate from nearest-known and spatial balance. ACSP does not fit a post-hoc distance/environment or distance/structure weight.
+For `COASTAL_ISLAND_STRUCTURE`, also declare the component fixed before outcome scoring with `--target-component-id`.
 
 ## Input contracts
 
@@ -116,47 +138,40 @@ Required columns:
 
 `nearest_anchor_km` is optional and is used only by the LOCAL nearest-known comparator.
 
-ACSP Discovery does **not** invent a universal 2-km or 5-km frame. The frame must be declared/frozen upstream from a justified regional, local, detached, or sentinel component.
+ACSP Discovery does **not** invent a universal 2-km or 5-km frame. LOCAL radius or BROAD bounds must be declared/frozen upstream.
 
 ### LOCAL versus DETACHED components
 
-When a provider/ecological graph already supplies `ecological_component_id`, the Python API can partition a frozen outer frame without a distance threshold:
+When a provider already supplies `ecological_component_id`, the Python API can partition a frozen outer frame without a distance threshold:
 
 ```python
 from acsp.discovery import partition_candidate_components
 
-local_frame, detached_frame, audit = partition_candidate_components(
+anchored_frame, other_frame, audit = partition_candidate_components(
     candidate_frame,
     anchored_component_ids=["component-containing-known-populations"],
 )
 ```
 
-LOCAL contains components represented by historical populations. DETACHED contains other source-backed components in the same already frozen outer frame. The partition itself uses no held-out outcome, access layer or distance threshold.
+The high-level `prepare-components` command performs this operation for ESA WorldCover without requiring the user to type component IDs.
 
 ### Structural sources
 
-Run:
+Run `acsp-discovery families` for exact provider/raw columns and source roles. Structural runs require a real source manifest with pinned release IDs and SHA-256 digests.
 
-```bash
-acsp-discovery families
-```
+The current structural families are also represented by a declarative recipe engine built from reusable primitives such as relative rank, local continuity, local similarity, edge signals, component membership, distance decay and conjunctive minimum. Existing frozen-family semantics must pass parity tests before recipes replace them in a frozen experiment.
 
-for the exact provider/raw columns and source roles required by each family. Structural runs require a real source manifest with pinned release IDs and SHA-256 digests.
-
-The current structural families are now also represented by a declarative recipe engine built from reusable primitives such as relative rank, local continuity, local similarity, edge signals, component membership, distance decay and conjunctive minimum. Existing frozen-family semantics must pass parity tests before the recipe engine can replace them in a frozen experiment.
-
-## What the command does not do
+## What ACSP Discovery does not do
 
 It does not claim:
 
-- occupancy probability;
-- exact occupied locations;
-- that nearest-known is the best method;
-- that one structural family is universally correct;
-- route, field-day, or budget optimality;
+- occupancy probability or exact occupied locations;
+- that nearest-known or one structural family is universally best;
+- that every unanchored physical component is biologically suitable;
+- route, field-day or budget optimality;
 - discoveries/hour or a stopping rule.
 
-Human access and movement restrictions belong downstream of ecological candidate generation. `distance_to_road`, trail/access, permission, route, travel, budget and field-outcome columns are rejected by the ecological ranking workflow. Field effort, detection/non-detection and complete visit logs are required before ACSP can estimate yield, days, budget or stopping.
+Human access and movement restrictions belong downstream of ecological candidate generation. Road/trail/access/permission/travel/budget/field-outcome columns are rejected by the ecological ranking workflow. Complete effort plus detection/non-detection logs are required before ACSP can estimate yield, days, budget or stopping.
 
 ## Python API
 
@@ -164,6 +179,7 @@ Human access and movement restrictions belong downstream of ecological candidate
 from acsp.discovery import (
     DiscoveryContext,
     assess_occurrence_evidence,
+    prepare_worldcover_component_partition,
     rank_discovery_frame,
 )
 
@@ -171,6 +187,13 @@ assessment, population_anchors = assess_occurrence_evidence(
     occurrences,
     context=DiscoveryContext(local_component_justified=True),
 )
+
+all_land, anchored_components, other_components, component_audit = \
+    prepare_worldcover_component_partition(
+        broad_candidate_frame,
+        population_anchors,
+        snapshot_path="worldcover_snapshot.tif",
+    )
 
 rankings, audit = rank_discovery_frame(
     candidate_frame,
@@ -180,4 +203,4 @@ rankings, audit = rank_discovery_frame(
 )
 ```
 
-`rankings` is a dictionary of **separate** method orders. Do not select the favorable method after opening field outcomes and then call that method prospective.
+`rankings` is a dictionary of **separate** method orders. Do not select a favorable method after opening field outcomes and then call that method prospective.
