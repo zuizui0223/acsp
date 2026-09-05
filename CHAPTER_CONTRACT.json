@@ -1,0 +1,26 @@
+{
+  "program_id": "niche-to-survey-four-chapter-v1",
+  "spine_version": 2,
+  "spine_fixed_date": "2026-09-01",
+  "chapter_number": 4,
+  "chapter_code": "N4",
+  "repository": "zuizui0223/acsp",
+  "chapter_title": "Survey action",
+  "spine_question": "WHERE can we justify looking next?",
+  "spine_thought_ja": "予測の終点は、次の観測の入口になる。",
+  "conceptual_role": "justified_next_observation",
+  "core_question": "Given the information and uncertainty available before a survey, where can field effort be justified next?",
+  "primary_output": "Bounded candidate survey patches or survey priorities with explicit justification",
+  "inquiry_thesis": "Prediction should terminate in an auditable next-observation decision rather than being treated as the end of the scientific cycle.",
+  "estimates_niche_drivers": false,
+  "estimates_historical_route": false,
+  "handoff_from_previous_chapter": "Consume supported and unresolved possibilities from N3 when available, while remaining usable with independently defined support inputs.",
+  "validated_japanese_candidate_patch_product_unchanged": true,
+  "current_paper_scientifically_closed": true,
+  "chapter_order": [
+    "N1:sdmr:WHAT_belongs_in_the_niche",
+    "N2:odsp:HOW_THICK_is_it",
+    "N3:eog:WHERE_can_it_become_real",
+    "N4:acsp:WHERE_can_we_justify_looking_next"
+  ]
+}
