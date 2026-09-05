@@ -1,4 +1,5 @@
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +12,10 @@ from rasterio.transform import from_origin
 from shapely.geometry import Polygon, mapping
 from shapely.ops import transform as shapely_transform
 
-from research.build_cirsium_private_alpine_local_grid_v1 import build_alpine_local_raw_grid
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from research.build_cirsium_private_alpine_local_grid_v1 import build_alpine_local_raw_grid  # noqa: E402
 
 
 class PrivateAlpineLocalGridTests(unittest.TestCase):
