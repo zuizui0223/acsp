@@ -1,0 +1,95 @@
+{
+  "schema_version": "cirsium-structural-selector-family-contract-v1",
+  "status": "PRE_CIRSIUM_FIELD_OUTCOME_FROZEN",
+  "scientific_role": "structural ecological selector development under ACSP issue 192",
+  "global_rule": "A structural feature family may be assigned only from taxon-specific habitat evidence frozen before the focal field outcome. Availability of a raster is not evidence that the raster belongs in the selector.",
+  "no_generic_kitchen_sink_stack": true,
+  "no_post_outcome_feature_family_switch": true,
+  "families": {
+    "WETLAND_MOISTURE_STRUCTURE": {
+      "evidence_required": "source explicitly identifies wetland, marsh, riparian, saturated or comparable moisture-structured habitat",
+      "candidate_structure": [
+        "wetland/water-adjacent land structure",
+        "topographic moisture or drainage position",
+        "terrain continuity/barriers"
+      ],
+      "forbidden_shortcut": "generic NDVI similarity alone"
+    },
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": {
+      "evidence_required": "source explicitly identifies alpine/subalpine/high-elevation or mountain-ridge habitat",
+      "candidate_structure": [
+        "elevation/relative relief",
+        "slope/landform continuity",
+        "ridge/valley barriers",
+        "snow/exposure proxy only if independently justified"
+      ],
+      "forbidden_shortcut": "elevation-only nearest-neighbour ranking without spatial comparator"
+    },
+    "COASTAL_ISLAND_STRUCTURE": {
+      "evidence_required": "source explicitly identifies coastal, maritime, sea-cliff, dune or comparable shore-structured habitat",
+      "candidate_structure": [
+        "coast-distance/topographic shore position",
+        "cliff/shore landform continuity",
+        "island-component barriers"
+      ],
+      "forbidden_shortcut": "treating all cells on the same island as one local continuation"
+    },
+    "FOREST_EDGE_STRUCTURE": {
+      "evidence_required": "source explicitly identifies forest interior, forest edge, woodland margin or comparable forest-boundary habitat",
+      "candidate_structure": [
+        "forest/nonforest edge continuity",
+        "canopy/opening transition structure",
+        "terrain and component barriers"
+      ],
+      "forbidden_shortcut": "generic greenness similarity without explicit forest-edge structure"
+    },
+    "CALCAREOUS_SUBSTRATE_STRUCTURE": {
+      "evidence_required": "source explicitly identifies limestone/calcareous substrate",
+      "candidate_structure": [
+        "geologic limestone/calcareous component",
+        "terrain continuity within the substrate component"
+      ],
+      "forbidden_shortcut": "using broad land-cover similarity as a substitute for substrate"
+    },
+    "ULTRAMAFIC_SERPENTINE_STRUCTURE": {
+      "evidence_required": "source explicitly identifies serpentine, ultramafic or equivalent substrate",
+      "candidate_structure": [
+        "ultramafic/serpentine geologic component",
+        "terrain continuity/barriers within the substrate component"
+      ],
+      "forbidden_shortcut": "using generic climate similarity as a substitute for substrate"
+    },
+    "OPEN_GRASSLAND_STRUCTURE": {
+      "evidence_required": "source explicitly identifies grassland, open meadow or comparable open-habitat structure",
+      "candidate_structure": [
+        "open-land continuity",
+        "edge/fragment structure",
+        "terrain context"
+      ],
+      "forbidden_shortcut": "reviving the failed Campanula NDVI-only selector"
+    },
+    "GENERAL_SPATIAL_BASELINE_ONLY": {
+      "evidence_required": "no source-backed structural habitat family has yet been frozen",
+      "candidate_structure": [
+        "annular distance baseline",
+        "deterministic spatial balance",
+        "broad robust support for sentinel mode"
+      ],
+      "forbidden_shortcut": "adding an ecological feature after seeing the field result"
+    }
+  },
+  "assignment_rule": {
+    "primary_family_per_validation_unit": 1,
+    "multi_family_assignment": "allowed only when the pre-outcome source explicitly supports multiple structural mechanisms; primary and sensitivity roles must be declared before field outcome",
+    "unknown_habitat_action": "GENERAL_SPATIAL_BASELINE_ONLY",
+    "taxonomic_block_is_habitat_evidence": false,
+    "range_sector_name_alone_is_habitat_evidence": false
+  },
+  "comparison_rule": {
+    "must_compare_to_annular_nearest_known": true,
+    "must_compare_to_deterministic_spatial_balance": true,
+    "matched_field_effort_required_for_external_promotion": true,
+    "stable_gain_requirement": "Any added-value claim must recur beyond one taxon, one region, and one favorable radius/fraction corner."
+  },
+  "claim_boundary": "A source-backed structural selector can improve where-search justification; it does not estimate occupancy or prove that the habitat feature causes population occurrence."
+}

@@ -1,0 +1,194 @@
+name: Campanula anchor compression baselines
+
+on:
+  pull_request:
+    paths:
+      - "research/evaluate_campanula_anchor_distance_frontier.py"
+      - "research/test_campanula_anchor_distance_frontier.py"
+      - "research/evaluate_campanula_anchor_spatial_balance.py"
+      - "research/test_campanula_anchor_spatial_balance.py"
+      - "research/evaluate_campanula_anchor_ndvi_filter.py"
+      - "research/test_campanula_anchor_ndvi_filter.py"
+      - "research/evaluate_campanula_annular_candidate_frame.py"
+      - "research/evaluate_campanula_occurrence_anchor_loco.py"
+      - ".github/workflows/campanula-anchor-ndvi-filter.yml"
+      - "field_validation/campanula_microdonta/development_data/**"
+  workflow_dispatch:
+
+concurrency:
+  group: campanula-anchor-compression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  anchor-compression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install rasterio pyproj scipy awscli
+
+      - name: Run focused tests
+        run: |
+          python -m unittest research.test_campanula_anchor_distance_frontier -v
+          python -m unittest research.test_campanula_anchor_spatial_balance -v
+          python -m unittest research.test_campanula_anchor_ndvi_filter -v
+
+      - name: Download frozen Campanula cache and DEM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-development-data
+          path: campanula-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31856717236
+
+      - name: Download pinned NDVI composite
+        run: |
+          set -euo pipefail
+          mkdir -p public-layers
+          NDVI_KEY="ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif"
+          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" public-layers/ndvi.tif --no-sign-request
+          sha256sum public-layers/ndvi.tif | tee public-layers/ndvi_sha256.txt
+          grep -q '^641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638 ' public-layers/ndvi_sha256.txt
+
+      - name: Rebuild outcome-blind full-island land-cell universe
+        run: |
+          python research/campanula_microterrain_discovery.py \
+            --gbif campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --out microterrain-results
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('microterrain-results/microterrain_report.json').read_text())
+          assert report['field_coordinates_used_by_generator'] is False
+          assert report['grid_cells'] == 22784
+          assert report['gbif_rows_in_islands'] == 56
+          PY
+
+      - name: Evaluate finite distance-frontier baseline
+        run: |
+          python research/evaluate_campanula_anchor_distance_frontier.py \
+            --universe microterrain-results/microterrain_universe.csv \
+            --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
+            --out-dir campanula-anchor-distance-frontier
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('campanula-anchor-distance-frontier')
+          summary = json.loads((root / 'summary.json').read_text())
+          folds = pd.read_csv(root / 'anchor_distance_frontier_folds.csv')
+          aggregate = pd.read_csv(root / 'anchor_distance_frontier_aggregate.csv')
+
+          assert summary['scientific_role'] == 'development_internal_strong_spatial_baseline_only'
+          assert summary['independent_validation'] is False
+          assert summary['reads_2026_field_outcomes'] is False
+          assert summary['hidden_cluster_coordinates_used_for_candidate_scoring'] is False
+          assert summary['candidate_universe_rows'] == 22784
+          assert summary['fold_rows'] == len(folds) == 420
+          assert summary['aggregate_rows'] == len(aggregate) == 96
+          assert summary['primary_cluster_policy'] == 'single_link'
+          assert summary['sensitivity_cluster_policy'] == 'complete_link'
+          assert summary['selection_fractions'] == [0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
+          assert summary['outer_radii_km'] == [2.0, 2.5]
+          print(aggregate.to_csv(index=False))
+          PY
+
+      - name: Evaluate spatially balanced coverage baseline
+        run: |
+          python research/evaluate_campanula_anchor_spatial_balance.py \
+            --universe microterrain-results/microterrain_universe.csv \
+            --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
+            --out-dir campanula-anchor-spatial-balance
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('campanula-anchor-spatial-balance')
+          summary = json.loads((root / 'summary.json').read_text())
+          folds = pd.read_csv(root / 'anchor_spatial_balance_folds.csv')
+          aggregate = pd.read_csv(root / 'anchor_spatial_balance_aggregate.csv')
+
+          assert summary['scientific_role'] == 'development_internal_spatial_coverage_baseline_only'
+          assert summary['independent_validation'] is False
+          assert summary['reads_2026_field_outcomes'] is False
+          assert summary['hidden_cluster_coordinates_used_for_candidate_selection'] is False
+          assert summary['candidate_universe_rows'] == 22784
+          assert summary['fold_rows'] == len(folds) == 420
+          assert summary['aggregate_rows'] == len(aggregate) == 96
+          assert summary['primary_cluster_policy'] == 'single_link'
+          assert summary['sensitivity_cluster_policy'] == 'complete_link'
+          assert summary['selection_fractions'] == [0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
+          assert summary['outer_radii_km'] == [2.0, 2.5]
+          print(aggregate.to_csv(index=False))
+          PY
+
+      - name: Evaluate NDVI compression inside occurrence annuli
+        run: |
+          python research/evaluate_campanula_anchor_ndvi_filter.py \
+            --universe microterrain-results/microterrain_universe.csv \
+            --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
+            --ndvi public-layers/ndvi.tif \
+            --out-dir campanula-anchor-ndvi-filter
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('campanula-anchor-ndvi-filter')
+          summary = json.loads((root / 'summary.json').read_text())
+          folds = pd.read_csv(root / 'anchor_ndvi_filter_folds.csv')
+          aggregate = pd.read_csv(root / 'anchor_ndvi_filter_aggregate.csv')
+
+          assert summary['scientific_role'] == 'development_internal_habitat_compression_test_only'
+          assert summary['independent_validation'] is False
+          assert summary['reads_2026_field_outcomes'] is False
+          assert summary['hidden_cluster_features_used_for_candidate_scoring'] is False
+          assert summary['candidate_universe_rows'] == 22784
+          assert summary['fold_rows'] == len(folds) == 420
+          assert summary['aggregate_rows'] == len(aggregate) == 96
+          assert summary['primary_cluster_policy'] == 'single_link'
+          assert summary['sensitivity_cluster_policy'] == 'complete_link'
+          assert summary['selection_fractions'] == [0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
+          assert summary['outer_radii_km'] == [2.0, 2.5]
+          print(aggregate.to_csv(index=False))
+          PY
+
+      - name: Upload experiment outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: campanula-anchor-compression-baselines
+          path: |
+            public-layers/ndvi_sha256.txt
+            microterrain-results/microterrain_report.json
+            campanula-anchor-distance-frontier/
+            campanula-anchor-spatial-balance/
+            campanula-anchor-ndvi-filter/
+          if-no-files-found: error
+          retention-days: 90

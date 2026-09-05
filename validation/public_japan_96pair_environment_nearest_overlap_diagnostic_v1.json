@@ -1,0 +1,35 @@
+{
+  "schema_version": "public-japan-96pair-environment-nearest-overlap-diagnostic-v1",
+  "status": "POST_RESULT_DIAGNOSTIC_FROZEN_BEFORE_OVERLAP_RERUN",
+  "parent_result": "validation/public_japan_96pair_environment_vs_distance_development_result_v1.json",
+  "scientific_role": "descriptive complementarity diagnosis only; no method nomination, tuning, or validation",
+  "validated_product_changed": false,
+  "new_independent_confirmation_claim": false,
+  "cohort": "exact same already-consumed frozen 96 Japan taxon-region pairs",
+  "method_replay": {
+    "environmental_support": "exact frozen implementation and shared strict historical evidence from parent comparison",
+    "nearest_known": "exact frozen implementation and shared strict historical evidence from parent comparison",
+    "candidate_count": "same parent environmental patch count k",
+    "recovery_radius_km": 10.0,
+    "recent_cluster_definition": "same 2021-2025 strict <=1000 m complete-link 0.5 km clusters with reobservations <=0.5 km removed"
+  },
+  "reported_cluster_categories": [
+    "both_environment_and_nearest",
+    "environment_only",
+    "nearest_only",
+    "neither"
+  ],
+  "aggregation": {
+    "primary_descriptive_denominator": "novel recent clusters from pairs where both parent methods were successfully constructed",
+    "generation_failures": "reported separately and never relabeled as neither",
+    "pair_rows": "retain all 96 declared pairs in the diagnostic table"
+  },
+  "forbidden": [
+    "do not create a fitted environment-distance weight from these opened outcomes",
+    "do not tune the 10 km diagnostic radius",
+    "do not choose a complementarity threshold from the observed overlap",
+    "do not drop parent comparison failures from the parent scientific decision",
+    "do not claim that an environment-or-nearest union is validated or field-efficient"
+  ],
+  "interpretation_rule": "If environment-only recovery is nonzero, environmental support contains some information complementary to nearest-known and may motivate a separately frozen multi-regime architecture; if it is negligible, prioritize genuinely new structural/process information instead. Either result is descriptive and cannot rescue the failed parent nomination gate."
+}

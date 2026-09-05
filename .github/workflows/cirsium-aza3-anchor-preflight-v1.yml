@@ -1,0 +1,37 @@
+name: Preflight Cirsium aza3 anchor availability v1
+
+on:
+  pull_request:
+    paths:
+      - 'research/preflight_cirsium_aza3_gbif_anchor_availability_v1.py'
+      - 'research/audit_cirsium_aza3_gbif_occurrences_v1.py'
+      - '.github/workflows/cirsium-aza3-anchor-preflight-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile preflight
+        run: python -m py_compile research/preflight_cirsium_aza3_gbif_anchor_availability_v1.py
+      - name: Run preflight
+        run: python research/preflight_cirsium_aza3_gbif_anchor_availability_v1.py --out-dir validation/cirsium_aza3_anchor_preflight_v1
+      - name: Guard public output
+        run: |
+          if grep -R -E 'decimalLatitude|decimalLongitude|latitude,longitude|longitude,latitude' validation/cirsium_aza3_anchor_preflight_v1; then
+            echo 'coordinate-bearing field leaked into public preflight'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-aza3-anchor-preflight-v1
+          path: validation/cirsium_aza3_anchor_preflight_v1/
+          if-no-files-found: error

@@ -1,0 +1,56 @@
+{
+  "schema_version": "public-cirsium-wetland-shikoku-structural-smoke-amendment-v1",
+  "status": "PRE_STRUCTURAL_OUTCOME_PUBLIC_SLOT_GEOMETRY_FROZEN",
+  "parent_contract": "validation/public_cirsium_structural_three_family_smoke_v1.json",
+  "cohort_unit_id": "CIR01",
+  "species": "Cirsium sieboldii",
+  "feature_family": "WETLAND_MOISTURE_STRUCTURE",
+  "validated_product_changed": false,
+  "public_development_only": true,
+  "slot_geometry": {
+    "identity": "existing validated Japan Shikoku regional rectangle",
+    "west": 132.5,
+    "south": 32.7,
+    "east": 134.5,
+    "north": 34.5,
+    "source": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS shikoku entry",
+    "reason": "Reuse an existing outcome-blind ACSP regional frame rather than fit a Shikoku subregion to later Cirsium records."
+  },
+  "historical_anchor_rule": {
+    "period": [2000, 2020],
+    "coordinate_uncertainty_m_max": 1000,
+    "clip_before_clustering": true,
+    "cluster_rule": "deterministic complete-link maximum within-cluster distance 0.5 km",
+    "anchor_representation": "one deterministic observed medoid per historical population cluster",
+    "anchor_count_rule": "use every strict historical population medoid inside the frozen Shikoku rectangle; do not force the prospective 2000-2025 anchor count",
+    "minimum_anchor_count": 1
+  },
+  "recent_outcome_rule": {
+    "period": [2021, 2025],
+    "same_shikoku_clip": true,
+    "cluster_rule": "deterministic complete-link maximum within-cluster distance 0.5 km",
+    "reobservation_exclusion_km": 0.5,
+    "novel_cluster_definition": "recent cluster farther than 0.5 km from every strict historical cluster in the same frozen region"
+  },
+  "candidate_and_method_rules": {
+    "candidate_frames": "unchanged parent 0.5-2.0 km primary and 0.5-5.0 km sensitivity union annuli, clipped to Shikoku rectangle",
+    "worldcover": "ESA WorldCover 2021 v200 Map, official 10 m COG crop, 250 m neighborhood fractions",
+    "terrain": "public GSI DEM-derived elev/slope100/tpi300/rough300",
+    "structural_family": "unchanged frozen WETLAND_MOISTURE_STRUCTURE",
+    "spatial_comparator": "MORTON_DYADIC_COVERAGE_ORDER_V1 under public_cirsium_structural_three_family_spatial_comparator_amendment_v1",
+    "nearest_comparator": "full ascending nearest_anchor_km order",
+    "prefix_curve": "unchanged parent all-prefix reporting",
+    "recovery_radii_km": [0.25, 0.5, 1.0]
+  },
+  "fail_closed": [
+    "if no strict historical anchor exists in the frozen region, abstain without widening the region or precision rule",
+    "if public terrain or WorldCover cannot construct the frozen frame, retain provider failure and do not substitute another layer",
+    "if no novel recent cluster exists, report no-target rather than selecting a different region or species"
+  ],
+  "forbidden": [
+    "do not use the 2021-2025 records to choose the Shikoku bounds or anchor count",
+    "do not pick only a favorable prefix/frame/radius after results",
+    "do not retune wetland family formulas on CIR01",
+    "do not call this an independent confirmation"
+  ]
+}

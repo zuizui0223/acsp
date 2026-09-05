@@ -1,0 +1,30 @@
+{
+  "schema_version": "public-japan-cirsium-gbif-precision-attrition-diagnostic-result-v1",
+  "status": "POST_TEMPORAL_BENCHMARK_DIAGNOSTIC_COMPLETE",
+  "protocol": "validation/public_japan_cirsium_gbif_precision_attrition_diagnostic_v1.json",
+  "workflow_run_id": 33938140579,
+  "artifact_id": 9960879773,
+  "artifact_digest": "sha256:3618d551f42cc1d142b470fc2960a648ddd9d40f7de04fcaf261aa34b2a492f8",
+  "field_outcomes_used": false,
+  "private_localities_used": false,
+  "parent_precision_rule_changed": false,
+  "declared_species": 13,
+  "raw_records": 657,
+  "attrition_totals": {
+    "exact_species_field_mismatch": 0,
+    "invalid_or_missing_coordinate_or_year": 0,
+    "forbidden_geospatial_issue": 0,
+    "missing_declared_coordinate_uncertainty": 483,
+    "invalid_declared_coordinate_uncertainty": 0,
+    "declared_coordinate_uncertainty_gt_1000m": 104,
+    "eligible_declared_uncertainty_le_1000m": 70
+  },
+  "fraction_missing_declared_coordinate_uncertainty": 0.7351598173515982,
+  "fraction_declared_uncertainty_gt_1000m": 0.1582952815829528,
+  "fraction_strict_eligible": 0.106544901065449,
+  "species_with_strict_historical_records": 5,
+  "species_with_strict_recent_records": 7,
+  "species_with_both_periods": 3,
+  "decision": "Public Cirsium fine-scale temporal evaluation is strongly precision-limited. Do not relax the <=1 km declared-uncertainty rule after seeing this result; use a larger prospectively fixed public cohort instead.",
+  "interpretation_boundary": "Missing uncertainty is not evidence of precision and is never converted into a local anchor."
+}

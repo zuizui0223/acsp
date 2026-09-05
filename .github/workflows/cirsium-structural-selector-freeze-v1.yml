@@ -1,0 +1,83 @@
+name: Validate Cirsium structural selector freeze v1
+
+on:
+  pull_request:
+    paths:
+      - "acsp/structural_selector.py"
+      - "acsp/structural_support.py"
+      - "acsp/structural_raw_adapters.py"
+      - "acsp/structural_graph.py"
+      - "research/build_cirsium_private_alpine_local_grid_v1.py"
+      - "research/build_cirsium_private_coastal_local_grid_v1.py"
+      - "research/build_cirsium_private_uncertainty_sentinel_grid_v1.py"
+      - "research/prepare_cirsium_private_candidate_frame_v1.py"
+      - "research/build_cirsium_private_source_manifest_v1.py"
+      - "research/preflight_cirsium_private_frame_archetypes_v1.py"
+      - "research/freeze_cirsium_candidate_patch_manifest_v1.py"
+      - "research/freeze_cirsium_candidate_patch_ranking_v2.py"
+      - "research/validate_cirsium_structural_selector_freeze_v1.py"
+      - "validation/cirsium_aza3_prospective_validation_cohort_v1.csv"
+      - "validation/cirsium_private_frame_source_requirements_v1.csv"
+      - "validation/cirsium_private_source_manifest_template_v1.json"
+      - "validation/cirsium_private_frame_archetype_preflight_v1.csv"
+      - "validation/cirsium_private_frame_archetype_preflight_v1.json"
+      - "validation/cirsium_structural_selector_family_contract_v1.json"
+      - "validation/cirsium_structural_selector_execution_freeze_v1.json"
+      - "validation/cirsium_structural_raw_adapter_contract_v1.json"
+      - "validation/cirsium_structural_graph_contract_v1.json"
+      - "validation/cirsium_candidate_frame_contract_v1.json"
+      - "tests/test_structural_selector.py"
+      - "tests/test_structural_support.py"
+      - "tests/test_structural_raw_adapters.py"
+      - "tests/test_structural_graph.py"
+      - "tests/test_cirsium_private_alpine_local_grid.py"
+      - "tests/test_cirsium_private_coastal_local_grid.py"
+      - "tests/test_cirsium_private_uncertainty_sentinel_grid.py"
+      - "tests/test_cirsium_private_frame_builder.py"
+      - "tests/test_cirsium_private_source_manifest_builder.py"
+      - "tests/test_cirsium_private_frame_archetype_preflight.py"
+      - "tests/test_cirsium_sentinel_execution_alignment.py"
+      - "tests/test_cirsium_candidate_patch_freeze.py"
+      - "tests/test_cirsium_candidate_ranking_v2.py"
+      - ".github/workflows/cirsium-structural-selector-freeze-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e . pyproj scipy
+      - name: Validate graph and component pipeline
+        run: |
+          python tests/test_structural_graph.py -v
+          python tests/test_structural_raw_adapters.py -v
+          python tests/test_structural_support.py -v
+          python tests/test_structural_selector.py -v
+      - name: Validate private-source, archetype raw-grid, private-frame and public-freeze mechanics
+        run: |
+          python tests/test_cirsium_private_source_manifest_builder.py -v
+          python tests/test_cirsium_private_alpine_local_grid.py -v
+          python tests/test_cirsium_private_coastal_local_grid.py -v
+          python tests/test_cirsium_private_uncertainty_sentinel_grid.py -v
+          python tests/test_cirsium_private_frame_builder.py -v
+          python tests/test_cirsium_candidate_patch_freeze.py -v
+          python tests/test_cirsium_candidate_ranking_v2.py -v
+          python tests/test_cirsium_sentinel_execution_alignment.py -v
+      - name: Validate frozen archetype execution preflight
+        run: |
+          python tests/test_cirsium_private_frame_archetype_preflight.py -v
+          rm -rf /tmp/cirsium-private-frame-preflight
+          python research/preflight_cirsium_private_frame_archetypes_v1.py --out-dir /tmp/cirsium-private-frame-preflight
+          diff -u validation/cirsium_private_frame_archetype_preflight_v1.csv /tmp/cirsium-private-frame-preflight/archetype_preflight.csv
+          diff -u validation/cirsium_private_frame_archetype_preflight_v1.json /tmp/cirsium-private-frame-preflight/summary.json
+      - name: Validate frozen execution boundary
+        run: python research/validate_cirsium_structural_selector_freeze_v1.py

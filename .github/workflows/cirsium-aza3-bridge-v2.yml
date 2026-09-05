@@ -1,0 +1,28 @@
+name: Validate Cirsium aza3 bridge v2
+
+on:
+  pull_request:
+    paths:
+      - 'validation/acsp_occurrence_anchored_local_discovery_development_v2.json'
+      - 'validation/cirsium_aza3_acsp_field_log_template_v1.csv'
+      - 'research/CIRSIUM_AZA3_PROSPECTIVE_LOCAL_DISCOVERY.md'
+      - 'research/validate_cirsium_aza3_bridge_v2.py'
+      - '.github/workflows/cirsium-aza3-bridge-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile bridge validator
+        run: python -m py_compile research/validate_cirsium_aza3_bridge_v2.py
+      - name: Validate frozen bridge
+        run: python research/validate_cirsium_aza3_bridge_v2.py
