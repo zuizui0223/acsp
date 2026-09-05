@@ -11,6 +11,7 @@ on:
       - "tests/test_discovery_package.py"
       - "tests/test_discovery_providers.py"
       - "tests/test_discovery_component_provider.py"
+      - "tests/test_discovery_component_workflow.py"
       - "tests/test_discovery_workflow.py"
       - "tests/test_discovery_recipes.py"
       - "tests/test_discovery_components.py"
@@ -38,6 +39,7 @@ jobs:
           python tests/test_discovery_package.py -v
           python tests/test_discovery_providers.py -v
           python tests/test_discovery_component_provider.py -v
+          python tests/test_discovery_component_workflow.py -v
           python tests/test_discovery_workflow.py -v
           python tests/test_discovery_recipes.py -v
           python tests/test_discovery_components.py -v
