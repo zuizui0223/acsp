@@ -12,6 +12,7 @@ construction, structural support, and strong same-frame comparators. It does not
 claim occupancy, field efficiency, optimal budgets, routes, or stopping rules.
 """
 
+from .comparators import ComparatorAudit, rank_nearest_anchor, select_stable_start_maximin
 from .evidence import (
     OccurrenceCluster,
     cluster_medoid,
@@ -45,4 +46,7 @@ __all__ = [
     "resolve_discovery_regime",
     "StructuralOrderAudit",
     "build_structural_support_order",
+    "ComparatorAudit",
+    "rank_nearest_anchor",
+    "select_stable_start_maximin",
 ]
