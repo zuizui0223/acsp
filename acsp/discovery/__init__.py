@@ -23,6 +23,14 @@ from .evidence import (
 )
 from .frames import AnnularFrameAudit, AnnularFrameSpec, build_annular_candidate_frame
 from .regimes import DiscoveryEvidenceProfile, DiscoveryRegime, RegimeDecision, resolve_discovery_regime
+from .schemas import (
+    CandidateFrameSchemaAudit,
+    OccurrenceEvidenceAudit,
+    SourceManifestAudit,
+    normalize_occurrence_evidence,
+    validate_candidate_frame_schema,
+    validate_source_manifest,
+)
 from .structural import StructuralOrderAudit, build_structural_support_order
 
 DISCOVERY_API_VERSION = "0.1.0-development"
@@ -49,4 +57,10 @@ __all__ = [
     "ComparatorAudit",
     "rank_nearest_anchor",
     "select_stable_start_maximin",
+    "OccurrenceEvidenceAudit",
+    "CandidateFrameSchemaAudit",
+    "SourceManifestAudit",
+    "normalize_occurrence_evidence",
+    "validate_candidate_frame_schema",
+    "validate_source_manifest",
 ]
