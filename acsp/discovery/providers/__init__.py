@@ -5,6 +5,7 @@ are deliberately separate from the scientific discovery primitives so a provider
 failure can be audited without silently changing the ecological method.
 """
 
+from .coastal_worldcover import CoastalWorldCoverAudit, attach_worldcover_coastal_features
 from .worldcover import (
     WORLD_COVER_2021_CLASS_NAMES,
     WorldCoverCropAudit,
@@ -21,4 +22,6 @@ __all__ = [
     "worldcover_tile_ids_for_bounds",
     "worldcover_2021_map_url",
     "build_worldcover_2021_map_crop",
+    "CoastalWorldCoverAudit",
+    "attach_worldcover_coastal_features",
 ]
