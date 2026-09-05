@@ -34,6 +34,7 @@ acsp-recommend = "acsp.cli:main"
 acsp-patches = "acsp.robust_cli:main"
 acsp-operate = "acsp.operational_cli:main"
 acsp-field-plan = "acsp.field_plan_cli:main"
+acsp-discovery = "acsp.discovery.cli:main"
 
 [project.license]
 text = "MIT"
