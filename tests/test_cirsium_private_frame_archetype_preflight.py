@@ -1,8 +1,13 @@
+import sys
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
-from research.preflight_cirsium_private_frame_archetypes_v1 import build_preflight
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from research.preflight_cirsium_private_frame_archetypes_v1 import build_preflight  # noqa: E402
 
 
 def _requirements():
