@@ -11,6 +11,7 @@ on:
       - "research/build_cirsium_private_alpine_local_grid_v1.py"
       - "research/benchmark_public_japan_cirsium_temporal_anchor_v1.py"
       - "tests/test_public_cirsium_alpine_structural_smoke_v1.py"
+      - "pyproject.toml"
       - ".github/workflows/public-cirsium-alpine-structural-smoke-v1.yml"
   workflow_dispatch:
 
@@ -30,7 +31,62 @@ jobs:
         run: python -m pip install -e .
       - name: Verify pre-execution anchor and slot semantics
         run: python tests/test_public_cirsium_alpine_structural_smoke_v1.py -v
+      - name: Preflight strict historical evidence contract
+        id: evidence
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/public-cirsium-alpine-structural-smoke-v1
+          mkdir -p /tmp/public-cirsium-alpine-structural-smoke-v1
+          python - <<'PY'
+          import json
+          import os
+          import pandas as pd
+          from pathlib import Path
+          from benchmark_public_japan_cirsium_temporal_anchor_v1 import fetch_gbif_species
+          from run_public_cirsium_alpine_structural_smoke_v1 import strict_period, historical_cluster_table
+
+          root = Path('/tmp/public-cirsium-alpine-structural-smoke-v1')
+          amendment = json.loads(Path('validation/public_cirsium_structural_three_family_smoke_anchor_slot_amendment_v1.json').read_text())
+          required = int(amendment['cir04_myoko_slot']['frozen_primary_anchor_count'])
+          records, fetch_audit = fetch_gbif_species('Cirsium otayae', maximum_records=10000, pause_seconds=0.02)
+          historical = strict_period(records, 2000, 2020)
+          observed = 0
+          if not historical.empty:
+              _, medoids = historical_cluster_table(historical)
+              observed = int(len(medoids))
+          blocked = observed < required
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
+              handle.write(f"blocked={'true' if blocked else 'false'}\n")
+          if blocked:
+              pd.DataFrame(columns=[
+                  'cohort_unit_id','species','family','outer_frame_km','prefix_fraction',
+                  'selected_count','recovery_radius_km','novel_recent_clusters',
+                  'structural_recall','nearest_recall','spatial_balance_recall'
+              ]).to_csv(root / 'alpine_prefix_curve.csv', index=False)
+              summary = {
+                  'schema_version': 'public-cirsium-alpine-structural-smoke-result-v1',
+                  'status': 'BLOCKED_EVIDENCE_CONTRACT_MISMATCH',
+                  'cohort_unit_id': 'CIR04',
+                  'species': 'Cirsium otayae',
+                  'family': 'ALPINE_TOPOGRAPHIC_STRUCTURE',
+                  'validated_product_changed': False,
+                  'new_confirmation_claim': False,
+                  'required_frozen_primary_anchor_count': required,
+                  'strict_historical_population_clusters_observed': observed,
+                  'strict_historical_period': [2000, 2020],
+                  'strict_coordinate_uncertainty_m_max': 1000,
+                  'structural_layer_run': False,
+                  'temporal_outcome_scoring_run': False,
+                  'replacement_or_anchor_count_relaxation_used': False,
+                  'fetch_audit': fetch_audit,
+                  'decision': 'ABSTAIN_CIR04_PUBLIC_STRUCTURAL_SMOKE_NO_RESCUE',
+                  'interpretation_boundary': 'The frozen four-anchor Myoko slot cannot be reconstructed from the strict 2000-2020 public evidence snapshot. The structural selector was not run and the anchor count was not relaxed to three.'
+              }
+              (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
       - name: Run frozen CIR04 public alpine smoke
+        if: steps.evidence.outputs.blocked != 'true'
         env:
           PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
         run: |
@@ -51,12 +107,19 @@ jobs:
           table = pd.read_csv(root / 'alpine_prefix_curve.csv')
           summary = json.loads((root / 'summary.json').read_text())
           assert summary['cohort_unit_id'] == 'CIR04'
-          assert summary['selected_myoko_anchor_medoids'] == 4
           assert summary['validated_product_changed'] is False
           assert summary['new_confirmation_claim'] is False
-          assert set(table['outer_frame_km']) == {2.0, 5.0}
-          assert set(table['recovery_radius_km']) == {0.25, 0.5, 1.0}
-          assert len(table) == 2 * 7 * 3
+          if summary['status'] == 'BLOCKED_EVIDENCE_CONTRACT_MISMATCH':
+              assert table.empty
+              assert summary['required_frozen_primary_anchor_count'] == 4
+              assert summary['strict_historical_population_clusters_observed'] < 4
+              assert summary['structural_layer_run'] is False
+              assert summary['replacement_or_anchor_count_relaxation_used'] is False
+          else:
+              assert summary['selected_myoko_anchor_medoids'] == 4
+              assert set(table['outer_frame_km']) == {2.0, 5.0}
+              assert set(table['recovery_radius_km']) == {0.25, 0.5, 1.0}
+              assert len(table) == 2 * 7 * 3
           PY
       - uses: actions/upload-artifact@v4
         with:
