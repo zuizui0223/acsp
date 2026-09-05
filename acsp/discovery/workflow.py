@@ -9,24 +9,71 @@ blend and never invents a local search radius when none is declared.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Iterable
 
-import numpy as np
 import pandas as pd
 
 from .comparators import rank_morton_dyadic_spatial_balance, rank_nearest_anchor
 from .evidence import cluster_medoid_table, complete_link_clusters
 from .families import get_structural_family_spec
-from .regimes import DiscoveryEvidenceProfile, DiscoveryRegime, RegimeDecision, resolve_discovery_regime
+from .regimes import DiscoveryEvidenceProfile, DiscoveryRegime, resolve_discovery_regime
 from .schemas import (
     CandidateFrameSchemaAudit,
-    OccurrenceEvidenceAudit,
     SourceManifestAudit,
     normalize_occurrence_evidence,
     validate_candidate_frame_schema,
     validate_source_manifest,
 )
 from .structural import StructuralOrderAudit, build_structural_support_order
+
+
+_ECOLOGY_FORBIDDEN_COLUMN_TOKENS = (
+    "field_outcome",
+    "field_success",
+    "detected",
+    "detection_state",
+    "tissue_acquired",
+    "distance_to_road",
+    "road_distance",
+    "distance_to_trail",
+    "trail_distance",
+    "access_score",
+    "permission",
+    "route_",
+    "travel_",
+    "budget",
+    "field_cost",
+    "search_minutes",
+    "survey_time",
+)
+_ECOLOGY_FORBIDDEN_SOURCE_TOKENS = (
+    "road",
+    "trail",
+    "access",
+    "permission",
+    "route",
+    "travel",
+    "budget",
+    "field_cost",
+)
+
+
+def _forbidden_ecology_columns(columns: Iterable[str]) -> list[str]:
+    found: list[str] = []
+    for column in columns:
+        lowered = str(column).strip().lower()
+        if any(token in lowered for token in _ECOLOGY_FORBIDDEN_COLUMN_TOKENS):
+            found.append(str(column))
+    return sorted(set(found))
+
+
+def _forbidden_ecology_source_roles(roles: Iterable[str]) -> list[str]:
+    found: list[str] = []
+    for role in roles:
+        lowered = str(role).strip().lower()
+        if any(token in lowered for token in _ECOLOGY_FORBIDDEN_SOURCE_TOKENS):
+            found.append(str(role))
+    return sorted(set(found))
 
 
 @dataclass(frozen=True)
@@ -61,6 +108,20 @@ class DiscoveryContext:
     detached_component_available: bool = False
     sentinel_context_available: bool = False
     sentinel_subregime: str = ""
+
+    def validate(self) -> None:
+        active = sum(
+            int(value)
+            for value in (
+                self.local_component_justified,
+                self.detached_component_available,
+                self.sentinel_context_available,
+            )
+        )
+        if active > 1:
+            raise ValueError("LOCAL, DETACHED and SENTINEL contexts are mutually exclusive for one discovery run")
+        if self.sentinel_subregime and not self.sentinel_context_available:
+            raise ValueError("sentinel_subregime requires SENTINEL context")
 
 
 @dataclass(frozen=True)
@@ -119,6 +180,7 @@ def assess_occurrence_evidence(
     cfg = policy or EvidencePolicy()
     cfg.validate()
     ctx = context or DiscoveryContext()
+    ctx.validate()
     normalized, occurrence_audit = normalize_occurrence_evidence(occurrence_frame)
 
     uncertainty = pd.to_numeric(normalized["coordinate_uncertainty_m"], errors="coerce")
@@ -218,12 +280,29 @@ def rank_discovery_frame(
     Structural support is optional. Spatial balance is always produced. The
     nearest-known comparator is produced only for LOCAL_CONTINUATION when the
     candidate frame carries a complete ``nearest_anchor_km`` column.
+
+    Field outcomes and human movement/access variables are forbidden here. They
+    belong downstream of ecological candidate generation.
     """
     if assessment.regime == DiscoveryRegime.ABSTAIN_LOCAL_PATCH.value:
         raise ValueError("cannot rank a local discovery frame while the assessment is ABSTAIN")
 
+    forbidden_columns = _forbidden_ecology_columns(candidate_frame.columns)
+    if forbidden_columns:
+        raise ValueError(
+            "ecological discovery frame contains field-outcome or human-feasibility columns that belong downstream in G_F: "
+            + ", ".join(forbidden_columns)
+        )
+
     candidate_audit: CandidateFrameSchemaAudit = validate_candidate_frame_schema(candidate_frame)
     source_audit: SourceManifestAudit = validate_source_manifest(source_manifest)
+    forbidden_roles = _forbidden_ecology_source_roles(source_audit.roles)
+    if forbidden_roles:
+        raise ValueError(
+            "source manifest contains human-feasibility roles that cannot create ecological support: "
+            + ", ".join(forbidden_roles)
+        )
+
     rankings: dict[str, pd.DataFrame] = {}
     structural_audit: StructuralOrderAudit | None = None
 
@@ -242,9 +321,11 @@ def rank_discovery_frame(
         missing = sorted(set(family.required_raw_columns).difference(candidate_frame.columns))
         if missing:
             raise ValueError(
-                f"candidate frame lacks raw columns required by {family.family_id}: {missing}. "
+                f"candidate frame lacks pre-graph raw columns required by {family.family_id}: {missing}. "
                 f"Required source roles: {', '.join(family.source_roles)}"
             )
+        if family.family_id == "COASTAL_ISLAND_STRUCTURE" and not str(target_component_id or "").strip():
+            raise ValueError("COASTAL_ISLAND_STRUCTURE requires a predeclared target_component_id")
         provenance = source_provenance or {
             "source_manifest": source_manifest,
             "family_id": family.family_id,
