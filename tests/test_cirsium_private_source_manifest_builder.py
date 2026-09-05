@@ -1,7 +1,8 @@
+import tempfile
+import unittest
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from research.build_cirsium_private_source_manifest_v1 import build_manifest
 
@@ -27,55 +28,64 @@ def _cohort():
     ])
 
 
-def test_cir03_manifest_requires_and_hashes_anchor_and_dem(tmp_path):
-    sector = _write(tmp_path / "sector.geojson", "sector")
-    grid = _write(tmp_path / "grid.csv", "grid")
-    anchor = _write(tmp_path / "anchors.csv", "anchors")
-    dem = _write(tmp_path / "dem.tif", "dem")
+class PrivateSourceManifestBuilderTests(unittest.TestCase):
+    def test_cir03_manifest_requires_and_hashes_anchor_and_dem(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sector = _write(root / "sector.geojson", "sector")
+            grid = _write(root / "grid.csv", "grid")
+            anchor = _write(root / "anchors.csv", "anchors")
+            dem = _write(root / "dem.tif", "dem")
 
-    with pytest.raises(ValueError, match="requires at least one GSI DEM"):
-        build_manifest(
-            _requirements(), _cohort(), unit_id="CIR03",
-            range_sector_file=sector, raw_grid_file=grid, primary_anchor_file=anchor,
-        )
+            with self.assertRaisesRegex(ValueError, "requires at least one GSI DEM"):
+                build_manifest(
+                    _requirements(), _cohort(), unit_id="CIR03",
+                    range_sector_file=sector, raw_grid_file=grid, primary_anchor_file=anchor,
+                )
 
-    manifest = build_manifest(
-        _requirements(), _cohort(), unit_id="CIR03",
-        range_sector_file=sector, raw_grid_file=grid, primary_anchor_file=anchor,
-        gsi_dem_files=(dem,),
-    )
-    assert manifest["cohort_unit_id"] == "CIR03"
-    assert manifest["gsi_dem"]["required"] is True
-    assert manifest["gsi_dem"]["files"][0]["file_name"] == "dem.tif"
-    assert manifest["occurrence_input"]["eligible_primary_anchor_private_table_sha256"]
-    assert manifest["field_outcomes_opened"] is False
+            manifest = build_manifest(
+                _requirements(), _cohort(), unit_id="CIR03",
+                range_sector_file=sector, raw_grid_file=grid, primary_anchor_file=anchor,
+                gsi_dem_files=(dem,),
+            )
+            self.assertEqual(manifest["cohort_unit_id"], "CIR03")
+            self.assertIs(manifest["gsi_dem"]["required"], True)
+            self.assertEqual(manifest["gsi_dem"]["files"][0]["file_name"], "dem.tif")
+            self.assertTrue(manifest["occurrence_input"]["eligible_primary_anchor_private_table_sha256"])
+            self.assertIs(manifest["field_outcomes_opened"], False)
+
+    def test_cir08_fails_closed_without_coastline_and_component(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sector = _write(root / "sector.geojson", "sector")
+            grid = _write(root / "grid.csv", "grid")
+            anchor = _write(root / "anchors.csv", "anchors")
+            wc = _write(root / "worldcover.tif", "wc")
+
+            with self.assertRaisesRegex(ValueError, "GSI coastline"):
+                build_manifest(
+                    _requirements(), _cohort(), unit_id="CIR08",
+                    range_sector_file=sector, raw_grid_file=grid, primary_anchor_file=anchor,
+                    worldcover_files=(wc,),
+                )
+
+    def test_cir02_preserves_frozen_uncertainty_subregime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sector = _write(root / "sector.geojson", "sector")
+            grid = _write(root / "grid.csv", "grid")
+            evidence = _write(root / "sentinel.csv", "sentinel")
+            dem = _write(root / "dem.tif", "dem")
+            wc = _write(root / "worldcover.tif", "wc")
+            manifest = build_manifest(
+                _requirements(), _cohort(), unit_id="CIR02",
+                range_sector_file=sector, raw_grid_file=grid, sentinel_evidence_file=evidence,
+                gsi_dem_files=(dem,), worldcover_files=(wc,),
+            )
+            self.assertEqual(manifest["occurrence_input"]["sentinel_subregime"], "UNCERTAINTY_FOOTPRINT")
+            self.assertIs(manifest["broad_sentinel_support"]["required"], True)
+            self.assertTrue(manifest["broad_sentinel_support"]["private_support_input_sha256"])
 
 
-def test_cir08_fails_closed_without_coastline_and_component(tmp_path):
-    sector = _write(tmp_path / "sector.geojson", "sector")
-    grid = _write(tmp_path / "grid.csv", "grid")
-    anchor = _write(tmp_path / "anchors.csv", "anchors")
-    wc = _write(tmp_path / "worldcover.tif", "wc")
-
-    with pytest.raises(ValueError, match="GSI coastline"):
-        build_manifest(
-            _requirements(), _cohort(), unit_id="CIR08",
-            range_sector_file=sector, raw_grid_file=grid, primary_anchor_file=anchor,
-            worldcover_files=(wc,),
-        )
-
-
-def test_cir02_preserves_frozen_uncertainty_subregime(tmp_path):
-    sector = _write(tmp_path / "sector.geojson", "sector")
-    grid = _write(tmp_path / "grid.csv", "grid")
-    evidence = _write(tmp_path / "sentinel.csv", "sentinel")
-    dem = _write(tmp_path / "dem.tif", "dem")
-    wc = _write(tmp_path / "worldcover.tif", "wc")
-    manifest = build_manifest(
-        _requirements(), _cohort(), unit_id="CIR02",
-        range_sector_file=sector, raw_grid_file=grid, sentinel_evidence_file=evidence,
-        gsi_dem_files=(dem,), worldcover_files=(wc,),
-    )
-    assert manifest["occurrence_input"]["sentinel_subregime"] == "UNCERTAINTY_FOOTPRINT"
-    assert manifest["broad_sentinel_support"]["required"] is True
-    assert manifest["broad_sentinel_support"]["private_support_input_sha256"]
+if __name__ == "__main__":
+    unittest.main()
