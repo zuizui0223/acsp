@@ -14,6 +14,7 @@ on:
       - "tests/test_discovery_recipes.py"
       - "tests/test_discovery_components.py"
       - "tests/test_discovery_broad_frames.py"
+      - "tests/test_discovery_evaluation.py"
       - "pyproject.toml"
       - ".github/workflows/discovery-package-checks.yml"
   workflow_dispatch:
@@ -39,6 +40,7 @@ jobs:
           python tests/test_discovery_recipes.py -v
           python tests/test_discovery_components.py -v
           python tests/test_discovery_broad_frames.py -v
+          python tests/test_discovery_evaluation.py -v
       - name: Smoke test installed CLI
         run: |
           acsp-discovery families > /tmp/families.json
