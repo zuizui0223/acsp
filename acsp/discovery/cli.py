@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import hashlib
 import json
 from pathlib import Path
@@ -9,7 +10,9 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+from .broad_frames import attach_nearest_anchor_distance, build_rectangular_candidate_frame
 from .families import list_structural_families
+from .frames import AnnularFrameSpec, build_annular_candidate_frame
 from .providers import fetch_gbif_occurrence_evidence
 from .workflow import DiscoveryContext, EvidencePolicy, assess_occurrence_evidence, rank_discovery_frame, summarize_rankings
 
@@ -84,15 +87,9 @@ def _auto_candidate_manifest(candidate_frame_path: Path) -> dict:
 
 def command_fetch_gbif(args: argparse.Namespace) -> int:
     frame, audit = fetch_gbif_occurrence_evidence(
-        args.scientific_name,
-        country=args.country,
-        year_from=args.year_from,
-        year_to=args.year_to,
-        maximum_records=int(args.max_records),
+        args.scientific_name, country=args.country, year_from=args.year_from, year_to=args.year_to, maximum_records=int(args.max_records)
     )
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(out, index=False)
+    out = Path(args.out); out.parent.mkdir(parents=True, exist_ok=True); frame.to_csv(out, index=False)
     audit_path = Path(args.audit_json) if args.audit_json else out.with_suffix(out.suffix + ".audit.json")
     _write_json(audit_path, audit.as_dict())
     print(json.dumps({"status": "GBIF_OCCURRENCE_EVIDENCE_WRITTEN", "rows": len(frame), "out": str(out), "audit": str(audit_path), **audit.as_dict()}, ensure_ascii=False, indent=2))
@@ -100,14 +97,8 @@ def command_fetch_gbif(args: argparse.Namespace) -> int:
 
 
 def command_families(_args: argparse.Namespace) -> int:
-    rows = [{
-        "family_id": family.family_id, "label": family.label,
-        "ecological_question": family.ecological_question,
-        "required_raw_columns": list(family.required_raw_columns),
-        "source_roles": list(family.source_roles), "notes": family.notes,
-    } for family in list_structural_families()]
-    print(json.dumps(rows, ensure_ascii=False, indent=2))
-    return 0
+    rows = [{"family_id": family.family_id, "label": family.label, "ecological_question": family.ecological_question, "required_raw_columns": list(family.required_raw_columns), "source_roles": list(family.source_roles), "notes": family.notes} for family in list_structural_families()]
+    print(json.dumps(rows, ensure_ascii=False, indent=2)); return 0
 
 
 def command_template(args: argparse.Namespace) -> int:
@@ -122,23 +113,70 @@ def command_template(args: argparse.Namespace) -> int:
     ]).to_csv(out / "candidate_frame.csv", index=False)
     _write_json(out / "source_manifest.json", {"schema_version": "acsp-discovery-source-manifest-v1", "sources": [{"provider_id": "YOUR_PROVIDER", "layer_role": "candidate_frame", "release_id": "YOUR_RELEASE", "retrieved_at": "2026-01-01T00:00:00+00:00", "source_uri": "YOUR_SOURCE_URI", "sha256": "0" * 64}]})
     (out / "README.txt").write_text(
-        "Optional first step: acsp-discovery fetch-gbif 'Species name' --country JP --out occurrences.csv\n"
-        "1) Run: acsp-discovery assess occurrences.csv\n"
-        "2) If a source-backed regime is justified, prepare/freeze a candidate frame.\n"
+        "Optional: acsp-discovery fetch-gbif 'Species name' --country JP --out occurrences.csv\n"
+        "1) acsp-discovery assess occurrences.csv --out-dir assessment\n"
+        "2) Build a declared frame: acsp-discovery build-frame local --anchors assessment/population_anchors.csv --outer-radius-km 5 --out candidate_frame.csv\n"
+        "   or: acsp-discovery build-frame broad --bounds WEST SOUTH EAST NORTH --anchors assessment/population_anchors.csv --out candidate_frame.csv\n"
         "3) Explicit --regime local/detached/sentinel requires --context-note.\n"
-        "4) Structural runs require a real source_manifest.json and `acsp-discovery families` shows required raw columns.\n",
+        "4) Structural runs require a real source manifest; `acsp-discovery families` shows required raw columns.\n",
         encoding="utf-8",
     )
     print(str(out)); return 0
 
 
+def command_build_frame(args: argparse.Namespace) -> int:
+    mode = str(args.frame_mode)
+    out = Path(args.out); out.parent.mkdir(parents=True, exist_ok=True)
+    audit_path = Path(args.audit_json) if args.audit_json else out.with_suffix(out.suffix + ".audit.json")
+    anchors = pd.read_csv(args.anchors) if args.anchors else None
+    technical_default_used = args.grid_spacing_m is None
+    if mode == "local":
+        if anchors is None or anchors.empty:
+            raise SystemExit("LOCAL frame requires --anchors from an assessed/frozen population evidence table")
+        if args.outer_radius_km is None:
+            raise SystemExit("LOCAL frame requires explicit --outer-radius-km; ACSP does not infer a universal local radius")
+        spacing = float(args.grid_spacing_m if args.grid_spacing_m is not None else 100.0)
+        frame, audit = build_annular_candidate_frame(
+            anchors,
+            spec=AnnularFrameSpec(
+                grid_spacing_m=spacing,
+                known_exclusion_km=float(args.known_exclusion_km),
+                outer_radius_km=float(args.outer_radius_km),
+            ),
+            candidate_id_prefix=str(args.candidate_id_prefix),
+        )
+        payload = {
+            "schema_version": "acsp-discovery-frame-build-v1", "status": "DECLARED_LOCAL_FRAME_BUILT",
+            "mode": "local", "technical_grid_default_used": technical_default_used,
+            "scientific_radius_user_declared": True, "audit": asdict(audit),
+            "warning": "The declared outer radius is not validated by this command and must come from a source-backed study contract/context."
+        }
+    elif mode == "broad":
+        if not args.bounds or len(args.bounds) != 4:
+            raise SystemExit("BROAD frame requires explicit --bounds WEST SOUTH EAST NORTH")
+        spacing = float(args.grid_spacing_m if args.grid_spacing_m is not None else 250.0)
+        frame, audit = build_rectangular_candidate_frame(tuple(map(float, args.bounds)), grid_spacing_m=spacing, candidate_id_prefix=str(args.candidate_id_prefix))
+        if anchors is not None and not anchors.empty:
+            frame = attach_nearest_anchor_distance(frame, anchors)
+        payload = {
+            "schema_version": "acsp-discovery-frame-build-v1", "status": "DECLARED_BROAD_FRAME_BUILT",
+            "mode": "broad", "technical_grid_default_used": technical_default_used,
+            "geographic_bounds_user_declared": True, "nearest_anchor_distance_attached": bool(anchors is not None and not anchors.empty),
+            "audit": asdict(audit),
+            "warning": "BROAD bounds are an external geographic contract, not a range inferred from held-out outcomes."
+        }
+    else:
+        raise SystemExit(f"unknown frame mode: {mode}")
+    frame.to_csv(out, index=False); _write_json(audit_path, payload)
+    print(json.dumps({**payload, "out": str(out), "audit_json": str(audit_path), "candidate_count": len(frame)}, ensure_ascii=False, indent=2))
+    return 0
+
+
 def command_assess(args: argparse.Namespace) -> int:
     assessment, medoids = assess_occurrence_evidence(pd.read_csv(args.occurrences), context=_context_from_args(args), policy=_policy_from_args(args))
-    payload = _assessment_payload(assessment, args)
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    payload = _assessment_payload(assessment, args); print(json.dumps(payload, ensure_ascii=False, indent=2))
     if args.out_dir:
-        out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
-        _write_json(out / "assessment.json", payload); medoids.to_csv(out / "population_anchors.csv", index=False)
+        out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True); _write_json(out / "assessment.json", payload); medoids.to_csv(out / "population_anchors.csv", index=False)
     return 0
 
 
@@ -146,52 +184,35 @@ def command_run(args: argparse.Namespace) -> int:
     occurrences_path, candidate_path = Path(args.occurrences), Path(args.candidate_frame)
     assessment, medoids = assess_occurrence_evidence(pd.read_csv(occurrences_path), context=_context_from_args(args), policy=_policy_from_args(args))
     out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
-    assessment_payload = _assessment_payload(assessment, args)
-    _write_json(out / "assessment.json", assessment_payload); medoids.to_csv(out / "population_anchors.csv", index=False)
-    if assessment.regime == "ABSTAIN_LOCAL_PATCH":
-        print(json.dumps(assessment_payload, ensure_ascii=False, indent=2)); return 2
-    candidate = pd.read_csv(candidate_path)
-    feature_family = str(args.feature_family or "").strip()
-    if args.source_manifest:
-        manifest = _read_json(Path(args.source_manifest))
-    elif feature_family:
-        raise SystemExit("--source-manifest is required for structural ranking so ecological source provenance is not lost")
-    else:
-        manifest = _auto_candidate_manifest(candidate_path)
-    rankings, audit = rank_discovery_frame(
-        candidate, assessment=assessment, source_manifest=manifest, feature_family=feature_family or None,
-        target_component_id=str(args.target_component_id or "").strip() or None,
-        graph_radius_cells=int(args.graph_radius_cells),
-    )
-    ranking_payload = audit.as_dict(); ranking_payload["declared_context_note"] = _declared_context_note(args)
-    _write_json(out / "ranking_audit.json", ranking_payload)
+    assessment_payload = _assessment_payload(assessment, args); _write_json(out / "assessment.json", assessment_payload); medoids.to_csv(out / "population_anchors.csv", index=False)
+    if assessment.regime == "ABSTAIN_LOCAL_PATCH": print(json.dumps(assessment_payload, ensure_ascii=False, indent=2)); return 2
+    candidate = pd.read_csv(candidate_path); feature_family = str(args.feature_family or "").strip()
+    if args.source_manifest: manifest = _read_json(Path(args.source_manifest))
+    elif feature_family: raise SystemExit("--source-manifest is required for structural ranking so ecological source provenance is not lost")
+    else: manifest = _auto_candidate_manifest(candidate_path)
+    rankings, audit = rank_discovery_frame(candidate, assessment=assessment, source_manifest=manifest, feature_family=feature_family or None, target_component_id=str(args.target_component_id or "").strip() or None, graph_radius_cells=int(args.graph_radius_cells))
+    ranking_payload = audit.as_dict(); ranking_payload["declared_context_note"] = _declared_context_note(args); _write_json(out / "ranking_audit.json", ranking_payload)
     summarize_rankings(rankings).to_csv(out / "ranking_summary.csv", index=False)
     for method, frame in rankings.items(): frame.to_csv(out / f"ranking_{method.lower().replace('/', '_')}.csv", index=False)
-    print(json.dumps({"status": audit.status, "regime": audit.regime, "methods": list(audit.methods), "out_dir": str(out), "warning": "Development-only: rankings are not occupancy probabilities, field-efficiency estimates, or optimal budgets."}, ensure_ascii=False, indent=2))
-    return 0
+    print(json.dumps({"status": audit.status, "regime": audit.regime, "methods": list(audit.methods), "out_dir": str(out), "warning": "Development-only: rankings are not occupancy probabilities, field-efficiency estimates, or optimal budgets."}, ensure_ascii=False, indent=2)); return 0
 
 
 def _add_evidence_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--regime", choices=("auto", "local", "detached", "sentinel"), default="auto")
     parser.add_argument("--context-note", default="", help="Required for explicit non-auto regime; cite/describe the ecological/range justification.")
-    parser.add_argument("--sentinel-subregime", default="")
-    parser.add_argument("--max-anchor-uncertainty-m", type=float, default=1000.0)
-    parser.add_argument("--population-cluster-radius-km", type=float, default=0.5)
+    parser.add_argument("--sentinel-subregime", default=""); parser.add_argument("--max-anchor-uncertainty-m", type=float, default=1000.0); parser.add_argument("--population-cluster-radius-km", type=float, default=0.5)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="acsp-discovery", description="Experimental fail-closed next-observation discovery workflow.")
-    sub = parser.add_subparsers(dest="command", required=True)
-    p_fetch = sub.add_parser("fetch-gbif", help="Fetch provider-neutral occurrence evidence from GBIF using a species name.")
-    p_fetch.add_argument("scientific_name"); p_fetch.add_argument("--country", default="")
-    p_fetch.add_argument("--year-from", type=int); p_fetch.add_argument("--year-to", type=int)
-    p_fetch.add_argument("--max-records", type=int, default=10000); p_fetch.add_argument("--out", required=True); p_fetch.add_argument("--audit-json")
-    p_fetch.set_defaults(func=command_fetch_gbif)
+    parser = argparse.ArgumentParser(prog="acsp-discovery", description="Experimental fail-closed next-observation discovery workflow."); sub = parser.add_subparsers(dest="command", required=True)
+    p_fetch = sub.add_parser("fetch-gbif", help="Fetch provider-neutral occurrence evidence from GBIF using a species name."); p_fetch.add_argument("scientific_name"); p_fetch.add_argument("--country", default=""); p_fetch.add_argument("--year-from", type=int); p_fetch.add_argument("--year-to", type=int); p_fetch.add_argument("--max-records", type=int, default=10000); p_fetch.add_argument("--out", required=True); p_fetch.add_argument("--audit-json"); p_fetch.set_defaults(func=command_fetch_gbif)
     p_families = sub.add_parser("families", help="List structural families and required provider inputs."); p_families.set_defaults(func=command_families)
     p_template = sub.add_parser("template", help="Create minimal CSV/JSON templates for a first run."); p_template.add_argument("--out-dir", default="acsp-discovery-template"); p_template.set_defaults(func=command_template)
+    p_frame = sub.add_parser("build-frame", help="Build an explicit LOCAL or BROAD candidate frame without inferring biological extent."); frame_sub = p_frame.add_subparsers(dest="frame_mode", required=True)
+    p_local = frame_sub.add_parser("local", help="Build an annular local frame around population anchors; outer radius is required."); p_local.add_argument("--anchors", required=True); p_local.add_argument("--outer-radius-km", type=float, required=True); p_local.add_argument("--known-exclusion-km", type=float, default=0.5); p_local.add_argument("--grid-spacing-m", type=float); p_local.add_argument("--candidate-id-prefix", default="local"); p_local.add_argument("--out", required=True); p_local.add_argument("--audit-json"); p_local.set_defaults(func=command_build_frame)
+    p_broad = frame_sub.add_parser("broad", help="Build a declared rectangular broad frame; bounds are required."); p_broad.add_argument("--bounds", type=float, nargs=4, metavar=("WEST", "SOUTH", "EAST", "NORTH"), required=True); p_broad.add_argument("--anchors"); p_broad.add_argument("--grid-spacing-m", type=float); p_broad.add_argument("--candidate-id-prefix", default="broad"); p_broad.add_argument("--out", required=True); p_broad.add_argument("--audit-json"); p_broad.set_defaults(func=command_build_frame)
     p_assess = sub.add_parser("assess", help="Audit occurrence evidence and resolve LOCAL/DETACHED/SENTINEL/ABSTAIN."); p_assess.add_argument("occurrences"); p_assess.add_argument("--out-dir"); _add_evidence_args(p_assess); p_assess.set_defaults(func=command_assess)
-    p_run = sub.add_parser("run", help="Assess evidence and rank one already frozen candidate frame.")
-    p_run.add_argument("--occurrences", required=True); p_run.add_argument("--candidate-frame", required=True); p_run.add_argument("--source-manifest"); p_run.add_argument("--feature-family"); p_run.add_argument("--target-component-id", help="Required for COASTAL_ISLAND_STRUCTURE and other component-specific recipes."); p_run.add_argument("--graph-radius-cells", type=int, default=1); p_run.add_argument("--out-dir", required=True); _add_evidence_args(p_run); p_run.set_defaults(func=command_run)
+    p_run = sub.add_parser("run", help="Assess evidence and rank one already frozen candidate frame."); p_run.add_argument("--occurrences", required=True); p_run.add_argument("--candidate-frame", required=True); p_run.add_argument("--source-manifest"); p_run.add_argument("--feature-family"); p_run.add_argument("--target-component-id"); p_run.add_argument("--graph-radius-cells", type=int, default=1); p_run.add_argument("--out-dir", required=True); _add_evidence_args(p_run); p_run.set_defaults(func=command_run)
     return parser
 
 
