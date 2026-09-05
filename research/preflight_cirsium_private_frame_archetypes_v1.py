@@ -23,6 +23,11 @@ SOURCE_FLAGS = (
     ("requires_broad_sentinel_support", "sentinel_support_input"),
     ("requires_target_component_id", "target_ecological_component"),
 )
+EXECUTION_ORDER = (
+    "CIR03: local alpine / single-anchor path",
+    "CIR08: local coastal-island / multiple-anchor + coastline path",
+    "CIR02: sentinel uncertainty-footprint path",
+)
 
 
 def _truth(value: object) -> bool:
@@ -56,8 +61,8 @@ def build_preflight(
         frame_status = str(r.get("private_frame_status", "NOT_BUILT"))
         ranking_status = str(r.get("public_full_ranking_status", "NOT_FROZEN"))
         source_ready = manifest_status in {"BUILT", "FROZEN", "READY"}
-
         blockers = [] if source_ready else ["private_source_manifest", *required_inputs]
+
         rows.append(
             {
                 "cohort_unit_id": unit_id,
@@ -74,16 +79,31 @@ def build_preflight(
         )
 
     table = pd.DataFrame(rows)
+    blockers_by_unit = {
+        str(row.cohort_unit_id): [value for value in str(row.blockers).split("|") if value]
+        for row in table.itertuples(index=False)
+        if str(row.blockers)
+    }
+    ready_units = int((table.preflight_status == "READY_FOR_PRIVATE_FRAME_BUILD").sum())
+    blocked_units = int((table.preflight_status == "BLOCKED_PRIVATE_SOURCE_FREEZE").sum())
     summary = {
         "schema_version": "cirsium-private-frame-archetype-preflight-v1",
         "scientific_role": "pre_field_execution_readiness_only",
         "field_outcomes_used": False,
         "exact_coordinates_used": False,
+        "generated_from": [
+            "validation/cirsium_private_frame_source_requirements_v1.csv",
+            "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+        ],
         "archetype_order": list(unit_ids),
         "units": int(len(table)),
-        "ready_units": int((table.preflight_status == "READY_FOR_PRIVATE_FRAME_BUILD").sum()),
-        "blocked_units": int((table.preflight_status == "BLOCKED_PRIVATE_SOURCE_FREEZE").sum()),
+        "ready_units": ready_units,
+        "blocked_units": blocked_units,
+        "status": "READY_FOR_PRIVATE_FRAME_BUILD" if blocked_units == 0 else "BLOCKED_PRIVATE_SOURCE_FREEZE",
+        "blockers_by_unit": blockers_by_unit,
+        "execution_order_after_source_freeze": list(EXECUTION_ORDER),
         "next_action": "Freeze the listed private source snapshots/manifests, then build CIR03 -> CIR08 -> CIR02 private frames without changing the frozen algorithms.",
+        "claim_boundary": "This preflight reports execution readiness only. It does not establish occupancy, field efficiency, selector superiority, or accessibility.",
     }
     return table, summary
 
