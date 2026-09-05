@@ -3,7 +3,8 @@
 
 This is retrospective development only. Candidate frames and all selector orders
 are constructed from 2000-2020 evidence plus public WorldCover before 2021-2025
-novel populations are scored.
+novel populations are scored. A later post-opened addendum reports component-wise
+reachability ceilings without changing or rescuing the frozen benchmark.
 """
 from __future__ import annotations
 
@@ -44,6 +45,7 @@ from acsp.discovery.providers.worldcover_land import retain_worldcover_land_cand
 from benchmark_public_japan_cirsium_temporal_anchor_v1 import fetch_gbif_species
 
 CONTRACT = ROOT / "validation" / "public_cirsium_detached_broad_coastal_development_v1.json"
+COMPONENT_ADDENDUM = ROOT / "validation" / "public_cirsium_detached_broad_coastal_component_reachability_addendum_v1.json"
 PRIOR_LOCAL_RESULT = ROOT / "validation" / "public_cirsium_portable_coastal_smoke_result_v1.json"
 UNIT_ID = "CIR08"
 SPECIES = "Cirsium brevicaule"
@@ -100,6 +102,18 @@ def _recall(selected: pd.DataFrame, clusters, radius_km: float) -> float:
     return float(sum(_cluster_hit(selected, cluster, radius_km) for cluster in clusters) / len(clusters))
 
 
+def _reachability(selected: pd.DataFrame, clusters, radius_km: float) -> dict[str, object]:
+    hits = [_cluster_hit(selected, cluster, radius_km) for cluster in clusters]
+    recovered = int(sum(hits))
+    total = int(len(clusters))
+    return {
+        "candidate_count": int(len(selected)),
+        "recovered_novel_clusters": recovered,
+        "novel_cluster_count": total,
+        "recall": 0.0 if total == 0 else float(recovered / total),
+    }
+
+
 def _subset_structural_order(structural_full: pd.DataFrame, detached: pd.DataFrame) -> pd.DataFrame:
     ids = set(detached["candidate_cell_id"].astype(str))
     out = structural_full.loc[structural_full["candidate_cell_id"].astype(str).isin(ids)].copy()
@@ -113,11 +127,18 @@ def _subset_structural_order(structural_full: pd.DataFrame, detached: pd.DataFra
 
 def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    addendum = json.loads(COMPONENT_ADDENDUM.read_text(encoding="utf-8"))
     prior = json.loads(PRIOR_LOCAL_RESULT.read_text(encoding="utf-8"))
     if contract.get("status") != "DEVELOPMENT_ONLY_FROZEN_BEFORE_DETACHED_BROAD_EXECUTION":
         raise ValueError("DETACHED_BROAD contract is not frozen")
+    if addendum.get("status") != "POST_OPENED_DESCRIPTIVE_ADDENDUM":
+        raise ValueError("component reachability addendum status changed")
+    if addendum.get("parent_contract") != str(CONTRACT.relative_to(ROOT)):
+        raise ValueError("component reachability addendum parent mismatch")
     if contract.get("species") != SPECIES or contract.get("feature_family") != FAMILY:
         raise ValueError("DETACHED_BROAD identity/family mismatch")
+    if addendum.get("cohort_unit_id") != UNIT_ID or addendum.get("species") != SPECIES:
+        raise ValueError("component addendum identity mismatch")
     if prior.get("novel_recent_population_clusters") != 15:
         raise ValueError("prior CIR08 local result no longer matches frozen 15-population denominator")
     if prior.get("full_frame_ceiling", {}).get("5_km", {}).get("recovered_novel_clusters_at_1km") != 1:
@@ -166,6 +187,14 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
         target_component_id=coastal_audit.target_component_id,
     )
     detached = partitioned.loc[partitioned["discovery_lane"].astype(str).str.startswith("DETACHED")].copy().reset_index(drop=True)
+    detached_same = partitioned.loc[partitioned["discovery_lane"].eq("DETACHED_SAME_COMPONENT")].copy().reset_index(drop=True)
+    detached_other = partitioned.loc[partitioned["discovery_lane"].eq("DETACHED_OTHER_COMPONENT")].copy().reset_index(drop=True)
+    anchored_component_full = broad_land.loc[
+        broad_land["ecological_component_id"].astype(str).eq(str(coastal_audit.target_component_id))
+    ].copy().reset_index(drop=True)
+    other_components_full = broad_land.loc[
+        ~broad_land["ecological_component_id"].astype(str).eq(str(coastal_audit.target_component_id))
+    ].copy().reset_index(drop=True)
     if detached.empty:
         raise RuntimeError("DETACHED_BROAD frame is empty")
 
@@ -211,7 +240,12 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
 
     radii = [float(value) for value in contract["outcome"]["recovery_radii_km"]]
     fractions = [float(value) for value in contract["ranking"]["prefix_fractions"]]
+    addendum_radii = [float(value) for value in addendum["recovery_radii_km"]]
+    if addendum_radii != radii:
+        raise ValueError("component addendum must reuse the parent recovery radii")
+
     reachability = {}
+    component_reachability = {}
     local_unreached_by_radius = {}
     for radius in radii:
         local_hits = [_cluster_hit(local_land, cluster, radius) for cluster in novel]
@@ -224,6 +258,13 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
             "broad_land_250m_recovered": int(sum(broad_hits)),
             "detached_broad_250m_recovered": int(sum(detached_hits)),
             "local_unreached_count": int(len(novel) - sum(local_hits)),
+        }
+        component_reachability[str(radius)] = {
+            "ANCHORED_COMPONENT_FULL": _reachability(anchored_component_full, novel, radius),
+            "OTHER_COMPONENTS_FULL": _reachability(other_components_full, novel, radius),
+            "DETACHED_SAME_COMPONENT": _reachability(detached_same, novel, radius),
+            "DETACHED_OTHER_COMPONENT": _reachability(detached_other, novel, radius),
+            "BROAD_LAND_UNION": _reachability(broad_land, novel, radius),
         }
 
     rows: list[dict] = []
@@ -256,6 +297,8 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
         "schema_version": "public-cirsium-detached-broad-coastal-result-v1",
         "status": "DEVELOPMENT_ONLY_DETACHED_BROAD_COMPLETE",
         "source_contract": str(CONTRACT.relative_to(ROOT)),
+        "component_reachability_addendum": str(COMPONENT_ADDENDUM.relative_to(ROOT)),
+        "component_reachability_is_post_opened_descriptive": True,
         "cohort_unit_id": UNIT_ID,
         "species": SPECIES,
         "family": FAMILY,
@@ -272,19 +315,22 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
         "coastal_feature_audit": asdict(coastal_audit),
         "detached_partition_audit": asdict(partition_audit),
         "detached_candidate_count": int(len(detached)),
-        "detached_same_component_count": int((detached["discovery_lane"] == "DETACHED_SAME_COMPONENT").sum()),
-        "detached_other_component_count": int((detached["discovery_lane"] == "DETACHED_OTHER_COMPONENT").sum()),
+        "detached_same_component_count": int(len(detached_same)),
+        "detached_other_component_count": int(len(detached_other)),
+        "anchored_component_full_count": int(len(anchored_component_full)),
+        "other_components_full_count": int(len(other_components_full)),
         "local_reconstruction": {
             "frame_build_audit": asdict(local_build_audit),
             "land_mask_audit": asdict(local_land_audit),
             "prior_frozen_1km_recovered": int(prior["full_frame_ceiling"]["5_km"]["recovered_novel_clusters_at_1km"]),
         },
         "reachability": reachability,
+        "component_reachability": component_reachability,
         "structural_audit": asdict(structural_audit),
         "spatial_audit": asdict(spatial_audit),
         "prefix_fractions": fractions,
         "recovery_radii_km": radii,
-        "interpretation_boundary": "Opened CIR08 development only. Broad-frame reachability is the primary diagnostic. Selector cells are secondary and cannot be promoted or retuned on this unit."
+        "interpretation_boundary": "Opened CIR08 development only. Parent broad-frame reachability is primary; component decomposition is a post-opened descriptive addendum. Selector cells cannot be promoted or retuned on this unit."
     }
     return table, summary
 
