@@ -31,7 +31,7 @@ def validate() -> dict[str, object]:
     with SOURCE_REQUIREMENTS.open(encoding="utf-8", newline="") as handle:
         source_rows = list(csv.DictReader(handle))
 
-    assert execution["status"] == "ALGORITHM_ADAPTERS_GRAPH_RANKING_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED"
+    assert execution["status"] == "ALGORITHM_ADAPTERS_GRAPH_RANKING_AND_SENTINEL_AUDIT_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED"
     assert execution["field_outcomes_opened"] is False
     assert execution["private_candidate_frames_built"] is False
     assert execution["public_patch_manifest_built"] is False
@@ -49,6 +49,14 @@ def validate() -> dict[str, object]:
     assert execution["matched_field_effort_claim"] is False
     assert execution["legacy_fixed_k_generator_authoritative_for_new_execution"] is False
     assert execution["public_full_ranking_generator"].endswith("freeze_cirsium_candidate_patch_ranking_v2.py")
+
+    audit_v2 = execution["occurrence_uncertainty_audit_v2"]
+    assert audit_v2["completed"] is True
+    assert audit_v2["workflow_run_id"] == 33847046386
+    assert audit_v2["artifact_id"] == 9926992269
+    assert audit_v2["artifact_digest"] == "sha256:5e908fecb625f2f8e4e87e758a0a9d0ace63c14e63fce19cf7bf87c0c7fe8147"
+    assert audit_v2["field_outcomes_opened"] is False
+    assert audit_v2["coordinate_leakage_guard_passed"] is True
 
     code_components = {family: list(columns) for family, columns in FAMILY_COMPONENTS.items()}
     code_components[BASELINE_FAMILY] = []
@@ -74,16 +82,27 @@ def validate() -> dict[str, object]:
         "Geospatial Information Authority of Japan"
     )
 
-    assert frame_contract["status"] == "LOCAL_FRAME_FROZEN_SENTINEL_SUBREGIME_PENDING_V2_AUDIT"
+    assert frame_contract["status"] == "LOCAL_FRAME_AND_SENTINEL_SUBREGIMES_FROZEN_PRE_PRIVATE_FRAME"
     assert frame_contract["grid"]["target_spacing_m"] == 100
     assert frame_contract["local_continuation"]["known_point_exclusion_km"] == 0.5
     assert frame_contract["local_continuation"]["primary_outer_radius_km"] == 2.0
     assert frame_contract["local_continuation"]["sensitivity_outer_radius_km"] == 5.0
     assert frame_contract["selection_count"]["status"] == "RANKING_FREEZE_FIRST"
+    sentinel_contract = frame_contract["sentinel"]
+    assert sentinel_contract["status"] == "SUBREGIMES_FROZEN_AFTER_UNCERTAINTY_AUDIT_V2"
+    assert set(sentinel_contract["subregimes"]) == {
+        "UNCERTAINTY_FOOTPRINT",
+        "LEGACY_RANGE_CONTEXT",
+        "COARSE_RANGE_CONTEXT",
+    }
+    assert sentinel_contract["known_point_local_kernel_allowed"] is False
+    assert sentinel_contract["forced_pseudo_exact_coordinate_allowed"] is False
 
     assert source_template["field_outcomes_opened"] is False
     assert source_template["candidate_grid"]["target_spacing_m"] == 100
     assert source_template["authorization_access_layers_in_G_E"] is False
+    assert source_template["occurrence_input"]["audit_v2_artifact_digest"] == audit_v2["artifact_digest"]
+    assert source_template["occurrence_input"]["sentinel_evidence_class"] == "REPLACE_FROM_FROZEN_COHORT"
     assert all(row["private_source_manifest_status"] == "NOT_BUILT" for row in source_rows)
     assert all(row["private_frame_status"] == "NOT_BUILT" for row in source_rows)
     assert all(row["public_full_ranking_status"] == "NOT_FROZEN" for row in source_rows)
@@ -95,11 +114,17 @@ def validate() -> dict[str, object]:
     assert source_state["coastline_source_of_record"] == "GSI_FUNDAMENTAL_GEOSPATIAL_DATA_BASIC_ITEMS_COASTLINE"
     assert source_state["coastline_private_snapshot_sha256_recorded"] is False
     assert source_state["private_unit_source_snapshots_built"] is False
-    assert source_state["sentinel_uncertainty_audit_v2_completed"] is False
+    assert source_state["sentinel_uncertainty_audit_v2_completed"] is True
 
     method_counts = Counter(row["method_arm"] for row in cohort)
     assert method_counts == Counter(
         {"STRUCTURAL_LOCAL": 8, "STRUCTURAL_SENTINEL": 4, "SPATIAL_BASELINE_ONLY": 1}
+    )
+    sentinel_subregime_counts = Counter(
+        row["sentinel_subregime"] for row in cohort if row["occurrence_problem_class"] == "SENTINEL"
+    )
+    assert sentinel_subregime_counts == Counter(
+        {"UNCERTAINTY_FOOTPRINT": 2, "LEGACY_RANGE_CONTEXT": 1, "COARSE_RANGE_CONTEXT": 1}
     )
     for row in cohort:
         family = row["structural_feature_family"]
@@ -112,6 +137,12 @@ def validate() -> dict[str, object]:
             assert execution["family_components"][family]
         assert row["outcome_opened"] == "false"
         assert row["candidate_patch_status"] == "NOT_BUILT"
+        if row["occurrence_problem_class"] == "LOCAL_CONTINUATION":
+            assert row["sentinel_subregime"] == "NOT_APPLICABLE"
+        elif row["sentinel_subregime"] == "UNCERTAINTY_FOOTPRINT":
+            assert "UNCERTAINTY_FOOTPRINT_SUPPORT" in row["comparators"]
+        else:
+            assert row["comparators"] == "DETERMINISTIC_SPATIAL_BALANCE"
 
     policy = execution["public_sensitive_coordinate_policy"]
     assert policy["exact_coordinates_written"] is False
@@ -123,13 +154,15 @@ def validate() -> dict[str, object]:
         "status": "OK",
         "cohort_size": len(cohort),
         "method_arm_counts": dict(method_counts),
+        "sentinel_subregime_counts": dict(sentinel_subregime_counts),
         "family_count": len(execution["family_components"]),
         "algorithm_frozen": True,
         "raw_adapters_frozen": True,
         "ecological_graph_frozen": True,
         "local_candidate_frame_frozen": True,
+        "sentinel_subregimes_frozen": True,
         "full_ranking_mechanics_frozen": True,
-        "sentinel_subregime_pending_v2": True,
+        "sentinel_subregime_pending_v2": False,
         "real_candidate_patches_built": False,
         "field_outcomes_opened": False,
     }
