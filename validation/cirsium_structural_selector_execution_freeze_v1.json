@@ -1,6 +1,6 @@
 {
   "schema_version": "cirsium-structural-selector-execution-freeze-v1",
-  "status": "ALGORITHM_ADAPTERS_GRAPH_RANKING_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED",
+  "status": "ALGORITHM_ADAPTERS_GRAPH_RANKING_AND_SENTINEL_AUDIT_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED",
   "scientific_role": "prospective Cirsium structural-continuity test under issue 192",
   "field_outcomes_opened": false,
   "private_candidate_frames_built": false,
@@ -77,13 +77,22 @@
   },
   "same_candidate_frame_full_ranking_within_unit": true,
   "matched_field_effort_claim": false,
+  "occurrence_uncertainty_audit_v2": {
+    "completed": true,
+    "workflow_run_id": 33847046386,
+    "artifact_id": 9926992269,
+    "artifact_digest": "sha256:5e908fecb625f2f8e4e87e758a0a9d0ace63c14e63fce19cf7bf87c0c7fe8147",
+    "head_sha": "6b2b8012e285e8fcaea267fd38190ac5025af9b2",
+    "field_outcomes_opened": false,
+    "coordinate_leakage_guard_passed": true
+  },
   "source_layer_state": {
     "terrain_semantics": "PINNED_GSI_DEM_DERIVED",
     "worldcover_semantics": "PINNED_ESA_WORLDCOVER_2021_NEIGHBOURHOOD",
     "coastline_source_of_record": "GSI_FUNDAMENTAL_GEOSPATIAL_DATA_BASIC_ITEMS_COASTLINE",
     "coastline_private_snapshot_sha256_recorded": false,
     "private_unit_source_snapshots_built": false,
-    "sentinel_uncertainty_audit_v2_completed": false
+    "sentinel_uncertainty_audit_v2_completed": true
   },
   "public_sensitive_coordinate_policy": {
     "exact_coordinates_written": false,
@@ -92,11 +101,10 @@
     "private_salt_committed": false
   },
   "remaining_pre_field_execution_steps": [
-    "complete/freeze occurrence uncertainty-provenance audit v2 and resolve each sentinel subregime",
     "download/freeze private source snapshots needed by each of the 13 units and record SHA-256/provenance",
     "build the 13 private candidate frames from pre-2026 occurrence evidence plus frozen environmental sources",
     "run the full-ranking HMAC freeze before opening any field outcome",
     "declare an equal field prefix across methods from logistical capacity before outcomes; never extend a method prefix because of observed success/failure"
   ],
-  "claim_boundary": "The problem gates, LOCAL frame geometry, structural families, raw-layer adapters, G_E graph mechanics, support composition, full deterministic ranking mechanics and HMAC public-freeze semantics are frozen. Real Cirsium candidate frames/rankings and the field prefix are not yet built, so this file does not establish occupancy, accessibility, field efficiency, or structural-selector superiority."
+  "claim_boundary": "The problem gates, LOCAL frame geometry, sentinel uncertainty-provenance audit, structural families, raw-layer adapters, G_E graph mechanics, support composition, full deterministic ranking mechanics and HMAC public-freeze semantics are frozen. Real Cirsium candidate frames/rankings and the field prefix are not yet built, so this file does not establish occupancy, accessibility, field efficiency, or structural-selector superiority."
 }
