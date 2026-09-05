@@ -24,30 +24,9 @@ class DiscoveryWorkflowTests(unittest.TestCase):
     def occurrence_frame(self) -> pd.DataFrame:
         return pd.DataFrame(
             [
-                {
-                    "occurrence_id": "a",
-                    "latitude": 35.0,
-                    "longitude": 139.0000,
-                    "event_year": 2024,
-                    "coordinate_uncertainty_m": 100.0,
-                    "provider_id": "test",
-                },
-                {
-                    "occurrence_id": "b",
-                    "latitude": 35.0,
-                    "longitude": 139.0020,
-                    "event_year": 2024,
-                    "coordinate_uncertainty_m": 200.0,
-                    "provider_id": "test",
-                },
-                {
-                    "occurrence_id": "c",
-                    "latitude": 35.1,
-                    "longitude": 139.1,
-                    "event_year": 2024,
-                    "coordinate_uncertainty_m": None,
-                    "provider_id": "test",
-                },
+                {"occurrence_id": "a", "latitude": 35.0, "longitude": 139.0000, "event_year": 2024, "coordinate_uncertainty_m": 100.0, "provider_id": "test"},
+                {"occurrence_id": "b", "latitude": 35.0, "longitude": 139.0020, "event_year": 2024, "coordinate_uncertainty_m": 200.0, "provider_id": "test"},
+                {"occurrence_id": "c", "latitude": 35.1, "longitude": 139.1, "event_year": 2024, "coordinate_uncertainty_m": None, "provider_id": "test"},
             ]
         )
 
@@ -65,16 +44,15 @@ class DiscoveryWorkflowTests(unittest.TestCase):
         return {
             "schema_version": "test-v1",
             "sources": [
-                {
-                    "provider_id": "TEST",
-                    "layer_role": "candidate_frame",
-                    "release_id": "v1",
-                    "retrieved_at": "2026-09-05T00:00:00+00:00",
-                    "source_uri": "synthetic://candidate-frame",
-                    "sha256": "0" * 64,
-                }
+                {"provider_id": "TEST", "layer_role": "candidate_frame", "release_id": "v1", "retrieved_at": "2026-09-05T00:00:00+00:00", "source_uri": "synthetic://candidate-frame", "sha256": "0" * 64}
             ],
         }
+
+    def local_assessment(self):
+        return assess_occurrence_evidence(
+            self.occurrence_frame(),
+            context=DiscoveryContext(local_component_justified=True),
+        )[0]
 
     def test_auto_context_does_not_promote_anchors_to_local(self) -> None:
         assessment, medoids = assess_occurrence_evidence(self.occurrence_frame())
@@ -85,47 +63,45 @@ class DiscoveryWorkflowTests(unittest.TestCase):
         self.assertEqual(len(medoids), 1)
         self.assertEqual(assessment.rows_missing_declared_uncertainty, 1)
 
+    def test_conflicting_regime_context_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
+            assess_occurrence_evidence(
+                self.occurrence_frame(),
+                context=DiscoveryContext(local_component_justified=True, detached_component_available=True),
+            )
+
     def test_explicit_source_backed_local_context_makes_frame_ranking_eligible(self) -> None:
-        assessment, _ = assess_occurrence_evidence(
-            self.occurrence_frame(),
-            context=DiscoveryContext(local_component_justified=True),
-        )
+        assessment = self.local_assessment()
         self.assertEqual(assessment.status, "READY_FOR_DECLARED_LOCAL_FRAME")
-        rankings, audit = rank_discovery_frame(
-            self.candidate_frame(),
-            assessment=assessment,
-            source_manifest=self.manifest(),
-        )
-        self.assertEqual(
-            set(rankings),
-            {"DETERMINISTIC_SPATIAL_BALANCE", "ANNULAR_NEAREST_KNOWN"},
-        )
+        rankings, audit = rank_discovery_frame(self.candidate_frame(), assessment=assessment, source_manifest=self.manifest())
+        self.assertEqual(set(rankings), {"DETERMINISTIC_SPATIAL_BALANCE", "ANNULAR_NEAREST_KNOWN"})
         self.assertTrue(audit.no_fitted_blend)
         self.assertTrue(audit.same_candidate_frame_for_all_methods)
         self.assertFalse(audit.human_access_used)
-        self.assertEqual(
-            rankings["ANNULAR_NEAREST_KNOWN"]["candidate_cell_id"].tolist(),
-            ["c1", "c2", "c3", "c4"],
-        )
+        self.assertEqual(rankings["ANNULAR_NEAREST_KNOWN"]["candidate_cell_id"].tolist(), ["c1", "c2", "c3", "c4"])
 
     def test_abstain_cannot_be_ranked(self) -> None:
         assessment, _ = assess_occurrence_evidence(self.occurrence_frame())
         with self.assertRaisesRegex(ValueError, "ABSTAIN"):
-            rank_discovery_frame(
-                self.candidate_frame(),
-                assessment=assessment,
-                source_manifest=self.manifest(),
-            )
+            rank_discovery_frame(self.candidate_frame(), assessment=assessment, source_manifest=self.manifest())
+
+    def test_human_access_columns_cannot_create_ecological_ranking(self) -> None:
+        candidate = self.candidate_frame()
+        candidate["distance_to_road_m"] = 100.0
+        with self.assertRaisesRegex(ValueError, "downstream in G_F"):
+            rank_discovery_frame(candidate, assessment=self.local_assessment(), source_manifest=self.manifest())
+
+    def test_human_access_source_roles_are_rejected(self) -> None:
+        manifest = self.manifest()
+        manifest["sources"][0]["layer_role"] = "road_access"
+        with self.assertRaisesRegex(ValueError, "cannot create ecological support"):
+            rank_discovery_frame(self.candidate_frame(), assessment=self.local_assessment(), source_manifest=manifest)
 
     def test_structural_family_missing_columns_returns_actionable_error(self) -> None:
-        assessment, _ = assess_occurrence_evidence(
-            self.occurrence_frame(),
-            context=DiscoveryContext(local_component_justified=True),
-        )
         with self.assertRaisesRegex(ValueError, "Required source roles"):
             rank_discovery_frame(
                 self.candidate_frame(),
-                assessment=assessment,
+                assessment=self.local_assessment(),
                 source_manifest=self.manifest(),
                 feature_family="WETLAND_MOISTURE_STRUCTURE",
             )
@@ -133,25 +109,11 @@ class DiscoveryWorkflowTests(unittest.TestCase):
     def test_cli_template_and_assess_are_runnable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "template"
-            subprocess.run(
-                [sys.executable, "-m", "acsp.discovery.cli", "template", "--out-dir", str(out)],
-                cwd=ROOT,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            subprocess.run([sys.executable, "-m", "acsp.discovery.cli", "template", "--out-dir", str(out)], cwd=ROOT, check=True, capture_output=True, text=True)
             self.assertTrue((out / "occurrences.csv").exists())
             assess_out = Path(tmp) / "assessment"
             completed = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "acsp.discovery.cli",
-                    "assess",
-                    str(out / "occurrences.csv"),
-                    "--out-dir",
-                    str(assess_out),
-                ],
+                [sys.executable, "-m", "acsp.discovery.cli", "assess", str(out / "occurrences.csv"), "--out-dir", str(assess_out)],
                 cwd=ROOT,
                 check=True,
                 capture_output=True,
