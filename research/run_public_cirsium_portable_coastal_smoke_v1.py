@@ -34,10 +34,7 @@ from acsp.discovery import (
     haversine_km,
     rank_discovery_frame,
 )
-from acsp.discovery.providers import (
-    attach_worldcover_coastal_features,
-    build_worldcover_2021_map_crop,
-)
+from acsp.discovery.providers import attach_worldcover_coastal_features, build_worldcover_2021_map_crop
 from benchmark_public_japan_cirsium_temporal_anchor_v1 import fetch_gbif_species
 
 CONTRACT = ROOT / "validation" / "public_cirsium_portable_coastal_smoke_v1.json"
@@ -55,17 +52,9 @@ def _inside(frame: pd.DataFrame, bounds: tuple[float, float, float, float]) -> p
 
 
 def _occurrence_schema(frame: pd.DataFrame) -> pd.DataFrame:
+    columns = ["occurrence_id", "latitude", "longitude", "event_year", "coordinate_uncertainty_m", "provider_id"]
     if frame.empty:
-        return pd.DataFrame(
-            columns=[
-                "occurrence_id",
-                "latitude",
-                "longitude",
-                "event_year",
-                "coordinate_uncertainty_m",
-                "provider_id",
-            ]
-        )
+        return pd.DataFrame(columns=columns)
     return pd.DataFrame(
         {
             "occurrence_id": frame["gbif_key"].astype(str),
@@ -141,22 +130,12 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
     if historical.empty:
         return _blocked("NO_STRICT_HISTORICAL_ANCHOR", fetch_audit=fetch_audit)
 
-    assessment, anchors = assess_occurrence_evidence(
-        historical,
-        context=DiscoveryContext(local_component_justified=True),
-    )
+    assessment, anchors = assess_occurrence_evidence(historical, context=DiscoveryContext(local_component_justified=True))
     if assessment.population_anchor_count < 1:
-        return _blocked(
-            "NO_STRICT_HISTORICAL_ANCHOR",
-            fetch_audit=fetch_audit,
-            assessment=assessment.as_dict(),
-        )
+        return _blocked("NO_STRICT_HISTORICAL_ANCHOR", fetch_audit=fetch_audit, assessment=assessment.as_dict())
 
     frame_spec = contract["candidate_frames"]
-    outer_values = (
-        float(frame_spec["primary_outer_radius_km"]),
-        float(frame_spec["sensitivity_outer_radius_km"]),
-    )
+    outer_values = (float(frame_spec["primary_outer_radius_km"]), float(frame_spec["sensitivity_outer_radius_km"]))
     raw_frames: dict[float, pd.DataFrame] = {}
     frame_build_audits: dict[str, dict] = {}
     for outer in outer_values:
@@ -201,7 +180,14 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
     source_manifest = {
         "schema_version": "portable-coastal-worldcover-source-v1",
         "sources": [
-            {"provider_id": "ESA_WORLDCOVER", "layer_role": role, "release_id": "2021_v200", "retrieved_at": retrieved_at, "source_uri": source_uri, "sha256": wc_audit.output_sha256}
+            {
+                "provider_id": "ESA_WORLDCOVER",
+                "layer_role": role,
+                "release_id": "2021_v200",
+                "retrieved_at": retrieved_at,
+                "source_uri": source_uri,
+                "sha256": wc_audit.output_sha256,
+            }
             for role in ("landcover", "coastline", "component_geometry")
         ],
     }
@@ -215,12 +201,8 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
                 raw,
                 anchors,
                 wc_path,
-                neighbourhood_half_width_m=float(contract["worldcover"]["grass_fraction_rule"].split("250 m")[0][-0:] or 250),
+                neighbourhood_half_width_m=float(contract["worldcover"]["neighbourhood_half_width_m"]),
             )
-            # The contract freezes 250 m; keep the explicit value independent of
-            # wording above to avoid parsing scientific settings from prose.
-            if float(coastal_audit.neighbourhood_half_width_m) != 250.0:
-                raise AssertionError("portable coastal neighbourhood must remain 250 m")
             rankings, ranking_audit = rank_discovery_frame(
                 enriched,
                 assessment=assessment,
@@ -239,12 +221,7 @@ def run(out_dir: Path) -> tuple[pd.DataFrame, dict]:
             state = "MULTIPLE_HISTORICAL_LAND_COMPONENTS"
         else:
             raise
-        return _blocked(
-            state,
-            fetch_audit=fetch_audit,
-            assessment=assessment.as_dict(),
-            detail=token,
-        )
+        return _blocked(state, fetch_audit=fetch_audit, assessment=assessment.as_dict(), detail=token)
 
     # Outcome scoring starts only after both frame-specific full ranking sets exist.
     novel = _novel_recent_clusters(historical, recent) if not recent.empty else []
@@ -313,7 +290,6 @@ def main() -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     table.to_csv(args.out_dir / "portable_coastal_prefix_curve.csv", index=False)
     (args.out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    # Do not retain provider raster in public CI artifact directory.
     private_crop = args.out_dir / "private_worldcover_crop.tif"
     if private_crop.exists():
         private_crop.unlink()
