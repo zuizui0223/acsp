@@ -9,6 +9,7 @@ on:
       - "acsp/structural_support.py"
       - "acsp/structural_selector.py"
       - "tests/test_discovery_package.py"
+      - "tests/test_discovery_providers.py"
       - "pyproject.toml"
       - ".github/workflows/discovery-package-checks.yml"
   workflow_dispatch:
@@ -27,7 +28,9 @@ jobs:
       - name: Install package
         run: python -m pip install -e .
       - name: Run taxon-neutral discovery tests
-        run: python tests/test_discovery_package.py -v
+        run: |
+          python tests/test_discovery_package.py -v
+          python tests/test_discovery_providers.py -v
       - name: Verify validation-boundary imports
         run: |
           python - <<'PY'
