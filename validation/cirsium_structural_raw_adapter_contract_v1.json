@@ -8,7 +8,7 @@
   "general_rules": {
     "unit_interval_inputs": "WorldCover fractions and precomputed graph-support columns must already lie in [0,1].",
     "terrain_rank_rule": "Where a monotone terrain direction is source-justified, use deterministic within-declared-frame percentile ranks; no fitted cut point.",
-    "graph_rule": "Ecological continuity/component scores are not reconstructed from convenient rasters in this adapter. They must come from a separately pinned ecological graph builder.",
+    "graph_rule": "Ecological continuity/component scores are not reconstructed from convenient rasters in this adapter. They come from the separately frozen G_E_LOCAL_GRID_V1 ecological graph builder.",
     "human_access_rule": "Roads, trails, permissions and accessibility cannot enter structural raw adapters; they belong to G_F after ecological candidate construction.",
     "outcome_columns": "Field outcome, detection, tissue and identity-result columns fail closed."
   },
@@ -46,14 +46,19 @@
   "source_layer_mapping": {
     "terrain_primitives": "reuse the outcome-blind GSI DEM extraction semantics already implemented in research/campanula_microterrain_discovery.py (elev, slope100, tpi300 and related diagnostics), generalized to the declared Cirsium private frame",
     "worldcover_primitives": "reuse the outcome-blind ESA WorldCover neighborhood-fraction semantics already implemented in research/campanula_worldcover_discovery.py at 250 m",
-    "coast_distance": "must be produced by a separately pinned coastline source/adapter before coastal private-frame freeze",
-    "graph_support": "must be produced by the next ecological graph-builder gate; not inferred here"
+    "coast_distance": "use the pinned GSI Fundamental Geospatial Data Basic Items coastline snapshot and record its private SHA-256 before coastal private-frame freeze",
+    "graph_support": "produced by frozen G_E_LOCAL_GRID_V1; not inferred by fitted weights or access layers"
+  },
+  "execution_adapters": {
+    "private_source_manifest_builder": "research/build_cirsium_private_source_manifest_v1.py",
+    "alpine_local_raw_grid_builder": "research/build_cirsium_private_alpine_local_grid_v1.py",
+    "private_candidate_frame_builder": "research/prepare_cirsium_private_candidate_frame_v1.py"
   },
   "current_blockers_before_real_patch_tokens": [
-    "pin ecological graph-builder semantics for continuity/component columns",
-    "pin coastline source and coast-distance extraction",
-    "build private candidate frames for the frozen 13 validation units",
-    "run HMAC patch freeze before opening any field outcome"
+    "download/freeze the required private source snapshots and record SHA-256/provenance",
+    "build raw grids and private candidate frames for the frozen 13 validation units",
+    "run the subregime-specific full-ranking HMAC freeze before opening any field outcome",
+    "declare equal field prefixes before outcomes"
   ],
   "claim_boundary": "These transforms operationalize predeclared structural evidence. They do not estimate occupancy, adaptation, causal habitat effects or field yield."
 }
