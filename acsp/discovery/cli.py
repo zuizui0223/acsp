@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from .broad_frames import attach_nearest_anchor_distance, build_rectangular_candidate_frame
+from .component_workflow import prepare_worldcover_component_partition
 from .families import list_structural_families
 from .frames import AnnularFrameSpec, build_annular_candidate_frame
 from .providers import fetch_gbif_occurrence_evidence
@@ -116,9 +117,10 @@ def command_template(args: argparse.Namespace) -> int:
         "Optional: acsp-discovery fetch-gbif 'Species name' --country JP --out occurrences.csv\n"
         "1) acsp-discovery assess occurrences.csv --out-dir assessment\n"
         "2) Build a declared frame: acsp-discovery build-frame local --anchors assessment/population_anchors.csv --outer-radius-km 5 --out candidate_frame.csv\n"
-        "   or: acsp-discovery build-frame broad --bounds WEST SOUTH EAST NORTH --anchors assessment/population_anchors.csv --out candidate_frame.csv\n"
-        "3) Explicit --regime local/detached/sentinel requires --context-note.\n"
-        "4) Structural runs require a real source manifest; `acsp-discovery families` shows required raw columns.\n",
+        "   or: acsp-discovery build-frame broad --bounds WEST SOUTH EAST NORTH --anchors assessment/population_anchors.csv --out broad_frame.csv\n"
+        "3) For a broad terrestrial frame: acsp-discovery prepare-components --candidate-frame broad_frame.csv --anchors assessment/population_anchors.csv --out-dir components\n"
+        "4) Explicit --regime local/detached/sentinel requires --context-note.\n"
+        "5) Structural runs require a real source manifest; `acsp-discovery families` shows required raw columns.\n",
         encoding="utf-8",
     )
     print(str(out)); return 0
@@ -172,6 +174,34 @@ def command_build_frame(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_prepare_components(args: argparse.Namespace) -> int:
+    candidate = pd.read_csv(args.candidate_frame)
+    anchors = pd.read_csv(args.anchors)
+    out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
+    snapshot = out / "worldcover_component_snapshot.tif"
+    all_land, anchored, other, audit = prepare_worldcover_component_partition(
+        candidate,
+        anchors,
+        snapshot_path=snapshot,
+        crop_margin_m=float(args.crop_margin_m),
+    )
+    all_land.to_csv(out / "candidate_components_all_land.csv", index=False)
+    anchored.to_csv(out / "candidate_components_anchored.csv", index=False)
+    other.to_csv(out / "candidate_components_other.csv", index=False)
+    _write_json(out / "component_audit.json", audit.as_dict())
+    _write_json(out / "source_manifest.json", audit.source_manifest)
+    payload = {
+        "status": audit.status,
+        "out_dir": str(out),
+        "land_candidate_count": audit.land_candidate_count,
+        "anchored_candidate_count": audit.anchored_candidate_count,
+        "other_component_candidate_count": audit.other_component_candidate_count,
+        "anchored_component_ids": list(audit.anchored_component_ids),
+        "warning": "WorldCover land components are source-backed physical components, not proof that every unanchored component is suitable habitat."
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2)); return 0
+
+
 def command_assess(args: argparse.Namespace) -> int:
     assessment, medoids = assess_occurrence_evidence(pd.read_csv(args.occurrences), context=_context_from_args(args), policy=_policy_from_args(args))
     payload = _assessment_payload(assessment, args); print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -211,6 +241,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_frame = sub.add_parser("build-frame", help="Build an explicit LOCAL or BROAD candidate frame without inferring biological extent."); frame_sub = p_frame.add_subparsers(dest="frame_mode", required=True)
     p_local = frame_sub.add_parser("local", help="Build an annular local frame around population anchors; outer radius is required."); p_local.add_argument("--anchors", required=True); p_local.add_argument("--outer-radius-km", type=float, required=True); p_local.add_argument("--known-exclusion-km", type=float, default=0.5); p_local.add_argument("--grid-spacing-m", type=float); p_local.add_argument("--candidate-id-prefix", default="local"); p_local.add_argument("--out", required=True); p_local.add_argument("--audit-json"); p_local.set_defaults(func=command_build_frame)
     p_broad = frame_sub.add_parser("broad", help="Build a declared rectangular broad frame; bounds are required."); p_broad.add_argument("--bounds", type=float, nargs=4, metavar=("WEST", "SOUTH", "EAST", "NORTH"), required=True); p_broad.add_argument("--anchors"); p_broad.add_argument("--grid-spacing-m", type=float); p_broad.add_argument("--candidate-id-prefix", default="broad"); p_broad.add_argument("--out", required=True); p_broad.add_argument("--audit-json"); p_broad.set_defaults(func=command_build_frame)
+    p_components = sub.add_parser("prepare-components", help="Fetch WorldCover and split a declared broad frame into anchored versus other physical land components."); p_components.add_argument("--candidate-frame", required=True); p_components.add_argument("--anchors", required=True); p_components.add_argument("--crop-margin-m", type=float, default=3000.0); p_components.add_argument("--out-dir", required=True); p_components.set_defaults(func=command_prepare_components)
     p_assess = sub.add_parser("assess", help="Audit occurrence evidence and resolve LOCAL/DETACHED/SENTINEL/ABSTAIN."); p_assess.add_argument("occurrences"); p_assess.add_argument("--out-dir"); _add_evidence_args(p_assess); p_assess.set_defaults(func=command_assess)
     p_run = sub.add_parser("run", help="Assess evidence and rank one already frozen candidate frame."); p_run.add_argument("--occurrences", required=True); p_run.add_argument("--candidate-frame", required=True); p_run.add_argument("--source-manifest"); p_run.add_argument("--feature-family"); p_run.add_argument("--target-component-id"); p_run.add_argument("--graph-radius-cells", type=int, default=1); p_run.add_argument("--out-dir", required=True); _add_evidence_args(p_run); p_run.set_defaults(func=command_run)
     return parser
