@@ -7,8 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 from pyproj import CRS, Transformer
-from shapely import contains_xy
-from shapely.geometry import Point, box
+from shapely.geometry import Point
 from shapely.ops import transform as shapely_transform, unary_union
 
 
@@ -41,92 +40,10 @@ class AnnularFrameAudit:
     field_outcomes_used: bool = False
 
 
-@dataclass(frozen=True)
-class RectangularFrameAudit:
-    candidate_count: int
-    grid_spacing_m: float
-    metric_crs: str
-    bounds_wgs84: tuple[float, float, float, float]
-    nominal_frame_area_km2: float
-    human_access_used: bool = False
-    field_outcomes_used: bool = False
-
-
 def metric_crs_for_lonlat(longitude: float, latitude: float) -> CRS:
     zone = max(1, min(60, int(math.floor((float(longitude) + 180.0) / 6.0)) + 1))
     epsg = (32600 if float(latitude) >= 0 else 32700) + zone
     return CRS.from_epsg(epsg)
-
-
-def build_rectangular_candidate_frame(
-    bounds_wgs84: tuple[float, float, float, float],
-    *,
-    grid_spacing_m: float = 100.0,
-    candidate_id_prefix: str = "candidate",
-) -> tuple[pd.DataFrame, RectangularFrameAudit]:
-    """Build one deterministic metric grid inside declared WGS84 bounds.
-
-    This is a provider-neutral outer-frame primitive. It does not use occurrence
-    outcomes, roads, access, or inferred range expansion. The metric grid is
-    globally aligned within the selected UTM zone so a later annular frame built
-    with the same spacing can be compared without changing cell resolution.
-    """
-    west, south, east, north = map(float, bounds_wgs84)
-    if not (-180.0 <= west < east <= 180.0 and -90.0 <= south < north <= 90.0):
-        raise ValueError("bounds_wgs84 must satisfy valid west < east and south < north")
-    spacing = float(grid_spacing_m)
-    if spacing <= 0:
-        raise ValueError("grid_spacing_m must be positive")
-
-    center_lon = (west + east) / 2.0
-    center_lat = (south + north) / 2.0
-    metric = metric_crs_for_lonlat(center_lon, center_lat)
-    to_metric = Transformer.from_crs("EPSG:4326", metric, always_xy=True)
-    to_wgs = Transformer.from_crs(metric, "EPSG:4326", always_xy=True)
-    declared_wgs84 = box(west, south, east, north)
-    declared_metric = shapely_transform(to_metric.transform, declared_wgs84)
-
-    minx, miny, maxx, maxy = declared_metric.bounds
-    x0 = math.floor(minx / spacing) * spacing
-    y0 = math.floor(miny / spacing) * spacing
-    x1 = math.ceil(maxx / spacing) * spacing
-    y1 = math.ceil(maxy / spacing) * spacing
-    xs = np.arange(x0, x1 + spacing * 0.5, spacing, dtype=float)
-    ys = np.arange(y0, y1 + spacing * 0.5, spacing, dtype=float)
-    xx, yy = np.meshgrid(xs, ys)
-    flat_x = xx.ravel()
-    flat_y = yy.ravel()
-    inside = contains_xy(declared_metric, flat_x, flat_y)
-    if not bool(np.any(inside)):
-        raise ValueError("declared rectangular frame contains no grid cells")
-
-    selected_x = flat_x[inside]
-    selected_y = flat_y[inside]
-    lon, lat = to_wgs.transform(selected_x, selected_y)
-    global_cols = np.rint(selected_x / spacing).astype(np.int64)
-    global_rows = np.rint(selected_y / spacing).astype(np.int64)
-    frame = pd.DataFrame(
-        {
-            "candidate_cell_id": [
-                f"{candidate_id_prefix}_r{int(row)}_c{int(col)}"
-                for row, col in zip(global_rows, global_cols)
-            ],
-            "latitude": np.asarray(lat, dtype=float),
-            "longitude": np.asarray(lon, dtype=float),
-            "grid_row": global_rows,
-            "grid_col": global_cols,
-        }
-    )
-    if frame["candidate_cell_id"].duplicated().any():
-        raise AssertionError("rectangular frame generated duplicate candidate IDs")
-    audit = RectangularFrameAudit(
-        candidate_count=int(len(frame)),
-        grid_spacing_m=spacing,
-        metric_crs=metric.to_string(),
-        bounds_wgs84=(west, south, east, north),
-        nominal_frame_area_km2=float(declared_metric.area / 1_000_000.0),
-    )
-    return frame, audit
 
 
 def build_annular_candidate_frame(
