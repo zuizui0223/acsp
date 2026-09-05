@@ -20,6 +20,7 @@ from .broad_frames import (
     partition_local_and_detached,
 )
 from .comparators import ComparatorAudit, rank_morton_dyadic_spatial_balance, rank_nearest_anchor, select_stable_start_maximin
+from .component_workflow import WorldCoverComponentPreparationAudit, prepare_worldcover_component_partition
 from .components import ComponentPartitionAudit, partition_candidate_components
 from .evidence import OccurrenceCluster, cluster_medoid, cluster_medoid_table, cluster_min_distance_km, complete_link_clusters, haversine_km
 from .families import StructuralFamilySpec, get_structural_family_spec, list_structural_families
@@ -39,6 +40,7 @@ __all__ = [
     "AnnularFrameSpec", "AnnularFrameAudit", "build_annular_candidate_frame",
     "RectangularFrameAudit", "DetachedPartitionAudit", "build_rectangular_candidate_frame", "attach_nearest_anchor_distance", "partition_local_and_detached",
     "ComponentPartitionAudit", "partition_candidate_components",
+    "WorldCoverComponentPreparationAudit", "prepare_worldcover_component_partition",
     "DiscoveryRegime", "DiscoveryEvidenceProfile", "RegimeDecision", "resolve_discovery_regime",
     "StructuralOrderAudit", "build_structural_support_order",
     "StructuralFamilySpec", "get_structural_family_spec", "list_structural_families",
