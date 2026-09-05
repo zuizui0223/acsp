@@ -1,9 +1,8 @@
 """Portable coastal/island primitives derived from ESA WorldCover.
 
-This provider turns one frozen WorldCover crop into the raw inputs required by
-``COASTAL_ISLAND_STRUCTURE``. It uses no field outcomes, roads, access, or fitted
-thresholds. The historical population medoids must identify one unambiguous land
-component before structural ranking is allowed.
+This provider turns one frozen WorldCover crop into component IDs or the raw
+inputs required by ``COASTAL_ISLAND_STRUCTURE``. It uses no field outcomes,
+roads, access, or fitted thresholds.
 """
 from __future__ import annotations
 
@@ -18,6 +17,19 @@ from pyproj import Transformer
 from scipy.ndimage import distance_transform_edt, label, uniform_filter
 
 from .worldcover import WORLD_COVER_2021_CLASS_NAMES
+
+
+@dataclass(frozen=True)
+class WorldCoverComponentAudit:
+    candidate_rows_input: int
+    candidate_land_rows_retained: int
+    historical_anchor_count: int
+    anchored_component_ids: tuple[str, ...]
+    anchored_component_count: int
+    land_component_count_in_crop: int
+    field_outcomes_used: bool = False
+    human_access_used: bool = False
+    distance_threshold_used: bool = False
 
 
 @dataclass(frozen=True)
@@ -85,6 +97,63 @@ def _sample_array(array: np.ndarray, rows: np.ndarray, cols: np.ndarray, inside:
     if len(valid):
         out[valid] = array[rows[valid], cols[valid]]
     return out
+
+
+def attach_worldcover_component_ids(
+    candidate_frame: pd.DataFrame,
+    historical_anchors: pd.DataFrame,
+    worldcover_crop: Path,
+) -> tuple[pd.DataFrame, WorldCoverComponentAudit]:
+    """Attach source-backed land component IDs without selecting one component.
+
+    This lightweight adapter is intended for LOCAL-versus-DETACHED frame
+    diagnostics. Candidate water/no-data cells are removed. Historical anchors
+    may occupy one or several land components; their component IDs are returned
+    in the audit rather than forcing a favorable single component.
+    """
+    if candidate_frame is None or candidate_frame.empty:
+        raise ValueError("candidate_frame cannot be empty")
+    if historical_anchors is None or historical_anchors.empty:
+        raise ValueError("NO_STRICT_HISTORICAL_ANCHOR")
+
+    valid_codes = np.array(sorted(WORLD_COVER_2021_CLASS_NAMES), dtype=np.int16)
+    with rasterio.open(Path(worldcover_crop)) as src:
+        cover = src.read(1)
+        valid_cover = np.isin(cover, valid_codes)
+        land = valid_cover & (cover != 80)
+        if not bool(land.any()):
+            raise ValueError("WORLDCOVER_PROVIDER_FAILURE:no valid land pixels inside declared crop")
+        components, component_count = label(land, structure=np.ones((3, 3), dtype=np.uint8))
+
+        anchor_rows, anchor_cols, anchor_inside = _indices_for_points(src, historical_anchors)
+        anchor_labels = _sample_array(components, anchor_rows, anchor_cols, anchor_inside, fill=0.0).astype(int)
+        if np.any(anchor_labels <= 0):
+            raise ValueError("ANCHOR_ON_NO_VALID_WORLDCOVER_LAND")
+        anchored_component_ids = tuple(
+            f"WORLDCOVER_LAND_COMPONENT_{int(value)}"
+            for value in sorted(set(int(value) for value in anchor_labels))
+        )
+
+        cand_rows, cand_cols, cand_inside = _indices_for_points(src, candidate_frame)
+        cand_labels = _sample_array(components, cand_rows, cand_cols, cand_inside, fill=0.0).astype(int)
+        keep = cand_inside & (cand_labels > 0)
+        retained = candidate_frame.loc[keep].copy().reset_index(drop=True)
+        retained_labels = cand_labels[keep]
+        retained["ecological_component_id"] = [
+            f"WORLDCOVER_LAND_COMPONENT_{int(value)}" for value in retained_labels
+        ]
+
+    if retained.empty:
+        raise ValueError("WORLDCOVER_PROVIDER_FAILURE:no land candidate cells retained")
+    audit = WorldCoverComponentAudit(
+        candidate_rows_input=int(len(candidate_frame)),
+        candidate_land_rows_retained=int(len(retained)),
+        historical_anchor_count=int(len(historical_anchors)),
+        anchored_component_ids=anchored_component_ids,
+        anchored_component_count=int(len(anchored_component_ids)),
+        land_component_count_in_crop=int(component_count),
+    )
+    return retained, audit
 
 
 def attach_worldcover_coastal_features(
