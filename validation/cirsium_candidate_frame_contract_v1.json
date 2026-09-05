@@ -1,6 +1,6 @@
 {
   "schema_version": "cirsium-candidate-frame-contract-v1",
-  "status": "LOCAL_FRAME_FROZEN_SENTINEL_SUBREGIME_PENDING_V2_AUDIT",
+  "status": "LOCAL_FRAME_AND_SENTINEL_SUBREGIMES_FROZEN_PRE_PRIVATE_FRAME",
   "field_outcomes_opened": false,
   "grid": {
     "target_spacing_m": 100,
@@ -30,10 +30,32 @@
     ]
   },
   "sentinel": {
-    "status": "SUBREGIME_PENDING_UNCERTAINTY_AUDIT_V2",
-    "rule": "Do not force the local annulus when primary anchors are absent. v2 occurrence evidence will decide whether declared-uncertainty kernels, coarse sector context, legacy context, or abstention is justified.",
+    "status": "SUBREGIMES_FROZEN_AFTER_UNCERTAINTY_AUDIT_V2",
+    "rule": "Do not force the local annulus when primary anchors are absent. The frozen cohort sentinel_evidence_class and sentinel_subregime determine whether declared-uncertainty footprints can bound the frame or whether only coarse/legacy range context is retained.",
     "known_point_local_kernel_allowed": false,
-    "forced_pseudo_exact_coordinate_allowed": false
+    "forced_pseudo_exact_coordinate_allowed": false,
+    "subregimes": {
+      "UNCERTAINTY_FOOTPRINT": {
+        "eligible_evidence_class": "SENTINEL_UNCERTAINTY_KERNEL_ELIGIBLE",
+        "frame_rule": "clip the predeclared range-sector grid to the union of unique declared coordinate-uncertainty footprints strictly above the frozen 1 km local-anchor ceiling",
+        "support_rule": "normalized equal-footprint overlap count; no preference for being nearer the reported coordinate inside a declared footprint",
+        "comparators": [
+          "UNCERTAINTY_FOOTPRINT_SUPPORT",
+          "DETERMINISTIC_SPATIAL_BALANCE"
+        ]
+      },
+      "LEGACY_RANGE_CONTEXT": {
+        "eligible_evidence_class": "SENTINEL_LEGACY_CONTEXT_ONLY",
+        "frame_rule": "retain only the predeclared range-sector context; legacy records are not converted to current pseudo-exact kernels",
+        "comparators": ["DETERMINISTIC_SPATIAL_BALANCE"]
+      },
+      "COARSE_RANGE_CONTEXT": {
+        "eligible_evidence_class": "SENTINEL_COARSE_CONTEXT_ONLY",
+        "frame_rule": "retain only the predeclared coarse range-sector context; unknown/obscured uncertainty is not invented as a coordinate radius",
+        "comparators": ["DETERMINISTIC_SPATIAL_BALANCE"]
+      }
+    },
+    "fail_closed_rule": "If the frozen subregime cannot be constructed from its declared evidence, return abstention rather than substitute another sentinel rule after outcome."
   },
   "selection_count": {
     "status": "RANKING_FREEZE_FIRST",
