@@ -5,31 +5,47 @@
   "cohort_role": "already_opened_and_consumed_development_only",
   "new_independent_confirmation_claim": false,
   "validated_product_changed": false,
+  "comparative_execution_opened": false,
   "question": "Within the same fixed Japanese regional frame, does the already validated occurrence-conditioned environmental-support representation recover later novel occurrence clusters better than direct nearest-known distance or deterministic spatial balance?",
+  "shared_historical_evidence": {
+    "period": [2000, 2020],
+    "strict_declared_coordinate_uncertainty_m_max": 1000,
+    "same_rows_for_environmental_support_and_nearest_known": true,
+    "minimum_historical_rows_for_environmental_generation": 5,
+    "reason": "Keep the local-discovery comparison on one public, spatially interpretable historical evidence set rather than allowing methods to see different occurrence rows."
+  },
   "scientific_methods": {
     "environmental_support": {
-      "identity": "validated_robust_core_unchanged",
+      "identity": "validated_robust_core_algorithm_unchanged_on_shared_strict_historical_rows",
       "support_fraction": 0.025,
       "support_world_dtype": "float32",
       "patch_merge_distance_m": 1000.0,
       "features": ["elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi"],
-      "candidate_surface_rule": "same frozen 800-point regional surface semantics used by the validated Japan core",
+      "candidate_surface_rule": "same frozen deterministic 800-point regional land-surface semantics used by the validated Japan core",
       "prototype_period": [2000, 2020],
-      "prototype_thinning_rule": "reuse validated core semantics; no temporal-outcome-driven tuning"
+      "prototype_thinning_rule": "reuse acsp.taxon_patches validated thinning semantics to at most 32 complete unique environmental prototypes; no temporal-outcome-driven tuning",
+      "selection_object": "validated non-ranked candidate-patch representatives",
+      "selection_count_symbol": "k = candidate_patch_count"
     },
     "nearest_known": {
       "identity": "distance_baseline_only",
       "historical_period": [2000, 2020],
       "known_reobservation_exclusion_km": 0.5,
-      "selection_count": "exactly match environmental-support candidate count on the same regional candidate universe"
+      "candidate_distance": "minimum haversine distance from each regional candidate-surface point to any shared strict historical occurrence coordinate",
+      "selection_rule": "exclude candidate points <=0.5 km from every historical coordinate, then take the k smallest remaining distances; ties break by stable SHA-256 key of pair_id and 8-decimal latitude/longitude",
+      "selection_count": "exactly k, where k is environmental-support candidate_patch_count; if fewer than k eligible points remain, the declared pair is retained as a zero comparative failure"
     },
     "spatial_balance": {
-      "identity": "deterministic_spatial_balance",
-      "selection_count": "exactly match environmental-support candidate count on the same regional candidate universe"
+      "identity": "stable_start_maximin_farthest_point",
+      "candidate_pool": "same regional candidate surface as environmental support",
+      "selection_rule": "start at the candidate with minimum stable SHA-256 key of pair_id and 8-decimal latitude/longitude; iteratively add the point maximizing its minimum haversine distance to already selected points; ties break by the same stable key",
+      "selection_count": "exactly k, where k is environmental-support candidate_patch_count; no environmental or outcome values enter the selection"
     },
     "random": {
       "identity": "same_region_same_count_random",
-      "repetitions": 200
+      "repetitions": 200,
+      "seed_base": 2026090501,
+      "selection_count": "exactly k from the same regional candidate surface without replacement"
     }
   },
   "outcome": {
@@ -37,19 +53,29 @@
     "strict_declared_coordinate_uncertainty_m_max": 1000,
     "cluster_rule": "deterministic_complete_link_greedy_max_0.5km",
     "exclude_reobserved_recent_clusters_within_km": 0.5,
+    "recovery_rule": "a novel recent cluster is recovered when any selected representative/candidate point lies within the declared recovery radius of any member coordinate in that cluster",
     "primary_recovery_radius_km": 10.0,
     "secondary_descriptive_radii_km": [2.0, 5.0]
   },
+  "failure_semantics": {
+    "intention_to_evaluate_denominator": 96,
+    "pair_generation_or_comparator_failure": "retain pair with zero recovery for all compared methods and zero method differences; do not replace the taxon-region pair",
+    "no_novel_recent_cluster": "retain pair as temporally evaluable but primary method differences are zero because no novel recovery target exists",
+    "provider_failure": "retain pair as zero comparative failure; no provider or data-source substitution"
+  },
   "decision_rule": {
-    "primary": "compare pair-level environmental-support minus nearest-known and environmental-support minus spatial-balance at 10 km; retain failures as zero/no replacement",
-    "development_success_requires": "positive mean difference against both strong baselines with direction not confined to one taxon group; this may nominate a method but cannot confirm it",
+    "primary": "compare pair-level environmental-support minus nearest-known and environmental-support minus spatial-balance at 10 km over all 96 declared pairs with frozen zero-failure semantics",
+    "secondary": "report environmental-support minus random and the same comparisons at 2 and 5 km descriptively only",
+    "development_success_requires": "positive overall mean difference against both nearest-known and spatial-balance at 10 km, with positive mean environmental-minus-baseline direction in both plant and animal groups for both baselines; this may nominate a method but cannot confirm it",
     "if_success": "freeze nominated method unchanged and sample a new disjoint public confirmation cohort before any external local-discovery claim",
-    "if_fail": "do not tune radii, precision, support fraction or feature weights on these 96 opened pairs"
+    "if_fail": "do not tune radii, precision, support fraction, spatial-balance mechanics, feature weights or taxon subset on these 96 opened pairs"
   },
   "forbidden": [
     "retune 0.025 support fraction",
     "change six validated terrain features because of temporal outcomes",
     "choose radius after seeing results",
+    "change the maximin spatial-balance start or tie-break after seeing results",
+    "loosen coordinate-uncertainty eligibility after seeing results",
     "drop failed pairs",
     "replace taxa",
     "claim new independent confirmation from these 96 pairs"
