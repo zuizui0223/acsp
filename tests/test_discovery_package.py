@@ -19,9 +19,12 @@ from acsp.discovery import (
     build_structural_support_order,
     cluster_medoid_table,
     complete_link_clusters,
+    normalize_occurrence_evidence,
     rank_nearest_anchor,
     resolve_discovery_regime,
     select_stable_start_maximin,
+    validate_candidate_frame_schema,
+    validate_source_manifest,
 )
 
 
@@ -139,6 +142,67 @@ class DiscoveryPackageTests(unittest.TestCase):
                 feature_family="ALPINE_TOPOGRAPHIC_STRUCTURE",
                 source_provenance={"source": "synthetic-public-terrain"},
             )
+
+    def test_occurrence_schema_preserves_precision_provenance_without_hidden_filter(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "occurrence_id": ["gbif:1", "gbif:2"],
+                "latitude": [35.0, 35.1],
+                "longitude": [139.0, 139.1],
+                "event_year": [2019, 2022],
+                "coordinate_uncertainty_m": [250.0, None],
+                "provider_id": ["GBIF", "GBIF"],
+            }
+        )
+        normalized, audit = normalize_occurrence_evidence(frame)
+        self.assertEqual(len(normalized), 2)
+        self.assertEqual(audit.rows_with_declared_uncertainty, 1)
+        self.assertEqual(audit.provider_count, 1)
+
+    def test_candidate_schema_is_provider_neutral(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "candidate_cell_id": ["x0", "x1"],
+                "latitude": [35.0, 35.01],
+                "longitude": [139.0, 139.01],
+                "grid_row": [0, 0],
+                "grid_col": [0, 1],
+                "nearest_anchor_km": [0.7, 0.8],
+            }
+        )
+        audit = validate_candidate_frame_schema(frame)
+        self.assertEqual(audit.row_count, 2)
+        self.assertTrue(audit.grid_cells_unique)
+        self.assertTrue(audit.nearest_anchor_distance_available)
+
+    def test_source_manifest_requires_provider_release_and_digest(self) -> None:
+        manifest = {
+            "schema_version": "discovery-source-manifest-v1",
+            "sources": [
+                {
+                    "provider_id": "example-terrain",
+                    "layer_role": "terrain",
+                    "release_id": "2026-01",
+                    "retrieved_at": "2026-09-05T00:00:00Z",
+                    "source_uri": "https://example.invalid/terrain.tif",
+                    "sha256": "a" * 64,
+                },
+                {
+                    "provider_id": "example-cover",
+                    "layer_role": "landcover",
+                    "release_id": "2025",
+                    "retrieved_at": "2026-09-05T00:00:00Z",
+                    "source_uri": "https://example.invalid/cover.tif",
+                    "sha256": "b" * 64,
+                },
+            ],
+        }
+        audit = validate_source_manifest(manifest)
+        self.assertEqual(audit.source_count, 2)
+        self.assertEqual(audit.roles, ("landcover", "terrain"))
+        bad = {**manifest, "sources": [{**manifest["sources"][0], "sha256": "not-a-digest"}]}
+        with self.assertRaises(ValueError):
+            validate_source_manifest(bad)
 
 
 if __name__ == "__main__":
