@@ -9,6 +9,7 @@ on:
       - "acsp/discovery/providers/worldcover_land.py"
       - "research/run_public_cirsium_detached_broad_coastal_v1.py"
       - "validation/public_cirsium_detached_broad_coastal_development_v1.json"
+      - "validation/public_cirsium_detached_broad_coastal_component_reachability_addendum_v1.json"
       - "validation/public_cirsium_portable_coastal_smoke_result_v1.json"
       - ".github/workflows/public-cirsium-detached-broad-coastal-v1.yml"
   workflow_dispatch:
@@ -57,6 +58,15 @@ jobs:
           assert summary['retuning_used'] is False
           assert summary['novel_recent_population_clusters'] == 15
           assert summary['local_reconstruction']['prior_frozen_1km_recovered'] == 1
+          assert summary['component_reachability_is_post_opened_descriptive'] is True
+          assert set(summary['component_reachability']) == {'0.25', '0.5', '1.0'}
+          expected_component_frames = {
+              'ANCHORED_COMPONENT_FULL', 'OTHER_COMPONENTS_FULL',
+              'DETACHED_SAME_COMPONENT', 'DETACHED_OTHER_COMPONENT',
+              'BROAD_LAND_UNION'
+          }
+          for radius, payload in summary['component_reachability'].items():
+              assert set(payload) == expected_component_frames, (radius, payload.keys())
           assert len(table) == 7 * 3
           assert set(table['recovery_radius_km']) == {0.25, 0.5, 1.0}
           assert set(table['prefix_fraction']) == {0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0}
