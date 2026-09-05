@@ -32,6 +32,7 @@ on:
       - "tests/test_cirsium_private_frame_builder.py"
       - "tests/test_cirsium_private_source_manifest_builder.py"
       - "tests/test_cirsium_private_frame_archetype_preflight.py"
+      - "tests/test_cirsium_sentinel_execution_alignment.py"
       - "tests/test_cirsium_candidate_patch_freeze.py"
       - "tests/test_cirsium_candidate_ranking_v2.py"
       - ".github/workflows/cirsium-structural-selector-freeze-v1.yml"
@@ -64,6 +65,7 @@ jobs:
           python tests/test_cirsium_private_frame_builder.py -v
           python tests/test_cirsium_candidate_patch_freeze.py -v
           python tests/test_cirsium_candidate_ranking_v2.py -v
+          python tests/test_cirsium_sentinel_execution_alignment.py -v
       - name: Validate frozen archetype execution preflight
         run: |
           python tests/test_cirsium_private_frame_archetype_preflight.py -v
