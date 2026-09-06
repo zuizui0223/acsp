@@ -20,6 +20,7 @@ from .worldcover import (
     worldcover_tile_id,
     worldcover_tile_ids_for_bounds,
 )
+from .worldcover_points import WorldCoverPointSampleAudit, retain_worldcover_land_points
 
 __all__ = [
     "GBIFOccurrenceAudit",
@@ -31,6 +32,8 @@ __all__ = [
     "worldcover_tile_ids_for_bounds",
     "worldcover_2021_map_url",
     "build_worldcover_2021_map_crop",
+    "WorldCoverPointSampleAudit",
+    "retain_worldcover_land_points",
     "WorldCoverComponentAudit",
     "attach_worldcover_component_ids",
     "CoastalWorldCoverAudit",
