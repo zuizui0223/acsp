@@ -77,8 +77,12 @@
     "provider": "GBIF",
     "country": "JP",
     "period": [2021, 2025],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_evaluable": false,
+    "has_geospatial_issue_allowed": false,
+    "occurrence_status": "PRESENT",
     "fetch_only_after_region_and_candidate_universes_are_frozen": true,
-    "novel_population_rule": "deterministic complete-link 0.5 km; recent cluster is novel when >0.5 km from every strict historical population in the selected fixed region",
+    "novel_population_rule": "Apply the same declared uncertainty <=1 km rule, then deterministic complete-link 0.5 km; a recent cluster is novel when >0.5 km from every strict historical population in the selected fixed region",
     "recovery_radii_km": [0.5, 1.0],
     "primary_recovery_radius_km": 1.0
   },
@@ -93,13 +97,14 @@
     "LOCAL_5KM_LAND ceiling at 0.5 and 1.0 km",
     "LOCAL_10KM_LAND ceiling at 0.5 and 1.0 km",
     "BROAD_LAND ceiling at 0.5 and 1.0 km",
-    "candidate counts and historical/recent/novel population counts for every frozen unit"
+    "candidate counts and strict historical/recent/novel population counts for every frozen unit"
   ],
   "forbidden": [
     "do not change species after opening 2021-2025 outcomes",
     "do not change allowed regions after opening 2021-2025 outcomes",
     "do not select a region using recent outcomes",
-    "do not relax the 1000-m historical precision rule after seeing evaluability",
+    "do not relax the 1000-m historical or recent precision rules after seeing evaluability",
+    "do not treat missing recent coordinate uncertainty as evaluable after seeing outcomes",
     "do not tune LOCAL radii after seeing outcomes",
     "do not fit or nominate a structural selector from this frame-ceiling replication",
     "do not call broad full-frame reachability field efficiency, occupancy probability, or exact-site prediction",
