@@ -19,6 +19,7 @@ on:
       - "tests/test_discovery_evaluation.py"
       - "tests/test_discovery_lanes.py"
       - "tests/test_discovery_availability.py"
+      - "tests/test_discovery_country_frames.py"
       - "pyproject.toml"
       - ".github/workflows/discovery-package-checks.yml"
   workflow_dispatch:
@@ -53,6 +54,7 @@ jobs:
           python tests/test_discovery_evaluation.py -v
           python tests/test_discovery_lanes.py -v
           python tests/test_discovery_availability.py -v
+          python tests/test_discovery_country_frames.py -v
       - name: Smoke test installed CLI
         run: |
           acsp-discovery families > /tmp/families.json
@@ -70,6 +72,6 @@ jobs:
           assert VALIDATED_ROBUST_STATUS == 'untouched_confirmation_passed'
           import acsp.discovery as discovery
           assert discovery.DISCOVERY_VALIDATION_STATUS == 'experimental_not_independently_validated'
-          assert discovery.DISCOVERY_API_VERSION == '0.6.0-development'
+          assert discovery.DISCOVERY_API_VERSION == '0.7.0-development'
           assert 'acsp.planning' not in sys.modules
           PY
