@@ -76,9 +76,23 @@ jobs:
                       assert len(lane['candidate_id_sha256']) == 64
                   assert len(unit['historical_evidence_sha256']) == 64
                   assert len(unit['population_anchor_sha256']) == 64
-          text = path.read_text()
-          for forbidden in ('recent_population', 'recent_occurrence', 'field_outcome', 'detection_state'):
-              assert forbidden not in text
+
+          # Negative audit flags such as field_outcomes_used=false are allowed.
+          # Actual opened-outcome measurements are not.
+          forbidden_keys = {
+              'recent_record_count', 'recent_occurrence_count', 'recent_population_count',
+              'novel_population_count', 'novel_recent_population_clusters',
+              'recovered_clusters', 'recall', 'outcome_recall', 'detection_state'
+          }
+          def walk(obj):
+              if isinstance(obj, dict):
+                  for key, child in obj.items():
+                      assert key not in forbidden_keys, key
+                      walk(child)
+              elif isinstance(obj, list):
+                  for child in obj:
+                      walk(child)
+          walk(value)
           PY
       - uses: actions/upload-artifact@v4
         with:
