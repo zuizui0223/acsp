@@ -117,7 +117,7 @@ def prepare_worldcover_component_partition(
     )
     # Explicit cross-check so a future provider refactor cannot silently alter
     # the partition semantics while returning a plausible audit object.
-    if audit.anchored_candidate_count != partition_audit.anchored_candidate_count:
+    if audit.anchored_candidate_count != partition_audit.local_candidate_count:
         raise AssertionError("anchored component count drifted during WorldCover preparation")
     if audit.other_component_candidate_count != partition_audit.detached_candidate_count:
         raise AssertionError("other component count drifted during WorldCover preparation")
