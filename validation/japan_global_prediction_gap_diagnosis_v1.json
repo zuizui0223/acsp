@@ -1,0 +1,118 @@
+{
+  "schema_version": "japan-global-prediction-gap-diagnosis-v1",
+  "status": "POST_OPENED_DIAGNOSIS_COMPLETE_NO_GLOBAL_PROMOTION",
+  "question": "Is the remaining Japan-versus-global difference evidence that the frozen robust ecological predictor loses predictive signal outside Japan, or is it primarily an availability/evaluability problem?",
+  "validated_japan_core_changed": false,
+  "global_scientific_method_changed": false,
+  "global_subset_rescue_used": false,
+  "global_promotion_status": "NOT_PROMOTED",
+  "sources": {
+    "japan_validation": {
+      "file": "paper/generated/table_1_robust_patch_confirmation.csv",
+      "scope": "96 fixed Japanese taxon-region pairs / 480 folds",
+      "primary_radius_km": 10.0,
+      "mean_robust_minus_random_recall": 0.08558708102617191,
+      "bootstrap_95_ci": [0.051186296271122624, 0.12165096941745603],
+      "status": "untouched_confirmation_passed"
+    },
+    "country_framing_confirmation": {
+      "file": "validation/acsp_geographic_framing_confirmation_result_v1.json",
+      "declared_taxa": 96,
+      "historical_registry_availability": 1.0,
+      "temporal_evaluability": 0.9791666666666666,
+      "conditional_mean_recent_record_containment": 0.9890252679856605,
+      "status": "confirmed"
+    },
+    "global_fresh_confirmation": {
+      "file": "validation/acsp_country_framed_fresh_heterogeneity_confirmation_result_v1.json",
+      "workflow_run_id": 32932865041,
+      "aggregate_artifact_id": 9605032549,
+      "aggregate_artifact_digest": "sha256:164e707058c76d46b4ec07fa4c3d6442939ef85cfbc69621a482ed8579dcd848",
+      "declared_taxa": 48,
+      "candidate_generation_success_taxa": 40,
+      "candidate_generation_success_rate": 0.8333333333333334,
+      "temporally_evaluable_taxa": 34,
+      "temporal_evaluability_rate": 0.7083333333333334,
+      "integrated_evaluable_taxa": 32,
+      "integrated_evaluability_rate": 0.6666666666666666,
+      "mean_robust_minus_random_recall": 0.1322978884579088,
+      "bootstrap_95_ci": [0.04958001673771295, 0.21963529305496163],
+      "plant_mean_robust_minus_random_recall": 0.08583437838304346,
+      "animal_mean_robust_minus_random_recall": 0.17329510322984878,
+      "fresh_confirmation_gate_passed": false,
+      "failed_gate": "temporal evaluability at least 0.75"
+    },
+    "global_reserved_replication": {
+      "issue": 141,
+      "declared_taxa": 24,
+      "candidate_generation_success_taxa": 20,
+      "temporally_evaluable_taxa": 18,
+      "integrated_evaluable_taxa": 17,
+      "mean_robust_minus_random_recall": 0.08960843345273417,
+      "bootstrap_95_ci": [-0.0024797646968568506, 0.18242922703119302],
+      "status": "scientific_fail_6_of_7_gates_not_promoted"
+    }
+  },
+  "fresh_global_failure_mode_decomposition": {
+    "candidate_generation_failures_total": 8,
+    "country_declaration_failed": {
+      "count": 2,
+      "pair_ids": [19, 41],
+      "examples": ["Treron sieboldii / HK", "Asplenium prolongatum / HK"]
+    },
+    "insufficient_historical_evidence_or_complete_prototypes": {
+      "count": 5,
+      "pair_ids": [13, 14, 21, 44, 48],
+      "examples": [
+        "Broussonetia papyrifera / LV: 6 historical rows but 1 complete prototype",
+        "Oenothera laciniata / ES: 9 historical rows but 4 complete prototypes",
+        "Diplazium x takamiyae / CN: 4 usable historical rows",
+        "Eviota storthynx / VN: 9 historical rows but 3 complete prototypes",
+        "Fusigobius duospilus / VN: 5 historical rows but 2 complete prototypes"
+      ]
+    },
+    "robust_core_returned_zero_candidate_patches_with_adequate_inputs": {
+      "count": 1,
+      "pair_ids": [40],
+      "examples": ["Passer montanus / LU: 132 historical rows, 32 prototypes, 3200 complete terrain points, zero robust patches"]
+    },
+    "temporal_non_evaluable_total": 14,
+    "zero_recent_country_records": {
+      "count": 12,
+      "generated_pair_count": 8
+    },
+    "no_declared_country": {
+      "count": 2,
+      "pair_ids": [19, 41]
+    },
+    "temporal_evaluability_given_candidate_generation": 0.8
+  },
+  "diagnosis": {
+    "ecological_signal_collapse_outside_japan_supported": false,
+    "availability_evaluability_gap_supported": true,
+    "country_registry_itself_is_primary_bottleneck": false,
+    "dominant_bottleneck": "end-to-end availability after country framing: sufficient historical evidence -> candidate generation -> recent heldout availability",
+    "interpretation": "The global fresh cohort retains positive robust-minus-random signal with a positive taxon-bootstrap lower bound among integrated-evaluable taxa. Most failures occur before a robust prediction can be made or before a recent heldout outcome exists. Therefore the remaining Japan/global disparity should not be described as demonstrated loss of ecological predictive accuracy outside Japan."
+  },
+  "comparability_boundary": {
+    "japan_and_global_mean_lifts_directly_comparable_as_accuracy_scores": false,
+    "reason": "The Japanese confirmation uses fixed taxon-region pairs and spatial folds, whereas the country-framed global experiments use taxon-country units and different evaluability filters. The numerical lifts demonstrate positive signal within each frozen design, not that one geography is intrinsically more predictable than the other.",
+    "allowed_claim": "The available evidence does not support an ecological predictive-signal collapse abroad; it does support a global availability/evaluability portability deficit.",
+    "forbidden_claim": "Global ACSP is already validated or globally more accurate than Japanese ACSP."
+  },
+  "development_consequence": {
+    "do_not_retune_robust_core": true,
+    "separate_primary_dimensions_for_future_global_work": [
+      "availability/evaluability coverage",
+      "conditional robust predictive lift on valid frames"
+    ],
+    "route_sparse_or_unresolved_frames_to": ["SENTINEL", "ABSTAIN"],
+    "retain_true_zero_patch_as_legitimate_empty_robust_result": true,
+    "engineering_scientific_targets": [
+      "country declaration/provider robustness",
+      "historical evidence and complete prototype availability",
+      "candidate-surface/provider completion",
+      "recent heldout observability"
+    ]
+  }
+}
