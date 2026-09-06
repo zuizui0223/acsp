@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import sys
 import unittest
 from pathlib import Path
@@ -78,13 +79,14 @@ class DisjointBroadFramePreflightTests(unittest.TestCase):
             ]
         )
 
+        @dataclass(frozen=True)
         class BroadAudit:
-            metric_crs = "EPSG:32653"
-            candidate_count = 2
-            grid_spacing_m = 1000.0
-            bounds_wgs84 = (132.5, 32.7, 134.5, 34.5)
-            field_outcomes_used = False
-            human_access_used = False
+            metric_crs: str = "EPSG:32653"
+            candidate_count: int = 2
+            grid_spacing_m: float = 1000.0
+            bounds_wgs84: tuple[float, float, float, float] = (132.5, 32.7, 134.5, 34.5)
+            field_outcomes_used: bool = False
+            human_access_used: bool = False
 
         class WcAudit:
             source_tile_ids = ("N30E132", "N33E132")
