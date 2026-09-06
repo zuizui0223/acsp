@@ -17,9 +17,15 @@ on:
       - "tests/test_discovery_components.py"
       - "tests/test_discovery_broad_frames.py"
       - "tests/test_discovery_evaluation.py"
+      - "tests/test_discovery_lanes.py"
+      - "tests/test_discovery_availability.py"
       - "pyproject.toml"
       - ".github/workflows/discovery-package-checks.yml"
   workflow_dispatch:
+
+concurrency:
+  group: discovery-package-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -45,6 +51,8 @@ jobs:
           python tests/test_discovery_components.py -v
           python tests/test_discovery_broad_frames.py -v
           python tests/test_discovery_evaluation.py -v
+          python tests/test_discovery_lanes.py -v
+          python tests/test_discovery_availability.py -v
       - name: Smoke test installed CLI
         run: |
           acsp-discovery families > /tmp/families.json
@@ -62,5 +70,6 @@ jobs:
           assert VALIDATED_ROBUST_STATUS == 'untouched_confirmation_passed'
           import acsp.discovery as discovery
           assert discovery.DISCOVERY_VALIDATION_STATUS == 'experimental_not_independently_validated'
+          assert discovery.DISCOVERY_API_VERSION == '0.6.0-development'
           assert 'acsp.planning' not in sys.modules
           PY
