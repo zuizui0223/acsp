@@ -2,9 +2,10 @@
 """Stage 1 v2 for issue #197: freeze 48 fresh taxon identities only.
 
 The 12 fixed Japanese cells are used only as a taxon-discovery registry. This
-stage pools those identity-only species facets, applies all prior-consumption
-exclusions, stratifies within plant and animal by registry record count, and
-freezes exactly six identities per group per stratum by a deterministic hash.
+stage pools speciesKey facet counts first, applies all prior-consumption key
+exclusions, stratifies within plant and animal by registry record count, then
+resolves taxonomic metadata only for hash-ordered identities needed to freeze
+six valid species per group per stratum.
 
 It does NOT import or query focal historical-country facets, country geometry,
 candidate generation, robust support, random baselines, or 2021-2025 heldout.
@@ -19,7 +20,14 @@ from typing import Callable
 
 import pandas as pd
 
-from benchmark_general_random_taxa_regions import REGION_CELLS, TAXON_GROUPS, taxon_frame
+from acsp.benchmarking import get_json
+from benchmark_general_random_taxa_regions import (
+    GBIF_SEARCH,
+    GBIF_SPECIES,
+    REGION_CELLS,
+    TAXON_GROUPS,
+    rectangle_wkt,
+)
 from freeze_global_availability_parity_identities_v1 import combined_exclusions
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,16 +71,53 @@ def identity_hash(seed: int, group: str, stratum: int, species_key: int) -> str:
     return hashlib.sha256(token).hexdigest()
 
 
-def _normalize_frame(frame: pd.DataFrame, *, region_index: int, group: str) -> pd.DataFrame:
-    required = {"speciesKey", "scientific_name", "coordinate_records"}
+def raw_taxon_key_frame(
+    bounds: tuple[float, float, float, float],
+    kingdom_key: int,
+    facet_limit: int,
+    minimum_records: int,
+) -> pd.DataFrame:
+    """Return speciesKey facet counts without N-per-candidate metadata calls."""
+    payload = get_json(
+        GBIF_SEARCH,
+        {
+            "kingdomKey": int(kingdom_key),
+            "geometry": rectangle_wkt(bounds),
+            "hasCoordinate": "true",
+            "hasGeospatialIssue": "false",
+            "occurrenceStatus": "PRESENT",
+            "limit": 0,
+            "facet": "speciesKey",
+            "facetLimit": int(facet_limit),
+            "facetMincount": int(minimum_records),
+        },
+    )
+    counts = payload.get("facets", [{}])[0].get("counts", [])
+    rows = [
+        {"speciesKey": int(item["name"]), "coordinate_records": int(item["count"])}
+        for item in counts
+        if item.get("name") is not None
+    ]
+    return pd.DataFrame(rows, columns=["speciesKey", "coordinate_records"])
+
+
+def fetch_species_metadata(species_key: int) -> dict[str, object]:
+    """Resolve one selected identity; provider errors propagate and abort."""
+    value = get_json(f"{GBIF_SPECIES}/{int(species_key)}", timeout=30)
+    if not isinstance(value, dict):
+        raise RuntimeError(f"species metadata is not an object for speciesKey={int(species_key)}")
+    return value
+
+
+def _normalize_key_frame(frame: pd.DataFrame, *, region_index: int, group: str) -> pd.DataFrame:
+    required = {"speciesKey", "coordinate_records"}
     missing = sorted(required.difference(frame.columns))
     if missing:
         raise ValueError(f"identity registry frame missing columns: {missing}")
     work = frame.copy()
     work["speciesKey"] = pd.to_numeric(work["speciesKey"], errors="raise").astype(int)
-    work["scientific_name"] = work["scientific_name"].astype(str).str.strip()
     work["coordinate_records"] = pd.to_numeric(work["coordinate_records"], errors="raise").astype(int)
-    work = work.drop_duplicates(["speciesKey", "scientific_name"]).copy()
+    work = work.drop_duplicates(["speciesKey"]).copy()
     work["region_cell_index"] = int(region_index)
     work["taxon_group"] = str(group)
     return work
@@ -80,7 +125,7 @@ def _normalize_frame(frame: pd.DataFrame, *, region_index: int, group: str) -> p
 
 def build_identity_registry(
     *,
-    frame_provider: Callable[[tuple[float, float, float, float], int, int, int], pd.DataFrame] = taxon_frame,
+    frame_provider: Callable[[tuple[float, float, float, float], int, int, int], pd.DataFrame] = raw_taxon_key_frame,
 ) -> tuple[pd.DataFrame, list[dict[str, object]]]:
     cfg = protocol()
     cohort = cfg["cohort"]
@@ -99,14 +144,16 @@ def build_identity_registry(
                 int(cohort["facet_limit_per_region_group"]),
                 int(cohort["minimum_japan_region_coordinate_records"]),
             )
-            normalized = _normalize_frame(frame, region_index=region_index, group=group)
+            normalized = _normalize_key_frame(frame, region_index=region_index, group=group)
             rows.append(normalized)
-            query_audit.append({
-                "region_cell_index": int(region_index),
-                "region_name": str(region_name),
-                "taxon_group": group,
-                "identity_rows": int(len(normalized)),
-            })
+            query_audit.append(
+                {
+                    "region_cell_index": int(region_index),
+                    "region_name": str(region_name),
+                    "taxon_group": group,
+                    "species_key_rows": int(len(normalized)),
+                }
+            )
 
     stacked = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
     if stacked.empty:
@@ -114,31 +161,39 @@ def build_identity_registry(
 
     registry_rows: list[dict[str, object]] = []
     for (group, species_key), part in stacked.groupby(["taxon_group", "speciesKey"], sort=True):
-        names = sorted(set(part["scientific_name"].astype(str)))
-        if not names:
-            continue
         regions = sorted(set(pd.to_numeric(part["region_cell_index"], errors="raise").astype(int)))
         counts = pd.to_numeric(part["coordinate_records"], errors="raise").astype(int)
-        registry_rows.append({
-            "taxon_group": str(group),
-            "kingdomKey": int(TAXON_GROUPS[str(group)]),
-            "speciesKey": int(species_key),
-            "scientific_name": str(names[0]),
-            "registry_max_coordinate_records": int(counts.max()),
-            "registry_sum_coordinate_records": int(counts.sum()),
-            "registry_source_region_count": int(len(regions)),
-            "registry_source_region_indices": ";".join(str(value) for value in regions),
-        })
+        registry_rows.append(
+            {
+                "taxon_group": str(group),
+                "kingdomKey": int(TAXON_GROUPS[str(group)]),
+                "speciesKey": int(species_key),
+                "registry_max_coordinate_records": int(counts.max()),
+                "registry_sum_coordinate_records": int(counts.sum()),
+                "registry_source_region_count": int(len(regions)),
+                "registry_source_region_indices": ";".join(str(value) for value in regions),
+            }
+        )
     registry = pd.DataFrame(registry_rows)
     if registry.empty:
-        raise RuntimeError("pooled identity registry has no resolved species identities")
+        raise RuntimeError("pooled identity registry has no speciesKey identities")
     return registry.sort_values(["taxon_group", "speciesKey"], kind="mergesort").reset_index(drop=True), query_audit
+
+
+def _resolved_species_name(metadata: dict[str, object], species_key: int) -> str:
+    if str(metadata.get("rank") or "").upper() != "SPECIES":
+        raise ValueError(f"selected speciesKey={int(species_key)} metadata rank is not SPECIES")
+    name = str(metadata.get("scientificName") or "").strip()
+    if not name:
+        raise ValueError(f"selected speciesKey={int(species_key)} has no scientificName")
+    return name
 
 
 def freeze_identities(
     prior_supply_snapshot: Path,
     *,
-    frame_provider: Callable[[tuple[float, float, float, float], int, int, int], pd.DataFrame] = taxon_frame,
+    frame_provider: Callable[[tuple[float, float, float, float], int, int, int], pd.DataFrame] = raw_taxon_key_frame,
+    metadata_provider: Callable[[int], dict[str, object]] = fetch_species_metadata,
 ) -> tuple[pd.DataFrame, dict[str, object]]:
     cfg = protocol()
     cohort = cfg["cohort"]
@@ -147,15 +202,14 @@ def freeze_identities(
 
     registry, query_audit = build_identity_registry(frame_provider=frame_provider)
     before_counts = registry["taxon_group"].value_counts().to_dict()
-    registry = registry[
-        ~registry["speciesKey"].isin(excluded_keys)
-        & ~registry["scientific_name"].isin(excluded_names)
-        & ~registry["scientific_name"].str.startswith(prefixes)
-    ].copy()
-    after_counts = registry["taxon_group"].value_counts().to_dict()
+    registry = registry[~registry["speciesKey"].isin(excluded_keys)].copy()
+    after_key_exclusion_counts = registry["taxon_group"].value_counts().to_dict()
 
     rows: list[dict[str, object]] = []
     stratum_audit: list[dict[str, object]] = []
+    metadata_audit: list[dict[str, object]] = []
+    selected_names: set[str] = set()
+
     for group in GROUP_ORDER:
         frame = registry[registry["taxon_group"].eq(group)].copy()
         if len(frame) < 24:
@@ -173,30 +227,91 @@ def freeze_identities(
                 identity_hash(int(cohort["selection_seed"]), group, stratum, int(key))
                 for key in pool["speciesKey"].astype(int)
             ]
-            chosen = pool.sort_values(
-                ["identity_selection_hash", "speciesKey", "scientific_name"], kind="mergesort"
-            ).head(6)
-            stratum_audit.append({
-                "taxon_group": group,
-                "record_count_stratum": int(stratum),
-                "eligible_identity_count": int(len(pool)),
-                "selected_identity_count": int(len(chosen)),
-            })
-            for item in chosen.itertuples(index=False):
-                rows.append({
-                    "availability_pair_id": len(rows) + 1,
-                    "status": "IDENTITY_FROZEN_PRE_HISTORICAL_COUNTRY_QUERY_V2",
+            ordered = pool.sort_values(["identity_selection_hash", "speciesKey"], kind="mergesort")
+            selected_in_stratum = 0
+            metadata_attempts = 0
+            for item in ordered.itertuples(index=False):
+                key = int(item.speciesKey)
+                metadata_attempts += 1
+                metadata = metadata_provider(key)
+                try:
+                    name = _resolved_species_name(metadata, key)
+                except ValueError as exc:
+                    metadata_audit.append(
+                        {
+                            "taxon_group": group,
+                            "record_count_stratum": int(stratum),
+                            "speciesKey": key,
+                            "accepted": False,
+                            "reason": str(exc),
+                        }
+                    )
+                    continue
+                if name in excluded_names or name.startswith(prefixes):
+                    metadata_audit.append(
+                        {
+                            "taxon_group": group,
+                            "record_count_stratum": int(stratum),
+                            "speciesKey": key,
+                            "accepted": False,
+                            "reason": "excluded scientific name or prefix",
+                        }
+                    )
+                    continue
+                if name in selected_names:
+                    metadata_audit.append(
+                        {
+                            "taxon_group": group,
+                            "record_count_stratum": int(stratum),
+                            "speciesKey": key,
+                            "accepted": False,
+                            "reason": "duplicate resolved scientific name",
+                        }
+                    )
+                    continue
+                selected_names.add(name)
+                metadata_audit.append(
+                    {
+                        "taxon_group": group,
+                        "record_count_stratum": int(stratum),
+                        "speciesKey": key,
+                        "accepted": True,
+                        "reason": "",
+                    }
+                )
+                rows.append(
+                    {
+                        "availability_pair_id": len(rows) + 1,
+                        "status": "IDENTITY_FROZEN_PRE_HISTORICAL_COUNTRY_QUERY_V2",
+                        "taxon_group": group,
+                        "kingdomKey": int(item.kingdomKey),
+                        "speciesKey": key,
+                        "scientific_name": name,
+                        "record_count_stratum": int(item.record_count_stratum),
+                        "registry_max_coordinate_records": int(item.registry_max_coordinate_records),
+                        "registry_sum_coordinate_records": int(item.registry_sum_coordinate_records),
+                        "registry_source_region_count": int(item.registry_source_region_count),
+                        "registry_source_region_indices": str(item.registry_source_region_indices),
+                        "identity_selection_hash": str(item.identity_selection_hash),
+                    }
+                )
+                selected_in_stratum += 1
+                if selected_in_stratum == 6:
+                    break
+            if selected_in_stratum != 6:
+                raise RuntimeError(
+                    f"could not resolve six eligible species identities for group={group}, stratum={stratum}; "
+                    f"selected={selected_in_stratum}, metadata_attempts={metadata_attempts}"
+                )
+            stratum_audit.append(
+                {
                     "taxon_group": group,
-                    "kingdomKey": int(item.kingdomKey),
-                    "speciesKey": int(item.speciesKey),
-                    "scientific_name": str(item.scientific_name),
-                    "record_count_stratum": int(item.record_count_stratum),
-                    "registry_max_coordinate_records": int(item.registry_max_coordinate_records),
-                    "registry_sum_coordinate_records": int(item.registry_sum_coordinate_records),
-                    "registry_source_region_count": int(item.registry_source_region_count),
-                    "registry_source_region_indices": str(item.registry_source_region_indices),
-                    "identity_selection_hash": str(item.identity_selection_hash),
-                })
+                    "record_count_stratum": int(stratum),
+                    "eligible_species_key_count": int(len(pool)),
+                    "metadata_attempt_count": int(metadata_attempts),
+                    "selected_identity_count": int(selected_in_stratum),
+                }
+            )
 
     identities = pd.DataFrame(rows).sort_values(
         ["taxon_group", "record_count_stratum", "identity_selection_hash"], kind="mergesort"
@@ -214,11 +329,19 @@ def freeze_identities(
         raise RuntimeError("fresh availability v2 identities overlap excluded species keys")
     if set(identities["scientific_name"].astype(str)) & excluded_names:
         raise RuntimeError("fresh availability v2 identities overlap excluded names")
+    if any(str(name).startswith(prefixes) for name in identities["scientific_name"]):
+        raise RuntimeError("fresh availability v2 identities overlap explicit excluded prefixes")
 
-    identity_records = identities[[
-        "availability_pair_id", "taxon_group", "record_count_stratum", "speciesKey",
-        "scientific_name", "identity_selection_hash",
-    ]].to_dict(orient="records")
+    identity_records = identities[
+        [
+            "availability_pair_id",
+            "taxon_group",
+            "record_count_stratum",
+            "speciesKey",
+            "scientific_name",
+            "identity_selection_hash",
+        ]
+    ].to_dict(orient="records")
     audit = {
         "schema_version": "global-availability-parity-identity-freeze-v2",
         "status": "IDENTITY_FREEZE_COMPLETE_PRE_HISTORICAL_COUNTRY_QUERY_V2",
@@ -228,7 +351,11 @@ def freeze_identities(
         "animal_count": 24,
         "identity_canonical_sha256": _canonical_sha256(identity_records),
         "registry_group_counts_before_exclusion": {str(k): int(v) for k, v in before_counts.items()},
-        "registry_group_counts_after_exclusion": {str(k): int(v) for k, v in after_counts.items()},
+        "registry_group_counts_after_key_exclusion": {
+            str(k): int(v) for k, v in after_key_exclusion_counts.items()
+        },
+        "identity_registry_provider_mode": "24 speciesKey facet queries plus metadata only for hash-ordered identities needed for final freeze",
+        "metadata_query_count": int(len(metadata_audit)),
         "focal_historical_country_facets_opened": False,
         "country_geometry_opened": False,
         "candidate_generation_run": False,
@@ -241,6 +368,7 @@ def freeze_identities(
         "exclusions": exclusion_audit,
         "query_audit": query_audit,
         "stratum_audit": stratum_audit,
+        "metadata_audit": metadata_audit,
     }
     return identities, audit
 
@@ -256,7 +384,17 @@ def main() -> None:
     identities.to_csv(args.identities_output, index=False)
     args.audit_output.parent.mkdir(parents=True, exist_ok=True)
     args.audit_output.write_text(json.dumps(audit, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(json.dumps({key: value for key, value in audit.items() if key not in {"query_audit", "stratum_audit"}}, indent=2, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                key: value
+                for key, value in audit.items()
+                if key not in {"query_audit", "stratum_audit", "metadata_audit"}
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
