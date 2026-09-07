@@ -28,10 +28,13 @@ class GlobalAvailabilityIdentityFreezeV2Tests(unittest.TestCase):
         for i in range(40):
             rows.append({
                 "speciesKey": group_offset + i + 1,
-                "scientific_name": f"Taxon {group_offset + i + 1}",
                 "coordinate_records": 20 + i + region_index,
             })
         return pd.DataFrame(rows)
+
+    @staticmethod
+    def fake_metadata(species_key: int):
+        return {"rank": "SPECIES", "scientificName": f"Taxon {int(species_key)}"}
 
     def test_registry_pools_regions_and_uses_max_record_count(self):
         registry, audit = mod.build_identity_registry(frame_provider=self.fake_frame)
@@ -43,12 +46,17 @@ class GlobalAvailabilityIdentityFreezeV2Tests(unittest.TestCase):
 
     def test_freeze_selects_six_per_group_per_stratum_without_outcome_inputs(self):
         with patch.object(mod, "combined_exclusions", return_value=(set(), set(), {"mock": True})):
-            identities, audit = mod.freeze_identities(Path("unused.csv"), frame_provider=self.fake_frame)
+            identities, audit = mod.freeze_identities(
+                Path("unused.csv"),
+                frame_provider=self.fake_frame,
+                metadata_provider=self.fake_metadata,
+            )
         self.assertEqual(len(identities), 48)
         self.assertEqual(identities["taxon_group"].value_counts().to_dict(), {"animal": 24, "plant": 24})
         for group in ("plant", "animal"):
             counts = identities.loc[identities["taxon_group"].eq(group), "record_count_stratum"].value_counts().sort_index().to_dict()
             self.assertEqual(counts, {0: 6, 1: 6, 2: 6, 3: 6})
+        self.assertEqual(audit["metadata_query_count"], 48)
         self.assertFalse(audit["focal_historical_country_facets_opened"])
         self.assertFalse(audit["candidate_generation_run"])
         self.assertFalse(audit["heldout_2021_2025_opened"])
@@ -58,7 +66,26 @@ class GlobalAvailabilityIdentityFreezeV2Tests(unittest.TestCase):
         excluded_plant = set(range(1, 22))
         with patch.object(mod, "combined_exclusions", return_value=(excluded_plant, set(), {"mock": True})):
             with self.assertRaisesRegex(RuntimeError, "fewer than 24 unconsumed pooled identities remain for group=plant"):
-                mod.freeze_identities(Path("unused.csv"), frame_provider=self.fake_frame)
+                mod.freeze_identities(
+                    Path("unused.csv"),
+                    frame_provider=self.fake_frame,
+                    metadata_provider=self.fake_metadata,
+                )
+
+    def test_name_exclusion_advances_within_frozen_stratum_only(self):
+        def metadata(species_key: int):
+            name = "Blocked taxon" if int(species_key) == 1 else f"Taxon {int(species_key)}"
+            return {"rank": "SPECIES", "scientificName": name}
+
+        with patch.object(mod, "combined_exclusions", return_value=(set(), {"Blocked taxon"}, {"mock": True})):
+            identities, audit = mod.freeze_identities(
+                Path("unused.csv"),
+                frame_provider=self.fake_frame,
+                metadata_provider=metadata,
+            )
+        self.assertEqual(len(identities), 48)
+        self.assertNotIn("Blocked taxon", set(identities["scientific_name"]))
+        self.assertGreaterEqual(audit["metadata_query_count"], 48)
 
 
 if __name__ == "__main__":
