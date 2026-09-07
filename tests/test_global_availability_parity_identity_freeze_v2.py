@@ -22,7 +22,7 @@ class GlobalAvailabilityIdentityFreezeV2Tests(unittest.TestCase):
         region_index = next(
             i
             for i, cell in enumerate(mod.REGION_CELLS, start=1)
-            if tuple(map(float, cell[3:7])) == tuple(map(float, bounds))
+            if tuple(map(float, cell[2:6])) == tuple(map(float, bounds))
         )
         rows = []
         for i in range(40):
