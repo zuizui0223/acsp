@@ -1,0 +1,45 @@
+{
+  "schema_version": "global-availability-parity-country-receipt-v2",
+  "status": "HISTORICAL_COUNTRY_PLANS_FROZEN_PRE_GEOMETRY_PRE_CANDIDATES_PRE_HELDOUT_V2",
+  "parent_protocol": "validation/acsp_global_availability_parity_confirmation_v2.json",
+  "workflow_run_id": 34121418533,
+  "workflow_head_sha": "4cc43fe8f25ae40baaada23527924299fee35bf8",
+  "artifact": {
+    "id": 10018362997,
+    "name": "global-availability-parity-countries-v2",
+    "digest": "sha256:77e68d56cc93983eab29136d002c4ae0c127f6ded7b5d3a2e762fd539bb9d149",
+    "full_country_plans_csv_sha256": "8c0ea3074a8960926dc76b480b20f11029bbca4885e41abd4a6adf7171ef6dd7",
+    "audit_json_sha256": "93948688d01823bc93e44d1576e4520f8797e4b180867e6b79d585d6092e5f89"
+  },
+  "authoritative_slim_plan": {
+    "path": "validation/acsp_global_availability_parity_country_plans_v2.csv",
+    "sha256": "8a18ead4f9373e3c78c63eb158aeaac2fca3a979cc8fb558b8f84d3e01c4e4d9",
+    "git_blob_sha": "0f7b9f3dc9b3f540ab384d9ad132e8285d01a702",
+    "country_plan_canonical_sha256": "88eeaa983ff011426a3341fa1b98fb16d3bb2ca468be0d79dc5602cb3b2c420b"
+  },
+  "cohort": {
+    "taxon_count": 48,
+    "plant_count": 24,
+    "animal_count": 24,
+    "ready_country_count": 48,
+    "state_counts": {"READY": 48},
+    "selected_jp_count": 25,
+    "selected_non_jp_count": 23,
+    "historical_selected_country_count_min": 34,
+    "historical_selected_country_count_median": 400.0,
+    "historical_selected_country_count_max": 128833
+  },
+  "information_boundary": {
+    "country_selection_uses_historical_1900_2020_only": true,
+    "country_geometry_opened": false,
+    "candidate_generation_run": false,
+    "robust_support_run": false,
+    "random_baseline_run": false,
+    "heldout_2021_2025_opened": false,
+    "recall_or_lift_read": false,
+    "taxon_replacement_after_identity_freeze": false,
+    "country_substitution_after_freeze": false,
+    "validated_japan_core_changed": false
+  },
+  "interpretation": "All 48 fully disjoint frozen taxa received a provider-supported evidence-first historical country plan before any country geometry, robust candidate generation, random baseline, or 2021-2025 heldout outcome was opened. This is an upstream availability result only and does not promote the global product."
+}
