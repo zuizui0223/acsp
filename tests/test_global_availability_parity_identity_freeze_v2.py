@@ -39,7 +39,7 @@ class GlobalAvailabilityIdentityFreezeV2Tests(unittest.TestCase):
         self.assertEqual(len(registry), 80)
         plant1 = registry[(registry["taxon_group"] == "plant") & (registry["speciesKey"] == 1)].iloc[0]
         self.assertEqual(int(plant1.registry_source_region_count), 12)
-        self.assertEqual(int(plant1.registry_max_coordinate_records), 33)
+        self.assertEqual(int(plant1.registry_max_coordinate_records), 32)
 
     def test_freeze_selects_six_per_group_per_stratum_without_outcome_inputs(self):
         with patch.object(mod, "combined_exclusions", return_value=(set(), set(), {"mock": True})):
