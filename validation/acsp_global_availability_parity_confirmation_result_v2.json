@@ -1,0 +1,47 @@
+{
+  "schema_version": "global-availability-parity-final-result-v2",
+  "status": "GLOBAL_AVAILABILITY_PARITY_CONFIRMATION_V2_COMPLETE",
+  "parent_issue": 197,
+  "source_workflow": {
+    "run_id": 34174350904,
+    "head_sha": "00e141e8714b9adac44e5d518be30870c820141a",
+    "artifact_id": 10036923813,
+    "artifact_name": "global-availability-parity-final-v2",
+    "artifact_digest": "sha256:68f133bb9b6dd0f22663aa385c697f03b6719eda545e844ac498761b1d347867",
+    "final_summary_sha256": "cb727312174a5a9d4f12219dba0744b9661e11e3e19724c05f71bbcb98fac137",
+    "heldout_taxon_results_sha256": "d266225f6eea2368a10830b1aa6212f9baf279a925475b25d10cbff2e63440b1"
+  },
+  "taxon_count": 48,
+  "preheldout_state_counts": {
+    "ROBUST_READY_PREHELDOUT": 43,
+    "ROBUST_EMPTY": 1,
+    "SENTINEL_OR_ABSTAIN": 4
+  },
+  "robust_constructible_taxa": 44,
+  "robust_constructible_fraction": 0.9166666666666666,
+  "temporally_evaluable_constructible_taxa": 35,
+  "conditional_retrospective_evaluability_fraction": 0.7954545454545454,
+  "conditional_mean_robust_minus_random_recall": 0.09862179146487055,
+  "taxon_bootstrap_95pct_ci": [
+    0.03856393861151015,
+    0.16254466745854068
+  ],
+  "plant_mean_robust_minus_random_recall": 0.12489390506855554,
+  "animal_mean_robust_minus_random_recall": 0.07649790632492531,
+  "gate_checks": {
+    "availability_constructible_fraction": true,
+    "conditional_retrospective_evaluability": true,
+    "mean_robust_minus_random_lift_positive": true,
+    "bootstrap_95_ci_lower_positive": true,
+    "plant_mean_nonnegative": true,
+    "animal_mean_nonnegative": true
+  },
+  "overall_pass": true,
+  "global_automatic_adapter_promoted": true,
+  "promotion_boundary": "automatic provider/evidence-aware historical-country framing plus the unchanged validated robust core under the tested global adapter",
+  "explicit_user_target_country_substitution_behavior_changed": false,
+  "same_cohort_retuning": false,
+  "validated_japan_core_changed": false,
+  "authoritative_taxon_result_path": "validation/acsp_global_availability_parity_heldout_results_v2.csv",
+  "interpretation": "The previously observed Japan-global gap is no longer attributable to disappearance of the ecological predictive signal under automatic global framing. In a fully disjoint 48-taxon confirmation, the revised automatic historical-evidence-aware global adapter passed preregistered availability, conditional retrospective evaluability, and conditional predictive-validity gates. This does not imply identical absolute accuracy between Japan and global cohorts, does not alter the validated Japanese core, and does not permit automatic country substitution when a user explicitly specifies a target country."
+}
