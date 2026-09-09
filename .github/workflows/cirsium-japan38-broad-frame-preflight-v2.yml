@@ -1,0 +1,69 @@
+name: Cirsium Japan38 broad-frame preflight v2
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_japan38_broad_frame_confirmation_v2.json"
+      - "validation/cirsium_japan38_disjoint_v2_roster.csv"
+      - "research/prepare_cirsium_japan38_broad_frame_confirmation_v2.py"
+      - "research/prepare_cirsium_disjoint_broad_frame_replication_v1.py"
+      - "tests/test_cirsium_japan38_broad_frame_confirmation_v2.py"
+      - "acsp/discovery/providers/worldcover_points.py"
+      - ".github/workflows/cirsium-japan38-broad-frame-preflight-v2.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: cirsium-japan38-broad-frame-preflight-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test frozen historical-only boundary
+        run: python -m unittest -v tests/test_cirsium_japan38_broad_frame_confirmation_v2.py
+      - name: Run all 31 frozen taxa historical-only preflight
+        run: |
+          mkdir -p japan38-preflight
+          python research/prepare_cirsium_japan38_broad_frame_confirmation_v2.py \
+            --out japan38-preflight/preflight_result.json
+      - name: Verify pre-outcome information boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('japan38-preflight/preflight_result.json')
+          x = json.loads(p.read_text(encoding='utf-8'))
+          assert x['status'] == 'HISTORICAL_ONLY_PREFLIGHT_COMPLETE'
+          assert x['declared_taxa'] == 31
+          assert x['recent_outcomes_fetched'] is False
+          assert x['validated_japan_product_changed'] is False
+          assert x['automatic_global_adapter_changed'] is False
+          assert len(x['units']) == 31
+          total = x['units_frozen'] + x['units_no_historical_anchor'] + x['units_provider_failure']
+          assert total == 31, (total, x['units_frozen'], x['units_no_historical_anchor'], x['units_provider_failure'])
+          assert all(row.get('recent_outcomes_fetched') is False for row in x['units'])
+          forbidden = ('recent_heldout', 'robust_minus_random', 'field_outcome', 'discovery_per_hour')
+          text = p.read_text(encoding='utf-8').lower()
+          for token in forbidden:
+              assert token not in text, token
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-japan38-broad-frame-preflight-v2
+          path: japan38-preflight/
+          if-no-files-found: error
+          retention-days: 90
