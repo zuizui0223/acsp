@@ -56,7 +56,20 @@ jobs:
           total = x['units_frozen'] + x['units_no_historical_anchor'] + x['units_provider_failure']
           assert total == 31, (total, x['units_frozen'], x['units_no_historical_anchor'], x['units_provider_failure'])
           assert all(row.get('recent_outcomes_fetched') is False for row in x['units'])
-          forbidden = ('recent_heldout', 'robust_minus_random', 'field_outcome', 'discovery_per_hour')
+          for row in x['units']:
+              gbif = row.get('gbif_historical_audit')
+              if gbif is not None:
+                  assert gbif.get('field_outcomes_used') is False
+              broad = row.get('broad_frame_audit')
+              if broad is not None:
+                  assert broad.get('field_outcomes_used') is False
+                  assert broad.get('human_access_used') is False
+              wc = row.get('worldcover_point_audit')
+              if wc is not None:
+                  assert wc.get('field_outcomes_used') is False
+                  assert wc.get('human_access_used') is False
+                  assert wc.get('component_segmentation_used') is False
+          forbidden = ('recent_heldout_occurrence_rows', 'robust_minus_random_recall', 'discovery_per_hour')
           text = p.read_text(encoding='utf-8').lower()
           for token in forbidden:
               assert token not in text, token
