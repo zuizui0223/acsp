@@ -1,17 +1,11 @@
 name: Japan plant broad-frame historical preflight v4
 
 on:
-  pull_request:
-    paths:
-      - "validation/japan_plant_broad_frame_identity_receipt_v4.json"
-      - "research/prepare_japan_plant_broad_frame_preflight_v4.py"
-      - "tests/test_japan_plant_broad_frame_preflight_v4.py"
-      - ".github/workflows/japan-plant-broad-frame-historical-preflight-v4.yml"
   workflow_dispatch:
 
 concurrency:
-  group: japan-plant-broad-frame-historical-preflight-v4-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: japan-plant-broad-frame-historical-preflight-v4-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
