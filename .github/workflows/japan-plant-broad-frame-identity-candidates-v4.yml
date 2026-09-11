@@ -1,0 +1,78 @@
+name: Japan plant broad-frame identity candidates v4
+
+on:
+  pull_request:
+    paths:
+      - "validation/japan_plant_broad_frame_confirmation_v4.json"
+      - "research/freeze_japan_plant_broad_frame_identity_candidates_v4.py"
+      - "tests/test_japan_plant_broad_frame_identity_candidates_v4.py"
+      - ".github/workflows/japan-plant-broad-frame-identity-candidates-v4.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: japan-plant-broad-frame-identity-candidates-v4-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test buffered identity-only boundary
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python tests/test_japan_plant_broad_frame_identity_candidates_v4.py -v
+      - name: Download prior provider-supply exclusion snapshot
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 33031292325
+          name: provider-eligible-observability-stage1-candidate-snapshot
+          path: /tmp/prior-provider-supply
+      - name: Freeze 96 fresh plant identity candidates
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/japan-plant-broad-v4-stage1
+          mkdir -p /tmp/japan-plant-broad-v4-stage1
+          python research/freeze_japan_plant_broad_frame_identity_candidates_v4.py \
+            --prior-supply-snapshot /tmp/prior-provider-supply/candidate_snapshot.csv \
+            --candidates-output /tmp/japan-plant-broad-v4-stage1/identity_candidates.csv \
+            --audit-output /tmp/japan-plant-broad-v4-stage1/audit.json
+      - name: Verify disjoint 96 and information barrier
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          a=json.load(open('/tmp/japan-plant-broad-v4-stage1/audit.json'))
+          x=pd.read_csv('/tmp/japan-plant-broad-v4-stage1/identity_candidates.csv')
+          old=pd.read_csv('validation/japan_plant_broad_frame_identity_candidates_v3.csv')
+          assert a['status']=='IDENTITY_CANDIDATES_FROZEN_PRE_FOCAL_HISTORICAL_QUERY'
+          assert len(x)==96 and x['speciesKey'].nunique()==96 and x['scientific_name'].nunique()==96
+          assert set(x['speciesKey'].astype(int)).isdisjoint(set(old['speciesKey'].astype(int)))
+          assert set(x['scientific_name'].astype(str)).isdisjoint(set(old['scientific_name'].astype(str)))
+          assert not x['scientific_name'].str.startswith(('Cirsium ','Campanula ')).any()
+          assert a['focal_2000_2020_occurrences_opened'] is False
+          assert a['heldout_2021_2025_opened'] is False
+          assert a['candidate_frames_built'] is False
+          assert a['selector_evaluated'] is False
+          assert a['validated_japan_product_changed'] is False
+          assert a['automatic_global_adapter_changed'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: japan-plant-broad-frame-identity-candidates-v4
+          path: /tmp/japan-plant-broad-v4-stage1/
+          if-no-files-found: error
+          retention-days: 90
