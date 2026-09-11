@@ -1,10 +1,14 @@
 name: Japan plant broad-frame historical preflight v4
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - research/occurrence-anchored-local-discovery-v1
+    paths:
+      - "validation/activate_japan_plant_broad_frame_historical_preflight_v4.marker"
 
 concurrency:
-  group: japan-plant-broad-frame-historical-preflight-v4-${{ github.ref }}
+  group: japan-plant-broad-frame-historical-preflight-v4-first-activation
   cancel-in-progress: false
 
 permissions:
@@ -17,9 +21,35 @@ jobs:
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Verify one-shot activation marker and unchanged scientific contract
+        run: |
+          python - <<'PY'
+          import hashlib, json, subprocess
+          from pathlib import Path
+
+          marker = json.loads(Path('validation/activate_japan_plant_broad_frame_historical_preflight_v4.marker').read_text())
+          parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
+          assert marker['activation'] == 'JAPAN_PLANT_BROAD_FRAME_HISTORICAL_PREFLIGHT_V4_FIRST'
+          assert marker['implementation_parent_sha'] == parent
+          assert marker['parent_issue'] == 203
+          assert marker['source_identity_run_id'] == 34565100325
+          assert marker['source_identity_artifact_id'] == 10186066547
+          assert marker['heldout_2021_2025_authorized'] is False
+          protocol = Path('validation/japan_plant_broad_frame_confirmation_v4.json')
+          assert hashlib.sha256(protocol.read_bytes()).hexdigest() == marker['protocol_sha256']
+          receipt = json.load(open('validation/japan_plant_broad_frame_identity_receipt_v4.json'))
+          assert receipt['status'] == 'IDENTITY_CANDIDATES_PINNED_PRE_FOCAL_HISTORICAL_QUERY'
+          assert receipt['source_workflow_run_id'] == marker['source_identity_run_id']
+          assert receipt['source_artifact_id'] == marker['source_identity_artifact_id']
+          assert receipt['candidate_count'] == 96
+          assert receipt['no_reselection_after_pin'] is True
+          PY
 
       - name: Install package
         run: python -m pip install -e .
