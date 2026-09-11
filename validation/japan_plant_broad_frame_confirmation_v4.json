@@ -1,0 +1,87 @@
+{
+  "protocol_id": "japan_plant_broad_frame_confirmation_v4",
+  "status": "FROZEN_BEFORE_IDENTITY_CANDIDATE_SELECTION_OR_FOCAL_HISTORICAL_QUERY",
+  "parent_issue": 203,
+  "parent_preoutcome_failure_issue": 202,
+  "scientific_role": "buffered fully disjoint confirmation of BROAD versus LOCAL candidate-universe adequacy among historically well-observed Japanese plants; uses the historical-only qualification rate from issue 202 only to size the identity buffer and does not relax any scientific threshold or outcome gate",
+  "validated_japan_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "stage1_identity_candidates": {
+    "target_candidates": 96,
+    "taxon_group": "plant",
+    "identity_registry": "union of speciesKey facets from all 12 frozen Japanese discovery regions",
+    "facet_limit_per_region": 1000,
+    "minimum_region_coordinate_records": 20,
+    "supply_filter": "upper half of the post-exclusion pooled plant registry by registry_max_coordinate_records; deterministic speciesKey tie-break",
+    "selection_seed": 2026091103,
+    "selection_hash": "SHA256(seed|speciesKey)",
+    "selection_uses_focal_2000_2020_occurrences": false,
+    "selection_uses_2021_2025": false
+  },
+  "exclusions": {
+    "inherit_base_consumed_and_prior_supply_exclusions_from": "research/freeze_global_availability_parity_identities_v1.py::combined_exclusions",
+    "prior_provider_supply_snapshot_sha256": "a3ef9ed1ad1dc49f63702511297c56dc0c68f02a7cc0c3805906fcd4291dbe41",
+    "exclude_global_availability_v2_identities": "validation/acsp_global_availability_parity_identities_v2.csv",
+    "exclude_issue_202_identity_candidates": "validation/japan_plant_broad_frame_identity_candidates_v3.csv",
+    "exclude_issue_202_identity_candidates_sha256": "6cde4966374c049c3ed55c4a1aa836a668fd52795ea60f8572a9aa8ac4963b1d",
+    "issue_202_consumed_identity_count": 48,
+    "excluded_name_prefixes": ["Cirsium ", "Campanula "],
+    "no_exclusion_relaxation_after_execution": true
+  },
+  "stage2_historical_qualification": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2000, 2020],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_exact": false,
+    "population_cluster_rule": "deterministic complete-link maximum diameter 0.5 km",
+    "region_registry": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS",
+    "region_selection_rule": "choose the fixed region with the largest strict historical population-cluster count; ties follow existing registry order",
+    "minimum_historical_population_clusters_in_selected_region": 5,
+    "candidate_identity_count": 96,
+    "final_taxa": 24,
+    "final_selection_seed": 2026091104,
+    "final_selection_hash": "SHA256(seed|speciesKey)",
+    "if_fewer_than_24_qualify": "STOP_PREOUTCOME_NO_HELDOUT",
+    "selection_uses_2021_2025": false
+  },
+  "candidate_universes": {
+    "grid_spacing_m": 1000,
+    "known_exclusion_km": 0.5,
+    "local_outer_radii_km": [2, 5, 10],
+    "broad_outer_frame": "selected fixed VALIDATED_JAPAN_REGIONS rectangle",
+    "land_filter_provider": "ESA WorldCover 2021_v200 official COG point sampling",
+    "water_class_removed": 80,
+    "matched_grid_resolution_across_local_and_broad": true,
+    "structural_selector_used": false,
+    "human_access_used": false
+  },
+  "outcome": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2021, 2025],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_evaluable": false,
+    "population_cluster_rule": "deterministic complete-link maximum diameter 0.5 km",
+    "novel_population_rule": "recent cluster is novel when >0.5 km from every strict historical population in the selected fixed region",
+    "recovery_radii_km": [0.5, 1.0],
+    "primary_recovery_radius_km": 1.0,
+    "open_only_after_24_taxa_and_candidate_hashes_frozen": true
+  },
+  "primary_endpoint": {
+    "contrast": "BROAD_LAND full-frame recall minus LOCAL_5KM_LAND full-frame recall at 1.0 km",
+    "minimum_temporally_evaluable_taxa": 12,
+    "minimum_fraction_evaluable_taxa_with_strictly_positive_difference": 0.5,
+    "minimum_cluster_weighted_added_recall": 0.1,
+    "overall_pass": "all three gates must pass"
+  },
+  "claim_boundary": {
+    "population": "historically well-observed/model-ready Japanese plant taxa under this historical qualification, not all Japanese plants",
+    "broad_is_superset": true,
+    "not_selector_superiority": true,
+    "not_occupancy_probability": true,
+    "not_field_efficiency": true,
+    "same_cohort_rescue_allowed": false,
+    "outcome_driven_retuning": false
+  }
+}
