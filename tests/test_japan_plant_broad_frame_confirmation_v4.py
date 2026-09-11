@@ -112,7 +112,10 @@ class JapanPlantBroadFrameConfirmationV4Tests(unittest.TestCase):
                 })
             return {"status": "TEMPORALLY_EVALUABLE", "recent_provider_audit": {"matched_usage_key": key}}, metrics
 
-        with patch.object(r, "verify_preoutcome_preflight", return_value=(protocol, preflight)):
+        with (
+            patch.object(r, "verify_preoutcome_preflight", return_value=(protocol, preflight)),
+            patch.object(r, "_sha256", return_value="synthetic"),
+        ):
             summary, _ = r.run(Path("unused.json"), reconstructor=fake_reconstructor, scorer=fake_scorer)
 
         first_score = next(i for i, item in enumerate(events) if item[0] == "score")
