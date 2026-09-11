@@ -1,0 +1,88 @@
+{
+  "schema_version": "japan-plant-broad-frame-identity-candidates-v3",
+  "status": "IDENTITY_CANDIDATES_FROZEN_PRE_FOCAL_HISTORICAL_QUERY",
+  "candidate_count": 48,
+  "candidate_identity_sha256": "3f6369dfebb1550393e81450df9c8f67f91758fa9fd7c7f8b4b1a8e9ffdf1694",
+  "protocol_sha256": "0b6062ed73df643d39f8156e777c63d587a5488cd4ce06f16ce2bdd33d4feef5",
+  "registry_count_before_exclusion": 3438,
+  "registry_count_after_key_exclusion": 1593,
+  "upper_half_registry_count": 797,
+  "metadata_attempt_count": 50,
+  "query_audit": [
+    {
+      "region_index": 1,
+      "region_name": "Hokkaido west",
+      "facet_rows": 527
+    },
+    {
+      "region_index": 2,
+      "region_name": "Hokkaido east",
+      "facet_rows": 789
+    },
+    {
+      "region_index": 3,
+      "region_name": "Tohoku",
+      "facet_rows": 1000
+    },
+    {
+      "region_index": 4,
+      "region_name": "Kanto",
+      "facet_rows": 1000
+    },
+    {
+      "region_index": 5,
+      "region_name": "Izu",
+      "facet_rows": 373
+    },
+    {
+      "region_index": 6,
+      "region_name": "Chubu mountains",
+      "facet_rows": 1000
+    },
+    {
+      "region_index": 7,
+      "region_name": "Kinki",
+      "facet_rows": 1000
+    },
+    {
+      "region_index": 8,
+      "region_name": "Chugoku",
+      "facet_rows": 1000
+    },
+    {
+      "region_index": 9,
+      "region_name": "Shikoku",
+      "facet_rows": 1000
+    },
+    {
+      "region_index": 10,
+      "region_name": "Northern Kyushu",
+      "facet_rows": 829
+    },
+    {
+      "region_index": 11,
+      "region_name": "Southern Kyushu",
+      "facet_rows": 860
+    },
+    {
+      "region_index": 12,
+      "region_name": "Ryukyu",
+      "facet_rows": 916
+    }
+  ],
+  "exclusion_audit": {
+    "base_consumed_key_count": 635,
+    "terminal_fresh48_excluded": 48,
+    "prior_provider_supply_excluded": 3161,
+    "combined_excluded_species_keys": 3844,
+    "combined_excluded_scientific_names": 3844,
+    "prior_supply_snapshot_sha256": "a3ef9ed1ad1dc49f63702511297c56dc0c68f02a7cc0c3805906fcd4291dbe41"
+  },
+  "additional_global_v2_keys_excluded": 48,
+  "focal_2000_2020_occurrences_opened": false,
+  "heldout_2021_2025_opened": false,
+  "candidate_frames_built": false,
+  "selector_evaluated": false,
+  "validated_japan_product_changed": false,
+  "automatic_global_adapter_changed": false
+}
