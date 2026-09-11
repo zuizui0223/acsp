@@ -1,0 +1,32 @@
+{
+  "schema_version": "japan-plant-broad-frame-preflight-receipt-v4",
+  "status": "PREOUTCOME_24_TAXA_AND_CANDIDATE_UNIVERSES_PINNED",
+  "parent_issue": 203,
+  "source_workflow_run_id": 34575434739,
+  "source_workflow_head_sha": "135e9ba90bb09fe8a025c70148bbb2859452af8d",
+  "source_artifact_id": 10189768431,
+  "source_artifact_name": "japan-plant-broad-frame-historical-preflight-v4",
+  "source_artifact_digest": "sha256:98c52261f01800e66e59bcf0d6e059632a9b356a31d8fdc7fec29149188f917d",
+  "preflight_json_sha256": "9c4b9f1325f8cc680fabce6ff3c4fdded1f5055e152a2075facb65fdc81db7d3",
+  "protocol_sha256": "5f7cac8afa1917fb1dc99976d122f03975f440a2a6671d532aae57c94fb76b8f",
+  "stage1_candidates_sha256": "1ba6f2ed3f29b3d6b63d6109f702acb3a5b9c41b55a3aeeaa60e8f001d3c750e",
+  "stage1_audit_sha256": "401119e0cffea399eac0a2ba8da3e9ef678440295bc9b1487b311f506ee6504a",
+  "candidate_identity_count": 96,
+  "historically_qualified_identities": 48,
+  "qualification_state_counts": {
+    "QUALIFIED": 48,
+    "BELOW_MIN_HISTORICAL_POPULATIONS": 27,
+    "NO_HISTORICAL_ANCHOR": 21
+  },
+  "minimum_historical_population_clusters": 5,
+  "final_taxa": 24,
+  "final_selection_sha256": "979eb36dbd5e19b747afda5a4548a08869a494e0b1358be29892e4c1e8410c23",
+  "selected_species_keys": [3070346, 3172134, 5352523, 3084719, 10775938, 7748052, 3132228, 5384955, 2867107, 7328041, 7307111, 5319259, 2705650, 4152523, 4048261, 4005004, 2715089, 7310823, 2798234, 2928560, 7296538, 5367572, 3104907, 6363436],
+  "heldout_2021_2025_opened": false,
+  "selector_evaluated": false,
+  "human_access_used": false,
+  "validated_japan_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "no_reselection_after_pin": true,
+  "next_authorized_step": "open the frozen 2021-2025 heldout only after an exact receipt-gated activation; evaluate the preregistered BROAD_LAND minus LOCAL_5KM_LAND candidate-universe endpoint without retuning"
+}
