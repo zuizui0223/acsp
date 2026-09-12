@@ -1,0 +1,27 @@
+{
+  "schema_version": "japan-plant-v4-shifted-region-historical-support-diagnostic-result-v1",
+  "status": "POSTHOC_DIAGNOSTIC_TERMINAL_HISTORICAL_RECONSTRUCTION_STABLE",
+  "issue": 205,
+  "source_confirmation_issue": 203,
+  "source_region_diagnostic_issue": 204,
+  "workflow_run_id": 34670262421,
+  "workflow_head_sha": "8d0a6031535b75eee67a35d6983dcf8ac2e22287",
+  "artifact_id": 10289933845,
+  "artifact_digest": "sha256:48331183e33cbdc7b36f234702d1bd83316fb67291ee2f227f6fb336c8d1b3c2",
+  "summary_json_sha256": "8aca7b3019f8d6af7fd1da5f62880a9100474235e899214e590fcd7dcb5feb39",
+  "taxon_historical_support_diagnostics_csv_sha256": "5a7513b77468d4235ca17e221e50cc53c537d1fe500d73daf68a78d6f56c794b",
+  "taxa": 10,
+  "historical_reconstruction_match_taxa": 10,
+  "historical_reconstruction_drift_taxa": 0,
+  "later_region_historical_support_counts": {
+    "later_region_already_historically_qualified": 1,
+    "later_region_historically_supported_below_threshold": 4,
+    "later_region_no_historical_support": 5
+  },
+  "fraction_shifted_taxa_later_region_already_historically_qualified": 0.1,
+  "fraction_shifted_taxa_later_region_with_any_historical_support": 0.5,
+  "design_inference_allowed": true,
+  "terminal_203_decision_changed": false,
+  "candidate_frames_rescored": false,
+  "interpretation": "Only 1/10 region-shift taxa had the later-best region already meeting the frozen >=5 historical-population qualification threshold; 4/10 had only 1-4 historical populations there and 5/10 had none. Therefore the dominant #203 evaluability failure cannot be repaired merely by retaining all historically-qualified regions. The deeper problem is temporal-spatial observability instability into regions that were weakly supported or unsupported during training."
+}

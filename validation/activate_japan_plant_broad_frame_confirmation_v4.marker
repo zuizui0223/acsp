@@ -1,0 +1,11 @@
+{
+  "activation": "JAPAN_PLANT_BROAD_FRAME_CONFIRMATION_V4_FIRST",
+  "parent_issue": 203,
+  "implementation_parent_sha": "e2ee9584fd3ac08cd0c2b8e96f1d3bd3bfdbb9c3",
+  "preflight_run_id": 34575434739,
+  "preflight_artifact_id": 10189768431,
+  "preflight_json_sha256": "9c4b9f1325f8cc680fabce6ff3c4fdded1f5055e152a2075facb65fdc81db7d3",
+  "final_selection_sha256": "979eb36dbd5e19b747afda5a4548a08869a494e0b1358be29892e4c1e8410c23",
+  "heldout_2021_2025_authorized": true,
+  "same_cohort_retuning_authorized": false
+}

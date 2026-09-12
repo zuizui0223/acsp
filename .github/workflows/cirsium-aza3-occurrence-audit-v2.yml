@@ -1,0 +1,43 @@
+name: Audit Cirsium aza3 occurrence evidence v2
+
+on:
+  pull_request:
+    paths:
+      - "acsp/sentinel_evidence.py"
+      - "research/audit_cirsium_aza3_gbif_occurrences_v1.py"
+      - "research/audit_cirsium_aza3_gbif_occurrences_v2.py"
+      - "tests/test_sentinel_evidence.py"
+      - ".github/workflows/cirsium-aza3-occurrence-audit-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Validate sentinel evidence gate
+        run: python tests/test_sentinel_evidence.py -v
+      - name: Run uncertainty-aware audit
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python research/audit_cirsium_aza3_gbif_occurrences_v2.py --out-dir validation/cirsium_aza3_occurrence_audit_v2
+      - name: Guard public output against coordinate leakage
+        run: |
+          if grep -R -E 'decimalLatitude|decimalLongitude|latitude,longitude|longitude,latitude' validation/cirsium_aza3_occurrence_audit_v2; then
+            echo 'coordinate-bearing field leaked into public v2 audit'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-aza3-occurrence-audit-v2
+          path: validation/cirsium_aza3_occurrence_audit_v2/
+          if-no-files-found: error

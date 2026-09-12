@@ -1,0 +1,240 @@
+name: Global availability parity candidate freeze v2
+
+on:
+  pull_request:
+    paths:
+      - "validation/acsp_global_availability_parity_country_plans_v2.csv"
+      - "validation/acsp_global_availability_parity_country_receipt_v2.json"
+      - "validation/acsp_global_availability_parity_candidate_freeze_v2.json"
+      - "research/freeze_global_availability_parity_candidate_pair_v2.py"
+      - "research/freeze_global_availability_parity_candidate_ru_v2.py"
+      - "research/aggregate_global_availability_parity_candidate_freeze_v2.py"
+      - "tests/test_global_availability_parity_candidate_freeze_v2.py"
+      - ".github/workflows/global-availability-parity-candidate-freeze-v2.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: global-availability-parity-candidate-freeze-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+  RU_SURFACE_RUN_ID: "32795662847"
+  RU_SURFACE_ARTIFACT: "ru-complete-surface"
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test strict preheldout information boundary
+        run: python tests/test_global_availability_parity_candidate_freeze_v2.py -v
+      - name: Verify frozen stage2 country plan before geometry or candidate work
+        run: |
+          python - <<'PY'
+          import freeze_global_availability_parity_candidate_pair_v2 as f
+          x = f.verify_inputs()
+          assert len(x) == 48
+          assert x['country_plan_state'].value_counts().to_dict() == {'READY': 48}
+          assert x.loc[x['selected_country_code'].eq('RU'), 'availability_pair_id'].astype(int).tolist() == [48]
+          PY
+      - name: Download and verify exact pinned RU surface before any RU world work
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RU_SURFACE_ARTIFACT }}
+          path: ru-surface
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.RU_SURFACE_RUN_ID }}
+      - name: Verify pinned RU surface identity
+        run: |
+          python research/freeze_global_availability_parity_candidate_ru_v2.py verify-surface \
+            --surface ru-surface/ru_complete_surface.parquet \
+            --surface-manifest ru-surface/surface_manifest.json
+
+  non-ru-pair:
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        pair_id: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Freeze one non-RU candidate result and exact candidate surface
+        run: |
+          python research/freeze_global_availability_parity_candidate_pair_v2.py \
+            --pair-id ${{ matrix.pair_id }} \
+            --output pair-result
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-parity-candidate-pair-${{ matrix.pair_id }}
+          path: pair-result/
+          if-no-files-found: error
+          retention-days: 90
+
+  ru-prepare:
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Freeze RU historical prototypes before heldout
+        run: python research/freeze_global_availability_parity_candidate_ru_v2.py prepare --output ru-prep
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-parity-ru-prep-48
+          path: ru-prep/
+          if-no-files-found: error
+          retention-days: 90
+
+  ru-world:
+    needs: ru-prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        shard_id: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Download exact pinned RU complete surface
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RU_SURFACE_ARTIFACT }}
+          path: ru-surface
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.RU_SURFACE_RUN_ID }}
+      - name: Download frozen RU prep
+        uses: actions/download-artifact@v4
+        with:
+          name: global-parity-ru-prep-48
+          path: ru-prep
+      - name: Compute exact float32 RU LOO world shard
+        run: |
+          python research/freeze_global_availability_parity_candidate_ru_v2.py world-shard \
+            --surface ru-surface/ru_complete_surface.parquet \
+            --surface-manifest ru-surface/surface_manifest.json \
+            --pair-prep ru-prep \
+            --shard-id ${{ matrix.shard_id }} \
+            --output ru-world
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-parity-ru-world-48-${{ matrix.shard_id }}
+          path: ru-world/
+          if-no-files-found: error
+          retention-days: 90
+
+  ru-assemble:
+    needs: ru-world
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Download exact pinned RU complete surface
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RU_SURFACE_ARTIFACT }}
+          path: ru-surface
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.RU_SURFACE_RUN_ID }}
+      - name: Download frozen RU prep
+        uses: actions/download-artifact@v4
+        with:
+          name: global-parity-ru-prep-48
+          path: ru-prep
+      - name: Download all exact RU world shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: global-parity-ru-world-48-*
+          path: ru-worlds
+      - name: Assemble RU patches and stop before heldout
+        run: |
+          python research/freeze_global_availability_parity_candidate_ru_v2.py assemble \
+            --surface ru-surface/ru_complete_surface.parquet \
+            --surface-manifest ru-surface/surface_manifest.json \
+            --pair-prep ru-prep \
+            --worlds-root ru-worlds \
+            --output pair-result
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-parity-candidate-pair-48
+          path: pair-result/
+          if-no-files-found: error
+          retention-days: 90
+
+  aggregate:
+    needs: [non-ru-pair, ru-assemble]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Download all 48 preheldout pair artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: global-parity-candidate-pair-*
+          path: all-pairs
+      - name: Freeze all 48 availability states before heldout
+        run: |
+          python research/aggregate_global_availability_parity_candidate_freeze_v2.py \
+            --input-root all-pairs \
+            --output candidate-freeze
+      - name: Guard aggregate information boundary
+        run: |
+          python - <<'PY'
+          import json
+          x=json.load(open('candidate-freeze/candidate_freeze_summary.json'))
+          assert x['taxon_count'] == 48
+          assert x['heldout_2021_2025_opened'] is False
+          assert x['random_baseline_run'] is False
+          assert x['recall_or_lift_read'] is False
+          assert x['taxon_or_country_replacement'] is False
+          assert x['validated_japan_core_changed'] is False
+          assert x['global_product_promoted'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-availability-parity-candidate-freeze-v2
+          path: candidate-freeze/
+          if-no-files-found: error
+          retention-days: 90

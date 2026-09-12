@@ -1,0 +1,37 @@
+name: Audit Cirsium aza3 occurrence evidence v1
+
+on:
+  pull_request:
+    paths:
+      - 'research/audit_cirsium_aza3_gbif_occurrences_v1.py'
+      - 'validation/acsp_occurrence_anchored_local_discovery_development_v2.json'
+      - '.github/workflows/cirsium-aza3-occurrence-audit-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile audit
+        run: python -m py_compile research/audit_cirsium_aza3_gbif_occurrences_v1.py
+      - name: Retrieve and type public occurrence evidence
+        run: python research/audit_cirsium_aza3_gbif_occurrences_v1.py --out-dir validation/cirsium_aza3_occurrence_audit_v1
+      - name: Guard against coordinate leakage
+        run: |
+          if grep -R -E 'decimalLatitude|decimalLongitude|latitude,longitude|longitude,latitude' validation/cirsium_aza3_occurrence_audit_v1; then
+            echo 'coordinate-bearing field leaked into public occurrence audit'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-aza3-occurrence-audit-v1
+          path: validation/cirsium_aza3_occurrence_audit_v1/
+          if-no-files-found: error

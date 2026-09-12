@@ -1,0 +1,90 @@
+{
+  "schema_version": "public-cirsium-portable-coastal-smoke-result-v1",
+  "status": "DEVELOPMENT_ONLY_COMPLETE_DO_NOT_RETUNE_ON_CIR08",
+  "source_contract": "validation/public_cirsium_portable_coastal_smoke_v1.json",
+  "workflow_run_id": 33952246159,
+  "artifact_id": 9965202842,
+  "artifact_sha256": "2f3bfa7842a13c7332ddadb8276cf25e5d96b27fd15b242dfb1921bb0ece3fb7",
+  "cohort_unit_id": "CIR08",
+  "species": "Cirsium brevicaule",
+  "feature_family": "COASTAL_ISLAND_STRUCTURE",
+  "scientific_role": "opened public development smoke only; not confirmation",
+  "validated_product_changed": false,
+  "replacement_or_precision_relaxation_used": false,
+  "historical_records_in_declared_frame": 3,
+  "historical_population_anchors": 3,
+  "recent_records_in_declared_frame": 32,
+  "novel_recent_population_clusters": 15,
+  "provider": {
+    "id": "ESA_WORLDCOVER",
+    "release": "2021_v200",
+    "source_tile": "N24E126",
+    "local_crop_sha256": "99ff9c4753dbde94e105b4afe02b022ae6dd226e4ff80582bbbc632d1dc4be28",
+    "portable_provider_execution_succeeded": true
+  },
+  "candidate_frames": {
+    "2_km": {
+      "raw_grid_cells": 3083,
+      "land_candidate_cells": 1679,
+      "nominal_area_km2": 30.918342149086012
+    },
+    "5_km": {
+      "raw_grid_cells": 13170,
+      "land_candidate_cells": 6292,
+      "nominal_area_km2": 131.86226233497607
+    },
+    "historical_anchors_resolved_to_one_worldcover_land_component": true,
+    "land_components_in_crop": 17
+  },
+  "full_frame_ceiling": {
+    "2_km": {
+      "recovered_novel_clusters_at_250m": 1,
+      "recovered_novel_clusters_at_500m": 1,
+      "recovered_novel_clusters_at_1km": 1,
+      "total_novel_clusters": 15,
+      "recall": 0.06666666666666667
+    },
+    "5_km": {
+      "recovered_novel_clusters_at_250m": 1,
+      "recovered_novel_clusters_at_500m": 1,
+      "recovered_novel_clusters_at_1km": 1,
+      "total_novel_clusters": 15,
+      "recall": 0.06666666666666667
+    },
+    "interpretation": "The frozen LOCAL annular candidate universe is the dominant ceiling in this opened unit. Ranking cannot recover novel populations that are absent from the candidate frame."
+  },
+  "all_42_declared_cells": {
+    "structural_vs_nearest": {
+      "wins": 1,
+      "ties": 35,
+      "losses": 6,
+      "mean_recall_difference": -0.007936507936507927
+    },
+    "structural_vs_spatial_balance": {
+      "wins": 1,
+      "ties": 31,
+      "losses": 10,
+      "mean_recall_difference": -0.014285714285714271
+    }
+  },
+  "by_outer_frame": {
+    "2_km": {
+      "structural_vs_nearest": {"wins": 1, "ties": 17, "losses": 3, "mean_recall_difference": -0.006349206349206342},
+      "structural_vs_spatial_balance": {"wins": 0, "ties": 15, "losses": 6, "mean_recall_difference": -0.01904761904761903}
+    },
+    "5_km": {
+      "structural_vs_nearest": {"wins": 0, "ties": 18, "losses": 3, "mean_recall_difference": -0.009523809523809514},
+      "structural_vs_spatial_balance": {"wins": 1, "ties": 16, "losses": 4, "mean_recall_difference": -0.009523809523809514}
+    }
+  },
+  "decision": {
+    "portable_worldcover_provider": "TECHNICALLY_VIABLE",
+    "current_coastal_structural_selector": "NOT_NOMINATED",
+    "current_local_annular_frame": "MAIN_BOTTLENECK_IN_THIS_OPENED_UNIT",
+    "retune_coastal_formula_on_cir08": false,
+    "retune_2_or_5_km_radius_on_cir08": false,
+    "fit_distance_structure_blend_on_cir08": false,
+    "next_hypothesis": "General discovery architecture should separate LOCAL continuation from DETACHED component discovery. A candidate-frame generator must be able to represent plausible detached habitat components before structural ranking can add value."
+  },
+  "claim_boundary": "This result does not establish that coastal structure is generally ineffective. The selected structural method cannot be promoted from this opened unit, and the full-frame ceiling prevents a clean selector-level test for 14 of 15 novel populations."
+}

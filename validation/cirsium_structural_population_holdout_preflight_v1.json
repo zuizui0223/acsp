@@ -1,0 +1,111 @@
+{
+  "schema_version": "cirsium-structural-population-holdout-preflight-v1",
+  "status": "FROZEN_BEFORE_STRUCTURAL_POPULATION_HOLDOUT_PREFLIGHT_EXECUTION",
+  "scientific_role": "public-data development preflight for known-truth whole-population structural-selector evaluation; not confirmation",
+  "source_issue": 192,
+  "source_pr": 184,
+  "source_cohort": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "source_cohort_git_blob_sha1": "4084355ae091ec992e4f9e64e26522341c65d058",
+  "validated_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "new_confirmation_claim": false,
+  "selector_run": false,
+  "field_outcomes_used": false,
+  "cohort": {
+    "unit_id_column": "cohort_unit_id",
+    "species_column": "species_binomial",
+    "structural_family_column": "structural_feature_family",
+    "expected_unit_count": 13,
+    "expected_unique_species": 13
+  },
+  "pair_frame": {
+    "region_registry": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS",
+    "fixed_region_ids": [
+      "hokkaido-west",
+      "hokkaido-east",
+      "tohoku",
+      "kanto",
+      "izu",
+      "chubu-mountains",
+      "kinki",
+      "chugoku",
+      "shikoku",
+      "northern-kyushu",
+      "southern-kyushu",
+      "ryukyu"
+    ],
+    "cartesian_product_all_units_all_regions": true,
+    "declared_pair_count": 156,
+    "region_selection_by_outcome": false,
+    "pair_replacement_allowed": false
+  },
+  "occurrence_evidence": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2000, 2025],
+    "occurrence_status": "PRESENT",
+    "has_coordinate": true,
+    "has_geospatial_issue": false,
+    "declared_coordinate_uncertainty_m_max": 1000,
+    "missing_coordinate_uncertainty_is_exact": false,
+    "exact_coordinate_deduplication_over_full_period": true,
+    "maximum_records_per_species": 10000
+  },
+  "population_definition": {
+    "method": "deterministic complete-link greedy",
+    "maximum_within_cluster_distance_km": 0.5,
+    "minimum_clusters_for_whole_population_holdout": 3
+  },
+  "structural_family_semantics": {
+    "family_assignment_frozen_from_source_cohort": true,
+    "baseline_family": "GENERAL_SPATIAL_BASELINE_ONLY",
+    "baseline_family_is_not_structural_selector_eligible": true,
+    "allowed_structural_families": [
+      "WETLAND_MOISTURE_STRUCTURE",
+      "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "OPEN_GRASSLAND_STRUCTURE",
+      "COASTAL_ISLAND_STRUCTURE",
+      "FOREST_EDGE_STRUCTURE"
+    ]
+  },
+  "pair_status_rules": {
+    "SPATIAL_HOLDOUT_ELIGIBLE": "population_clusters >= 3 and structural family is not GENERAL_SPATIAL_BASELINE_ONLY",
+    "BASELINE_ONLY_NO_STRUCTURAL_FAMILY": "unit structural family is GENERAL_SPATIAL_BASELINE_ONLY; population counts remain reported",
+    "BELOW_MIN_POPULATIONS": "population_clusters < 3 for a structural-family unit",
+    "PROVIDER_FAILURE": "species-level public occurrence retrieval failed; retain all 12 region pairs"
+  },
+  "preflight_boundary": {
+    "candidate_surface_built": false,
+    "raw_structural_layers_built": false,
+    "structural_selector_scored": false,
+    "heldout_population_selected": false,
+    "purpose": "measure whether the already-frozen Cirsium family assignments have enough strict replicated public populations to justify a later source-backed whole-population structural holdout"
+  },
+  "public_artifact": {
+    "pair_table": "structural_population_holdout_preflight_pairs.csv",
+    "summary": "summary.json",
+    "coordinate_free": true,
+    "forbidden_public_columns": [
+      "latitude",
+      "longitude",
+      "decimalLatitude",
+      "decimalLongitude",
+      "gbif_key",
+      "occurrence_id"
+    ]
+  },
+  "decision_rule": {
+    "if_multiple_structural_families_have_eligible_pairs": "proceed to a separately frozen structural whole-population holdout without changing family formulas on these preflight counts",
+    "if_eligibility_is_too_sparse_or_family_concentrated": "freeze the evidence-adequacy blocker; do not manufacture a selector result by relaxing precision, cluster count, region bounds, or taxon identity"
+  },
+  "forbidden": [
+    "do not choose a favorable fixed region after population counts are observed; all 156 pairs remain in the preflight artifact",
+    "do not relax the <=1 km declared uncertainty rule after observing attrition",
+    "do not reduce the >=3 population requirement after observing attrition",
+    "do not replace species or regions after provider/evidence failure",
+    "do not run or tune a structural selector in this preflight",
+    "do not reuse opened public temporal outcomes to tune family formulas",
+    "do not call this independent confirmation or prospective field validation",
+    "do not infer route, access, days, budget, discoveries per hour, or stopping"
+  ]
+}

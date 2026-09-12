@@ -1,0 +1,39 @@
+{
+  "schema_version": "public-japan-cirsium-temporal-anchor-region-diagnostic-v1",
+  "status": "POST_V1_DESCRIPTIVE_DIAGNOSTIC_FROZEN_BEFORE_EXECUTION",
+  "scientific_role": "diagnose whether national-scale detached components explain the failed local-proximity generalization in public v1",
+  "parent_result": "validation/public_japan_cirsium_temporal_anchor_benchmark_result_v1.json",
+  "parent_result_retuned": false,
+  "field_outcomes_used": false,
+  "private_localities_used": false,
+  "species_source": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "species_count": 13,
+  "gbif_record_filter": "identical_to_public_japan_cirsium_temporal_anchor_benchmark_v1",
+  "temporal_split": {
+    "historical_anchor_years": [2000, 2020],
+    "recent_evaluation_years": [2021, 2025]
+  },
+  "cluster_radius_km": 0.5,
+  "local_recovery_radii_km": [2.0, 5.0],
+  "fixed_regions": [
+    {"region_name": "Hokkaido west", "west": 140.0, "south": 42.5, "east": 142.0, "north": 44.5},
+    {"region_name": "Hokkaido east", "west": 143.0, "south": 42.5, "east": 145.5, "north": 44.5},
+    {"region_name": "Tohoku", "west": 139.5, "south": 38.0, "east": 141.5, "north": 40.5},
+    {"region_name": "Kanto", "west": 138.5, "south": 35.0, "east": 140.5, "north": 36.5},
+    {"region_name": "Izu", "west": 138.8, "south": 34.0, "east": 139.8, "north": 35.0},
+    {"region_name": "Chubu mountains", "west": 136.5, "south": 35.0, "east": 138.5, "north": 37.0},
+    {"region_name": "Kinki", "west": 134.5, "south": 33.5, "east": 136.5, "north": 35.5},
+    {"region_name": "Chugoku", "west": 131.5, "south": 34.0, "east": 134.0, "north": 35.5},
+    {"region_name": "Shikoku", "west": 132.5, "south": 32.7, "east": 134.5, "north": 34.5},
+    {"region_name": "Northern Kyushu", "west": 129.5, "south": 32.5, "east": 131.5, "north": 34.0},
+    {"region_name": "Southern Kyushu", "west": 130.0, "south": 30.8, "east": 131.8, "north": 32.5},
+    {"region_name": "Ryukyu", "west": 126.0, "south": 24.0, "east": 130.0, "north": 28.5}
+  ],
+  "diagnostic_question": "Within the same fixed Japanese regional frame, do later novel occurrence clusters lie substantially closer to historical clusters than in the national-scale v1 benchmark?",
+  "decision_use": {
+    "if_regional_recovery_improves_materially": "retain LOCAL_CONTINUATION only after external region/component framing; do not use species-wide nearest-known as the outer search universe",
+    "if_regional_recovery_remains_low": "distance-based local continuation is not sufficient even inside the validated regional frame; structural/environmental support must do the selection",
+    "cannot_change_parent_v1": true,
+    "cannot_change_validated_2_5pct_core": true
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": "japan-plant-population-holdout-selector-development-v1",
+  "protocol_id": "japan_plant_population_holdout_selector_development_v1",
+  "status": "DEVELOPMENT_PROTOCOL_FROZEN_BEFORE_POPULATION_HOLDOUT_EXECUTION",
+  "source_issue": 207,
+  "scientific_role": "consumed-cohort development of selector-level whole-population spatial holdout",
+  "independent_confirmation": false,
+  "cohort": {
+    "source_workflow_run_id": 32335791948,
+    "source_artifact_id": 9394691112,
+    "source_artifact_name": "acsp-robust-patch-untouched-confirmation-cohort-v2",
+    "source_artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "predeclared_pairs_sha256": "8e8eebf56b071572ad4eb84d6fe5dbe9ec12c4cd561e84dfca22abd398bede4d",
+    "cohort_manifest_sha256": "8fdc03b94d10e9448c2fe7515e5dbdaf4e5a26f1b6784d7a9bf947cea406f809",
+    "declared_source_pairs": 96,
+    "taxon_group": "plant",
+    "declared_plant_pairs": 48,
+    "replacement_allowed": false
+  },
+  "known_truth": {
+    "country": "JP",
+    "period": [2000, 2025],
+    "coordinate_uncertainty_m_max": 1000,
+    "record_species_key_must_equal_frozen_species_key": true,
+    "deduplicate_exact_coordinates": true,
+    "population_cluster_algorithm": "deterministic_complete_link_greedy",
+    "population_cluster_maximum_within_distance_km": 0.5,
+    "minimum_population_clusters_for_pair_evaluation": 3
+  },
+  "holdout": {
+    "unit": "whole_population_cluster",
+    "maximum_folds_per_pair": 2,
+    "fold_selection": "ascending_sha256_of_stable_cluster_fingerprint",
+    "heldout_cluster_available_to_generation_or_ranking": false,
+    "training_rebuilt_separately_per_fold": true
+  },
+  "candidate_surface": {
+    "generator": "acsp.taxon_patches._terrain_inputs validated fixed-region terrain surface",
+    "known_reobservation_exclusion_km": 0.5,
+    "common_eligible_surface_rule": "training-built terrain surface points with nearest training occurrence distance >0.5 km",
+    "same_eligible_surface_for_all_selectors": true
+  },
+  "selectors": {
+    "environment": "validated_robust_candidate_patches applied to the common eligible surface using training-only terrain prototypes",
+    "nearest_known": "ascending distance to training occurrences on the common eligible surface",
+    "spatial_balance": "deterministic farthest-point spatial balance on the common eligible surface",
+    "random": "seeded random selection on the common eligible surface",
+    "matched_k": "k equals the environment selector candidate count on the common eligible surface"
+  },
+  "random": {
+    "repetitions_per_fold": 200,
+    "seed_base": 2026091207
+  },
+  "recovery_radii_km": [2.0, 5.0, 10.0],
+  "primary_development_contrast": {
+    "radius_km": 5.0,
+    "contrast": "environment_recovery - nearest_known_recovery",
+    "strong_geometry_control": "environment_recovery - spatial_balance_recovery"
+  },
+  "forbidden": {
+    "radius_tuning": true,
+    "k_tuning": true,
+    "cluster_threshold_tuning": true,
+    "selector_weight_tuning": true,
+    "production_selector_change": true,
+    "route_access_time_budget_claim": true,
+    "prospective_claim": true
+  },
+  "claim_boundary": "The frozen 48 plant pairs are already consumed and may only support development. Whole-population holdout diagnoses hidden-population recovery without temporal provider dependence, but promotion requires a fresh disjoint plant cohort frozen before occurrence rows are opened."
+}

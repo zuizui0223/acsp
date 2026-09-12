@@ -1,0 +1,61 @@
+name: Japan plant v4 temporal persistence gate development
+
+on:
+  push:
+    paths:
+      - "validation/activate_japan_plant_v4_temporal_persistence_gate_development.marker"
+  workflow_dispatch:
+
+concurrency:
+  group: japan-plant-v4-temporal-persistence-gate-development-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+
+jobs:
+  develop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test frozen development cohort and single-gate mechanics
+        run: python -m unittest -v tests/test_japan_plant_v4_temporal_persistence_gate.py
+      - name: Reconstruct training-only temporal persistence and evaluate development enrichment
+        run: |
+          mkdir -p temporal-persistence-development
+          python research/develop_japan_plant_v4_temporal_persistence_gate.py \
+            --out-dir temporal-persistence-development
+      - name: Verify development-only boundary and public-safe outputs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(Path('temporal-persistence-development/summary.json').read_text(encoding='utf-8'))
+          assert summary['taxa'] == 24
+          assert summary['ungated_temporally_evaluable_taxa'] == 6
+          assert summary['threshold_search_performed'] is False
+          assert summary['candidate_frames_rescored'] is False
+          assert summary['terminal_203_decision_changed'] is False
+          assert summary['future_cohort_selected'] is False
+          for path in Path('temporal-persistence-development').glob('*'):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding='utf-8').lower()
+              for token in ('latitude', 'longitude', 'occurrence_id'):
+                  assert token not in text, (path, token)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: japan-plant-v4-temporal-persistence-gate-development
+          path: temporal-persistence-development/
+          if-no-files-found: error
+          retention-days: 90

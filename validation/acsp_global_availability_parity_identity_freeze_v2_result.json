@@ -1,0 +1,52 @@
+{
+  "schema_version": "acsp-global-availability-parity-identity-freeze-v2-result",
+  "status": "IDENTITY_FREEZE_COMPLETE_PRE_HISTORICAL_COUNTRY_QUERY_V2",
+  "protocol": "validation/acsp_global_availability_parity_confirmation_v2.json",
+  "workflow_run_id": 34120710303,
+  "workflow_run_number": 5,
+  "workflow_head_sha": "3bafe70b115c5e8dcda6f1bd9ab98b401f952985",
+  "artifact": {
+    "id": 10018103754,
+    "name": "global-availability-parity-identities-v2",
+    "digest": "sha256:2863d9408d1c59f4f0912c6edc6191040f8416a86ea86b7f0e23808f7c0fbd05",
+    "identities_csv_sha256": "cfc51e6bb3cb8a76d22ee61ce19d83be29eea64a1fc4fb5dfca5343aec8fbad5",
+    "audit_json_sha256": "ce683261a0704545d92e131632978bd99b2a9bbba60620b3cb53ad010c7ad8af"
+  },
+  "committed_identity_file": "validation/acsp_global_availability_parity_identities_v2.csv",
+  "identity_canonical_sha256": "25ccd369962948a02d728263172cd3c89c695e4da73357d3e98c968f308f535d",
+  "cohort": {
+    "identity_count": 48,
+    "plant_count": 24,
+    "animal_count": 24,
+    "record_count_strata_per_group": {
+      "0": 6,
+      "1": 6,
+      "2": 6,
+      "3": 6
+    },
+    "registry_group_counts_before_exclusion": {
+      "animal": 4390,
+      "plant": 3438
+    },
+    "registry_group_counts_after_key_exclusion": {
+      "animal": 2368,
+      "plant": 1617
+    },
+    "prior_provider_supply_identities_excluded": 3161,
+    "metadata_query_count": 48,
+    "identity_registry_provider_mode": "24 speciesKey facet queries plus metadata only for hash-ordered identities needed for final freeze"
+  },
+  "information_boundary": {
+    "focal_historical_country_facets_opened": false,
+    "country_geometry_opened": false,
+    "candidate_generation_run": false,
+    "heldout_2021_2025_opened": false,
+    "robust_support_run": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false,
+    "outcome_driven_tuning": false,
+    "validated_japan_core_changed": false
+  },
+  "interpretation": "The v1 per-region quota was pre-outcome infeasible after strict prior-supply exclusions. Under the prospectively frozen pooled-registry v2 identity design, a fully disjoint balanced 48-taxon cohort was successfully frozen without opening focal historical-country evidence, candidate outputs, or heldout outcomes. This is an identity-freeze success only, not evidence that the global adapter passes availability or predictive-validity gates.",
+  "next_authorized_stage": "stage2_historical_country_plan_freeze_for_exactly_these_48_identities"
+}

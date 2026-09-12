@@ -1,0 +1,44 @@
+{
+  "schema_version": "public-japan-cirsium-gbif-precision-attrition-diagnostic-v1",
+  "status": "POST_TEMPORAL_BENCHMARK_DIAGNOSTIC_FROZEN_BEFORE_EXECUTION",
+  "scientific_role": "diagnose why public fine-scale temporal evaluation is sparse without relaxing or rescuing the parent benchmark",
+  "parent_result": "validation/public_japan_cirsium_temporal_anchor_benchmark_result_v1.json",
+  "regional_result_role": "regional diagnostic already showed little recovery improvement from fixed-region clipping",
+  "field_outcomes_used": false,
+  "private_localities_used": false,
+  "species_source": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "species_count": 13,
+  "gbif_query": {
+    "country": "JP",
+    "hasCoordinate": true,
+    "hasGeospatialIssue": false,
+    "occurrenceStatus": "PRESENT",
+    "year": "2000,2025",
+    "page_size": 300,
+    "maximum_records_per_species": 10000
+  },
+  "ordered_attrition_classes": [
+    "exact_species_field_mismatch",
+    "invalid_or_missing_coordinate_or_year",
+    "forbidden_geospatial_issue",
+    "missing_declared_coordinate_uncertainty",
+    "invalid_declared_coordinate_uncertainty",
+    "declared_coordinate_uncertainty_gt_1000m",
+    "eligible_declared_uncertainty_le_1000m"
+  ],
+  "temporal_adequacy_outputs": [
+    "raw_records_by_species",
+    "eligible_records_by_species",
+    "fraction_missing_uncertainty",
+    "fraction_uncertainty_gt_1000m",
+    "species_with_strict_historical_records",
+    "species_with_strict_recent_records",
+    "species_with_both_periods"
+  ],
+  "decision_boundary": {
+    "missing_uncertainty_records_may_not_be_promoted_to_precise_points": true,
+    "parent_2km_5km_result_may_not_be_recomputed_with_looser_precision_after_this_diagnostic": true,
+    "if_precision_attrition_dominates": "treat public fine-scale local validation as information-limited and expand the benchmark cohort using taxa with prospectively adequate public precision rather than loosening the precision rule",
+    "if_precision_attrition_does_not_dominate": "sparse temporal overlap is the principal data limitation"
+  }
+}

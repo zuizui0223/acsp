@@ -1,0 +1,66 @@
+{
+  "schema_version": "cirsium-aza3-occurrence-audit-result-v1",
+  "status": "FROZEN_PRE_FIELD_RESULT",
+  "source_workflow": {
+    "run_id": 33838128330,
+    "head_sha": "6049c7e405cea7cd94edd242e584b8045e093cec",
+    "artifact_id": 9924073984,
+    "artifact_name": "cirsium-aza3-occurrence-audit-v1",
+    "artifact_digest": "sha256:fe1971d5547b4741fdcfc568fe568193007398afca6dd0aa316c2713d8d6e430",
+    "aza3_source_commit": "b4ef6b45da377a0be1f0265935aafa20ec411450"
+  },
+  "frozen_input_rules": {
+    "country": "Japan",
+    "event_date_max": "2025-12-31",
+    "primary_anchor_event_years": "2000-2025",
+    "primary_anchor_max_declared_coordinate_uncertainty_m": 1000,
+    "unknown_coordinate_uncertainty_is_precise": false,
+    "serious_geospatial_issue_allowed": false,
+    "legacy_sensitivity_event_years": "1950-1999",
+    "public_exact_coordinates_written": false
+  },
+  "universe": {
+    "required_tree_slots": 228,
+    "required_slot_species": 127,
+    "p7_zero_required_slot_species_not_in_audit": 1
+  },
+  "taxon_match_counts": {
+    "AUTO_EXACT_ACCEPTED": 100,
+    "EXACT_MATCH_REVIEW_REQUIRED": 10,
+    "NONEXACT_MATCH_REVIEW_REQUIRED": 3,
+    "NO_GBIF_MATCH": 14,
+    "review_required_total": 27
+  },
+  "species_problem_counts": {
+    "LOCAL_CONTINUATION_INPUT_AVAILABLE": 29,
+    "SENTINEL_OR_ABSTAIN_NO_PRIMARY_ANCHOR": 65,
+    "SENTINEL_OR_ABSTAIN_WITH_LEGACY_CONTEXT": 4,
+    "SENTINEL_OR_ABSTAIN_ZERO_GBIF_RECORDS": 2,
+    "TAXON_MATCH_REVIEW_BEFORE_OCCURRENCE_QUERY": 27
+  },
+  "slot_problem_counts": {
+    "LOCAL_CONTINUATION_INPUT_AVAILABLE": 47,
+    "SENTINEL_OR_ABSTAIN_NO_PRIMARY_ANCHOR": 120,
+    "SENTINEL_OR_ABSTAIN_WITH_LEGACY_CONTEXT": 8,
+    "SENTINEL_OR_ABSTAIN_ZERO_GBIF_RECORDS": 4,
+    "TAXON_MATCH_REVIEW_BEFORE_OCCURRENCE_QUERY": 49
+  },
+  "derived_fractions": {
+    "species_local_anchor_ready_overall": 0.2283464566929134,
+    "species_taxon_review_required": 0.2125984251968504,
+    "species_local_anchor_ready_given_auto_exact_taxonomy": 0.29,
+    "species_sentinel_or_abstain_given_auto_exact_taxonomy": 0.71,
+    "slots_local_anchor_ready_overall": 0.20614035087719298,
+    "slots_taxon_review_required": 0.2149122807017544,
+    "slots_local_anchor_ready_given_taxonomy_not_blocked": 0.26256983240223464
+  },
+  "algorithmic_consequence": {
+    "old_implicit_order": "occurrence points -> candidate score",
+    "new_required_order": "taxon concept -> evidence adequacy -> discovery regime -> structural family -> ecological patch -> survey feasibility -> field observation",
+    "local_anchor_search_is_majority_problem": false,
+    "sentinel_abstention_and_taxonomy_are_first_class": true,
+    "forced_local_interpolation_allowed": false,
+    "interpretation": "In this external plant-sampling system, local-anchor search is a minority case. ACSP must classify the identifiable survey problem before scoring candidate patches."
+  },
+  "claim_boundary": "This is an outcome-blind occurrence-evidence audit before prospective Cirsium field validation. It does not validate candidate patches, current occupancy, detection probability, route efficiency, or collection success."
+}

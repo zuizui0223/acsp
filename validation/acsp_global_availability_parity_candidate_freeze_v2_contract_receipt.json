@@ -1,0 +1,31 @@
+{
+  "schema_version": "global-availability-parity-candidate-freeze-v2-contract-receipt",
+  "status": "CONTRACT_GREEN_PREHELDOUT_MATRIX_QUEUED",
+  "parent_protocol": "validation/acsp_global_availability_parity_confirmation_v2.json",
+  "workflow_run_id": 34132286994,
+  "workflow_run_number": 1,
+  "workflow_head_sha": "38396b5c6684db7cfe7262c33a2defc44c16f5b4",
+  "contract_job": {
+    "job_id": 101775005078,
+    "conclusion": "success",
+    "checks": [
+      "strict preheldout information boundary",
+      "frozen stage2 country plan verified before geometry or candidate work",
+      "exact pinned RU surface downloaded and verified before RU world work",
+      "pinned RU surface identity verified"
+    ]
+  },
+  "matrix_state_at_receipt": {
+    "non_ru_pair_jobs_declared": 47,
+    "ru_prepare_declared": true,
+    "status": "queued"
+  },
+  "information_boundary": {
+    "heldout_2021_2025_opened": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false,
+    "candidate_matrix_complete": false,
+    "scientific_success_claimed": false
+  },
+  "interpretation": "The stage-3 contract passed before any heldout outcome was opened. This receipt records only the information-boundary and pinned-input checks; it is not a candidate-generation result and does not promote the global product."
+}

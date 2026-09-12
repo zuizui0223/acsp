@@ -1,0 +1,29 @@
+{
+  "schema_version": "public-cirsium-structural-three-family-spatial-comparator-amendment-v1",
+  "status": "PRE_STRUCTURAL_OUTCOME_COMPARATOR_IDENTITY_FROZEN",
+  "parent_contract": "validation/public_cirsium_structural_three_family_smoke_v1.json",
+  "validated_product_changed": false,
+  "structural_outcome_scoring_completed_before_amendment": false,
+  "reason": "The parent contract named DETERMINISTIC_SPATIAL_BALANCE but did not define a scalable algorithm. The first CIR04 attempts stopped before structural scoring because of dependency and historical-evidence contract failures. This amendment fixes comparator identity before any structural-family outcome is scored.",
+  "comparator": {
+    "public_method_name": "DETERMINISTIC_SPATIAL_BALANCE",
+    "algorithm_identity": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+    "candidate_pool": "exact same frozen candidate frame as structural and nearest-known methods",
+    "grid_requirement": "declared regular grid_row/grid_col",
+    "order": [
+      "sort candidates by Morton code of normalized grid indices with stable candidate hash tie-break",
+      "visit both ends of the Morton curve then recursively visit interval midpoints until every candidate appears once"
+    ],
+    "complexity": "O(n log n) time / O(n) memory",
+    "scientific_role": "uninformed progressively distributed coverage comparator",
+    "not_grts": true,
+    "not_equivalent_to_96pair_maximin": true
+  },
+  "scope": "three-family public structural smoke only; it does not replace maximin in the already executed 96-pair environment-vs-distance comparison or any other predeclared experiment",
+  "forbidden": [
+    "do not switch between maximin and Morton based on observed recovery",
+    "do not call Morton ordering GRTS",
+    "do not use structural support, occurrence distance, habitat values or held-out outcomes to alter Morton order",
+    "do not retroactively reinterpret the 96-pair maximin results"
+  ]
+}

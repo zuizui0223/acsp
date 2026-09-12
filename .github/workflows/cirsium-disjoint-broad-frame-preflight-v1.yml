@@ -1,0 +1,102 @@
+name: Cirsium disjoint broad-frame preflight v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_disjoint_broad_frame_replication_v1.json"
+      - "research/prepare_cirsium_disjoint_broad_frame_replication_v1.py"
+      - "acsp/discovery/providers/worldcover_points.py"
+      - "acsp/discovery/providers/worldcover.py"
+      - "acsp/discovery/providers/gbif.py"
+      - "acsp/discovery/broad_frames.py"
+      - "acsp/discovery/evidence.py"
+      - "tests/test_discovery_worldcover_points.py"
+      - "tests/test_cirsium_disjoint_broad_frame_preflight.py"
+      - ".github/workflows/cirsium-disjoint-broad-frame-preflight-v1.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: cirsium-disjoint-broad-frame-preflight-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  historical-only-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test pre-outcome mechanics
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          python tests/test_discovery_worldcover_points.py -v
+          python tests/test_cirsium_disjoint_broad_frame_preflight.py -v
+      - name: Freeze historical-only candidate universes
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/cirsium-disjoint-broad-frame-preflight-v1
+          mkdir -p /tmp/cirsium-disjoint-broad-frame-preflight-v1
+          python research/prepare_cirsium_disjoint_broad_frame_replication_v1.py \
+            --out /tmp/cirsium-disjoint-broad-frame-preflight-v1/preflight_summary.json
+      - name: Guard pre-outcome boundary and fingerprints
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('/tmp/cirsium-disjoint-broad-frame-preflight-v1/preflight_summary.json')
+          value = json.loads(path.read_text())
+          assert value['status'] == 'HISTORICAL_ONLY_PREFLIGHT_COMPLETE'
+          assert value['recent_outcomes_fetched'] is False
+          assert value['validated_product_changed'] is False
+          assert value['unit_count'] == 3
+          assert value['units_provider_failure'] == 0
+          assert value['units_frozen'] + value['units_no_historical_anchor'] == 3
+          for unit in value['units']:
+              assert unit['recent_outcomes_fetched'] is False
+              assert unit['region_selection_uses_recent_outcomes'] is False
+              assert unit['validated_product_changed'] is False
+              if unit['status'] == 'PREOUTCOME_CANDIDATE_UNIVERSES_FROZEN':
+                  assert unit['historical_population_count'] >= 1
+                  assert set(unit['candidate_universes']) == {
+                      'BROAD_LAND', 'LOCAL_2KM_LAND', 'LOCAL_5KM_LAND', 'LOCAL_10KM_LAND'
+                  }
+                  for lane in unit['candidate_universes'].values():
+                      assert lane['candidate_count'] >= 0
+                      assert len(lane['candidate_id_sha256']) == 64
+                  assert len(unit['historical_evidence_sha256']) == 64
+                  assert len(unit['population_anchor_sha256']) == 64
+
+          # Negative audit flags such as field_outcomes_used=false are allowed.
+          # Actual opened-outcome measurements are not.
+          forbidden_keys = {
+              'recent_record_count', 'recent_occurrence_count', 'recent_population_count',
+              'novel_population_count', 'novel_recent_population_clusters',
+              'recovered_clusters', 'recall', 'outcome_recall', 'detection_state'
+          }
+          def walk(obj):
+              if isinstance(obj, dict):
+                  for key, child in obj.items():
+                      assert key not in forbidden_keys, key
+                      walk(child)
+              elif isinstance(obj, list):
+                  for child in obj:
+                      walk(child)
+          walk(value)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-disjoint-broad-frame-preflight-v1
+          path: /tmp/cirsium-disjoint-broad-frame-preflight-v1/preflight_summary.json
+          if-no-files-found: error
+          retention-days: 90

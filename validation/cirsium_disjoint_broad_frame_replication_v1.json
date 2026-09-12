@@ -1,0 +1,113 @@
+{
+  "schema_version": "cirsium-disjoint-broad-frame-replication-v1",
+  "status": "FROZEN_BEFORE_2021_2025_OUTCOME_FETCH",
+  "scientific_role": "disjoint replication of the candidate-universe result; not selector validation and not a change to the validated Japanese ACSP product",
+  "question": "Across previously unused Cirsium taxa, does a training-only fixed regional broad land universe recover novel later populations that a bounded LOCAL frame cannot represent?",
+  "validated_product_changed": false,
+  "prior_opened_units_excluded": [
+    "CIR01 Cirsium sieboldii",
+    "CIR04 Cirsium otayae",
+    "CIR08 Cirsium brevicaule"
+  ],
+  "cohort_selection": {
+    "selected_before_recent_outcome_fetch": true,
+    "selection_basis": "external distribution/habitat descriptions plus absence from prior ACSP repository analyses; no 2021-2025 occurrence counts used",
+    "units": [
+      {
+        "unit_id": "DBR01",
+        "species": "Cirsium spicatum",
+        "japanese_name": "ヤマアザミ",
+        "external_source": "https://www.kahaku.go.jp/research/db/botany/azami/detail.html?no=157",
+        "source_distribution_summary": "Japanese endemic reported from Shikoku and Kyushu; grassland species, sometimes on limestone",
+        "allowed_fixed_regions": ["shikoku", "northern-kyushu", "southern-kyushu"]
+      },
+      {
+        "unit_id": "DBR02",
+        "species": "Cirsium maritimum",
+        "japanese_name": "ハマアザミ",
+        "external_source": "https://www.kahaku.go.jp/research/db/botany/azami/detail.html?no=126",
+        "source_distribution_summary": "Japanese endemic reported from Honshu, Shikoku and Kyushu on Pacific coastal grassland, beaches and rocky/gravel coast",
+        "allowed_fixed_regions": ["kanto", "izu", "kinki", "shikoku", "northern-kyushu", "southern-kyushu"]
+      },
+      {
+        "unit_id": "DBR03",
+        "species": "Cirsium ishidzuchiense",
+        "japanese_name": "イシヅチアザミ",
+        "external_source": "https://www.kahaku.go.jp/research/db/botany/azami/detail.html?no=12",
+        "source_distribution_summary": "Japanese endemic reported from Shikoku, associated with cool-temperate forest edge",
+        "allowed_fixed_regions": ["shikoku"]
+      }
+    ]
+  },
+  "fixed_region_registry": {
+    "source": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS",
+    "region_count": 12,
+    "region_selection_uses_recent_outcomes": false,
+    "selection_rule": "For each unit, among externally allowed fixed regions choose the region with the largest number of strict 2000-2020 population clusters; ties follow the existing VALIDATED_JAPAN_REGIONS order. If all allowed regions have zero strict historical populations, retain the unit as NO_HISTORICAL_ANCHOR and do not replace it."
+  },
+  "historical_evidence": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2000, 2020],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_exact": false,
+    "has_geospatial_issue_allowed": false,
+    "occurrence_status": "PRESENT",
+    "population_cluster_rule": "deterministic complete-link maximum diameter 0.5 km",
+    "region_choice_uses_population_clusters_not_raw_record_density": true
+  },
+  "candidate_universes": {
+    "grid_spacing_m": 1000,
+    "known_exclusion_km": 0.5,
+    "local_outer_radii_km": [2, 5, 10],
+    "broad_outer_frame": "the selected fixed VALIDATED_JAPAN_REGIONS rectangle",
+    "matched_grid_resolution_across_local_and_broad": true,
+    "land_filter": {
+      "provider": "ESA WorldCover",
+      "release": "2021_v200",
+      "mode": "official 3-degree COG point sampling at frozen candidate coordinates",
+      "valid_classes": [10, 20, 30, 40, 50, 60, 70, 90, 95, 100],
+      "water_class_removed": 80,
+      "component_segmentation_used": false
+    },
+    "human_access_used": false,
+    "structural_selector_used": false
+  },
+  "outcome": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2021, 2025],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_evaluable": false,
+    "has_geospatial_issue_allowed": false,
+    "occurrence_status": "PRESENT",
+    "fetch_only_after_region_and_candidate_universes_are_frozen": true,
+    "novel_population_rule": "Apply the same declared uncertainty <=1 km rule, then deterministic complete-link 0.5 km; a recent cluster is novel when >0.5 km from every strict historical population in the selected fixed region",
+    "recovery_radii_km": [0.5, 1.0],
+    "primary_recovery_radius_km": 1.0
+  },
+  "primary_endpoint": {
+    "contrast": "BROAD_LAND full-frame recall minus LOCAL_5KM_LAND full-frame recall at 1.0 km",
+    "unit_weighting": "report every unit; pooled cluster-weighted result is secondary to unit-level signs",
+    "replication_support_rule": "At least 2 of 3 frozen units must be temporally evaluable, and at least 2 temporally evaluable units must have a strictly positive BROAD_LAND minus LOCAL_5KM_LAND recall difference at 1.0 km.",
+    "zero_recent_or_zero_novel_units": "retained as non-evaluable/zero-information, never replaced after outcome opening"
+  },
+  "secondary_outputs": [
+    "LOCAL_2KM_LAND ceiling at 0.5 and 1.0 km",
+    "LOCAL_5KM_LAND ceiling at 0.5 and 1.0 km",
+    "LOCAL_10KM_LAND ceiling at 0.5 and 1.0 km",
+    "BROAD_LAND ceiling at 0.5 and 1.0 km",
+    "candidate counts and strict historical/recent/novel population counts for every frozen unit"
+  ],
+  "forbidden": [
+    "do not change species after opening 2021-2025 outcomes",
+    "do not change allowed regions after opening 2021-2025 outcomes",
+    "do not select a region using recent outcomes",
+    "do not relax the 1000-m historical or recent precision rules after seeing evaluability",
+    "do not treat missing recent coordinate uncertainty as evaluable after seeing outcomes",
+    "do not tune LOCAL radii after seeing outcomes",
+    "do not fit or nominate a structural selector from this frame-ceiling replication",
+    "do not call broad full-frame reachability field efficiency, occupancy probability, or exact-site prediction",
+    "do not modify the independently validated Japanese 2.5% / 10-km candidate-patch product"
+  ]
+}

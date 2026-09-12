@@ -1,0 +1,75 @@
+name: Public Cirsium wetland structural smoke v1
+
+on:
+  pull_request:
+    paths:
+      - "research/run_public_cirsium_wetland_structural_smoke_v1.py"
+      - "validation/public_cirsium_structural_three_family_smoke_v1.json"
+      - "validation/public_cirsium_wetland_shikoku_structural_smoke_amendment_v1.json"
+      - "validation/public_cirsium_structural_three_family_spatial_comparator_amendment_v1.json"
+      - "acsp/discovery/**"
+      - "acsp/structural_graph.py"
+      - "acsp/structural_raw_adapters.py"
+      - "acsp/structural_support.py"
+      - "research/campanula_worldcover_discovery.py"
+      - "research/build_cirsium_private_alpine_local_grid_v1.py"
+      - "pyproject.toml"
+      - ".github/workflows/public-cirsium-wetland-structural-smoke-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run frozen CIR01 public wetland smoke
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/public-cirsium-wetland-structural-smoke-v1
+          python research/run_public_cirsium_wetland_structural_smoke_v1.py \
+            --out-dir /tmp/public-cirsium-wetland-structural-smoke-v1
+      - name: Guard aggregate public result
+        run: |
+          if head -n 1 /tmp/public-cirsium-wetland-structural-smoke-v1/wetland_prefix_curve.csv | grep -E '(^|,)(latitude|longitude|decimalLatitude|decimalLongitude|gbif_key|occurrence_id)(,|$)'; then
+            echo 'coordinate or occurrence identifier leaked into public wetland artifact'
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('/tmp/public-cirsium-wetland-structural-smoke-v1')
+          table = pd.read_csv(root / 'wetland_prefix_curve.csv')
+          summary = json.loads((root / 'summary.json').read_text())
+          assert summary['cohort_unit_id'] == 'CIR01'
+          assert summary['validated_product_changed'] is False
+          assert summary['new_confirmation_claim'] is False
+          if summary['status'] == 'DEVELOPMENT_ONLY_WETLAND_SMOKE_COMPLETE':
+              assert set(table['outer_frame_km']) == {2.0, 5.0}
+              assert set(table['recovery_radius_km']) == {0.25, 0.5, 1.0}
+              assert len(table) == 2 * 7 * 3
+              assert summary['frame_audits'][0]['spatial_comparator'] == 'MORTON_DYADIC_COVERAGE_ORDER_V1'
+          else:
+              assert table.empty
+              assert summary['structural_layer_run'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-cirsium-wetland-structural-smoke-v1
+          path: |
+            /tmp/public-cirsium-wetland-structural-smoke-v1/wetland_prefix_curve.csv
+            /tmp/public-cirsium-wetland-structural-smoke-v1/summary.json
+          if-no-files-found: error
+          retention-days: 90

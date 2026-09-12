@@ -1,0 +1,52 @@
+{
+  "schema_version": "public-japan-96pair-environment-vs-distance-posthoc-diagnostic-v1",
+  "status": "POST_RESULT_DESCRIPTIVE_NO_RETUNING",
+  "parent_result": "validation/public_japan_96pair_environment_vs_distance_development_result_v1.json",
+  "scientific_role": "describe why the frozen development nomination gate failed; not a new method, threshold, or confirmation",
+  "compared_pairs": 12,
+  "compared_pair_primary_10km": {
+    "mean_environment_recall": 0.3698172760919067,
+    "mean_nearest_recall": 0.399816639299398,
+    "mean_spatial_balance_recall": 0.1752064037039406,
+    "mean_random_recall": 0.1858795657430509,
+    "environment_minus_nearest_mean": -0.029999363207491265,
+    "environment_minus_nearest_wins_ties_losses": {"wins": 2, "ties": 4, "losses": 6},
+    "environment_minus_spatial_balance_mean": 0.19461087238796596,
+    "environment_minus_spatial_balance_wins_ties_losses": {"wins": 7, "ties": 3, "losses": 2},
+    "environment_minus_random_mean": 0.18393771034885564,
+    "environment_minus_random_wins_ties_losses": {"wins": 8, "ties": 0, "losses": 4},
+    "pooled_novel_clusters": 334,
+    "pooled_environment_recovered": 155,
+    "pooled_nearest_recovered": 162,
+    "pooled_spatial_balance_recovered": 47,
+    "pooled_environment_fraction": 0.46407185628742514,
+    "pooled_nearest_fraction": 0.48502994011976047,
+    "pooled_spatial_balance_fraction": 0.14071856287425147
+  },
+  "subgroup_compared_only_10km": {
+    "plant": {
+      "pairs": 5,
+      "environment_minus_nearest_mean": 0.00879662209711472,
+      "environment_minus_spatial_balance_mean": 0.12186840253342716,
+      "environment_minus_random_mean": 0.057626817968566744
+    },
+    "animal": {
+      "pairs": 7,
+      "environment_minus_nearest_mean": -0.057710781282209835,
+      "environment_minus_spatial_balance_mean": 0.2465697794269223,
+      "environment_minus_random_mean": 0.27415977633477634
+    }
+  },
+  "generation_failures": {
+    "count": 4,
+    "shared_reason": "fewer than five unique complete training environment prototypes after applying the frozen strict historical evidence and terrain extraction",
+    "pair_ids": [18, 44, 70, 92]
+  },
+  "interpretation": "Environmental support clearly beats uninformed spatial placement, so the regional environmental geometry is not empty signal. However nearest-known remains the stronger local comparator overall, especially in the animal subset. The failure therefore points to a missing local-process representation rather than a need to retune the validated regional support fraction. A future local-discovery method must add source-backed structural or continuity information and beat nearest-known on a new disjoint cohort; simply reusing the regional environmental-support rule is not sufficient.",
+  "forbidden_use": [
+    "do not select favorable compared pairs only",
+    "do not drop the 84 zero/failure pairs from the primary development decision",
+    "do not tune a distance/environment weight on these 96 opened pairs and present it as validated",
+    "do not change the 0.025 regional robust-support product because of this local-discovery failure"
+  ]
+}
