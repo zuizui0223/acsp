@@ -1,0 +1,28 @@
+{
+  "schema_version": "japan-plant-v4-temporal-region-stability-diagnostic-result-v1",
+  "status": "POSTHOC_DIAGNOSTIC_TERMINAL",
+  "issue": 204,
+  "source_confirmation_issue": 203,
+  "workflow_run_id": 34670002425,
+  "workflow_head_sha": "c0e4983884c3a061bef2660ac67d3162f8ed56c8",
+  "artifact_id": 10290477855,
+  "artifact_digest": "sha256:d70fd23b593c762773ed25033fe2451c9f9f9969a95dbe29a166a2e1cb6d7555",
+  "summary_json_sha256": "35ea4b551e3549b90a44011231cacdff1a624b1932abbbadfcbc98f878c7f42c",
+  "taxon_region_diagnostics_csv_sha256": "ca7e2c3f505ead32bd1c0823248cbb5781b6c2d75a9dbb1dd621756b057e9881",
+  "taxa": 24,
+  "classification_counts": {
+    "same_region_recent_support": 6,
+    "other_fixed_region_recent_support": 10,
+    "no_fixed_region_recent_support": 8
+  },
+  "taxa_with_any_recent_strict_countrywide_record": 17,
+  "taxa_with_any_recent_fixed_region_population": 16,
+  "non_evaluable_203_taxa": 18,
+  "non_evaluable_explained_by_other_fixed_region_recent_support": 10,
+  "non_evaluable_with_no_fixed_region_recent_support": 8,
+  "fraction_non_evaluable_explained_by_region_mismatch": 0.5555555555555556,
+  "terminal_203_decision_changed": false,
+  "candidate_frames_rescored": false,
+  "same_cohort_retuned": false,
+  "interpretation": "More than half of #203 temporal non-evaluability was caused by strict recent provider evidence occurring in another fixed Japanese region rather than the pre-outcome historical max-population region. The remainder lacked a strict recent population in every fixed region. This supports separating region stability from species-level provider scarcity in the next design diagnosis, but does not rescue #203."
+}
