@@ -1,0 +1,14 @@
+issue=207
+mode=consumed_cohort_development_only
+source_run=32335791948
+source_artifact=9394691112
+taxon_group=plant
+declared_pairs=48
+holdout_unit=whole_0.5km_population_cluster
+maximum_folds_per_pair=2
+heldout_available_to_generation=false
+matched_k=true
+primary_radius_km=5
+radius_tuning=false
+selector_weight_tuning=false
+production_selector_change=false
