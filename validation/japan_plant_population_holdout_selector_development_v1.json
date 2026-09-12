@@ -10,6 +10,8 @@
     "source_artifact_id": 9394691112,
     "source_artifact_name": "acsp-robust-patch-untouched-confirmation-cohort-v2",
     "source_artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "predeclared_pairs_sha256": "8e8eebf56b071572ad4eb84d6fe5dbe9ec12c4cd561e84dfca22abd398bede4d",
+    "cohort_manifest_sha256": "8fdc03b94d10e9448c2fe7515e5dbdaf4e5a26f1b6784d7a9bf947cea406f809",
     "declared_source_pairs": 96,
     "taxon_group": "plant",
     "declared_plant_pairs": 48,
@@ -35,14 +37,15 @@
   "candidate_surface": {
     "generator": "acsp.taxon_patches._terrain_inputs validated fixed-region terrain surface",
     "known_reobservation_exclusion_km": 0.5,
-    "same_eligible_surface_for_all_comparators": true
+    "common_eligible_surface_rule": "training-built terrain surface points with nearest training occurrence distance >0.5 km",
+    "same_eligible_surface_for_all_selectors": true
   },
   "selectors": {
-    "environment": "validated_robust_candidate_patches on training-only terrain prototypes, then common known-point exclusion",
-    "nearest_known": "ascending distance to training occurrences on common eligible surface",
-    "spatial_balance": "deterministic farthest-point spatial balance on common eligible surface",
-    "random": "seeded random selection on common eligible surface",
-    "matched_k": "k equals environment selector cells remaining after common >0.5-km training-point exclusion"
+    "environment": "validated_robust_candidate_patches applied to the common eligible surface using training-only terrain prototypes",
+    "nearest_known": "ascending distance to training occurrences on the common eligible surface",
+    "spatial_balance": "deterministic farthest-point spatial balance on the common eligible surface",
+    "random": "seeded random selection on the common eligible surface",
+    "matched_k": "k equals the environment selector candidate count on the common eligible surface"
   },
   "random": {
     "repetitions_per_fold": 200,
