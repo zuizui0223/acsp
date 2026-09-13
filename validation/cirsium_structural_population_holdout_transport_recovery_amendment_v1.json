@@ -3,7 +3,7 @@
   "status": "FROZEN_TRANSPORT_ONLY_RECOVERY_AFTER_PROVIDER_503",
   "scientific_contract": {
     "path": "validation/cirsium_structural_population_holdout_development_v1.json",
-    "git_blob_sha1": "c28f1b5bcce5ded674a8062b7fed4ede1099b220"
+    "git_blob_sha1": "3b1dd32e190f13a7c363a4bb6d12ec3beb822bd0"
   },
   "parent_partial_execution": {
     "workflow_run_id": 34696675904,
