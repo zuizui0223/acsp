@@ -1,0 +1,45 @@
+name: Scale-separated coverage then fine structure checks
+
+on:
+  pull_request:
+    paths:
+      - "acsp/discovery/scale_separated.py"
+      - "acsp/discovery/__init__.py"
+      - "tests/test_coverage_then_fine_structure_v1.py"
+      - "validation/coverage_then_fine_structure_architecture_v1.json"
+      - ".github/workflows/coverage-then-fine-structure-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and test dependency
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run scale-separated mechanics tests
+        run: pytest -q tests/test_coverage_then_fine_structure_v1.py
+      - name: Guard frozen architecture boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('validation/coverage_then_fine_structure_architecture_v1.json').read_text())
+          assert p['status'] == 'FROZEN_BEFORE_FRESH_EVALUATION'
+          assert p['global_order']['method_identity'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
+          assert p['role_separation']['coarse_default_order_identity'] == 'MORTON_DYADIC_COVERAGE_ORDER_V1'
+          assert p['role_separation']['coverage_structure_weight'] is None
+          assert p['role_separation']['budget_parameter'] is None
+          assert p['role_separation']['cross_cell_structural_score_comparison'] is False
+          assert p['fresh_evaluation_requirements']['fresh_or_disjoint_outcomes_required'] is True
+          assert p['fresh_evaluation_requirements']['consumed_cirsium_12_folds_may_be_used_for_promotion'] is False
+          PY
