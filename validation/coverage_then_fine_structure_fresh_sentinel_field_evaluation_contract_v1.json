@@ -7,7 +7,7 @@
     "prospective_contract": "research/CIRSIUM_AZA3_PROSPECTIVE_LOCAL_DISCOVERY.md",
     "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
     "fresh_method_freeze": "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json",
-    "note": "Endpoint states, minimum effort fields, and the requirement for matched field effort come from the existing prospective contract. Binary-denominator and unresolved-identity handling below are newly frozen methodological decisions made before prospective outcomes are opened."
+    "note": "Endpoint states, minimum effort fields, and the requirement for matched field effort come from the existing prospective contract. Binary-denominator handling, PERSON_MINUTES_V1, and no-skip frozen-order assignment are frozen before prospective outcomes are opened."
   },
   "field_endpoint": {
     "primary_success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
@@ -45,16 +45,29 @@
     "record_when_defensibly_measured": ["traversed_length_m", "searched_area_m2"],
     "matched_field_effort_required_for_between_arm_promotion": true,
     "complete_visited_patch_detection_and_non_detection_logs_required": true,
-    "numeric_effort_metric_frozen_now": false,
+    "numeric_effort_metric_frozen_now": true,
+    "numeric_effort_metric": {
+      "identity": "PERSON_MINUTES_V1",
+      "unit": "person-minute",
+      "formula": "search_minutes * observer_count"
+    },
     "numeric_effort_schedule_frozen_now": false,
-    "reason_pending": "The repository has not yet frozen a numeric field-effort metric, visit allocation, or candidate-specific schedule for these four prospective units. Candidate identities themselves depend on the still-missing private range-sector geometry.",
-    "forbidden_inference": "Do not choose an effort metric, effort threshold, visit count, stopping rule, or favorable subset after field outcomes are opened."
+    "reason_pending": "The candidate-specific visit allocation and numerical person-minute schedule cannot be instantiated until the still-missing private range-sector geometry produces exact frozen candidate identities.",
+    "forbidden_inference": "Do not change the person-minute metric, choose a new effort threshold, visit count, stopping rule, or favorable subset after field outcomes are opened."
+  },
+  "schedule_selection_mechanics": {
+    "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+    "rule": "For each cohort unit and method arm, the unique scheduled candidate references must be a no-skip prefix of the exact hash-verified frozen arm order. Repeat visits may repeat a candidate already inside that prefix.",
+    "candidate_membership_in_exact_frozen_arm_order_required": true,
+    "private_unit_receipt_hash_linkage_required": true,
+    "private_order_hash_linkage_required": true,
+    "post_outcome_candidate_substitution_allowed": false
   },
   "analysis_unit_and_repeated_visits": {
     "field_log_row_semantics": "one logged search/visit record",
     "primary_analysis_unit_frozen_now": false,
     "repeated_visit_aggregation_frozen_now": false,
-    "required_next_gate": "Freeze the analysis unit, repeated-visit aggregation rule, comparator assignment, numeric effort metric, and candidate-specific visit/allocation schedule before opening prospective outcomes."
+    "required_next_gate": "Freeze the analysis unit, repeated-visit aggregation rule, shared-candidate handling, and candidate-specific visit/allocation schedule before opening prospective outcomes."
   },
   "field_log_schema_required_columns": [
     "validation_unit_id",
@@ -82,7 +95,7 @@
     "private_exact_site_record_id"
   ],
   "promotion_claim_ceiling": {
-    "allowed_after_all_pre_outcome_gates_and_complete_logs": "test whether the frozen structural-within-coverage order improves verified current-occurrence recovery relative to frozen comparators at matched field effort",
+    "allowed_after_all_pre_outcome_gates_and_complete_logs": "test whether the frozen structural-within-coverage order improves verified current-occurrence recovery relative to frozen comparators at matched person-minute field effort",
     "not_authorized_by_this_contract": [
       "optimal field days",
       "optimal monetary budget",
@@ -99,6 +112,6 @@
     "field_allocation_and_effort_schedule_frozen": false,
     "field_allocation_and_effort_schedule_pinned": false,
     "prospective_outcome_opening_allowed_now": false,
-    "next_gate": "After private candidate/order freeze and immutable public hash pin, freeze and publicly pin the actual field allocation/effort schedule before any outcome-opening workflow."
+    "next_gate": "After private candidate/order freeze and immutable public hash pin, instantiate a no-skip frozen-order schedule with matched PERSON_MINUTES_V1 effort, then publicly pin its receipt before any outcome-opening workflow."
   }
 }
