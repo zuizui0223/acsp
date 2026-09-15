@@ -140,7 +140,9 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
     assert verified["status"] == VERIFIED_STATUS
     assert verified["pin_commit"] == pin
     assert verified["pin_rule"].startswith("first commit")
-    assert verified["outcome_opening_gate_satisfied"] is True
+    assert verified["pre_field_prescription_pin_gate_satisfied"] is True
+    assert verified["outcome_opening_gate_satisfied"] is False
+    assert "allocation/effort schedule" in verified["remaining_pre_outcome_gate"]
     assert verified["prospective_field_outcomes_opened"] is False
 
     (repo / "README.md").write_text("later non-receipt change\n", encoding="utf-8")
@@ -149,6 +151,7 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
     descendant = verify_public_freeze_pin(receipt, repo_root=repo, expected_pin_commit=pin)
     assert descendant["pin_commit"] == pin
     assert descendant["verified_head"] != pin
+    assert descendant["outcome_opening_gate_satisfied"] is False
 
 
 def test_pin_verifier_rejects_uncommitted_receipt_change(tmp_path: Path) -> None:
