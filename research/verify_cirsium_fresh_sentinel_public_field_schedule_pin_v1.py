@@ -17,6 +17,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_STATUS = "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_READY_FOR_COMMIT"
 VERIFIED_STATUS = "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_COMMITTED_AND_PINNED"
+EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
+EXPECTED_EFFORT_METRIC = {
+    "identity": "PERSON_MINUTES_V1",
+    "unit": "person-minute",
+    "formula": "search_minutes * observer_count",
+}
 
 
 def _inside(path: Path, root: Path) -> bool:
@@ -45,6 +51,10 @@ def _first_add_commit(repo: Path, relative: str) -> str:
 def _validate_receipt(value: dict[str, Any]) -> None:
     if value.get("status") != EXPECTED_STATUS:
         raise ValueError("public field-schedule receipt is not in the commit-ready frozen state")
+    if value.get("comparator_assignment_identity") != EXPECTED_ASSIGNMENT_IDENTITY:
+        raise ValueError("public field-schedule receipt must preserve FROZEN_ORDER_PREFIX_V1")
+    if value.get("numeric_effort_metric") != EXPECTED_EFFORT_METRIC:
+        raise ValueError("public field-schedule receipt must preserve PERSON_MINUTES_V1")
     for key in ("coordinate_bearing_data_included", "private_candidate_refs_included", "private_paths_included"):
         if value.get(key) is not False:
             raise ValueError(f"public field-schedule receipt must keep {key}=false")
@@ -122,6 +132,8 @@ def verify_public_field_schedule_pin(receipt_path: Path, *, repo_root: Path = RO
         "pin_rule": "first commit adding the field-schedule receipt; later byte changes are forbidden",
         "verified_head": head,
         "public_schedule_receipt_commit_verified": True,
+        "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
+        "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
         "private_candidate_membership_verified": True,
         "frozen_order_prefix_verified": True,
         "prospective_field_outcomes_opened": False,
