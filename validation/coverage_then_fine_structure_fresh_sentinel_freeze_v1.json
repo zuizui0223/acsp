@@ -15,6 +15,7 @@
     "opened_coarse_structural_terminal": "b2e25aaafd30dde9796678fb68c8825a13f78e2c"
   },
   "cohort_file": "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv",
+  "field_evaluation_contract": "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json",
   "selection_rule": {
     "source_table": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
     "include": [
@@ -99,7 +100,7 @@
   "execution_blocker": {
     "current": true,
     "reason": "The four fresh sentinel units do not yet have complete private source manifests and executable declared range-sector/candidate-frame inputs. Running now would require inventing or weakening source geometry after method freeze.",
-    "next_legal_step": "materialize and hash the already-declared source snapshots/sector geometry, then build the 100-m candidate frame and freeze full method/comparator rankings before opening prospective field outcomes"
+    "next_legal_step": "Materialize and hash the already-declared source snapshots/sector geometry, build the 100-m candidate frame, freeze all method/comparator rankings, pin the coordinate-free candidate/order receipt, then freeze and pin the candidate-specific field allocation/effort schedule before opening prospective outcomes."
   },
   "forbidden": [
     "do not recycle CIR01/CIR04/CIR07/CIR08 as fresh promotion outcomes",
@@ -109,6 +110,7 @@
     "do not fit coverage/structure weights",
     "do not invent a sentinel nearest-known kernel",
     "do not let roads, access, route cost, survey days or money create ecological support",
-    "do not claim field efficiency without matched effort and complete detection/non-detection logs"
+    "do not claim field efficiency without matched effort and complete detection/non-detection logs",
+    "do not open prospective outcomes until both the immutable candidate/order prescription receipt and the candidate-specific field allocation/effort schedule have been frozen and publicly pinned"
   ]
 }
