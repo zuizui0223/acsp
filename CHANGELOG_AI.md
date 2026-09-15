@@ -1,5 +1,30 @@
 # AI Change Log
 
+## 2026-09-15 - Codex (OpenAI) - Portable frozen identity-path comparisons
+
+Changed files:
+- research/predeclare_country_frame_observability_confirmation_historical_discovery.py
+- research/test_country_frame_observability_confirmation_historical_discovery.py
+- research/test_geographic_framing_confirmation_v1.py
+- CHANGELOG_AI.md
+
+Summary:
+- Compare repository-relative identity paths using POSIX serialization, matching the unchanged frozen protocol on Windows and Linux.
+- Correct the geographic-framing test's path serialization without changing its identity hashes or exclusion assertions.
+- Add host-independent Windows-path coverage and rejection tests for different identity paths and altered identity bytes.
+
+Features preserved:
+- Exact frozen artifact bytes, SHA256 and protocol fingerprints; consumed-identity exclusions; heldout isolation; Japanese robust core; global adapter and experimental discovery semantics.
+
+Known risks / TODO:
+- Exact-byte artifact checks still require a checkout preserving committed LF bytes. This fix deliberately does not normalize frozen content or accept changed hashes.
+- No live research rerun or new scientific claim is part of this repair.
+
+Validation:
+- Reproduced the previous three exposure-binding errors and one geographic-framing failure on Windows before the fix.
+- All 250 research unittest cases and all 271 tests/ cases pass on Windows in an LF-preserving checkout; focused 12 cases pass, including the three new regressions.
+- App compilation and diff whitespace checks pass. No validation/, paper/, or acsp/ files changed.
+
 ## 2026-09-15 - Codex (OpenAI) - Align product entry points with confirmed adapter evidence
 
 Changed files:

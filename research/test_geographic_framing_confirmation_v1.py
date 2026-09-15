@@ -67,8 +67,8 @@ class GeographicFramingConfirmationV1Tests(unittest.TestCase):
         self.assertEqual(protocol["confirmation_gate"]["conditional_containment_overall_min"], 0.97)
         self.assertEqual(hashlib.sha256(V3_IDENTITY.read_bytes()).hexdigest(), protocol["cohort"]["development_v3_identity_sha256"])
         self.assertEqual(hashlib.sha256(V4_IDENTITY.read_bytes()).hexdigest(), protocol["cohort"]["development_v4_identity_sha256"])
-        self.assertIn(str(V3_IDENTITY), protocol["exclusion_files"])
-        self.assertIn(str(V4_IDENTITY), protocol["exclusion_files"])
+        self.assertIn(V3_IDENTITY.as_posix(), protocol["exclusion_files"])
+        self.assertIn(V4_IDENTITY.as_posix(), protocol["exclusion_files"])
 
     def test_sampler_marks_fresh_confirmation_without_opening_outcomes(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(sampler.base, "run", return_value={"status": "ready"}) as base_run:
