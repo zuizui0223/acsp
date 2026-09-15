@@ -28,13 +28,7 @@ def _inside(path: Path, root: Path) -> bool:
 
 
 def _git(repo_root: Path, *args: str, text: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git", *args],
-        cwd=repo_root,
-        check=True,
-        capture_output=True,
-        text=text,
-    )
+    return subprocess.run(["git", *args], cwd=repo_root, check=True, capture_output=True, text=text)
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -42,11 +36,7 @@ def _sha256_bytes(payload: bytes) -> str:
 
 
 def _first_add_commit(repo: Path, relative: str) -> str:
-    commits = [
-        line.strip()
-        for line in _git(repo, "log", "--diff-filter=A", "--format=%H", "--", relative).stdout.splitlines()
-        if line.strip()
-    ]
+    commits = [line.strip() for line in _git(repo, "log", "--diff-filter=A", "--format=%H", "--", relative).stdout.splitlines() if line.strip()]
     if not commits:
         raise ValueError("could not identify the first commit that added the public field-schedule receipt")
     return commits[-1]
@@ -58,6 +48,14 @@ def _validate_receipt(value: dict[str, Any]) -> None:
     for key in ("coordinate_bearing_data_included", "private_candidate_refs_included", "private_paths_included"):
         if value.get(key) is not False:
             raise ValueError(f"public field-schedule receipt must keep {key}=false")
+    for key in (
+        "private_candidate_membership_verified",
+        "private_pre_field_receipt_hash_linkage_verified",
+        "frozen_order_hash_linkage_verified",
+        "frozen_order_prefix_verified",
+    ):
+        if value.get(key) is not True:
+            raise ValueError(f"public field-schedule receipt must prove {key}")
     if value.get("prospective_field_outcomes_opened") is not False:
         raise ValueError("public field-schedule receipt cannot declare opened prospective outcomes")
     if value.get("field_outcomes_used_to_allocate") is not False:
@@ -74,12 +72,7 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("final pre-outcome linkage gate must remain required")
 
 
-def verify_public_field_schedule_pin(
-    receipt_path: Path,
-    *,
-    repo_root: Path = ROOT,
-    expected_pin_commit: str = "",
-) -> dict[str, Any]:
+def verify_public_field_schedule_pin(receipt_path: Path, *, repo_root: Path = ROOT, expected_pin_commit: str = "") -> dict[str, Any]:
     repo = Path(repo_root).resolve()
     path = Path(receipt_path)
     path = (repo / path).resolve() if not path.is_absolute() else path.resolve()
@@ -129,6 +122,8 @@ def verify_public_field_schedule_pin(
         "pin_rule": "first commit adding the field-schedule receipt; later byte changes are forbidden",
         "verified_head": head,
         "public_schedule_receipt_commit_verified": True,
+        "private_candidate_membership_verified": True,
+        "frozen_order_prefix_verified": True,
         "prospective_field_outcomes_opened": False,
         "field_schedule_pin_gate_satisfied": True,
         "outcome_opening_gate_satisfied": False,
