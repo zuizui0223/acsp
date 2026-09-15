@@ -16,16 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONTRACT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
 DEFAULT_FIELD_LOG_TEMPLATE = ROOT / "validation" / "cirsium_aza3_acsp_field_log_template_v1.csv"
 EXPECTED_UNITS = ["CIR02", "CIR06", "CIR12", "CIR13"]
-EXPECTED_NON_BIOLOGICAL_STATES = [
-    "ACCESS_FAILED",
-    "PERMISSION_BLOCKED",
-    "PHENOLOGY_NOT_EVALUABLE",
-    "SEARCH_INCOMPLETE_OTHER",
-]
-EXPECTED_RESOLVED_DENOMINATOR_STATES = [
-    "SEARCH_COMPLETED_DETECTED_VERIFIED",
-    "SEARCH_COMPLETED_NOT_DETECTED",
-]
+EXPECTED_NON_BIOLOGICAL_STATES = ["ACCESS_FAILED", "PERMISSION_BLOCKED", "PHENOLOGY_NOT_EVALUABLE", "SEARCH_INCOMPLETE_OTHER"]
+EXPECTED_RESOLVED_DENOMINATOR_STATES = ["SEARCH_COMPLETED_DETECTED_VERIFIED", "SEARCH_COMPLETED_NOT_DETECTED"]
+EXPECTED_EFFORT_METRIC = {
+    "identity": "PERSON_MINUTES_V1",
+    "unit": "person-minute",
+    "formula": "search_minutes * observer_count",
+}
+EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -44,10 +42,7 @@ def _field_log_header(path: Path) -> list[str]:
             raise ValueError("field log template is empty") from exc
 
 
-def validate_field_evaluation_contract(
-    contract_path: Path = DEFAULT_CONTRACT,
-    field_log_template: Path = DEFAULT_FIELD_LOG_TEMPLATE,
-) -> dict[str, Any]:
+def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, field_log_template: Path = DEFAULT_FIELD_LOG_TEMPLATE) -> dict[str, Any]:
     contract = _load_json(Path(contract_path))
     if contract.get("status") != "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING":
         raise ValueError("unexpected field evaluation contract status")
@@ -96,10 +91,25 @@ def validate_field_evaluation_contract(
         raise ValueError("matched field effort must be required for promotion")
     if effort.get("complete_visited_patch_detection_and_non_detection_logs_required") is not True:
         raise ValueError("complete visited-patch logs must be required")
-    if effort.get("numeric_effort_metric_frozen_now") is not False:
-        raise ValueError("numeric effort metric cannot be claimed frozen yet")
+    if effort.get("numeric_effort_metric_frozen_now") is not True:
+        raise ValueError("PERSON_MINUTES_V1 must remain frozen before outcomes")
+    if effort.get("numeric_effort_metric") != EXPECTED_EFFORT_METRIC:
+        raise ValueError("numeric effort metric changed from PERSON_MINUTES_V1")
     if effort.get("numeric_effort_schedule_frozen_now") is not False:
-        raise ValueError("numeric effort schedule cannot be claimed frozen yet")
+        raise ValueError("numeric effort schedule cannot be claimed frozen before candidate-specific allocation")
+
+    mechanics = contract.get("schedule_selection_mechanics") or {}
+    if mechanics.get("comparator_assignment_identity") != EXPECTED_ASSIGNMENT_IDENTITY:
+        raise ValueError("schedule comparator assignment changed from FROZEN_ORDER_PREFIX_V1")
+    for key in (
+        "candidate_membership_in_exact_frozen_arm_order_required",
+        "private_unit_receipt_hash_linkage_required",
+        "private_order_hash_linkage_required",
+    ):
+        if mechanics.get(key) is not True:
+            raise ValueError(f"schedule selection mechanic weakened: {key}")
+    if mechanics.get("post_outcome_candidate_substitution_allowed") is not False:
+        raise ValueError("post-outcome candidate substitution must remain forbidden")
 
     analysis = contract.get("analysis_unit_and_repeated_visits") or {}
     if analysis.get("primary_analysis_unit_frozen_now") is not False:
@@ -130,6 +140,8 @@ def validate_field_evaluation_contract(
         "cohort_unit_ids": EXPECTED_UNITS,
         "primary_success_state": endpoint["primary_success_state"],
         "resolved_binary_denominator_states": primary["resolved_binary_denominator_states"],
+        "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
+        "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
         "numeric_effort_schedule_frozen": False,
         "prospective_outcome_opening_allowed_now": False,
     }
