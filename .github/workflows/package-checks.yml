@@ -32,7 +32,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip build
           python -m pip install -e .
-          python -m pip install pyproj
+          python -m pip install pyproj pytest
       - name: Compile Python sources
         run: >-
           python -m py_compile
@@ -73,7 +73,7 @@ jobs:
       - name: Run survey-tool tests
         run: |
           python -m unittest discover -v
-          python -m unittest discover -s tests -p "test_*.py" -v
+          python -m pytest tests -v
       - name: Run research pipeline tests
         run: python -m unittest discover -s research -t research -v
       - name: Build Python wheel
@@ -84,12 +84,14 @@ jobs:
           .wheel-venv/bin/python -m pip install --upgrade pip
           .wheel-venv/bin/python -m pip install dist/*.whl
           pushd /tmp
+          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import sys; import acsp.global_cli; from acsp.global_country import _provider_inventory; assert len(_provider_inventory()[0]) == 249; assert not any(k.startswith('acsp.discovery') or k == 'research' or k.startswith('research.') for k in sys.modules); assert 'acsp.planning' not in sys.modules; print('standalone global command and pinned resources verified')"
           "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp.robust_patches; import acsp.validated_robust; import acsp.taxon_patches; import acsp.robust_cli; import acsp.cli; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
           popd
       - name: Verify packaged commands
         run: |
           acsp-fieldmap --help
           acsp-patches --help
+          acsp-global-patches --help
           acsp-recommend --help
           acsp-recommend recommend --help
           acsp-recommend zones --help

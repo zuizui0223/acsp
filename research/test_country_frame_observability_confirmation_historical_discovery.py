@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -10,6 +10,29 @@ import predeclare_country_frame_observability_confirmation_historical_discovery 
 
 
 class HistoricalDiscoveryBoundaryTests(unittest.TestCase):
+    def test_windows_path_matches_frozen_posix_identity_on_any_host(self) -> None:
+        class WindowsRelativePath(type(mod.EXPOSED_IDENTITY_PATH)):
+            def relative_to(self, *other):
+                return PureWindowsPath(super().relative_to(*other))
+
+        identity = WindowsRelativePath(mod.EXPOSED_IDENTITY_PATH)
+        self.assertIn("\\", str(identity.relative_to(mod.ROOT)))
+        with patch.object(mod, "EXPOSED_IDENTITY_PATH", identity):
+            bound, keys = mod.exposure_binding()
+        self.assertEqual(keys, {9775639})
+        self.assertEqual(bound["identity_file"], identity.relative_to(mod.ROOT).as_posix())
+
+    def test_different_identity_path_still_fails_closed(self) -> None:
+        with patch.object(mod, "EXPOSED_IDENTITY_PATH", mod.ROOT / "validation" / "not-frozen.csv"):
+            with self.assertRaisesRegex(ValueError, "exposure identity path drift"):
+                mod.exposure_binding()
+
+    def test_changed_identity_bytes_still_fail_hash_check(self) -> None:
+        changed = mod.EXPOSED_IDENTITY_PATH.read_bytes() + b"tampered"
+        with patch.object(type(mod.EXPOSED_IDENTITY_PATH), "read_bytes", return_value=changed):
+            with self.assertRaisesRegex(ValueError, "identity-only file SHA256 mismatch"):
+                mod.exposure_binding()
+
     def test_boundary_correction_is_frozen_and_bound_to_parent_protocol(self) -> None:
         corrected = mod.correction()
         self.assertEqual(
