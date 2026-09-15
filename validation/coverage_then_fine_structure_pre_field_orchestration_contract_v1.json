@@ -17,8 +17,11 @@
     "build_private_structural_candidate_frame",
     "derive_5km_coarse_coverage_cells_from_100m_grid",
     "freeze_scale_separated_and_comparator_orders",
-    "export_hash_only_public_freeze_receipt"
+    "export_hash_only_public_freeze_receipt",
+    "commit_and_pin_public_freeze_receipt",
+    "verify_committed_public_freeze_pin_before_outcome_opening"
   ],
+  "execution_entrypoint": "research/run_cirsium_fresh_sentinel_freeze_v1.py",
   "spatial_scales": {
     "fine_candidate_spacing_m": 100,
     "coarse_coverage_cell_size_m": 5000,
@@ -56,12 +59,21 @@
   "privacy_boundary": {
     "coordinate_bearing_outputs_public": false,
     "private_output_root_must_be_outside_repository": true,
-    "public_safe_freeze_object": "hash-only receipt after private execution"
+    "public_safe_freeze_object": "hash-only receipt after private execution",
+    "one_command_public_receipt_location": "validation/"
   },
   "public_freeze_gate": {
     "exporter": "research/export_cirsium_fresh_sentinel_public_freeze_receipt_v1.py",
-    "receipt_status": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
+    "single_execution_entrypoint": "research/run_cirsium_fresh_sentinel_freeze_v1.py",
+    "pin_verifier": "research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py",
+    "receipt_status_before_commit": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
+    "verified_status_after_commit": "PUBLIC_HASH_FREEZE_COMMITTED_AND_PINNED",
     "receipt_must_be_committed_and_pinned_before_outcome_opening": true,
+    "receipt_generation_alone_authorizes_outcome_opening": false,
+    "pin_verifier_requires_git_tracked_receipt": true,
+    "pin_verifier_requires_clean_receipt": true,
+    "pin_verifier_requires_head_bytes_equal_receipt": true,
+    "pin_verifier_requires_pin_commit_ancestor_of_head": true,
     "coordinate_or_private_paths_allowed_in_public_receipt": false,
     "prospective_outcome_opening_allowed_before_public_receipt_commit": false
   },
