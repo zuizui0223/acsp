@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Verify that the exact public fresh-SENTINEL hash receipt is committed and pinned.
+"""Verify that the exact public fresh-SENTINEL hash receipt is committed and immutable.
 
 Receipt generation is intentionally insufficient. This verifier is the only
 repository-side transition that may report the public pre-outcome provenance gate
-as satisfied. It requires a tracked, clean receipt whose bytes equal HEAD, records
-the commit that last changed that receipt, and verifies that pin commit is an
-ancestor of the current checkout.
+as satisfied. It requires a tracked, clean receipt whose bytes equal HEAD and,
+critically, whose current bytes still equal the bytes in the *first commit that
+added the receipt*. A later commit therefore cannot silently re-pin a modified
+receipt after outcomes are known.
 """
 from __future__ import annotations
 
@@ -62,6 +63,17 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("receipt bytes must not self-assert that their own commit was verified")
 
 
+def _first_add_commit(repo: Path, relative: str) -> str:
+    commits = [
+        line.strip()
+        for line in _git(repo, "log", "--diff-filter=A", "--format=%H", "--", relative).stdout.splitlines()
+        if line.strip()
+    ]
+    if not commits:
+        raise ValueError("could not identify the first commit that added the public receipt")
+    return commits[-1]
+
+
 def verify_public_freeze_pin(
     receipt_path: Path,
     *,
@@ -98,9 +110,10 @@ def verify_public_freeze_pin(
     if head_payload != payload:
         raise ValueError("working public receipt bytes do not equal the receipt stored at HEAD")
 
-    pin_commit = _git(repo, "log", "-n", "1", "--format=%H", "--", relative).stdout.strip()
-    if not pin_commit:
-        raise ValueError("could not identify a commit that pins the public receipt")
+    pin_commit = _first_add_commit(repo, relative)
+    initial_payload = _git(repo, "show", f"{pin_commit}:{relative}", text=False).stdout
+    if initial_payload != payload:
+        raise ValueError("public receipt bytes differ from the immutable first-add pin commit")
     if expected_pin_commit and pin_commit != str(expected_pin_commit).strip():
         raise ValueError("public receipt pin commit does not match the expected immutable commit")
     try:
@@ -114,6 +127,7 @@ def verify_public_freeze_pin(
         "receipt_repo_path": relative,
         "receipt_sha256": _sha256_bytes(payload),
         "pin_commit": pin_commit,
+        "pin_rule": "first commit adding the receipt; later byte changes are forbidden",
         "verified_head": head,
         "public_receipt_commit_verified": True,
         "prospective_field_outcomes_opened": False,
