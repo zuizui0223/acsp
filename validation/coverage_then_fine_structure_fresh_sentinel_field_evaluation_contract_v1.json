@@ -1,0 +1,104 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-field-evaluation-contract-v1",
+  "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
+  "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "source_basis": {
+    "prospective_contract": "research/CIRSIUM_AZA3_PROSPECTIVE_LOCAL_DISCOVERY.md",
+    "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
+    "fresh_method_freeze": "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json",
+    "note": "Endpoint states, minimum effort fields, and the requirement for matched field effort come from the existing prospective contract. Binary-denominator and unresolved-identity handling below are newly frozen methodological decisions made before prospective outcomes are opened."
+  },
+  "field_endpoint": {
+    "primary_success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
+    "resolved_completed_non_detection_state": "SEARCH_COMPLETED_NOT_DETECTED",
+    "identity_unresolved_state": "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED",
+    "non_biological_negative_states": [
+      "ACCESS_FAILED",
+      "PERMISSION_BLOCKED",
+      "PHENOLOGY_NOT_EVALUABLE",
+      "SEARCH_INCOMPLETE_OTHER"
+    ],
+    "tissue_collection_is_secondary": true,
+    "verified_occurrence_without_tissue_is_location_discovery_success": true
+  },
+  "newly_frozen_primary_binary_endpoint": {
+    "success_numerator": "count of SEARCH_COMPLETED_DETECTED_VERIFIED among analysis units admitted by the pre-outcome allocation schedule",
+    "resolved_binary_denominator_states": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED"
+    ],
+    "identity_unresolved_handling": "report separately; exclude from the resolved binary denominator until identity is resolved by the predeclared verification process; never recode as absence",
+    "non_biological_negative_handling": "report separately; exclude from the biological detection/non-detection denominator; never recode as absence",
+    "primary_between_arm_contrast": "difference in verified-current-occurrence success proportion between the frozen primary method and each frozen comparator, evaluated only under the pre-outcome matched-effort allocation schedule",
+    "favorable_subsetting_after_outcome": false,
+    "switching_primary_endpoint_after_outcome": false
+  },
+  "frozen_method_arms": {
+    "primary": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+    "coverage_only": "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
+    "fine_spatial_balance": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+    "nearest_known": "NOT_DEFINED_FOR_SENTINEL"
+  },
+  "effort_accounting": {
+    "minimum_required_fields": ["search_minutes", "observer_count"],
+    "record_when_defensibly_measured": ["traversed_length_m", "searched_area_m2"],
+    "matched_field_effort_required_for_between_arm_promotion": true,
+    "complete_visited_patch_detection_and_non_detection_logs_required": true,
+    "numeric_effort_metric_frozen_now": false,
+    "numeric_effort_schedule_frozen_now": false,
+    "reason_pending": "The repository has not yet frozen a numeric field-effort metric, visit allocation, or candidate-specific schedule for these four prospective units. Candidate identities themselves depend on the still-missing private range-sector geometry.",
+    "forbidden_inference": "Do not choose an effort metric, effort threshold, visit count, stopping rule, or favorable subset after field outcomes are opened."
+  },
+  "analysis_unit_and_repeated_visits": {
+    "field_log_row_semantics": "one logged search/visit record",
+    "primary_analysis_unit_frozen_now": false,
+    "repeated_visit_aggregation_frozen_now": false,
+    "required_next_gate": "Freeze the analysis unit, repeated-visit aggregation rule, comparator assignment, numeric effort metric, and candidate-specific visit/allocation schedule before opening prospective outcomes."
+  },
+  "field_log_schema_required_columns": [
+    "validation_unit_id",
+    "aza3_slot_id",
+    "species_binomial",
+    "acsp_patch_id",
+    "discovery_regime",
+    "method_arm",
+    "comparator_assignment",
+    "deidentified_locality_id",
+    "visit_date",
+    "phenology_status",
+    "access_evaluability_state",
+    "search_minutes",
+    "observer_count",
+    "traversed_length_m",
+    "searched_area_m2",
+    "field_outcome_state",
+    "focal_detection_count",
+    "identity_verification_status",
+    "identity_evidence_id",
+    "incomplete_search_reason",
+    "tissue_acquired_secondary",
+    "aza3_authorization_record_id",
+    "private_exact_site_record_id"
+  ],
+  "promotion_claim_ceiling": {
+    "allowed_after_all_pre_outcome_gates_and_complete_logs": "test whether the frozen structural-within-coverage order improves verified current-occurrence recovery relative to frozen comparators at matched field effort",
+    "not_authorized_by_this_contract": [
+      "optimal field days",
+      "optimal monetary budget",
+      "discoveries per hour as a validated product claim",
+      "automatic stopping threshold",
+      "structural support implies occupancy",
+      "access failure implies biological absence"
+    ]
+  },
+  "pre_outcome_gate_state": {
+    "static_evaluation_semantics_frozen": true,
+    "private_candidate_and_order_freeze_completed": false,
+    "public_candidate_order_hash_receipt_pinned": false,
+    "field_allocation_and_effort_schedule_frozen": false,
+    "field_allocation_and_effort_schedule_pinned": false,
+    "prospective_outcome_opening_allowed_now": false,
+    "next_gate": "After private candidate/order freeze and immutable public hash pin, freeze and publicly pin the actual field allocation/effort schedule before any outcome-opening workflow."
+  }
+}
