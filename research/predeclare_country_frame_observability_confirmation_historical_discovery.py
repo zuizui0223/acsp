@@ -96,7 +96,7 @@ def exposure_binding() -> tuple[dict[str, object], set[int]]:
         raise ValueError("quarantined run unexpectedly created an artifact")
     if payload["frozen_country_heldout_endpoint_opened"] is not False:
         raise ValueError("quarantined run opened the heldout endpoint")
-    if payload["identity_file"] != str(EXPOSED_IDENTITY_PATH.relative_to(ROOT)):
+    if payload["identity_file"] != EXPOSED_IDENTITY_PATH.relative_to(ROOT).as_posix():
         raise ValueError("exposure identity path drift")
 
     data = EXPOSED_IDENTITY_PATH.read_bytes()
