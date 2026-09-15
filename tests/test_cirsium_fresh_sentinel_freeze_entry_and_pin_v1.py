@@ -114,6 +114,15 @@ def _init_repo(repo: Path) -> None:
     _git(repo, "config", "user.name", "ACSP test")
 
 
+def _commit_initial_receipt(repo: Path) -> tuple[Path, str]:
+    receipt = repo / "validation" / "fresh-freeze.json"
+    receipt.parent.mkdir()
+    receipt.write_text(json.dumps(_public_receipt(), sort_keys=True) + "\n", encoding="utf-8")
+    _git(repo, "add", "validation/fresh-freeze.json")
+    _git(repo, "commit", "-m", "Pin public fresh sentinel freeze")
+    return receipt, _git(repo, "rev-parse", "HEAD")
+
+
 def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _init_repo(repo)
@@ -130,6 +139,7 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
     verified = verify_public_freeze_pin(receipt, repo_root=repo, expected_pin_commit=pin)
     assert verified["status"] == VERIFIED_STATUS
     assert verified["pin_commit"] == pin
+    assert verified["pin_rule"].startswith("first commit")
     assert verified["outcome_opening_gate_satisfied"] is True
     assert verified["prospective_field_outcomes_opened"] is False
 
@@ -144,11 +154,20 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
 def test_pin_verifier_rejects_uncommitted_receipt_change(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _init_repo(repo)
-    receipt = repo / "validation" / "fresh-freeze.json"
-    receipt.parent.mkdir()
-    receipt.write_text(json.dumps(_public_receipt(), sort_keys=True) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/fresh-freeze.json")
-    _git(repo, "commit", "-m", "Pin receipt")
+    receipt, _ = _commit_initial_receipt(repo)
     receipt.write_text(json.dumps({**_public_receipt(), "tampered": True}, sort_keys=True) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="uncommitted"):
         verify_public_freeze_pin(receipt, repo_root=repo)
+
+
+def test_pin_verifier_rejects_clean_but_recommitted_receipt_change(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    receipt, original_pin = _commit_initial_receipt(repo)
+    receipt.write_text(json.dumps({**_public_receipt(), "tampered_after_pin": True}, sort_keys=True) + "\n", encoding="utf-8")
+    _git(repo, "add", "validation/fresh-freeze.json")
+    _git(repo, "commit", "-m", "Attempt to re-pin changed receipt")
+    with pytest.raises(ValueError, match="first-add"):
+        verify_public_freeze_pin(receipt, repo_root=repo)
+    with pytest.raises(ValueError):
+        verify_public_freeze_pin(receipt, repo_root=repo, expected_pin_commit=original_pin)
