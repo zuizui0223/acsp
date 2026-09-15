@@ -1,5 +1,41 @@
 # AI Change Log
 
+## 2026-09-15 - Codex (OpenAI) - Species-name global candidate-patch command
+
+Changed files:
+- acsp/global_cli.py
+- acsp/global_geometry.py
+- acsp/global_inputs.py
+- acsp/global_lattice.py
+- acsp/global_patches.py
+- tests/test_global_product.py
+- pyproject.toml
+- .github/workflows/package-checks.yml
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- RESEARCH_POSITIONING.md
+- CHANGELOG_AI.md
+
+Summary:
+- Connect the historical country planner to the existing pinned country geometry, complete regional lattice, terrain inputs and fixed robust patch core through acsp-global-patches.
+- Preserve the research function bodies and verify exact lattice/terrain/patch parity. Reject malformed occurrence transport before the unchanged scientific input body; do not classify malformed responses as empty evidence.
+- Record country planning, progress, output hash and scientific scope. Distinguish normal empty output, insufficient usable evidence and technical failures. Refuse existing output directories.
+- Keep global and explicit-country validation labels separate from the Japanese confirmation label.
+
+Features preserved:
+- Japan entry points and patch membership, legacy app functions, every frozen research artifact, provider pinning, historical-only inputs, complete geometry-selected lattice, fixed 2.5% rule and all prior failures/claim ceilings.
+
+Known risks / TODO:
+- One eligible country is selected, not all countries worldwide. Arbitrary explicit-country applications are not independently confirmed.
+- Large-country time/memory performance is not yet verified for this command. No tile omission or density reduction is allowed. Live provider changes can alter operational outputs.
+- Local installed-wheel checks reuse installed dependencies; truly isolated wheel tests run in Linux CI. CI integration remains pending at submission.
+
+Validation:
+- Focused parity and failure-state tests cover nonempty patches, normal empty output, explicit-country labels, malformed transport, abstention and no-overwrite behavior.
+- Research regression: 250 cases passed. Product tests/: 292 cases passed, including 11 global adapter tests.
+- Live explicit SG / Ficus microcarpa execution completed: 6 historical rows, 2 tiles / 1600 geometry points, 1575 complete terrain points, 6 prototypes, ROBUST_EMPTY / 0 patches. CSV row count and SHA-256 match summary. This was an operational smoke, not a new scientific confirmation.
+- Wheel build and outside-checkout import/help checks passed; compile and whitespace checks passed.
+
 ## 2026-09-15 - Codex (OpenAI) - Species-name historical country planning entry
 
 Changed files:

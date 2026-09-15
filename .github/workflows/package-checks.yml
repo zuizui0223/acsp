@@ -45,6 +45,11 @@ jobs:
           acsp/cli.py
           acsp/robust_cli.py
           acsp/taxon_patches.py
+          acsp/global_cli.py
+          acsp/global_geometry.py
+          acsp/global_inputs.py
+          acsp/global_lattice.py
+          acsp/global_patches.py
           acsp/comparator_benchmark.py
           acsp/comparator_export.py
           acsp/coverage.py
@@ -84,6 +89,7 @@ jobs:
           .wheel-venv/bin/python -m pip install --upgrade pip
           .wheel-venv/bin/python -m pip install dist/*.whl
           pushd /tmp
+          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import sys; import acsp.global_cli; import acsp.global_geometry; import acsp.global_inputs; from acsp.global_lattice import POINTS_PER_REGIONAL_TILE; from acsp.global_patches import METHOD_FINGERPRINT; assert POINTS_PER_REGIONAL_TILE == 800; assert METHOD_FINGERPRINT == '7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9'; assert not any(k == 'research' or k.startswith('research.') for k in sys.modules); print('global adapter installed without research checkout')"
           "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "from acsp.discovery.country_entry import _provider_inventory; mapping, supported = _provider_inventory(); assert len(mapping) == 249 and 'JP' in supported; print('installed country-planning resources verified without a research checkout')"
           "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp.robust_patches; import acsp.validated_robust; import acsp.taxon_patches; import acsp.robust_cli; import acsp.cli; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
           popd
@@ -91,6 +97,7 @@ jobs:
         run: |
           acsp-fieldmap --help
           acsp-patches --help
+          acsp-global-patches --help
           acsp-discovery plan-country --help
           acsp-recommend --help
           acsp-recommend recommend --help
