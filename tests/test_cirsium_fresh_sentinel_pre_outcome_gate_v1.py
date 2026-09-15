@@ -59,10 +59,10 @@ def _candidate_receipt() -> dict:
     }
 
 
-def _schedule_receipt(candidate: Path, evaluation: Path) -> dict:
+def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_override: str = "") -> dict:
     return {
         "status": "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_READY_FOR_COMMIT",
-        "candidate_order_public_receipt_sha256": _sha256(candidate),
+        "candidate_order_public_receipt_sha256": candidate_hash_override or _sha256(candidate),
         "field_evaluation_contract_sha256": _sha256(evaluation),
         "method_arms": [
             "COVERAGE_THEN_FINE_STRUCTURE_V1",
@@ -82,7 +82,11 @@ def _schedule_receipt(candidate: Path, evaluation: Path) -> dict:
     }
 
 
-def _prepare_repo(tmp_path: Path) -> tuple[Path, Path, Path, Path, str, str]:
+def _prepare_repo(
+    tmp_path: Path,
+    *,
+    candidate_hash_override: str = "",
+) -> tuple[Path, Path, Path, Path, Path, str, str]:
     repo = tmp_path / "repo"
     _init_repo(repo)
     evaluation = repo / "validation" / "coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
@@ -100,7 +104,7 @@ def _prepare_repo(tmp_path: Path) -> tuple[Path, Path, Path, Path, str, str]:
     candidate_pin = _git(repo, "rev-parse", "HEAD")
 
     schedule = repo / "validation" / "field-schedule-receipt.json"
-    _write(schedule, _schedule_receipt(candidate, evaluation))
+    _write(schedule, _schedule_receipt(candidate, evaluation, candidate_hash_override=candidate_hash_override))
     _git(repo, "add", "validation/field-schedule-receipt.json")
     _git(repo, "commit", "-m", "Pin field schedule receipt")
     schedule_pin = _git(repo, "rev-parse", "HEAD")
@@ -142,14 +146,14 @@ def test_candidate_pin_alone_cannot_authorize_outcome_opening(tmp_path: Path) ->
         verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
 
 
-def test_wrong_candidate_hash_linkage_is_rejected(tmp_path: Path) -> None:
-    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
-    value = json.loads(schedule.read_text())
-    value["candidate_order_public_receipt_sha256"] = "0" * 64
-    schedule.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/field-schedule-receipt.json")
-    _git(repo, "commit", "-m", "Create bad linked schedule in negative test")
-    with pytest.raises(ValueError, match="first-add"):
+def test_initially_pinned_wrong_candidate_hash_linkage_is_rejected(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, schedule_pin = _prepare_repo(
+        tmp_path,
+        candidate_hash_override="0" * 64,
+    )
+    schedule_result = verify_public_field_schedule_pin(schedule, repo_root=repo, expected_pin_commit=schedule_pin)
+    assert schedule_result["field_schedule_pin_gate_satisfied"] is True
+    with pytest.raises(ValueError, match="exact immutable candidate/order receipt"):
         verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
 
 
