@@ -2,8 +2,9 @@
 """Verify a private field schedule against the exact frozen private candidate orders.
 
 This verifier reads only pre-outcome private artifacts. It proves that every
-scheduled private_candidate_ref exists in the correct frozen arm order and that
-the selected unique candidates form a no-skip prefix of that exact order.
+scheduled private_candidate_ref exists in the correct frozen arm order, selected
+unique candidates form a no-skip prefix, and the preregistered person-minute
+effort values are computed from the required search-minute and observer-count fields.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,11 @@ EXPECTED_CANDIDATE_STATUS = "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT"
 EXPECTED_PRIVATE_TOP_STATUS = "ALL_FOUR_PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
 EXPECTED_PRIVATE_UNIT_STATUS = "PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
 EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
+EXPECTED_EFFORT_METRIC = {
+    "identity": "PERSON_MINUTES_V1",
+    "unit": "person-minute",
+    "formula": "search_minutes * observer_count",
+}
 ARM_TO_ORDER = {
     "COVERAGE_THEN_FINE_STRUCTURE_V1": "coverage_then_fine_structure",
     "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1": "coverage_only",
@@ -100,6 +107,8 @@ def validate_private_schedule_membership(
     schedule = _load_json(schedule_path)
     if schedule.get("comparator_assignment_identity") != EXPECTED_ASSIGNMENT_IDENTITY:
         raise ValueError("comparator assignment must use the frozen no-skip order-prefix identity")
+    if schedule.get("numeric_effort_metric") != EXPECTED_EFFORT_METRIC:
+        raise ValueError("numeric effort metric must remain PERSON_MINUTES_V1 = search_minutes * observer_count")
 
     candidate = _load_json(candidate_receipt_path)
     if candidate.get("status") != EXPECTED_CANDIDATE_STATUS:
@@ -168,9 +177,7 @@ def validate_private_schedule_membership(
     if not isinstance(assignments, list) or not assignments:
         raise ValueError("private field schedule must contain assignments")
 
-    selected: dict[str, dict[str, list[str]]] = {
-        unit: {arm: [] for arm in ARM_TO_ORDER} for unit in EXPECTED_UNITS
-    }
+    selected: dict[str, dict[str, list[str]]] = {unit: {arm: [] for arm in ARM_TO_ORDER} for unit in EXPECTED_UNITS}
     for index, row in enumerate(assignments):
         if not isinstance(row, dict):
             raise ValueError(f"assignment {index} must be an object")
@@ -181,6 +188,17 @@ def validate_private_schedule_membership(
             raise ValueError(f"assignment {index} has invalid unit/arm/candidate reference")
         if candidate_ref not in set(ordered_ids[unit][arm]):
             raise ValueError(f"assignment {index} candidate is not present in the exact frozen order for {unit}/{arm}")
+        try:
+            minutes = float(row.get("planned_search_minutes"))
+            observers = int(row.get("planned_observer_count"))
+            declared_effort = float(row.get("planned_effort_value"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"assignment {index} has malformed planned effort fields") from exc
+        expected_effort = minutes * observers
+        if not all(math.isfinite(value) for value in (minutes, declared_effort, expected_effort)) or minutes <= 0 or observers <= 0:
+            raise ValueError(f"assignment {index} has invalid planned person-minute inputs")
+        if not math.isclose(declared_effort, expected_effort, rel_tol=1e-9, abs_tol=1e-9):
+            raise ValueError(f"assignment {index} planned_effort_value is not search_minutes * observer_count")
         if candidate_ref not in selected[unit][arm]:
             selected[unit][arm].append(candidate_ref)
 
@@ -197,6 +215,8 @@ def validate_private_schedule_membership(
         "status": "PRIVATE_FIELD_SCHEDULE_MEMBERSHIP_AND_PREFIX_VALID",
         "cohort_unit_ids": list(EXPECTED_UNITS),
         "private_pre_field_top_receipt_sha256": _sha256(top_path),
+        "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
+        "numeric_effort_metric_verified": True,
         "private_candidate_membership_verified": True,
         "private_pre_field_receipt_hash_linkage_verified": True,
         "frozen_order_hash_linkage_verified": True,
