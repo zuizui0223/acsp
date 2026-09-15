@@ -31,6 +31,7 @@ dependencies = [
 acsp-fieldmap = "acsp.app:main"
 acsp-recommend = "acsp.cli:main"
 acsp-patches = "acsp.robust_cli:main"
+acsp-global-patches = "acsp.global_cli:main"
 acsp-operate = "acsp.operational_cli:main"
 acsp-field-plan = "acsp.field_plan_cli:main"
 
@@ -50,3 +51,6 @@ py-modules = ["acsp_discover", "gbif_fieldmap_builder_app"]
 
 [tool.setuptools.packages.find]
 include = ["acsp*"]
+
+[tool.setuptools.package-data]
+acsp = ["data/*.json"]

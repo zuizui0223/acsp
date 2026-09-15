@@ -1,5 +1,37 @@
 # AI Change Log
 
+## 2026-09-15 - Codex (OpenAI) - Standalone global product release candidate
+
+Changed files:
+- acsp/global_cli.py, acsp/global_country.py, acsp/global_country_frames.py, acsp/global_gbif.py
+- acsp/global_geometry.py, acsp/global_inputs.py, acsp/global_lattice.py, acsp/global_patches.py
+- acsp/data/acsp_geoboundaries_v6_adm0_coverage_v1.json, acsp/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
+- tests/test_global_country.py, tests/test_global_country_frames.py, tests/test_global_product.py, tests/test_global_release.py
+- validation/acsp_global_release_port_manifest_v1.json
+- validation/acsp_global_availability_parity_confirmation_result_v2.json, validation/acsp_global_availability_parity_heldout_results_v2.csv
+- research/predeclare_country_frame_observability_confirmation_historical_discovery.py
+- research/test_country_frame_observability_confirmation_historical_discovery.py, research/test_geographic_framing_confirmation_v1.py
+- pyproject.toml, .github/workflows/package-checks.yml
+- README.md, VALIDATED_PRODUCT_CONTRACT.md, RESEARCH_POSITIONING.md, docs/GLOBAL_RELEASE_PROVENANCE.md, CHANGELOG_AI.md
+
+Summary:
+- Extract only the global species-name command from tested integration 0357b7e onto main, without experimental discovery or its research execution workflows.
+- Verify 41 extracted function/class definitions; changes are module/resource paths and retaining only the two needed GBIF functions. Preserve complete lattice, country planning and robust mechanics.
+- Record source/release hashes, copy canonical result provenance and link the full frozen research tree and prior failures.
+- Reuse only the verified PR210 Windows path serialization fix after reproducing four existing Windows research failures.
+
+Features preserved:
+- All main functionality and Japanese patch membership; scientific constants, no-ranking/no-planner rules, explicit country no-substitution and distinct empty/abstention/technical-failure states.
+
+Known risks / TODO:
+- Large-country performance remains unverified. Copied results are provenance, not a full scientific replay bundle. Immutable links retain complete research dependencies and earlier failures.
+- Main release CI must pass before merge. Draft PR184 remains separate.
+
+Validation:
+- 40 tests/ cases passed, including offline country/patch checks and source-hash/import isolation gates. Root unittest discovery and wheel build passed.
+- All 221 main research regression cases passed after the exact PR210 repair. App/new modules compile. CI runs pytest to include function-style tests as well as unittest cases.
+- Standalone installed wheel live automatic Ficus microcarpa run selected TW and produced 85 patches; output CSV was byte-identical to the development wheel run. This is operational parity, not new scientific confirmation.
+
 ## 2026-08-31 - Codex (OpenAI) - Make submission alignment guard executable in ordinary CI
 
 Changed files:

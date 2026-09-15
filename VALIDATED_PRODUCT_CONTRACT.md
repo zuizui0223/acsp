@@ -37,6 +37,16 @@ The independently confirmed core keeps these values fixed:
 
 Changing these values is a new scientific experiment and must not be described as the already validated product.
 
+## Confirmed automatic global adapter
+
+`acsp-global-patches --taxon NAME --out-dir NEW` connects historical-only country planning to pinned geoBoundaries geometry, a complete 2-degree regional lattice with 800 points per intersecting tile, historical terrain prototypes and the unchanged fixed 2.5% robust patch rule. It needs no experimental discovery package or research checkout.
+
+The separate [canonical confirmation v2 result](validation/acsp_global_availability_parity_confirmation_result_v2.json) passed six preregistered gates on 48 fresh taxa: 44/48 constructible (including one valid empty set), 35/44 conditionally evaluable, conditional mean robust-minus-random lift +0.0986218 with 95% taxon-bootstrap CI [+0.0385639, +0.1625447]. Evaluability is conditional on constructibility, not 35/48 availability. The evaluable empty set contributes zero lift.
+
+The identity frame was the pooled species registry of the 12 Japanese discovery regions, excluding consumed taxa. This does not validate arbitrary worldwide species, equal accuracy between Japan and global cohorts, or arbitrary explicit-country applications. Explicit target countries must never be substituted. Japan's 96-pair / 480-fold confirmation remains separate and unchanged.
+
+Port parity and live operational runs are software evidence, not new scientific confirmation. Earlier country-framed failures, provider aborts and experimental LOCAL/DETACHED/SENTINEL results retain their original status; see [immutable provenance](docs/GLOBAL_RELEASE_PROVENANCE.md). No occupancy, field efficiency or structural selector promotion follows from this release. Large-country performance is unverified for the single-command implementation.
+
 ## What is outside the validated core
 
 The following may remain available as software, compatibility, exploratory, or operational layers, but they are not part of the independently validated candidate-patch claim unless separately validated:

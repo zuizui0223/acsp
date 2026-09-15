@@ -6,6 +6,20 @@ The validated product reconstructs a robust, occurrence-conditioned environmenta
 
 It does **not** ask the user to choose a survey budget, number of sites, route, travel mode, or field days. It does **not** claim occupancy probability or an exact occupied location.
 
+## Global species-name entry
+
+```bash
+acsp-global-patches --taxon "Ficus microcarpa" --out-dir new-global-run
+```
+
+This selects **one eligible country** from historical evidence and fixed provider coverage, retrieves pinned country geometry, builds the complete regional terrain lattice and returns non-ranked candidate patches. It does not scan every country worldwide. Optional `--country SG` fixes the target without substitution; arbitrary explicit-country applications are not independently confirmed.
+
+The new directory records `country_plan.json`, `progress.json`, `candidate_patches.csv` and `summary.json` as their stages complete. Existing directories are refused. Exit 0 means normal output (including `ROBUST_EMPTY`); exit 2 means no ready country or insufficient usable evidence; exit 1 means a technical failure with a receipt, not biological absence. Large-country time and memory requirements remain unverified; no tiles are silently omitted.
+
+The automatic adapter passed a separate bounded confirmation: 44/48 taxa constructible and 35/44 conditionally evaluable. This does not validate every species/country or establish occupancy or field efficiency. See the [global release provenance](docs/GLOBAL_RELEASE_PROVENANCE.md) and [product contract](VALIDATED_PRODUCT_CONTRACT.md#confirmed-automatic-global-adapter).
+
+The Japan command below is unchanged. Experimental LOCAL/DETACHED discovery remains outside this release.
+
 ## Simplest use
 
 For the validated Japanese domain, the user now supplies only a scientific species name:

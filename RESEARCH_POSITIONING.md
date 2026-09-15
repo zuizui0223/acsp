@@ -16,6 +16,8 @@ The current validated core is:
 - bounded candidate patches with no priority ranking;
 - 96 taxon-region pairs / 480 folds as the independently confirmed frame.
 
+The separate automatic global adapter and its bounded conditional confirmation are defined in `VALIDATED_PRODUCT_CONTRACT.md`. The species-name command does not change the Japanese result or promote experimental structural discovery; full provenance and earlier failures are linked in `docs/GLOBAL_RELEASE_PROVENANCE.md`.
+
 `Campanula microdonta` remains development and freeze-regression evidence, not an untouched cross-taxon confirmation cohort.
 
 This document defines the broader scientific purpose, novelty, intended users, historical hypotheses, and future validation strategy of ACSP.
