@@ -16,6 +16,8 @@ The current validated core is:
 - bounded candidate patches with no priority ranking;
 - 96 taxon-region pairs / 480 folds as the independently confirmed frame.
 
+The later automatic provider/evidence-aware global adapter passed a separate fresh 48-taxon confirmation: 44/48 constructible, 35/44 conditionally evaluable, and conditional mean lift +0.0986218 (95% CI [+0.0385639, +0.1625447]). Its scope and staged implementation are defined in the [product contract](VALIDATED_PRODUCT_CONTRACT.md#confirmed-automatic-global-adapter-boundary). Earlier transfer failures remain authoritative for their own methods. LOCAL/DETACHED structural discovery still requires separate confirmation.
+
 `Campanula microdonta` remains development and freeze-regression evidence, not an untouched cross-taxon confirmation cohort.
 
 This document defines the broader scientific purpose, novelty, intended users, historical hypotheses, and future validation strategy of ACSP.

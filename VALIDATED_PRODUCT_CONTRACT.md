@@ -37,6 +37,20 @@ The independently confirmed core keeps these values fixed:
 
 Changing these values is a new scientific experiment and must not be described as the already validated product.
 
+## Confirmed automatic global adapter boundary
+
+The separate [availability-parity confirmation v2](validation/acsp_global_availability_parity_confirmation_v2.json) passed its six preregistered gates on 48 fresh taxa. Its [canonical result](validation/acsp_global_availability_parity_confirmation_result_v2.json) promotes only automatic provider/evidence-aware historical-country framing plus the frozen robust core under the tested adapter.
+
+- Country selection uses 1900–2020 historical counts and pinned provider coverage before candidates or heldout outcomes.
+- Robust construction succeeded for 44/48 taxa, including one valid empty patch set.
+- Retrospective evaluability was 35/44 **conditional on constructibility**; conditional mean lift over random was +0.0986218 with taxon-bootstrap 95% CI [+0.0385639, +0.1625447]. The evaluable empty patch set contributes zero lift.
+- The identity frame was the pooled species registry of the 12 Japanese discovery regions, with prior consumed identities excluded. This does not validate arbitrary worldwide species or establish equal absolute accuracy between Japan and global cohorts.
+- Explicit user-target countries must never be silently replaced by another country. This automatic-country confirmation does not separately validate arbitrary explicit-country searches.
+
+The original 96-pair / 480-fold Japanese confirmation remains a separate result. Earlier country-framed failures and provider aborts retain their original decisions and denominators. LOCAL/DETACHED/SENTINEL structural ranking, field efficiency and occupancy claims are outside this promotion.
+
+**Implementation status:** `acsp-patches --taxon` still runs the Japanese 12-region adapter. `acsp.discovery.country_frames` provides historical country planning; the confirmed end-to-end global procedure is implemented by the staged research pipeline. A species-only global command has not yet been integrated. `acsp-discovery` remains an experimental exploration entry point.
+
 ## What is outside the validated core
 
 The following may remain available as software, compatibility, exploratory, or operational layers, but they are not part of the independently validated candidate-patch claim unless separately validated:

@@ -6,6 +6,17 @@ The validated product reconstructs a robust, occurrence-conditioned environmenta
 
 It does **not** ask the user to choose a survey budget, number of sites, route, travel mode, or field days. It does **not** claim occupancy probability or an exact occupied location.
 
+## Product entry points
+
+| Need | Entry point | Evidence and availability |
+| --- | --- | --- |
+| Candidate patches from a species name in Japan | `acsp-patches --taxon ...` | Validated 12-region path; CSV patches and summary JSON |
+| Candidate patches in a user-specified rectangle | `acsp-patches --taxon ... --extent ...` | Same rule applied to a custom domain; no separate validation for that rectangle |
+| Automatic historical-country framing outside Japan | `acsp.discovery.country_frames` and the frozen global research pipeline | Tested adapter passed a separate fresh 48-taxon confirmation; no species-only global CLI yet |
+| Source-backed LOCAL / DETACHED / SENTINEL exploration | `acsp-discovery` | Experimental; see the [discovery quick start](docs/DISCOVERY_QUICKSTART.md) |
+
+The global adapter's scientific confirmation and its integration into a simple user-facing command are separate milestones. `acsp-patches --taxon` still scans Japan, and `acsp-discovery fetch-gbif --country` only fetches occurrence evidence.
+
 ## Simplest use
 
 For the validated Japanese domain, the user now supplies only a scientific species name:
@@ -81,7 +92,7 @@ The confirmation passed every predeclared gate without post-outcome retuning. Th
 
 This does not establish occupancy probability, calibrated suitability probability, exact-site precision, route efficiency, budget optimality, or universal optimality of 2.5% outside this ACSP candidate-generation contract.
 
-### Country-framed extension status
+### Earlier country-framed experiments
 
 A separate country-framed regional-lattice extension was developed to test whether the same frozen candidate-patch rule could be carried beyond the validated Japanese regional frame. Its development cohort was favorable, but the preregistered reserved 24-taxon replication did **not** pass all seven gates.
 
@@ -91,11 +102,21 @@ A completely fresh, disjoint **48-taxon** confirmation was then frozen before id
 
 The secondary heterogeneity hypothesis generated after the reserved replication did not reproduce: plant lift SD was **0.22460**, animal lift SD was **0.27292**, and the plant/animal SD ratio was **0.823** with bootstrap 95% CI **[0.340, 1.242]**. This secondary result was explicitly unable to change the primary promotion decision.
 
-Therefore the country-framed/global extension remains **development evidence, not a validated global candidate-generation product**. The repeated positive lift among evaluable taxa is not enough to override the preregistered generality/evaluability gates. No country-framed or global claim should replace the validated Japanese-domain claim above.
+These earlier country-framed methods remain **development evidence**. Their positive lift among evaluable taxa does not override their failed preregistered gates. The later automatic adapter below has its own protocol, cohort and conditional estimand; it does not revise either earlier result.
 
 The reserved-replication result is preserved in `validation/acsp_country_framed_robust_integration_development_v2_replication_result_v1.json`. The fresh confirmation is preserved in `validation/acsp_country_framed_fresh_heterogeneity_confirmation_result_v1.json`, with its 48-taxon compact audit in `validation/acsp_country_framed_fresh_heterogeneity_confirmation_taxon_audit_v1.csv`. Post-outcome diagnostics remain descriptive only and are not eligibility rules or retuned science.
 
-### Publication closure and development hard stop
+### Confirmed automatic global adapter
+
+A later, disjoint 48-taxon confirmation tested automatic selection of a provider-supported country using historical evidence, followed by the frozen robust core. All six preregistered gates passed: **44/48** taxa were robust-constructible and **35/44** were retrospectively evaluable. Conditional mean lift was **+0.09862**, with 95% CI **[+0.03856, +0.16254]**; plant and animal means were positive.
+
+The evaluability denominator is **44 constructible taxa**, and the effect is conditional on **35 evaluable taxa** (including one valid empty output at zero lift). It is not the earlier 34/48 evaluability test. Identities were drawn from Japanese discovery-region records; this does not establish performance for arbitrary worldwide taxa, equal Japan/global accuracy, exact occupancy, or field efficiency. Explicit user-target countries retain no-substitution behavior.
+
+Authoritative result: [automatic adapter confirmation v2](validation/acsp_global_availability_parity_confirmation_result_v2.json). The [product contract](VALIDATED_PRODUCT_CONTRACT.md#confirmed-automatic-global-adapter-boundary) defines its scope. The end-to-end implementation is currently a staged research pipeline; integrating that exact procedure into a simple global command remains product work.
+
+### Earlier publication closure and development hard stop
+
+This closure records the earlier Japanese-product manuscript and provider activation. The later automatic-adapter study above is separate evidence and does not rewrite those frozen paper results.
 
 The later provider-eligible observability first activation terminated at the historical provider gate as supply `protocol_abort`, hypothesis `unavailable`, and promotion `not_promoted`. The 2021–2025 heldout data remained unopened. This is an evaluability boundary, not a null or adverse global result, and it does not alter the validated Japanese product.
 
@@ -183,4 +204,4 @@ No route, field-day, travel-mode, or budget optimizer belongs in the validated c
 
 ## Status
 
-**Alpha (0.1.0).** The robust candidate-patch rule has passed independent cross-taxon confirmation at the 10 km screening scale in the validated Japanese regional domain. The country-framed extension failed both its reserved replication and a completely fresh 48-taxon confirmation and remains development-only. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.
+**Alpha (0.1.0).** The Japanese 12-region candidate-patch command is independently validated at the 10 km screening scale. The later automatic global adapter passed its separate conditional confirmation and remains available through staged research execution. Earlier country-framed failures are retained. LOCAL/DETACHED structural discovery remains experimental. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.

@@ -72,6 +72,6 @@ jobs:
           assert VALIDATED_ROBUST_STATUS == 'untouched_confirmation_passed'
           import acsp.discovery as discovery
           assert discovery.DISCOVERY_VALIDATION_STATUS == 'experimental_not_independently_validated'
-          assert discovery.DISCOVERY_API_VERSION == '0.7.0-development'
+          assert discovery.DISCOVERY_API_VERSION == '0.8.0-development'
           assert 'acsp.planning' not in sys.modules
           PY

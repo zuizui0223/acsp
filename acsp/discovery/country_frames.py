@@ -176,15 +176,15 @@ def plan_explicit_target_country(
     target = str(target_country_code).strip().upper()
     if not target:
         raise ValueError("target_country_code is required")
+    supported = {str(code).strip().upper() for code in provider_supported_country_codes if str(code).strip()}
     candidates = rank_historical_country_frames(
         country_counts,
-        provider_supported_country_codes=provider_supported_country_codes,
+        provider_supported_country_codes=supported,
         historical_min_count=historical_min_count,
         tie_break_seed=tie_break_seed,
     )
     lookup = {candidate.country_code: candidate for candidate in candidates}
     candidate = lookup.get(target)
-    supported = {str(code).strip().upper() for code in provider_supported_country_codes if str(code).strip()}
     if candidate is None:
         state = CountryFrameState.INSUFFICIENT_HISTORICAL_EVIDENCE if target in supported else CountryFrameState.PROVIDER_UNSUPPORTED
     else:
