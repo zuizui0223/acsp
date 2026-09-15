@@ -6,7 +6,10 @@ on:
       - "acsp/discovery/scale_separated.py"
       - "acsp/discovery/__init__.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
+      - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -26,13 +29,18 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Run scale-separated mechanics tests
-        run: pytest -q tests/test_coverage_then_fine_structure_v1.py
+      - name: Run scale-separated mechanics and fresh-cohort guards
+        run: |
+          pytest -q \
+            tests/test_coverage_then_fine_structure_v1.py \
+            tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py
       - name: Guard frozen architecture boundary
         run: |
           python - <<'PY'
+          import csv
           import json
           from pathlib import Path
+
           p = json.loads(Path('validation/coverage_then_fine_structure_architecture_v1.json').read_text())
           assert p['status'] == 'FROZEN_BEFORE_FRESH_EVALUATION'
           assert p['global_order']['method_identity'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
@@ -42,4 +50,20 @@ jobs:
           assert p['role_separation']['cross_cell_structural_score_comparison'] is False
           assert p['fresh_evaluation_requirements']['fresh_or_disjoint_outcomes_required'] is True
           assert p['fresh_evaluation_requirements']['consumed_cirsium_12_folds_may_be_used_for_promotion'] is False
+
+          f = json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json').read_text())
+          assert f['status'] == 'FROZEN_PRE_FIELD_OUTCOME_SOURCE_BLOCKED'
+          assert f['method_identity'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
+          assert f['selection_rule']['selected_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert f['execution_blocker']['current'] is True
+          assert f['frozen_method_boundary']['fine_candidate_spacing_m'] == 100
+          assert f['frozen_method_boundary']['coarse_coverage_cell_size_m'] == 5000
+          assert f['frozen_method_boundary']['coverage_structure_weight'] is None
+          assert f['frozen_method_boundary']['known_point_kernel_for_sentinel'] is False
+
+          with Path('validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv').open(newline='', encoding='utf-8') as handle:
+              rows = list(csv.DictReader(handle))
+          assert [row['cohort_unit_id'] for row in rows] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert all(row['outcome_opened'].lower() == 'false' for row in rows)
+          assert all(row['execution_status'] == 'BLOCKED_PRIVATE_SOURCE_FREEZE' for row in rows)
           PY
