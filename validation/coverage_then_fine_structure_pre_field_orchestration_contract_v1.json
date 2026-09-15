@@ -76,14 +76,16 @@
     "validator": "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py",
     "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
     "primary_success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
-    "resolved_binary_denominator_states": [
-      "SEARCH_COMPLETED_DETECTED_VERIFIED",
-      "SEARCH_COMPLETED_NOT_DETECTED"
-    ],
+    "resolved_binary_denominator_states": ["SEARCH_COMPLETED_DETECTED_VERIFIED", "SEARCH_COMPLETED_NOT_DETECTED"],
     "identity_unresolved_recode_as_absence_allowed": false,
     "access_permission_phenology_incomplete_recode_as_absence_allowed": false,
     "matched_field_effort_required_for_promotion": true,
-    "numeric_effort_metric_frozen": false,
+    "numeric_effort_metric_frozen": true,
+    "numeric_effort_metric": {
+      "identity": "PERSON_MINUTES_V1",
+      "unit": "person-minute",
+      "formula": "search_minutes * observer_count"
+    },
     "numeric_effort_schedule_frozen": false,
     "prospective_outcome_opening_allowed_while_schedule_pending": false
   },
@@ -118,19 +120,19 @@
     "must_be_publicly_pinned_before_outcome_opening": true,
     "private_instantiated_schedule_must_remain_outside_repository": true,
     "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+    "numeric_effort_metric_identity": "PERSON_MINUTES_V1",
     "candidate_refs_must_exist_in_exact_frozen_arm_order": true,
     "private_unit_receipt_hash_must_match_public_candidate_receipt": true,
     "private_order_hash_must_match_public_candidate_receipt": true,
     "scheduled_unique_candidates_must_form_no_skip_frozen_order_prefix": true,
+    "planned_effort_value_must_equal_search_minutes_times_observer_count": true,
     "public_schedule_receipt_must_attest_membership_and_prefix_verification": true,
     "required_to_freeze": [
       "primary analysis unit",
       "repeated-visit aggregation rule",
       "shared-candidate handling rule",
-      "comparator assignment",
-      "numeric effort metric",
       "candidate-specific visit allocation",
-      "numeric effort schedule"
+      "numeric person-minute effort schedule"
     ],
     "matched_effort_scope": "WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS",
     "all_three_arms_required_for_each_cohort_unit": true,
@@ -148,6 +150,7 @@
     "requires_frozen_field_allocation_and_effort_schedule": true,
     "requires_private_candidate_membership_verification": true,
     "requires_no_skip_frozen_order_prefix_verification": true,
+    "requires_person_minute_effort_identity": true,
     "requires_immutable_public_field_schedule_pin": true,
     "requires_exact_candidate_receipt_hash_linkage": true,
     "requires_exact_field_evaluation_contract_hash_linkage": true,
