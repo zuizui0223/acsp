@@ -12,10 +12,21 @@ It does **not** ask the user to choose a survey budget, number of sites, route, 
 | --- | --- | --- |
 | Candidate patches from a species name in Japan | `acsp-patches --taxon ...` | Validated 12-region path; CSV patches and summary JSON |
 | Candidate patches in a user-specified rectangle | `acsp-patches --taxon ... --extent ...` | Same rule applied to a custom domain; no separate validation for that rectangle |
-| Automatic historical-country framing outside Japan | `acsp-discovery plan-country "Species name" --out country_plan.json` | Country-plan JSON only; the end-to-end patch procedure remains staged research |
+| Global candidate patches with automatic historical-country framing | `acsp-global-patches --taxon "Species name" --out-dir new-run` | Fixed global adapter; patches, country plan and audit; bounded conditional confirmation |
+| Preview historical-country framing without generating patches | `acsp-discovery plan-country "Species name" --out country_plan.json` | Country-plan JSON only |
 | Source-backed LOCAL / DETACHED / SENTINEL exploration | `acsp-discovery` | Experimental; see the [discovery quick start](docs/DISCOVERY_QUICKSTART.md) |
 
 The global adapter's scientific confirmation and its integration into a simple user-facing command are separate milestones. `acsp-patches --taxon` still scans Japan, and `acsp-discovery fetch-gbif --country` only fetches occurrence evidence.
+
+For the global adapter, run:
+
+```bash
+acsp-global-patches --taxon "Ficus microcarpa" --out-dir new-global-run
+```
+
+The command connects species matching, historical-only country planning, pinned country geometry, the complete 2-degree regional lattice (800 points per intersecting tile), terrain extraction and the unchanged fixed 2.5% robust patch rule. It chooses **one eligible country**, not all countries worldwide. Optional `--country SG` fixes that country without substitution; arbitrary explicit-country applications are not independently confirmed.
+
+The new output directory contains `country_plan.json`, `progress.json`, `candidate_patches.csv` and `summary.json` when the corresponding stages succeed. The summary records provenance, method fingerprint and the CSV hash. Existing directories are refused. Exit 0 means `ROBUST_READY` or a normal zero-patch `ROBUST_EMPTY`; exit 2 means no ready country or insufficient usable evidence (`SENTINEL_OR_ABSTAIN`). Provider/computation failures exit 1 and leave a `TECHNICAL_FAILURE` receipt, not a biological absence result. Large countries can take substantial time and memory; no tiles are dropped for speed. Large-country execution performance is not yet verified for this command.
 
 `acsp-discovery plan-country` resolves a species name and queries only 1900–2020 country counts. It uses the frozen provider-coverage inventory, minimum count and tie-break rule. Optional `--country JP` assesses that target without substituting another country. Its JSON distinguishes ready, insufficient evidence, no historical country and unsupported provider. Provider failures raise an error instead of becoming biological absence. Exit code 0 means a country plan is ready; 2 means no ready plan. Neither means candidate patches have been generated, and existing output files are not overwritten.
 
@@ -114,7 +125,7 @@ A later, disjoint 48-taxon confirmation tested automatic selection of a provider
 
 The evaluability denominator is **44 constructible taxa**, and the effect is conditional on **35 evaluable taxa** (including one valid empty output at zero lift). It is not the earlier 34/48 evaluability test. Identities were drawn from Japanese discovery-region records; this does not establish performance for arbitrary worldwide taxa, equal Japan/global accuracy, exact occupancy, or field efficiency. Explicit user-target countries retain no-substitution behavior.
 
-Authoritative result: [automatic adapter confirmation v2](validation/acsp_global_availability_parity_confirmation_result_v2.json). The [product contract](VALIDATED_PRODUCT_CONTRACT.md#confirmed-automatic-global-adapter-boundary) defines its scope. The end-to-end implementation is currently a staged research pipeline; integrating that exact procedure into a simple global command remains product work.
+Authoritative result: [automatic adapter confirmation v2](validation/acsp_global_availability_parity_confirmation_result_v2.json). The [product contract](VALIDATED_PRODUCT_CONTRACT.md#confirmed-automatic-global-adapter-boundary) defines its scope. `acsp-global-patches` now connects that fixed procedure into a species-name command. Software parity tests and operational smoke runs are not new scientific confirmation.
 
 ### Earlier publication closure and development hard stop
 
@@ -206,4 +217,4 @@ No route, field-day, travel-mode, or budget optimizer belongs in the validated c
 
 ## Status
 
-**Alpha (0.1.0).** The Japanese 12-region candidate-patch command is independently validated at the 10 km screening scale. The later automatic global adapter passed its separate conditional confirmation and remains available through staged research execution. Earlier country-framed failures are retained. LOCAL/DETACHED structural discovery remains experimental. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.
+**Alpha (0.1.0).** The Japanese 12-region candidate-patch command is independently validated at the 10 km screening scale. The later automatic global adapter passed its separate conditional confirmation and is accessible through `acsp-global-patches`. Earlier country-framed failures are retained. LOCAL/DETACHED structural discovery remains experimental. Exact field occupancy, detectability, abundance, and fine-scale access remain outside the validated claim.
