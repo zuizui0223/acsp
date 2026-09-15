@@ -1,5 +1,37 @@
 # AI Change Log
 
+## 2026-09-15 - Codex (OpenAI) - Align product entry points with confirmed adapter evidence
+
+Changed files:
+- .github/workflows/package-checks.yml
+- .github/workflows/discovery-package-checks.yml
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- RESEARCH_POSITIONING.md
+- docs/DISCOVERY_QUICKSTART.md
+- acsp/discovery/country_frames.py
+- tests/test_discovery_country_frames.py
+- tests/test_global_adapter_result_integrity.py
+- CHANGELOG_AI.md
+
+Summary:
+- Documented the existing Japanese command, custom extent, staged global adapter, and experimental discovery entry points.
+- Recorded the separate automatic-adapter confirmation scope and its conditional 35/44 evaluability denominator; retained earlier failures and manuscript closure as historical evidence.
+- Fixed explicit-country planning with a streamed provider inventory: missing historical records in a supported country now retain the insufficient-evidence state rather than becoming a false provider-unsupported state.
+- Added offline result integrity checks for the frozen artifact hash, 48 identities, prior-cohort disjointness, conditional denominators, valid empty output, effect/bootstrap recomputation, and information-boundary flags.
+- Fixed package CI's missing pytest dependency through the declared dev extra and ran tests/ with pytest so function-style tests execute as well as unittest cases. Updated the discovery import check to its existing 0.8.0-development API version.
+
+Features preserved:
+- Japanese species-only behavior, all frozen scientific methods/results, explicit-country no-substitution, existing CLI commands, and experimental discovery ranking semantics.
+
+Validation:
+- Four frozen-result audit tests and seven country-planning tests passed; app compilation passed.
+- All 271 tests/ checks passed in a Git-LF checkout, including the previously unexecuted pytest functions. The Japanese product/import regression passed 14 tests; the discovery import/CLI checks passed.
+
+Known risks / TODO:
+- The confirmed global end-to-end procedure still uses staged research execution; a species-only global command is not yet available.
+- PR #184 includes other experimental work and scientific workflow triggers; this focused change alone does not establish that the whole PR is ready to merge.
+
 ## 2026-08-31 - Codex (OpenAI) - Make submission alignment guard executable in ordinary CI
 
 Changed files:

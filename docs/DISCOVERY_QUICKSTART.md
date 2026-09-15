@@ -6,6 +6,8 @@
 
 It is deliberately separate from the independently validated Japanese 2.5% / 10-km candidate-patch product.
 
+The [automatic global adapter confirmation](../validation/acsp_global_availability_parity_confirmation_result_v2.json) validates a specific historical-country adapter plus the frozen robust core. It does not promote the structural rankings in this guide. That end-to-end global procedure currently uses staged research scripts; `fetch-gbif --country` retrieves evidence only, and `acsp-patches --taxon` continues to scan Japan. See [product entry points](../README.md#product-entry-points) before choosing a workflow.
+
 ## Fast path: species name to auditable search lanes
 
 ```bash

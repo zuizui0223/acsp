@@ -69,6 +69,17 @@ class DiscoveryCountryFrameTests(unittest.TestCase):
         self.assertEqual(lookup["C"].state, CountryFrameState.PROVIDER_UNSUPPORTED)
         self.assertEqual(lookup["A"].evidence_rank, 1)
 
+    def test_explicit_target_without_history_preserves_iterable_provider_coverage(self) -> None:
+        # Provider inventories may be streamed; history missing for JP must not
+        # be reported as a provider failure after the iterable is consumed.
+        plan = plan_explicit_target_country(
+            "JP", {"TW": 100},
+            provider_supported_country_codes=iter(["jp", "TW"]),
+        )
+        self.assertEqual(plan.state, CountryFrameState.INSUFFICIENT_HISTORICAL_EVIDENCE)
+        self.assertIsNone(plan.selected_country_code)
+        self.assertFalse(plan.country_substitution_after_target_declaration)
+
     def test_negative_historical_count_fails_closed(self) -> None:
         with self.assertRaises(ValueError):
             rank_historical_country_frames(
