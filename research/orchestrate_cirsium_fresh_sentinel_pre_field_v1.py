@@ -275,7 +275,13 @@ def run_private_pre_field_pipeline(bundle_geojson: Path, private_root: Path) -> 
                 graph_radius_cells=GRAPH_RADIUS_CELLS,
             )
             orders, order_audit = freeze_pre_field_orders(private_frame)
-            covered_frame = orders["coverage_then_fine_structure"].sort_values("candidate_cell_id").reset_index(drop=True)
+            method_columns = ["within_cell_structure_rank", "decision_method", "decision_rank"]
+            covered_frame = (
+                orders["coverage_then_fine_structure"]
+                .drop(columns=[column for column in method_columns if column in orders["coverage_then_fine_structure"].columns])
+                .sort_values("candidate_cell_id")
+                .reset_index(drop=True)
+            )
             candidate_frame_csv = unit_dir / "candidate_frame_pre_field.csv"
             frame_summary_json = unit_dir / "candidate_frame_summary.json"
             covered_frame.to_csv(candidate_frame_csv, index=False)
@@ -305,6 +311,7 @@ def run_private_pre_field_pipeline(bundle_geojson: Path, private_root: Path) -> 
                 "human_access_used": False,
                 "replacement_taxon_allowed": False,
                 "retuning_after_failure_allowed": False,
+                "public_hash_receipt_committed": False,
             }
             receipt_json = unit_dir / "pre_field_freeze_receipt.json"
             _write_json(receipt_json, unit_receipt)
@@ -345,7 +352,10 @@ def run_private_pre_field_pipeline(bundle_geojson: Path, private_root: Path) -> 
         "human_access_used": False,
         "budget_used": False,
         "replacement_taxon_allowed": False,
-        "ready_for_future_prospective_outcome_opening": True,
+        "public_hash_receipt_committed": False,
+        "ready_for_public_hash_receipt_freeze": True,
+        "ready_for_future_prospective_outcome_opening": False,
+        "next_gate": "Export, commit and pin the coordinate-free public hash receipt before any prospective outcome-opening workflow is authorized.",
     }
     _write_json(private_root / "pre_field_freeze_receipt.json", receipt)
     return receipt
