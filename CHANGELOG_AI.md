@@ -1,5 +1,32 @@
 # AI Change Log
 
+## 2026-09-15 - Codex (OpenAI) - Isolate global entry imports from experimental discovery
+
+Changed files:
+- acsp/discovery/__init__.py
+- acsp/discovery/providers/__init__.py
+- tests/test_global_import_boundary.py
+- .github/workflows/package-checks.yml
+- VALIDATED_PRODUCT_CONTRACT.md
+- CHANGELOG_AI.md
+
+Summary:
+- Resolve existing discovery/provider exports lazily, retaining their names and original function/class identities.
+- Global command import now needs only historical country framing and GBIF within discovery. Experimental structural, ranking and WorldCover modules are loaded only when explicitly used.
+- Add blocked-import, export-identity, wildcard-import and isolated-wheel checks.
+
+Features preserved:
+- All 66 discovery and 15 provider public exports, version/status constants, CLI behavior, scientific function bodies, candidate membership and every frozen artifact.
+
+Known risks / TODO:
+- Import errors for optional features now occur when those features are first used. This does not yet split the distribution or authorize merging draft research PR184 into main.
+- Main release selection still needs a separate source/provenance audit; post-change CI must pass before integration.
+
+Validation:
+- 295 tests/ cases and 250 research unittest cases passed, including exact global patch parity and all lazy export checks.
+- Global entry loads 5 discovery modules versus 23 before this change; all 66 + 15 public export names are preserved.
+- App/module compilation, wheel build and whitespace checks passed. Isolated installed-wheel dependency assertions added to CI.
+
 ## 2026-09-15 - Codex (OpenAI) - Species-name global candidate-patch command
 
 Changed files:

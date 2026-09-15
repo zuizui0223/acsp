@@ -71,6 +71,7 @@ The validated path is planner-free at both execution and package-import time.
 - `acsp.robust_patches` must not depend on `acsp.planning`.
 - Importing `acsp`, `validated_robust_candidate_patches`, or `discover_validated_candidate_patches` must not import `acsp.planning`.
 - Historical planner APIs may remain available through lazy compatibility exports.
+- Importing `acsp.global_cli` loads only historical country planning and GBIF modules from `acsp.discovery`, not experimental structural/ranking/WorldCover modules. Existing discovery exports remain available on explicit use.
 
 ## Campanula role
 
