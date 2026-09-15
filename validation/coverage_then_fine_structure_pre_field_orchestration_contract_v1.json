@@ -16,7 +16,8 @@
     "build_private_source_manifest",
     "build_private_structural_candidate_frame",
     "derive_5km_coarse_coverage_cells_from_100m_grid",
-    "freeze_scale_separated_and_comparator_orders"
+    "freeze_scale_separated_and_comparator_orders",
+    "export_hash_only_public_freeze_receipt"
   ],
   "spatial_scales": {
     "fine_candidate_spacing_m": 100,
@@ -57,6 +58,14 @@
     "private_output_root_must_be_outside_repository": true,
     "public_safe_freeze_object": "hash-only receipt after private execution"
   },
+  "public_freeze_gate": {
+    "exporter": "research/export_cirsium_fresh_sentinel_public_freeze_receipt_v1.py",
+    "receipt_status": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
+    "receipt_must_be_committed_and_pinned_before_outcome_opening": true,
+    "coordinate_or_private_paths_allowed_in_public_receipt": false,
+    "prospective_outcome_opening_allowed_before_public_receipt_commit": false
+  },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
+  "outcome_opening_allowed_now": false,
   "scientific_claim_added": false
 }
