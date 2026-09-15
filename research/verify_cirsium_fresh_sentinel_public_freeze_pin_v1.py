@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Verify that the exact public fresh-SENTINEL hash receipt is committed and immutable.
+"""Verify that the exact public fresh-SENTINEL prescription receipt is immutable.
 
-Receipt generation is intentionally insufficient. This verifier is the only
-repository-side transition that may report the public pre-outcome provenance gate
-as satisfied. It requires a tracked, clean receipt whose bytes equal HEAD and,
-critically, whose current bytes still equal the bytes in the *first commit that
-added the receipt*. A later commit therefore cannot silently re-pin a modified
-receipt after outcomes are known.
+Receipt generation is intentionally insufficient. This verifier closes only the
+candidate/order prescription-provenance gate. It requires a tracked, clean receipt
+whose bytes equal HEAD and, critically, whose current bytes still equal the bytes in
+the *first commit that added the receipt*. A later commit therefore cannot silently
+re-pin a modified receipt after outcomes are known.
+
+Passing this verifier does NOT by itself authorize prospective outcome opening. The
+field analysis unit, repeated-visit rule, comparator assignment, numeric effort
+metric, and candidate-specific allocation/effort schedule must also be frozen and
+publicly pinned before outcomes can be opened.
 """
 from __future__ import annotations
 
@@ -131,8 +135,10 @@ def verify_public_freeze_pin(
         "verified_head": head,
         "public_receipt_commit_verified": True,
         "prospective_field_outcomes_opened": False,
-        "outcome_opening_gate_satisfied": True,
-        "authorization_scope": "provenance gate only; does not assert biological success or field efficiency",
+        "pre_field_prescription_pin_gate_satisfied": True,
+        "outcome_opening_gate_satisfied": False,
+        "remaining_pre_outcome_gate": "Freeze and publicly pin the field analysis unit, repeated-visit aggregation rule, comparator assignment, numeric effort metric, and candidate-specific allocation/effort schedule before prospective outcomes are opened.",
+        "authorization_scope": "candidate/order prescription provenance only; does not authorize outcome opening or assert biological success or field efficiency",
     }
 
 
