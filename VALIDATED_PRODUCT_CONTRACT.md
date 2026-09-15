@@ -49,7 +49,7 @@ The separate [availability-parity confirmation v2](validation/acsp_global_availa
 
 The original 96-pair / 480-fold Japanese confirmation remains a separate result. Earlier country-framed failures and provider aborts retain their original decisions and denominators. LOCAL/DETACHED/SENTINEL structural ranking, field efficiency and occupancy claims are outside this promotion.
 
-**Implementation status:** `acsp-patches --taxon` still runs the Japanese 12-region adapter. `acsp.discovery.country_frames` provides historical country planning; the confirmed end-to-end global procedure is implemented by the staged research pipeline. A species-only global command has not yet been integrated. `acsp-discovery` remains an experimental exploration entry point.
+**Implementation status:** `acsp-patches --taxon` still runs the Japanese 12-region adapter. `acsp-discovery plan-country` provides species-name access to historical country planning with the pinned coverage and selection rule; it outputs a country plan, not patches. The confirmed end-to-end global procedure is implemented by the staged research pipeline. A species-only global patch command has not yet been integrated. `acsp-discovery` remains an experimental exploration entry point.
 
 ## What is outside the validated core
 

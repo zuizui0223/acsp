@@ -12,10 +12,12 @@ It does **not** ask the user to choose a survey budget, number of sites, route, 
 | --- | --- | --- |
 | Candidate patches from a species name in Japan | `acsp-patches --taxon ...` | Validated 12-region path; CSV patches and summary JSON |
 | Candidate patches in a user-specified rectangle | `acsp-patches --taxon ... --extent ...` | Same rule applied to a custom domain; no separate validation for that rectangle |
-| Automatic historical-country framing outside Japan | `acsp.discovery.country_frames` and the frozen global research pipeline | Tested adapter passed a separate fresh 48-taxon confirmation; no species-only global CLI yet |
+| Automatic historical-country framing outside Japan | `acsp-discovery plan-country "Species name" --out country_plan.json` | Country-plan JSON only; the end-to-end patch procedure remains staged research |
 | Source-backed LOCAL / DETACHED / SENTINEL exploration | `acsp-discovery` | Experimental; see the [discovery quick start](docs/DISCOVERY_QUICKSTART.md) |
 
 The global adapter's scientific confirmation and its integration into a simple user-facing command are separate milestones. `acsp-patches --taxon` still scans Japan, and `acsp-discovery fetch-gbif --country` only fetches occurrence evidence.
+
+`acsp-discovery plan-country` resolves a species name and queries only 1900–2020 country counts. It uses the frozen provider-coverage inventory, minimum count and tie-break rule. Optional `--country JP` assesses that target without substituting another country. Its JSON distinguishes ready, insufficient evidence, no historical country and unsupported provider. Provider failures raise an error instead of becoming biological absence. Exit code 0 means a country plan is ready; 2 means no ready plan. Neither means candidate patches have been generated, and existing output files are not overwritten.
 
 ## Simplest use
 
