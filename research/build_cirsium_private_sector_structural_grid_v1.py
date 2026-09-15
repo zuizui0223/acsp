@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from research.build_cirsium_private_alpine_local_grid_v1 import _inside_repo, _load_geojson_geometry, _sample_terrain
-from research.build_cirsium_private_uncertainty_sentinel_grid_v1 import _sample_worldcover, _sector_grid
+from build_cirsium_private_alpine_local_grid_v1 import _inside_repo, _load_geojson_geometry, _sample_terrain
+from build_cirsium_private_uncertainty_sentinel_grid_v1 import _sample_worldcover, _sector_grid
 
 SUPPORTED = {
     "CIR06": "ALPINE_TOPOGRAPHIC_STRUCTURE",

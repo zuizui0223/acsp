@@ -3,8 +3,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from research.build_cirsium_private_sector_structural_grid_v1 import expected_family
-from research.materialize_cirsium_fresh_sentinel_public_sources_v1 import (
+from build_cirsium_private_sector_structural_grid_v1 import expected_family
+from materialize_cirsium_fresh_sentinel_public_sources_v1 import (
     EXPECTED_UNITS,
     _unit_row,
     qualified_uncertainty_evidence,

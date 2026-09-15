@@ -23,6 +23,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
 jobs:
   check:
     runs-on: ubuntu-24.04

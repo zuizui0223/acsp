@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from research.validate_cirsium_fresh_range_sector_bundle_v1 import EXPECTED_UNITS, validate_bundle
+from validate_cirsium_fresh_range_sector_bundle_v1 import EXPECTED_UNITS, validate_bundle
 
 
 def _feature(unit: str, x: float) -> dict:

@@ -24,7 +24,7 @@ from typing import Any
 
 import pandas as pd
 
-from research.audit_cirsium_aza3_gbif_occurrences_v1 import (
+from audit_cirsium_aza3_gbif_occurrences_v1 import (
     MAX_PRIMARY_UNCERTAINTY_M,
     fetch_occurrences,
     gbif_taxon_match,
@@ -32,7 +32,7 @@ from research.audit_cirsium_aza3_gbif_occurrences_v1 import (
     temporal_class,
     uncertainty_m,
 )
-from research.audit_cirsium_aza3_gbif_occurrences_v2 import (
+from audit_cirsium_aza3_gbif_occurrences_v2 import (
     _generalized,
     _has_coordinates,
     _serious_issue,
@@ -117,7 +117,7 @@ def qualified_uncertainty_evidence(records: list[dict[str, Any]]) -> pd.DataFram
 
 
 def _geometry_bounds_and_references(path: Path) -> tuple[tuple[float, float, float, float], tuple[tuple[float, float], ...]]:
-    from research.build_cirsium_private_alpine_local_grid_v1 import _load_geojson_geometry
+    from build_cirsium_private_alpine_local_grid_v1 import _load_geojson_geometry
 
     geometry = _load_geojson_geometry(path)
     west, south, east, north = map(float, geometry.bounds)
