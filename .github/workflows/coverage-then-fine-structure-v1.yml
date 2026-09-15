@@ -5,11 +5,15 @@ on:
     paths:
       - "acsp/discovery/scale_separated.py"
       - "acsp/discovery/__init__.py"
+      - "research/materialize_cirsium_fresh_sentinel_public_sources_v1.py"
+      - "research/build_cirsium_private_sector_structural_grid_v1.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_source_readiness_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
+      - "validation/coverage_then_fine_structure_source_readiness_amendment_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -29,11 +33,12 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Run scale-separated mechanics and fresh-cohort guards
+      - name: Run scale-separated mechanics, fresh-cohort and source-readiness guards
         run: |
           pytest -q \
             tests/test_coverage_then_fine_structure_v1.py \
-            tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py
+            tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py \
+            tests/test_cirsium_fresh_sentinel_source_readiness_v1.py
       - name: Guard frozen architecture boundary
         run: |
           python - <<'PY'
@@ -66,4 +71,10 @@ jobs:
           assert [row['cohort_unit_id'] for row in rows] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert all(row['outcome_opened'].lower() == 'false' for row in rows)
           assert all(row['execution_status'] == 'BLOCKED_PRIVATE_SOURCE_FREEZE' for row in rows)
+
+          s = json.loads(Path('validation/coverage_then_fine_structure_source_readiness_amendment_v1.json').read_text())
+          assert s['status'] == 'PUBLIC_SOURCE_RECONSTRUCTION_READY_PRIVATE_RANGE_SECTOR_GEOMETRY_BLOCKED'
+          assert s['repo_and_upstream_audit']['aza3_required_slots_frozen_at_pinned_commit'] == 0
+          assert s['remaining_external_blocker']['single_input_class'] == 'PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY'
+          assert s['remaining_external_blocker']['required_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           PY
