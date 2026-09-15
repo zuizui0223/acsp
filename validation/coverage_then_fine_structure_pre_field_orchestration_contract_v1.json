@@ -21,8 +21,11 @@
     "export_hash_only_public_freeze_receipt",
     "commit_and_pin_public_freeze_receipt",
     "verify_immutable_candidate_order_prescription_pin",
-    "freeze_candidate_specific_field_allocation_and_effort_schedule",
-    "commit_and_pin_field_allocation_and_effort_schedule",
+    "instantiate_private_field_allocation_and_effort_schedule",
+    "validate_private_field_allocation_and_effort_schedule",
+    "export_hash_only_public_field_schedule_receipt",
+    "commit_and_pin_public_field_schedule_receipt",
+    "verify_immutable_field_schedule_pin",
     "verify_all_pre_outcome_gates_before_outcome_opening"
   ],
   "execution_entrypoint": "research/run_cirsium_fresh_sentinel_freeze_v1.py",
@@ -63,6 +66,7 @@
   "privacy_boundary": {
     "coordinate_bearing_outputs_public": false,
     "private_output_root_must_be_outside_repository": true,
+    "private_field_schedule_must_be_outside_repository": true,
     "public_safe_freeze_object": "hash-only receipt after private execution",
     "one_command_public_receipt_location": "validation/"
   },
@@ -102,26 +106,42 @@
     "prospective_outcome_opening_allowed_before_public_receipt_commit": false
   },
   "field_allocation_effort_gate": {
+    "private_schema": "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json",
+    "private_validator": "research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py",
+    "public_receipt_exporter": "research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py",
+    "public_pin_verifier": "research/verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1.py",
+    "final_pre_outcome_verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
     "candidate_specific_schedule_possible_before_private_candidate_freeze": false,
     "must_freeze_before_outcome_opening": true,
     "must_be_publicly_pinned_before_outcome_opening": true,
+    "private_instantiated_schedule_must_remain_outside_repository": true,
     "required_to_freeze": [
       "primary analysis unit",
       "repeated-visit aggregation rule",
+      "shared-candidate handling rule",
       "comparator assignment",
       "numeric effort metric",
       "candidate-specific visit allocation",
       "numeric effort schedule"
     ],
+    "matched_effort_scope": "WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS",
+    "all_three_arms_required_for_each_cohort_unit": true,
     "outcome_data_allowed_to_define_schedule": false,
-    "status": "PENDING_PRIVATE_CANDIDATE_IDENTITIES"
+    "post_outcome_schedule_edits_allowed": false,
+    "public_schedule_receipt_pin_commit_identity": "first commit that adds the public field-schedule receipt path",
+    "later_committed_public_schedule_receipt_byte_changes_allowed": false,
+    "status": "MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES"
   },
   "outcome_opening_gate": {
+    "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
     "requires_static_field_evaluation_semantics": true,
     "requires_private_candidate_and_order_freeze": true,
     "requires_immutable_public_candidate_order_receipt_pin": true,
     "requires_frozen_field_allocation_and_effort_schedule": true,
     "requires_immutable_public_field_schedule_pin": true,
+    "requires_exact_candidate_receipt_hash_linkage": true,
+    "requires_exact_field_evaluation_contract_hash_linkage": true,
+    "verifier_reads_prospective_field_outcomes": false,
     "all_requirements_satisfied_now": false
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
