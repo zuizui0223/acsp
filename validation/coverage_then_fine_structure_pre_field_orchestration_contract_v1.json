@@ -70,9 +70,12 @@
     "verified_status_after_commit": "PUBLIC_HASH_FREEZE_COMMITTED_AND_PINNED",
     "receipt_must_be_committed_and_pinned_before_outcome_opening": true,
     "receipt_generation_alone_authorizes_outcome_opening": false,
+    "pin_commit_identity": "first commit that adds the public receipt path",
+    "later_committed_receipt_byte_changes_allowed": false,
     "pin_verifier_requires_git_tracked_receipt": true,
     "pin_verifier_requires_clean_receipt": true,
     "pin_verifier_requires_head_bytes_equal_receipt": true,
+    "pin_verifier_requires_current_bytes_equal_first_add_commit": true,
     "pin_verifier_requires_pin_commit_ancestor_of_head": true,
     "coordinate_or_private_paths_allowed_in_public_receipt": false,
     "prospective_outcome_opening_allowed_before_public_receipt_commit": false
