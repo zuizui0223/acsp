@@ -60,6 +60,11 @@ def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_overr
             "MORTON_DYADIC_COVERAGE_ORDER_V1",
         ],
         "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+        "numeric_effort_metric": {
+            "identity": "PERSON_MINUTES_V1",
+            "unit": "person-minute",
+            "formula": "search_minutes * observer_count",
+        },
         "private_candidate_membership_verified": True,
         "private_pre_field_receipt_hash_linkage_verified": True,
         "frozen_order_hash_linkage_verified": True,
@@ -155,6 +160,17 @@ def test_schedule_pin_rejects_missing_membership_proof(tmp_path: Path) -> None:
     _git(repo, "add", "validation/field-schedule-receipt.json")
     _git(repo, "commit", "-m", "Create invalid membership receipt")
     with pytest.raises(ValueError, match="private_candidate_membership_verified"):
+        verify_public_field_schedule_pin(schedule, repo_root=repo)
+
+
+def test_schedule_pin_rejects_non_frozen_effort_metric(tmp_path: Path) -> None:
+    repo, _, schedule, _, _, _, _ = _prepare_repo(tmp_path)
+    value = json.loads(schedule.read_text())
+    value["numeric_effort_metric"]["identity"] = "POSTHOC_METRIC"
+    schedule.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _git(repo, "add", "validation/field-schedule-receipt.json")
+    _git(repo, "commit", "-m", "Create invalid effort metric receipt")
+    with pytest.raises(ValueError, match="PERSON_MINUTES_V1"):
         verify_public_field_schedule_pin(schedule, repo_root=repo)
 
 
