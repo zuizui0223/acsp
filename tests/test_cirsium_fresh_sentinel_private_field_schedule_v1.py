@@ -63,18 +63,12 @@ def _private_root(tmp_path: Path) -> tuple[Path, dict[str, dict[str, str]]]:
         }
         receipt_path = unit_dir / "pre_field_freeze_receipt.json"
         _write(receipt_path, receipt)
-        top_units[unit] = {
-            "candidate_frame_sha256": receipt["candidate_frame_sha256"],
-            "order_sha256": order_hashes,
-        }
-    _write(
-        root / "pre_field_freeze_receipt.json",
-        {
-            "status": "ALL_FOUR_PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN",
-            "units": list(EXPECTED_UNITS),
-            "unit_receipts": top_units,
-        },
-    )
+        top_units[unit] = {"candidate_frame_sha256": receipt["candidate_frame_sha256"], "order_sha256": order_hashes}
+    _write(root / "pre_field_freeze_receipt.json", {
+        "status": "ALL_FOUR_PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN",
+        "units": list(EXPECTED_UNITS),
+        "unit_receipts": top_units,
+    })
     return root, first
 
 
@@ -90,23 +84,17 @@ def _public_inputs(repo: Path, private_root: Path) -> tuple[Path, Path]:
             "order_sha256": private_receipt["order_sha256"],
             "private_unit_receipt_sha256": _sha256(unit_dir / "pre_field_freeze_receipt.json"),
         }
-    _write(
-        candidate,
-        {
-            "status": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
-            "prospective_field_outcomes_opened": False,
-            "field_outcomes_used_to_choose_or_rank": False,
-            "private_top_receipt_sha256": _sha256(private_root / "pre_field_freeze_receipt.json"),
-            "units": units,
-        },
-    )
-    _write(
-        evaluation,
-        {
-            "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
-            "cohort_unit_ids": list(EXPECTED_UNITS),
-        },
-    )
+    _write(candidate, {
+        "status": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
+        "prospective_field_outcomes_opened": False,
+        "field_outcomes_used_to_choose_or_rank": False,
+        "private_top_receipt_sha256": _sha256(private_root / "pre_field_freeze_receipt.json"),
+        "units": units,
+    })
+    _write(evaluation, {
+        "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
+        "cohort_unit_ids": list(EXPECTED_UNITS),
+    })
     return candidate, evaluation
 
 
@@ -114,18 +102,16 @@ def _schedule(candidate: Path, evaluation: Path, first: dict[str, dict[str, str]
     assignments = []
     for unit in EXPECTED_UNITS:
         for arm_index, arm in enumerate(EXPECTED_ARMS):
-            assignments.append(
-                {
-                    "cohort_unit_id": unit,
-                    "analysis_unit_id": f"{unit}-analysis-{arm_index}",
-                    "private_candidate_ref": first[unit][arm],
-                    "method_arm": arm,
-                    "visit_index": 1,
-                    "planned_effort_value": 60.0,
-                    "planned_search_minutes": 30.0,
-                    "planned_observer_count": 2,
-                }
-            )
+            assignments.append({
+                "cohort_unit_id": unit,
+                "analysis_unit_id": f"{unit}-analysis-{arm_index}",
+                "private_candidate_ref": first[unit][arm],
+                "method_arm": arm,
+                "visit_index": 1,
+                "planned_effort_value": 60.0,
+                "planned_search_minutes": 30.0,
+                "planned_observer_count": 2,
+            })
     return {
         "schema_version": "cirsium-fresh-sentinel-private-field-schedule-v1",
         "status": "PRIVATE_FIELD_ALLOCATION_AND_EFFORT_SCHEDULE_FROZEN",
@@ -139,9 +125,9 @@ def _schedule(candidate: Path, evaluation: Path, first: dict[str, dict[str, str]
         "shared_candidate_handling_rule": "fixture handling chosen before outcomes",
         "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
         "numeric_effort_metric": {
-            "identity": "TEST_PERSON_MINUTES_V1",
+            "identity": "PERSON_MINUTES_V1",
             "unit": "person-minute",
-            "formula": "planned_search_minutes * planned_observer_count",
+            "formula": "search_minutes * observer_count",
         },
         "matched_effort_scope": "WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS",
         "assignments": assignments,
@@ -169,7 +155,7 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     assert validated["assignment_count"] == 12
     assert membership["private_candidate_membership_verified"] is True
     assert membership["frozen_order_prefix_verified"] is True
-
+    assert membership["numeric_effort_metric_verified"] is True
     receipt = build_public_field_schedule_receipt(schedule_path, candidate, evaluation, private_root, repo_root=repo)
     assert receipt["status"] == PUBLIC_STATUS
     assert receipt["private_candidate_membership_verified"] is True
@@ -205,6 +191,22 @@ def test_schedule_rejects_private_receipt_not_bound_to_public_receipt(tmp_path: 
     value["tampered"] = True
     _write(unit_receipt, value)
     with pytest.raises(ValueError, match="private unit receipt hash"):
+        validate_private_schedule_membership(schedule_path, candidate, private_root, repo_root=repo)
+
+
+def test_schedule_rejects_non_frozen_effort_metric(tmp_path: Path) -> None:
+    repo, private_root, _, candidate, _, schedule_path, value = _fixture(tmp_path)
+    value["numeric_effort_metric"]["identity"] = "POSTHOC_METRIC"
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="PERSON_MINUTES_V1"):
+        validate_private_schedule_membership(schedule_path, candidate, private_root, repo_root=repo)
+
+
+def test_schedule_rejects_inconsistent_person_minute_value(tmp_path: Path) -> None:
+    repo, private_root, _, candidate, _, schedule_path, value = _fixture(tmp_path)
+    value["assignments"][0]["planned_effort_value"] = 61.0
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="search_minutes \* observer_count"):
         validate_private_schedule_membership(schedule_path, candidate, private_root, repo_root=repo)
 
 
