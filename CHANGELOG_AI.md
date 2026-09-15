@@ -1,5 +1,37 @@
 # AI Change Log
 
+## 2026-09-15 - Codex (OpenAI) - Species-name historical country planning entry
+
+Changed files:
+- .github/workflows/package-checks.yml
+- acsp/discovery/country_entry.py
+- acsp/discovery/cli.py
+- acsp/discovery/data/acsp_geoboundaries_v6_adm0_coverage_v1.json
+- acsp/discovery/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
+- pyproject.toml
+- tests/test_country_entry.py
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- CHANGELOG_AI.md
+
+Summary:
+- Add plan-country to resolve a scientific species name and return a historical-only country plan, without fetching geometry, individual occurrences, terrain, patches or heldout outcomes.
+- Package exact copies of the frozen coverage and ISO snapshots; check their semantic fingerprints before use, without relying on research files in an installed wheel.
+- Reuse the country planner with the confirmed minimum count 5 and tie-break seed 2026090701. Explicit targets cannot be substituted.
+- Preserve provider errors as errors; only verified empty evidence becomes NO_HISTORICAL_COUNTRY. Do not overwrite existing output files.
+
+Features preserved:
+- All existing commands, Japan candidate membership, frozen scientific artifacts, no-substitution policy, experimental discovery status and scientific claim ceilings.
+
+Known risks / TODO:
+- This is the country-planning first stage, not a species-only global candidate-patch generator. Geometry, terrain and exact patch generation still require integration of the existing staged procedure.
+- Arbitrary explicit-country applications are not separately confirmed. Live provider changes can alter country counts; the complete counts and query parameters are recorded in each plan.
+
+Validation:
+- 281 tests/ cases and 250 research unittest cases pass; compilation and whitespace checks pass.
+- Built and installed a wheel outside the source checkout; verified both pinned resource files are usable without research files. Added the same offline resource check to isolated-wheel CI.
+- Live GBIF smoke for Castanopsis sieboldii returned JP in automatic mode; installed-wheel explicit CN mode retained CN and returned INSUFFICIENT_HISTORICAL_EVIDENCE (2 records), without substitution. No candidate or heldout data were opened.
+
 ## 2026-09-15 - Codex (OpenAI) - Portable frozen identity-path comparisons
 
 Changed files:

@@ -102,6 +102,20 @@ def command_families(_args: argparse.Namespace) -> int:
     print(json.dumps(rows, ensure_ascii=False, indent=2)); return 0
 
 
+def command_plan_country(args: argparse.Namespace) -> int:
+    from .country_entry import plan_country_for_species
+
+    out = Path(args.out)
+    if out.exists():
+        raise SystemExit(f"Output already exists: {out}")
+    payload = plan_country_for_species(args.scientific_name, country=args.country)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("x", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload["status"] == "READY" else 2
+
+
 def command_template(args: argparse.Namespace) -> int:
     out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
     pd.DataFrame([
@@ -235,6 +249,11 @@ def _add_evidence_args(parser: argparse.ArgumentParser) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="acsp-discovery", description="Experimental fail-closed next-observation discovery workflow."); sub = parser.add_subparsers(dest="command", required=True)
+    p_country = sub.add_parser("plan-country", help="Plan a historical-evidence country from a species name; does not generate patches.")
+    p_country.add_argument("scientific_name")
+    p_country.add_argument("--country", default="", help="Optional fixed target; never substituted with another country.")
+    p_country.add_argument("--out", required=True, help="New JSON output path; existing files are not overwritten.")
+    p_country.set_defaults(func=command_plan_country)
     p_fetch = sub.add_parser("fetch-gbif", help="Fetch provider-neutral occurrence evidence from GBIF using a species name."); p_fetch.add_argument("scientific_name"); p_fetch.add_argument("--country", default=""); p_fetch.add_argument("--year-from", type=int); p_fetch.add_argument("--year-to", type=int); p_fetch.add_argument("--max-records", type=int, default=10000); p_fetch.add_argument("--out", required=True); p_fetch.add_argument("--audit-json"); p_fetch.set_defaults(func=command_fetch_gbif)
     p_families = sub.add_parser("families", help="List structural families and required provider inputs."); p_families.set_defaults(func=command_families)
     p_template = sub.add_parser("template", help="Create minimal CSV/JSON templates for a first run."); p_template.add_argument("--out-dir", default="acsp-discovery-template"); p_template.set_defaults(func=command_template)

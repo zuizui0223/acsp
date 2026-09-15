@@ -84,12 +84,14 @@ jobs:
           .wheel-venv/bin/python -m pip install --upgrade pip
           .wheel-venv/bin/python -m pip install dist/*.whl
           pushd /tmp
+          "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "from acsp.discovery.country_entry import _provider_inventory; mapping, supported = _provider_inventory(); assert len(mapping) == 249 and 'JP' in supported; print('installed country-planning resources verified without a research checkout')"
           "$GITHUB_WORKSPACE/.wheel-venv/bin/python" -I -c "import acsp; import acsp.robust_patches; import acsp.validated_robust; import acsp.taxon_patches; import acsp.robust_cli; import acsp.cli; import acsp_discover; import gbif_fieldmap_builder_app; print('installed Python package and app imports successfully')"
           popd
       - name: Verify packaged commands
         run: |
           acsp-fieldmap --help
           acsp-patches --help
+          acsp-discovery plan-country --help
           acsp-recommend --help
           acsp-recommend recommend --help
           acsp-recommend zones --help
