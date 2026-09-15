@@ -55,4 +55,5 @@ py-modules = ["acsp_discover", "gbif_fieldmap_builder_app"]
 include = ["acsp*"]
 
 [tool.setuptools.package-data]
+acsp = ["data/*.json"]
 "acsp.discovery" = ["data/*.json"]

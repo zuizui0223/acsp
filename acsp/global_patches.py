@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .discovery.country_entry import plan_country_for_species
+from .global_country import plan_country_for_species
 from .global_geometry import fetch_geoboundaries_country_geometry
 from .global_inputs import fetch_country_occurrences
 from .global_lattice import POINTS_PER_REGIONAL_TILE, build_regional_country_surface

@@ -1,0 +1,82 @@
+{
+  "schema_version": "global-release-port-manifest-v1",
+  "source_commit": "0357b7e4bbf39bea787c893587714a260eebaa59",
+  "main_base_commit": "0c6e45599c3b1deac8e7666c5c22948a55bcad75",
+  "allowed_changes": [
+    "module import paths",
+    "resource package name acsp.discovery to acsp",
+    "GBIF extraction limited to unchanged _get_json and match_species functions"
+  ],
+  "files": [
+    {
+      "source_path": "acsp/global_cli.py",
+      "release_path": "acsp/global_cli.py",
+      "source_sha256": "9abce9bb95c2aa6e8a8a9af8bfbeeedef7b019db0aea7251d5a3d6e429c8f966",
+      "release_lf_sha256": "9abce9bb95c2aa6e8a8a9af8bfbeeedef7b019db0aea7251d5a3d6e429c8f966",
+      "unchanged_function_or_class_count": 2
+    },
+    {
+      "source_path": "acsp/global_geometry.py",
+      "release_path": "acsp/global_geometry.py",
+      "source_sha256": "11f073a9251684445e3907809a29887181faafd45b756122455bbb09288262c0",
+      "release_lf_sha256": "640e00c714bb7927d74af4754d0bf4e3961f0b3e646a036b5699d12448c4b4b5",
+      "unchanged_function_or_class_count": 6
+    },
+    {
+      "source_path": "acsp/global_inputs.py",
+      "release_path": "acsp/global_inputs.py",
+      "source_sha256": "163bb3168909c28fbd42bbc328657a98f9ef44fe969e4cc2f363ed36c41e2d27",
+      "release_lf_sha256": "163bb3168909c28fbd42bbc328657a98f9ef44fe969e4cc2f363ed36c41e2d27",
+      "unchanged_function_or_class_count": 4
+    },
+    {
+      "source_path": "acsp/global_lattice.py",
+      "release_path": "acsp/global_lattice.py",
+      "source_sha256": "e69c7bead49da2a95aaf4466082e8a145cdc936910cc088a786a8fac296250ad",
+      "release_lf_sha256": "e69c7bead49da2a95aaf4466082e8a145cdc936910cc088a786a8fac296250ad",
+      "unchanged_function_or_class_count": 12
+    },
+    {
+      "source_path": "acsp/global_patches.py",
+      "release_path": "acsp/global_patches.py",
+      "source_sha256": "ae298bab3195c796865ed6c87d2264fc286f0fef4d5c8d9b430c0d7409b1094b",
+      "release_lf_sha256": "81e62362ed2d631adbcae9e3f1f1b4560b486ceae513fb4b8c3a13735dcbec2f",
+      "unchanged_function_or_class_count": 3
+    },
+    {
+      "source_path": "acsp/discovery/country_entry.py",
+      "release_path": "acsp/global_country.py",
+      "source_sha256": "ff36ae1e04110bd0e61090542b5d2f72e4b77c568553b72ce6960ada543a9388",
+      "release_lf_sha256": "e1cf9941a732be1ce1c8a7c0f2ac104ba294d990f97b4962fa6c12af9ef1215c",
+      "unchanged_function_or_class_count": 5
+    },
+    {
+      "source_path": "acsp/discovery/country_frames.py",
+      "release_path": "acsp/global_country_frames.py",
+      "source_sha256": "06c215136b8b383195c6e9feed734e3c6ab0fa6259bc54d1a77d20040df08110",
+      "release_lf_sha256": "06c215136b8b383195c6e9feed734e3c6ab0fa6259bc54d1a77d20040df08110",
+      "unchanged_function_or_class_count": 7
+    },
+    {
+      "source_path": "acsp/discovery/providers/gbif.py",
+      "release_path": "acsp/global_gbif.py",
+      "source_sha256": "fd839cb28d5b78e6e11e49bc0996e5c0b3554860a423fc741e3b9cf68e9d3975",
+      "release_lf_sha256": "752682e00b2aa5cace9c008f42cf880691507956b8fc943dab9e3cbd6b9f9f82",
+      "unchanged_function_or_class_count": 2
+    },
+    {
+      "source_path": "acsp/discovery/data/acsp_geoboundaries_v6_adm0_coverage_v1.json",
+      "release_path": "acsp/data/acsp_geoboundaries_v6_adm0_coverage_v1.json",
+      "source_sha256": "f0b8260c951664d86d3e879f002effc37bac26e4ef1f48f9f25e5e9391c3e493",
+      "release_lf_sha256": "f0b8260c951664d86d3e879f002effc37bac26e4ef1f48f9f25e5e9391c3e493",
+      "unchanged_function_or_class_count": 0
+    },
+    {
+      "source_path": "acsp/discovery/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json",
+      "release_path": "acsp/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json",
+      "source_sha256": "f77ba13da1e25967d759805f5eda8562f577bf4dc70f9fd3519f2edafdd0f26e",
+      "release_lf_sha256": "f77ba13da1e25967d759805f5eda8562f577bf4dc70f9fd3519f2edafdd0f26e",
+      "unchanged_function_or_class_count": 0
+    }
+  ]
+}

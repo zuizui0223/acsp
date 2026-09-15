@@ -22,7 +22,7 @@ from shapely.ops import unary_union
 
 from acsp.benchmarking import get_json
 from .global_inputs import CountryLandGeometry
-from .discovery.country_entry import _provider_inventory
+from .global_country import _provider_inventory
 from importlib.resources import files
 
 GEOBOUNDARIES_RELEASE_TAG = "v6.0.0"
@@ -30,7 +30,7 @@ GEOBOUNDARIES_RELEASE_COMMIT = "1289e40e366c7b320550be1ee0614a9472d572d4"
 GEOBOUNDARIES_LICENSE = "CC BY 4.0"
 GEOBOUNDARIES_LICENSE_BLOB_SHA = "82e5f0190c068568b975ebb42d77f7f25e4d09ef"
 GEOBOUNDARIES_SOURCE_ID = "geoBoundaries-gbOpen-ADM0-simplified"
-ISO_MAPPING_PATH = files("acsp.discovery").joinpath("data").joinpath("iso3166_alpha2_to_alpha3_pycountry_24_6_1.json")
+ISO_MAPPING_PATH = files("acsp").joinpath("data").joinpath("iso3166_alpha2_to_alpha3_pycountry_24_6_1.json")
 URL_TEMPLATE = (
     "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/"
     f"{GEOBOUNDARIES_RELEASE_COMMIT}/releaseData/gbOpen/{{iso3}}/ADM0/"
