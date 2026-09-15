@@ -8,15 +8,18 @@ on:
       - "research/materialize_cirsium_fresh_sentinel_public_sources_v1.py"
       - "research/build_cirsium_private_sector_structural_grid_v1.py"
       - "research/validate_cirsium_fresh_range_sector_bundle_v1.py"
+      - "research/orchestrate_cirsium_fresh_sentinel_pre_field_v1.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
       - "tests/test_cirsium_fresh_sentinel_source_readiness_v1.py"
       - "tests/test_cirsium_fresh_range_sector_bundle_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_pre_field_orchestration_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
       - "validation/coverage_then_fine_structure_source_readiness_amendment_v1.json"
       - "validation/coverage_then_fine_structure_private_range_sector_schema_v1.json"
+      - "validation/coverage_then_fine_structure_pre_field_orchestration_contract_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -39,13 +42,14 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Run scale-separated mechanics, fresh-cohort and source-readiness guards
+      - name: Run scale-separated mechanics, fresh-cohort, source-readiness and orchestration guards
         run: |
           pytest -q \
             tests/test_coverage_then_fine_structure_v1.py \
             tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py \
             tests/test_cirsium_fresh_sentinel_source_readiness_v1.py \
-            tests/test_cirsium_fresh_range_sector_bundle_v1.py
+            tests/test_cirsium_fresh_range_sector_bundle_v1.py \
+            tests/test_cirsium_fresh_sentinel_pre_field_orchestration_v1.py
       - name: Guard frozen architecture boundary
         run: |
           python - <<'PY'
@@ -89,4 +93,16 @@ jobs:
           assert schema['properties']['type']['const'] == 'FeatureCollection'
           assert schema['properties']['features']['minItems'] == 4
           assert schema['properties']['features']['maxItems'] == 4
+
+          o = json.loads(Path('validation/coverage_then_fine_structure_pre_field_orchestration_contract_v1.json').read_text())
+          assert o['status'] == 'FROZEN_PRE_FIELD_ORCHESTRATION_MECHANICS'
+          assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert o['spatial_scales']['fine_candidate_spacing_m'] == 100
+          assert o['spatial_scales']['coarse_coverage_cell_size_m'] == 5000
+          assert o['spatial_scales']['fine_cells_per_coarse_axis'] == 50
+          assert o['orders_frozen_before_field_outcomes']['primary'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
+          assert o['orders_frozen_before_field_outcomes']['coverage_only'] == 'COVERAGE_ONLY_STABLE_WITHIN_CELL_V1'
+          assert o['failure_semantics']['replacement_after_failure_allowed'] is False
+          assert o['privacy_boundary']['coordinate_bearing_outputs_public'] is False
+          assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
           PY

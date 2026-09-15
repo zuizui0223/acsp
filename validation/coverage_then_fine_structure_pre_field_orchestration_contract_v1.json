@@ -1,0 +1,62 @@
+{
+  "schema_version": "coverage-then-fine-structure-pre-field-orchestration-contract-v1",
+  "status": "FROZEN_PRE_FIELD_ORCHESTRATION_MECHANICS",
+  "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+  "fresh_units": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "input_boundary": {
+    "single_private_input_class": "PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY",
+    "bundle_shape": "one FeatureCollection with exactly one Polygon/MultiPolygon per frozen cohort unit",
+    "text_to_geometry_inference_allowed": false,
+    "replacement_taxon_allowed": false
+  },
+  "pipeline": [
+    "validate_and_split_private_range_sector_bundle",
+    "materialize_frozen_public_sources",
+    "build_100m_private_raw_grid",
+    "build_private_source_manifest",
+    "build_private_structural_candidate_frame",
+    "derive_5km_coarse_coverage_cells_from_100m_grid",
+    "freeze_scale_separated_and_comparator_orders"
+  ],
+  "spatial_scales": {
+    "fine_candidate_spacing_m": 100,
+    "coarse_coverage_cell_size_m": 5000,
+    "fine_cells_per_coarse_axis": 50,
+    "structural_graph_radius_cells": 1
+  },
+  "coarse_coverage_rule": {
+    "coverage_grid_row": "floor(grid_row / 50)",
+    "coverage_grid_col": "floor(grid_col / 50)",
+    "cell_order_identity": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+    "outcome_or_score_used_to_define_cells": false
+  },
+  "orders_frozen_before_field_outcomes": {
+    "primary": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+    "coverage_only": "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
+    "fine_spatial_balance": "MORTON_DYADIC_COVERAGE_ORDER_V1"
+  },
+  "primary_order_rule": "within_cell_structure_rank ASC -> coverage_rank ASC -> stable_candidate_hash ASC",
+  "coverage_only_rule": "within_cell_stable_hash_rank ASC -> coverage_rank ASC -> stable_candidate_hash ASC",
+  "failure_semantics": {
+    "provider_or_source_failure_is_biological_negative": false,
+    "replacement_after_failure_allowed": false,
+    "post_failure_retuning_allowed": false,
+    "partial_success_promotes_method": false
+  },
+  "forbidden_inputs": [
+    "prospective_field_outcomes",
+    "permissions",
+    "roads_or_trails",
+    "route_cost",
+    "survey_days",
+    "monetary_budget",
+    "human_access"
+  ],
+  "privacy_boundary": {
+    "coordinate_bearing_outputs_public": false,
+    "private_output_root_must_be_outside_repository": true,
+    "public_safe_freeze_object": "hash-only receipt after private execution"
+  },
+  "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
+  "scientific_claim_added": false
+}
