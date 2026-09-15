@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Export a public-safe hash-only freeze receipt from private fresh-SENTINEL outputs.
 
-This is the final pre-outcome provenance step. It never reads candidate coordinates
-or field outcomes. It selects only method identities, unit identities and SHA-256
-fingerprints from the already-completed private pre-field receipts. The resulting
-JSON is safe to commit publicly and must be pinned before any future prospective
-outcome-opening workflow is authorized.
+This is the final pre-outcome provenance generation step. It never reads candidate
+coordinates or field outcomes. It selects only method identities, unit identities
+and SHA-256 fingerprints from already-completed private pre-field receipts. The
+resulting JSON is safe to commit publicly, but generation alone does not authorize
+prospective outcome opening: the exact receipt must be committed and pinned first.
 """
 from __future__ import annotations
 
@@ -60,6 +60,10 @@ def build_public_freeze_receipt(private_root: Path) -> dict[str, Any]:
         raise ValueError("private top receipt cannot declare opened field outcomes")
     if top.get("replacement_taxon_allowed") is not False:
         raise ValueError("private top receipt must preserve the no-replacement rule")
+    if top.get("ready_for_future_prospective_outcome_opening") is not False:
+        raise ValueError("private top receipt must not authorize outcome opening before public pinning")
+    if top.get("public_hash_receipt_committed") is not False:
+        raise ValueError("private top receipt cannot pre-claim that the public receipt is committed")
 
     units: dict[str, Any] = {}
     for unit_id in EXPECTED_UNITS:
@@ -106,7 +110,10 @@ def build_public_freeze_receipt(private_root: Path) -> dict[str, Any]:
         "replacement_taxon_allowed": False,
         "post_freeze_retuning_allowed": False,
         "public_safe_to_commit": True,
-        "outcome_opening_gate": "Commit and pin this exact hash-only receipt before any prospective field-outcome workflow is authorized."
+        "outcome_opening_authorized_by_generation_alone": False,
+        "public_receipt_commit_required_before_outcome_opening": True,
+        "public_receipt_commit_verified": False,
+        "outcome_opening_gate": "Commit and pin this exact hash-only receipt, then pass the repository pin verifier before any prospective field-outcome workflow is authorized."
     }
 
 
