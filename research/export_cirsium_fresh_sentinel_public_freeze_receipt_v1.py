@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Export a public-safe hash-only freeze receipt from private fresh-SENTINEL outputs.
 
-This is the final pre-outcome provenance generation step. It never reads candidate
+This is the candidate/order prescription provenance step. It never reads candidate
 coordinates or field outcomes. It selects only method identities, unit identities
 and SHA-256 fingerprints from already-completed private pre-field receipts. The
-resulting JSON is safe to commit publicly, but generation alone does not authorize
-prospective outcome opening: the exact receipt must be committed and pinned first.
+resulting JSON is safe to commit publicly, but generation and prescription pinning
+alone do not authorize prospective outcome opening: field evaluation semantics and
+the actual allocation/effort schedule must also be frozen and pinned pre-outcome.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_UNITS = ("CIR02", "CIR06", "CIR12", "CIR13")
 PRIVATE_TOP_STATUS = "ALL_FOUR_PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
 PRIVATE_UNIT_STATUS = "PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
+FIELD_EVALUATION_CONTRACT = "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
 
 
 def _inside_repo(path: Path) -> bool:
@@ -61,7 +63,7 @@ def build_public_freeze_receipt(private_root: Path) -> dict[str, Any]:
     if top.get("replacement_taxon_allowed") is not False:
         raise ValueError("private top receipt must preserve the no-replacement rule")
     if top.get("ready_for_future_prospective_outcome_opening") is not False:
-        raise ValueError("private top receipt must not authorize outcome opening before public pinning")
+        raise ValueError("private top receipt must not authorize outcome opening before all public pre-outcome gates")
     if top.get("public_hash_receipt_committed") is not False:
         raise ValueError("private top receipt cannot pre-claim that the public receipt is committed")
 
@@ -113,7 +115,10 @@ def build_public_freeze_receipt(private_root: Path) -> dict[str, Any]:
         "outcome_opening_authorized_by_generation_alone": False,
         "public_receipt_commit_required_before_outcome_opening": True,
         "public_receipt_commit_verified": False,
-        "outcome_opening_gate": "Commit and pin this exact hash-only receipt, then pass the repository pin verifier before any prospective field-outcome workflow is authorized."
+        "field_evaluation_contract": FIELD_EVALUATION_CONTRACT,
+        "field_allocation_and_effort_schedule_required_before_outcome_opening": True,
+        "field_allocation_and_effort_schedule_pinned": False,
+        "outcome_opening_gate": "Pinning this exact receipt closes only the candidate/order prescription gate. Freeze and publicly pin the field analysis unit, repeated-visit rule, comparator assignment, numeric effort metric, and candidate-specific allocation/effort schedule before prospective outcomes are opened."
     }
 
 
