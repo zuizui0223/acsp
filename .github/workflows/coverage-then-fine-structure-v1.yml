@@ -10,12 +10,15 @@ on:
       - "research/validate_cirsium_fresh_range_sector_bundle_v1.py"
       - "research/orchestrate_cirsium_fresh_sentinel_pre_field_v1.py"
       - "research/export_cirsium_fresh_sentinel_public_freeze_receipt_v1.py"
+      - "research/run_cirsium_fresh_sentinel_freeze_v1.py"
+      - "research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
       - "tests/test_cirsium_fresh_sentinel_source_readiness_v1.py"
       - "tests/test_cirsium_fresh_range_sector_bundle_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_field_orchestration_v1.py"
       - "tests/test_cirsium_fresh_sentinel_public_freeze_receipt_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_freeze_entry_and_pin_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
@@ -44,7 +47,7 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Run scale-separated mechanics, fresh-cohort, source-readiness and orchestration guards
+      - name: Run scale-separated mechanics, fresh-cohort, source-readiness and freeze/pin guards
         run: |
           pytest -q \
             tests/test_coverage_then_fine_structure_v1.py \
@@ -52,7 +55,8 @@ jobs:
             tests/test_cirsium_fresh_sentinel_source_readiness_v1.py \
             tests/test_cirsium_fresh_range_sector_bundle_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_field_orchestration_v1.py \
-            tests/test_cirsium_fresh_sentinel_public_freeze_receipt_v1.py
+            tests/test_cirsium_fresh_sentinel_public_freeze_receipt_v1.py \
+            tests/test_cirsium_fresh_sentinel_freeze_entry_and_pin_v1.py
       - name: Guard frozen architecture boundary
         run: |
           python - <<'PY'
@@ -100,6 +104,7 @@ jobs:
           o = json.loads(Path('validation/coverage_then_fine_structure_pre_field_orchestration_contract_v1.json').read_text())
           assert o['status'] == 'FROZEN_PRE_FIELD_ORCHESTRATION_MECHANICS'
           assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert o['execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
           assert o['spatial_scales']['fine_candidate_spacing_m'] == 100
           assert o['spatial_scales']['coarse_coverage_cell_size_m'] == 5000
           assert o['spatial_scales']['fine_cells_per_coarse_axis'] == 50
@@ -107,8 +112,16 @@ jobs:
           assert o['orders_frozen_before_field_outcomes']['coverage_only'] == 'COVERAGE_ONLY_STABLE_WITHIN_CELL_V1'
           assert o['failure_semantics']['replacement_after_failure_allowed'] is False
           assert o['privacy_boundary']['coordinate_bearing_outputs_public'] is False
-          assert o['public_freeze_gate']['receipt_must_be_committed_and_pinned_before_outcome_opening'] is True
-          assert o['public_freeze_gate']['prospective_outcome_opening_allowed_before_public_receipt_commit'] is False
+          gate = o['public_freeze_gate']
+          assert gate['single_execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
+          assert gate['pin_verifier'] == 'research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py'
+          assert gate['receipt_must_be_committed_and_pinned_before_outcome_opening'] is True
+          assert gate['receipt_generation_alone_authorizes_outcome_opening'] is False
+          assert gate['pin_verifier_requires_git_tracked_receipt'] is True
+          assert gate['pin_verifier_requires_clean_receipt'] is True
+          assert gate['pin_verifier_requires_head_bytes_equal_receipt'] is True
+          assert gate['pin_verifier_requires_pin_commit_ancestor_of_head'] is True
+          assert gate['prospective_outcome_opening_allowed_before_public_receipt_commit'] is False
           assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
           assert o['outcome_opening_allowed_now'] is False
           PY
