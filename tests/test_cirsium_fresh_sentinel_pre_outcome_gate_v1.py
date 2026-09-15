@@ -7,20 +7,10 @@ import subprocess
 
 import pytest
 
-from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import (
-    DEFAULT_CONTRACT,
-    DEFAULT_FIELD_LOG_TEMPLATE,
-)
-from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import (
-    FINAL_STATUS,
-    verify_pre_outcome_gate,
-)
-from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import (
-    verify_public_field_schedule_pin,
-)
-from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import (
-    verify_public_freeze_pin,
-)
+from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import DEFAULT_CONTRACT, DEFAULT_FIELD_LOG_TEMPLATE
+from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import FINAL_STATUS, verify_pre_outcome_gate
+from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
+from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import verify_public_freeze_pin
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -69,6 +59,11 @@ def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_overr
             "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
             "MORTON_DYADIC_COVERAGE_ORDER_V1",
         ],
+        "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+        "private_candidate_membership_verified": True,
+        "private_pre_field_receipt_hash_linkage_verified": True,
+        "frozen_order_hash_linkage_verified": True,
+        "frozen_order_prefix_verified": True,
         "coordinate_bearing_data_included": False,
         "private_candidate_refs_included": False,
         "private_paths_included": False,
@@ -82,11 +77,7 @@ def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_overr
     }
 
 
-def _prepare_repo(
-    tmp_path: Path,
-    *,
-    candidate_hash_override: str = "",
-) -> tuple[Path, Path, Path, Path, Path, str, str]:
+def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple[Path, Path, Path, Path, Path, str, str]:
     repo = tmp_path / "repo"
     _init_repo(repo)
     evaluation = repo / "validation" / "coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
@@ -132,6 +123,8 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["candidate_order_pin_gate_satisfied"] is True
     assert final["field_schedule_pin_gate_satisfied"] is True
     assert final["exact_hash_linkage_satisfied"] is True
+    assert final["private_candidate_membership_verified"] is True
+    assert final["frozen_order_prefix_verified"] is True
     assert final["prospective_field_outcomes_opened"] is False
     assert final["outcome_opening_gate_satisfied"] is True
 
@@ -147,14 +140,22 @@ def test_candidate_pin_alone_cannot_authorize_outcome_opening(tmp_path: Path) ->
 
 
 def test_initially_pinned_wrong_candidate_hash_linkage_is_rejected(tmp_path: Path) -> None:
-    repo, candidate, schedule, evaluation, log_template, _, schedule_pin = _prepare_repo(
-        tmp_path,
-        candidate_hash_override="0" * 64,
-    )
+    repo, candidate, schedule, evaluation, log_template, _, schedule_pin = _prepare_repo(tmp_path, candidate_hash_override="0" * 64)
     schedule_result = verify_public_field_schedule_pin(schedule, repo_root=repo, expected_pin_commit=schedule_pin)
     assert schedule_result["field_schedule_pin_gate_satisfied"] is True
     with pytest.raises(ValueError, match="exact immutable candidate/order receipt"):
         verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
+
+
+def test_schedule_pin_rejects_missing_membership_proof(tmp_path: Path) -> None:
+    repo, _, schedule, _, _, _, _ = _prepare_repo(tmp_path)
+    value = json.loads(schedule.read_text())
+    value["private_candidate_membership_verified"] = False
+    schedule.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _git(repo, "add", "validation/field-schedule-receipt.json")
+    _git(repo, "commit", "-m", "Create invalid membership receipt")
+    with pytest.raises(ValueError, match="private_candidate_membership_verified"):
+        verify_public_field_schedule_pin(schedule, repo_root=repo)
 
 
 def test_clean_recommit_of_changed_schedule_receipt_cannot_repin(tmp_path: Path) -> None:
