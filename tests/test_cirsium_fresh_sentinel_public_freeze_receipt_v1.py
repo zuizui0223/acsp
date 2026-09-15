@@ -7,6 +7,7 @@ import pytest
 
 from research.export_cirsium_fresh_sentinel_public_freeze_receipt_v1 import (
     EXPECTED_UNITS,
+    FIELD_EVALUATION_CONTRACT,
     build_public_freeze_receipt,
 )
 
@@ -69,6 +70,10 @@ def test_public_receipt_contains_only_hash_level_provenance(tmp_path: Path) -> N
     assert receipt["outcome_opening_authorized_by_generation_alone"] is False
     assert receipt["public_receipt_commit_required_before_outcome_opening"] is True
     assert receipt["public_receipt_commit_verified"] is False
+    assert receipt["field_evaluation_contract"] == FIELD_EVALUATION_CONTRACT
+    assert receipt["field_allocation_and_effort_schedule_required_before_outcome_opening"] is True
+    assert receipt["field_allocation_and_effort_schedule_pinned"] is False
+    assert "closes only the candidate/order prescription gate" in receipt["outcome_opening_gate"]
     assert list(receipt["units"]) == list(EXPECTED_UNITS)
     rendered = json.dumps(receipt)
     assert str(tmp_path) not in rendered
