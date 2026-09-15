@@ -31,6 +31,9 @@ def _private_root(tmp_path: Path) -> Path:
         "graph_radius_cells": 1,
         "field_outcomes_opened": False,
         "replacement_taxon_allowed": False,
+        "public_hash_receipt_committed": False,
+        "ready_for_public_hash_receipt_freeze": True,
+        "ready_for_future_prospective_outcome_opening": False,
     }
     _write(root / "pre_field_freeze_receipt.json", top)
     for index, unit in enumerate(EXPECTED_UNITS):
@@ -50,6 +53,7 @@ def _private_root(tmp_path: Path) -> Path:
                 "field_outcomes_opened": False,
                 "replacement_taxon_allowed": False,
                 "retuning_after_failure_allowed": False,
+                "public_hash_receipt_committed": False,
             },
         )
     return root
@@ -62,6 +66,9 @@ def test_public_receipt_contains_only_hash_level_provenance(tmp_path: Path) -> N
     assert receipt["private_paths_included"] is False
     assert receipt["prospective_field_outcomes_opened"] is False
     assert receipt["public_safe_to_commit"] is True
+    assert receipt["outcome_opening_authorized_by_generation_alone"] is False
+    assert receipt["public_receipt_commit_required_before_outcome_opening"] is True
+    assert receipt["public_receipt_commit_verified"] is False
     assert list(receipt["units"]) == list(EXPECTED_UNITS)
     rendered = json.dumps(receipt)
     assert str(tmp_path) not in rendered
@@ -74,6 +81,16 @@ def test_public_receipt_rejects_opened_outcome(tmp_path: Path) -> None:
     value["field_outcomes_opened"] = True
     _write(path, value)
     with pytest.raises(ValueError):
+        build_public_freeze_receipt(root)
+
+
+def test_public_receipt_rejects_private_top_that_claims_opening_ready(tmp_path: Path) -> None:
+    root = _private_root(tmp_path)
+    path = root / "pre_field_freeze_receipt.json"
+    value = json.loads(path.read_text())
+    value["ready_for_future_prospective_outcome_opening"] = True
+    _write(path, value)
+    with pytest.raises(ValueError, match="authorize"):
         build_public_freeze_receipt(root)
 
 
