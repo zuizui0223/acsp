@@ -1,0 +1,32 @@
+{
+  "schema_version": "public-japan-cirsium-temporal-anchor-benchmark-result-v1",
+  "status": "PUBLIC_RETROSPECTIVE_DEVELOPMENT_COMPLETE",
+  "protocol": "validation/public_japan_cirsium_temporal_anchor_benchmark_v1.json",
+  "workflow_run_id": 33937800816,
+  "artifact_id": 9960764490,
+  "artifact_digest": "sha256:dcff74eac76294a94b47d8b5c2390f6a414ebf47c5f490b413fc5fe28d1d1531",
+  "source_head_sha": "0349164c47f8650d37a084f88419979efdbde3a9",
+  "field_outcomes_used": false,
+  "private_localities_used": false,
+  "validated_product_changed": false,
+  "declared_species": 13,
+  "species_with_any_eligible_records": 9,
+  "temporally_evaluable_species": 3,
+  "species_with_novel_recent_clusters": 3,
+  "sentinel_species_count": 4,
+  "novel_recent_cluster_count": 28,
+  "pooled_fraction_novel_recent_within_2km": 0.03571428571428571,
+  "pooled_fraction_novel_recent_within_5km": 0.07142857142857142,
+  "species_level_fraction_within_2km_median": 0.0,
+  "species_level_fraction_within_5km_median": 0.05,
+  "gbif_raw_records_seen": 657,
+  "gbif_eligible_records": 70,
+  "interpretation": {
+    "local_proximity_generalization_supported": false,
+    "result": "Later public GBIF clusters are not generally concentrated within 2-5 km of pre-2021 clusters in this strict 13-species Japan benchmark.",
+    "primary_reason_to_investigate": "The later public record set includes geographically detached observation components and the strict <=1 km declared-uncertainty filter leaves limited temporal evaluability.",
+    "architectural_consequence": "Do not use nearest-known local continuation as the universal outer search rule. Preserve LOCAL_CONTINUATION as a typed mode and keep DETACHED_COMPONENT/SENTINEL broad search as separate upstream regimes.",
+    "does_not_show": "This does not show that occurrence-conditioned environmental support fails within a declared regional frame, and it does not invalidate the independently confirmed 10-km Japan robust candidate-patch core."
+  },
+  "retuning_after_result": false
+}

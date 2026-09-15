@@ -1,0 +1,83 @@
+name: Japan plant broad-frame historical preflight v3
+
+on:
+  pull_request:
+    paths:
+      - "validation/japan_plant_broad_frame_confirmation_v3.json"
+      - "validation/japan_plant_broad_frame_identity_candidates_v3.csv"
+      - "validation/japan_plant_broad_frame_identity_candidates_audit_v3.json"
+      - "validation/japan_plant_broad_frame_identity_receipt_v3.json"
+      - "research/prepare_japan_plant_broad_frame_preflight_v3.py"
+      - "tests/test_japan_plant_broad_frame_preflight_v3.py"
+      - ".github/workflows/japan-plant-broad-frame-historical-preflight-v3.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: japan-plant-broad-frame-historical-preflight-v3-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test historical-only qualification mechanics
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python tests/test_japan_plant_broad_frame_preflight_v3.py -v
+      - name: Verify exact stage1 receipt before focal historical queries
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          r=json.load(open('validation/japan_plant_broad_frame_identity_receipt_v3.json'))
+          for key,path_key in [('identity_candidates_sha256','identity_candidates_path'),('identity_audit_sha256','identity_audit_path')]:
+              p=Path(r[path_key]); got=hashlib.sha256(p.read_bytes()).hexdigest(); assert got==r[key], (key,got,r[key])
+          assert r['status']=='IDENTITY_CANDIDATES_PINNED_PRE_FOCAL_HISTORICAL_QUERY'
+          assert r['candidate_count']==48
+          assert r['focal_2000_2020_occurrences_opened'] is False
+          assert r['heldout_2021_2025_opened'] is False
+          PY
+      - name: Open only 2000-2020 evidence and freeze final 24 candidate universes
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/japan-plant-broad-v3-preflight
+          mkdir -p /tmp/japan-plant-broad-v3-preflight
+          python research/prepare_japan_plant_broad_frame_preflight_v3.py \
+            --candidates validation/japan_plant_broad_frame_identity_candidates_v3.csv \
+            --stage1-audit validation/japan_plant_broad_frame_identity_candidates_audit_v3.json \
+            --output /tmp/japan-plant-broad-v3-preflight/preflight.json
+      - name: Verify pre-heldout boundary
+        run: |
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/japan-plant-broad-v3-preflight/preflight.json'))
+          assert x['status'] in {'PREOUTCOME_24_TAXA_AND_CANDIDATE_UNIVERSES_FROZEN','STOP_PREOUTCOME_INSUFFICIENT_HISTORICAL_QUALIFIERS'}
+          assert x['candidate_identity_count']==48
+          assert x['heldout_2021_2025_opened'] is False
+          assert x['selector_evaluated'] is False
+          assert x['validated_japan_product_changed'] is False
+          assert x['automatic_global_adapter_changed'] is False
+          if x['status']=='PREOUTCOME_24_TAXA_AND_CANDIDATE_UNIVERSES_FROZEN':
+              assert x['final_taxa']==24 and len(x['selected_taxa'])==24
+              assert len({int(r['speciesKey']) for r in x['selected_taxa']})==24
+              assert all(int(r['historical_population_count'])>=5 for r in x['selected_taxa'])
+          else:
+              assert int(x['historically_qualified_identities'])<24
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: japan-plant-broad-frame-historical-preflight-v3
+          path: /tmp/japan-plant-broad-v3-preflight/
+          if-no-files-found: error
+          retention-days: 90

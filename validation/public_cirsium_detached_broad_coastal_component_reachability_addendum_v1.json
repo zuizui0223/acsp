@@ -1,0 +1,25 @@
+{
+  "schema_version": "public-cirsium-detached-broad-coastal-component-reachability-addendum-v1",
+  "status": "POST_OPENED_DESCRIPTIVE_ADDENDUM",
+  "parent_contract": "validation/public_cirsium_detached_broad_coastal_development_v1.json",
+  "cohort_unit_id": "CIR08",
+  "species": "Cirsium brevicaule",
+  "validated_product_changed": false,
+  "reason": "The parent DETACHED_BROAD benchmark was already opened. This addendum decomposes its already-frozen broad WorldCover candidate frame into source-backed component ceilings to diagnose why the 5-km LOCAL frame missed 14/15 novel populations.",
+  "descriptive_frames": [
+    "ANCHORED_COMPONENT_FULL",
+    "OTHER_COMPONENTS_FULL",
+    "DETACHED_SAME_COMPONENT",
+    "DETACHED_OTHER_COMPONENT",
+    "BROAD_LAND_UNION"
+  ],
+  "recovery_radii_km": [0.25, 0.5, 1.0],
+  "constraints": [
+    "reuse the parent 250-m broad frame, strict historical anchors, WorldCover crop and 5-km LOCAL boundary exactly",
+    "do not introduce a component-size threshold",
+    "do not choose components based on later population locations",
+    "do not use this decomposition to promote or tune a selector",
+    "report every named frame at every radius"
+  ],
+  "interpretation": "descriptive candidate-universe diagnosis only; cannot rescue, promote or validate DETACHED_BROAD"
+}

@@ -1,0 +1,120 @@
+{
+  "schema_version": "cirsium-structural-selector-execution-freeze-v1",
+  "status": "ALGORITHM_ADAPTERS_GRAPH_RANKING_AND_SENTINEL_AUDIT_FROZEN_PRIVATE_FRAMES_NOT_YET_EXECUTED",
+  "scientific_role": "prospective Cirsium structural-continuity test under issue 192",
+  "field_outcomes_opened": false,
+  "private_candidate_frames_built": false,
+  "public_patch_manifest_built": false,
+  "public_full_ranking_built": false,
+  "field_prefix_selected": false,
+  "cohort_table": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "cohort_size": 13,
+  "family_contract": "validation/cirsium_structural_selector_family_contract_v1.json",
+  "raw_adapter_contract": "validation/cirsium_structural_raw_adapter_contract_v1.json",
+  "graph_contract": "validation/cirsium_structural_graph_contract_v1.json",
+  "candidate_frame_contract": "validation/cirsium_candidate_frame_contract_v1.json",
+  "private_source_requirements": "validation/cirsium_private_frame_source_requirements_v1.csv",
+  "private_source_manifest_template": "validation/cirsium_private_source_manifest_template_v1.json",
+  "selector_core": "acsp/structural_selector.py",
+  "support_composer": "acsp/structural_support.py",
+  "raw_adapter_core": "acsp/structural_raw_adapters.py",
+  "ecological_graph_core": "acsp/structural_graph.py",
+  "private_frame_builder": "research/prepare_cirsium_private_candidate_frame_v1.py",
+  "public_full_ranking_generator": "research/freeze_cirsium_candidate_patch_ranking_v2.py",
+  "legacy_fixed_k_freeze_generator": "research/freeze_cirsium_candidate_patch_manifest_v1.py",
+  "legacy_fixed_k_generator_authoritative_for_new_execution": false,
+  "support_composition_rule": "ROW_MIN_CONJUNCTIVE_SUPPORT",
+  "feature_weights_fitted": false,
+  "field_outcome_columns_allowed_in_generation": false,
+  "post_outcome_family_switch_allowed": false,
+  "ecological_graph_uses_human_access": false,
+  "raw_adapter_uses_human_access": false,
+  "full_ranking_before_field_prefix": true,
+  "outcome_dependent_prefix_extension_allowed": false,
+  "family_components": {
+    "WETLAND_MOISTURE_STRUCTURE": [
+      "wetland_water_adjacent_score",
+      "topographic_moisture_score",
+      "terrain_continuity_score"
+    ],
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": [
+      "relative_relief_score",
+      "landform_continuity_score",
+      "ridge_valley_continuity_score"
+    ],
+    "OPEN_GRASSLAND_STRUCTURE": [
+      "open_land_score",
+      "fragment_continuity_score",
+      "terrain_context_score"
+    ],
+    "COASTAL_ISLAND_STRUCTURE": [
+      "shore_position_score",
+      "shore_landform_continuity_score",
+      "island_component_score"
+    ],
+    "FOREST_EDGE_STRUCTURE": [
+      "forest_edge_score",
+      "canopy_opening_transition_score",
+      "terrain_component_score"
+    ],
+    "GENERAL_SPATIAL_BASELINE_ONLY": []
+  },
+  "ranking_method_sets": {
+    "STRUCTURAL_LOCAL": [
+      "STRUCTURAL_SUPPORT",
+      "ANNULAR_NEAREST_KNOWN",
+      "DETERMINISTIC_SPATIAL_BALANCE"
+    ],
+    "STRUCTURAL_SENTINEL": {
+      "UNCERTAINTY_FOOTPRINT": [
+        "STRUCTURAL_SUPPORT",
+        "UNCERTAINTY_FOOTPRINT_SUPPORT",
+        "DETERMINISTIC_SPATIAL_BALANCE"
+      ],
+      "LEGACY_RANGE_CONTEXT": [
+        "STRUCTURAL_SUPPORT",
+        "DETERMINISTIC_SPATIAL_BALANCE"
+      ],
+      "COARSE_RANGE_CONTEXT": [
+        "STRUCTURAL_SUPPORT",
+        "DETERMINISTIC_SPATIAL_BALANCE"
+      ]
+    },
+    "SPATIAL_BASELINE_ONLY": [
+      "ANNULAR_NEAREST_KNOWN",
+      "DETERMINISTIC_SPATIAL_BALANCE"
+    ]
+  },
+  "same_candidate_frame_full_ranking_within_unit": true,
+  "matched_field_effort_claim": false,
+  "occurrence_uncertainty_audit_v2": {
+    "completed": true,
+    "workflow_run_id": 33847046386,
+    "artifact_id": 9926992269,
+    "artifact_digest": "sha256:5e908fecb625f2f8e4e87e758a0a9d0ace63c14e63fce19cf7bf87c0c7fe8147",
+    "head_sha": "6b2b8012e285e8fcaea267fd38190ac5025af9b2",
+    "field_outcomes_opened": false,
+    "coordinate_leakage_guard_passed": true
+  },
+  "source_layer_state": {
+    "terrain_semantics": "PINNED_GSI_DEM_DERIVED",
+    "worldcover_semantics": "PINNED_ESA_WORLDCOVER_2021_NEIGHBOURHOOD",
+    "coastline_source_of_record": "GSI_FUNDAMENTAL_GEOSPATIAL_DATA_BASIC_ITEMS_COASTLINE",
+    "coastline_private_snapshot_sha256_recorded": false,
+    "private_unit_source_snapshots_built": false,
+    "sentinel_uncertainty_audit_v2_completed": true
+  },
+  "public_sensitive_coordinate_policy": {
+    "exact_coordinates_written": false,
+    "raw_candidate_ids_written": false,
+    "public_candidate_identifier": "HMAC-SHA256 token using execution-time private salt",
+    "private_salt_committed": false
+  },
+  "remaining_pre_field_execution_steps": [
+    "download/freeze private source snapshots needed by each of the 13 units and record SHA-256/provenance",
+    "build the 13 private candidate frames from pre-2026 occurrence evidence plus frozen environmental sources",
+    "run the full-ranking HMAC freeze before opening any field outcome",
+    "declare an equal field prefix across methods from logistical capacity before outcomes; never extend a method prefix because of observed success/failure"
+  ],
+  "claim_boundary": "The problem gates, LOCAL frame geometry, sentinel uncertainty-provenance audit and subregime-specific comparators, structural families, raw-layer adapters, G_E graph mechanics, support composition, full deterministic ranking mechanics and HMAC public-freeze semantics are frozen. Real Cirsium candidate frames/rankings and the field prefix are not yet built, so this file does not establish occupancy, accessibility, field efficiency, or structural-selector superiority."
+}
