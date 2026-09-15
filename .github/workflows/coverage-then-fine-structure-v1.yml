@@ -7,13 +7,16 @@ on:
       - "acsp/discovery/__init__.py"
       - "research/materialize_cirsium_fresh_sentinel_public_sources_v1.py"
       - "research/build_cirsium_private_sector_structural_grid_v1.py"
+      - "research/validate_cirsium_fresh_range_sector_bundle_v1.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
       - "tests/test_cirsium_fresh_sentinel_source_readiness_v1.py"
+      - "tests/test_cirsium_fresh_range_sector_bundle_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
       - "validation/coverage_then_fine_structure_source_readiness_amendment_v1.json"
+      - "validation/coverage_then_fine_structure_private_range_sector_schema_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -38,7 +41,8 @@ jobs:
           pytest -q \
             tests/test_coverage_then_fine_structure_v1.py \
             tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py \
-            tests/test_cirsium_fresh_sentinel_source_readiness_v1.py
+            tests/test_cirsium_fresh_sentinel_source_readiness_v1.py \
+            tests/test_cirsium_fresh_range_sector_bundle_v1.py
       - name: Guard frozen architecture boundary
         run: |
           python - <<'PY'
@@ -77,4 +81,9 @@ jobs:
           assert s['repo_and_upstream_audit']['aza3_required_slots_frozen_at_pinned_commit'] == 0
           assert s['remaining_external_blocker']['single_input_class'] == 'PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY'
           assert s['remaining_external_blocker']['required_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+
+          schema = json.loads(Path('validation/coverage_then_fine_structure_private_range_sector_schema_v1.json').read_text())
+          assert schema['properties']['type']['const'] == 'FeatureCollection'
+          assert schema['properties']['features']['minItems'] == 4
+          assert schema['properties']['features']['maxItems'] == 4
           PY
