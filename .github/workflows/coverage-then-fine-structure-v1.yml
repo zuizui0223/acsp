@@ -14,6 +14,7 @@ on:
       - "research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py"
       - "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_private_schedule_membership_v1.py"
       - "research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py"
       - "research/verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1.py"
       - "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
@@ -126,7 +127,12 @@ jobs:
           ]
           assert e['newly_frozen_primary_binary_endpoint']['favorable_subsetting_after_outcome'] is False
           assert e['effort_accounting']['matched_field_effort_required_for_between_arm_promotion'] is True
-          assert e['effort_accounting']['numeric_effort_metric_frozen_now'] is False
+          assert e['effort_accounting']['numeric_effort_metric_frozen_now'] is True
+          assert e['effort_accounting']['numeric_effort_metric'] == {
+              'identity': 'PERSON_MINUTES_V1',
+              'unit': 'person-minute',
+              'formula': 'search_minutes * observer_count',
+          }
           assert e['effort_accounting']['numeric_effort_schedule_frozen_now'] is False
           assert e['pre_outcome_gate_state']['field_allocation_and_effort_schedule_pinned'] is False
           assert e['pre_outcome_gate_state']['prospective_outcome_opening_allowed_now'] is False
@@ -154,7 +160,8 @@ jobs:
           static_gate = o['static_field_evaluation_gate']
           assert static_gate['contract'] == 'validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json'
           assert static_gate['matched_field_effort_required_for_promotion'] is True
-          assert static_gate['numeric_effort_metric_frozen'] is False
+          assert static_gate['numeric_effort_metric_frozen'] is True
+          assert static_gate['numeric_effort_metric']['identity'] == 'PERSON_MINUTES_V1'
           assert static_gate['prospective_outcome_opening_allowed_while_schedule_pending'] is False
           gate = o['public_freeze_gate']
           assert gate['single_execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
