@@ -7,7 +7,7 @@
     "prospective_contract": "research/CIRSIUM_AZA3_PROSPECTIVE_LOCAL_DISCOVERY.md",
     "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
     "fresh_method_freeze": "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json",
-    "note": "Endpoint states, minimum effort fields, and the requirement for matched field effort come from the existing prospective contract. Binary-denominator handling, PERSON_MINUTES_V1, and no-skip frozen-order assignment are frozen before prospective outcomes are opened."
+    "note": "Endpoint states, minimum effort fields, matched PERSON_MINUTES_V1 effort, the candidate-level arm-specific analysis unit, repeated-visit aggregation, shared-candidate handling, and no-skip frozen-order assignment are all frozen before prospective outcomes are opened."
   },
   "field_endpoint": {
     "primary_success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
@@ -23,7 +23,7 @@
     "verified_occurrence_without_tissue_is_location_discovery_success": true
   },
   "newly_frozen_primary_binary_endpoint": {
-    "success_numerator": "count of SEARCH_COMPLETED_DETECTED_VERIFIED among analysis units admitted by the pre-outcome allocation schedule",
+    "success_numerator": "count of resolved COHORT_ARM_CANDIDATE_V1 analysis units classified SEARCH_COMPLETED_DETECTED_VERIFIED under the frozen repeated-visit rule",
     "resolved_binary_denominator_states": [
       "SEARCH_COMPLETED_DETECTED_VERIFIED",
       "SEARCH_COMPLETED_NOT_DETECTED"
@@ -65,9 +65,18 @@
   },
   "analysis_unit_and_repeated_visits": {
     "field_log_row_semantics": "one logged search/visit record",
-    "primary_analysis_unit_frozen_now": false,
-    "repeated_visit_aggregation_frozen_now": false,
-    "required_next_gate": "Freeze the analysis unit, repeated-visit aggregation rule, shared-candidate handling, and candidate-specific visit/allocation schedule before opening prospective outcomes."
+    "primary_analysis_unit_frozen_now": true,
+    "primary_analysis_unit_identity": "COHORT_ARM_CANDIDATE_V1",
+    "primary_analysis_unit_definition": "one unique cohort_unit_id x method_arm x private_candidate_ref selected by the frozen pre-outcome schedule; all scheduled visits to that arm-specific candidate aggregate into this single primary analysis unit",
+    "analysis_unit_id_must_map_one_to_one_to_cohort_arm_candidate": true,
+    "visit_indices_must_be_contiguous_from_one_within_analysis_unit": true,
+    "repeated_visit_aggregation_frozen_now": true,
+    "repeated_visit_aggregation_identity": "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1",
+    "repeated_visit_aggregation_rule": "Within one COHORT_ARM_CANDIDATE_V1 unit, any SEARCH_COMPLETED_DETECTED_VERIFIED visit makes the unit a verified detection success. If no verified detection occurs, classify the unit SEARCH_COMPLETED_NOT_DETECTED only when every scheduled visit is SEARCH_COMPLETED_NOT_DETECTED. Identity-unresolved or non-biological/non-evaluable visits never become absence; without a verified detection they keep the unit outside the resolved binary denominator.",
+    "shared_candidate_handling_frozen_now": true,
+    "shared_candidate_handling_identity": "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1",
+    "shared_candidate_handling_rule": "If the same physical candidate is selected by multiple frozen arms, retain one arm-specific analysis unit in every nominating arm; do not drop, substitute, or assign exclusive ownership. A single physical search may supply the same observed biological outcome to each nominating arm-specific unit, while PERSON_MINUTES_V1 is charged to each arm's preregistered counterfactual schedule. Cross-arm candidate overlap must be reported, and summed arm effort must not be interpreted as total expedition effort.",
+    "required_next_gate": "Instantiate the candidate-specific visit/allocation and PERSON_MINUTES_V1 schedule after exact candidate identities exist, then publicly pin its hash-only receipt before opening prospective outcomes."
   },
   "field_log_schema_required_columns": [
     "validation_unit_id",
@@ -107,6 +116,7 @@
   },
   "pre_outcome_gate_state": {
     "static_evaluation_semantics_frozen": true,
+    "analysis_unit_and_repeat_semantics_frozen": true,
     "private_candidate_and_order_freeze_completed": false,
     "public_candidate_order_hash_receipt_pinned": false,
     "field_allocation_and_effort_schedule_frozen": false,
