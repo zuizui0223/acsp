@@ -24,6 +24,9 @@ EXPECTED_EFFORT_METRIC = {
     "formula": "search_minutes * observer_count",
 }
 EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
+EXPECTED_ANALYSIS_UNIT_IDENTITY = "COHORT_ARM_CANDIDATE_V1"
+EXPECTED_REPEAT_AGGREGATION_IDENTITY = "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1"
+EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY = "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -112,14 +115,28 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         raise ValueError("post-outcome candidate substitution must remain forbidden")
 
     analysis = contract.get("analysis_unit_and_repeated_visits") or {}
-    if analysis.get("primary_analysis_unit_frozen_now") is not False:
-        raise ValueError("analysis unit cannot be claimed frozen before allocation schedule")
-    if analysis.get("repeated_visit_aggregation_frozen_now") is not False:
-        raise ValueError("repeated-visit aggregation cannot be claimed frozen yet")
+    if analysis.get("primary_analysis_unit_frozen_now") is not True:
+        raise ValueError("primary analysis unit must remain frozen before schedule instantiation")
+    if analysis.get("primary_analysis_unit_identity") != EXPECTED_ANALYSIS_UNIT_IDENTITY:
+        raise ValueError("analysis unit identity changed from COHORT_ARM_CANDIDATE_V1")
+    if analysis.get("analysis_unit_id_must_map_one_to_one_to_cohort_arm_candidate") is not True:
+        raise ValueError("analysis unit must remain one-to-one with cohort-arm-candidate identity")
+    if analysis.get("visit_indices_must_be_contiguous_from_one_within_analysis_unit") is not True:
+        raise ValueError("visit indices must remain contiguous from one within each analysis unit")
+    if analysis.get("repeated_visit_aggregation_frozen_now") is not True:
+        raise ValueError("repeated-visit aggregation must remain frozen before schedule instantiation")
+    if analysis.get("repeated_visit_aggregation_identity") != EXPECTED_REPEAT_AGGREGATION_IDENTITY:
+        raise ValueError("repeated-visit aggregation identity changed")
+    if analysis.get("shared_candidate_handling_frozen_now") is not True:
+        raise ValueError("shared-candidate handling must remain frozen before schedule instantiation")
+    if analysis.get("shared_candidate_handling_identity") != EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY:
+        raise ValueError("shared-candidate handling identity changed")
 
     gate = contract.get("pre_outcome_gate_state") or {}
     if gate.get("static_evaluation_semantics_frozen") is not True:
         raise ValueError("static evaluation semantics must be frozen")
+    if gate.get("analysis_unit_and_repeat_semantics_frozen") is not True:
+        raise ValueError("analysis-unit and repeat-visit semantics must remain frozen")
     if gate.get("field_allocation_and_effort_schedule_frozen") is not False:
         raise ValueError("field allocation/effort schedule is not frozen yet")
     if gate.get("field_allocation_and_effort_schedule_pinned") is not False:
@@ -142,6 +159,12 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         "resolved_binary_denominator_states": primary["resolved_binary_denominator_states"],
         "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
         "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
+        "analysis_unit_frozen": True,
+        "analysis_unit_identity": EXPECTED_ANALYSIS_UNIT_IDENTITY,
+        "repeated_visit_aggregation_frozen": True,
+        "repeated_visit_aggregation_identity": EXPECTED_REPEAT_AGGREGATION_IDENTITY,
+        "shared_candidate_handling_frozen": True,
+        "shared_candidate_handling_identity": EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY,
         "numeric_effort_schedule_frozen": False,
         "prospective_outcome_opening_allowed_now": False,
     }
