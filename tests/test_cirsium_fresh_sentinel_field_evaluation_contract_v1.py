@@ -30,6 +30,12 @@ def test_repository_contract_and_empty_field_log_template_are_valid() -> None:
     assert result["cohort_unit_ids"] == ["CIR02", "CIR06", "CIR12", "CIR13"]
     assert result["primary_success_state"] == "SEARCH_COMPLETED_DETECTED_VERIFIED"
     assert result["resolved_binary_denominator_states"] == EXPECTED_RESOLVED_DENOMINATOR_STATES
+    assert result["analysis_unit_frozen"] is True
+    assert result["analysis_unit_identity"] == "COHORT_ARM_CANDIDATE_V1"
+    assert result["repeated_visit_aggregation_frozen"] is True
+    assert result["repeated_visit_aggregation_identity"] == "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1"
+    assert result["shared_candidate_handling_frozen"] is True
+    assert result["shared_candidate_handling_identity"] == "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
     assert result["numeric_effort_schedule_frozen"] is False
     assert result["prospective_outcome_opening_allowed_now"] is False
 
@@ -70,3 +76,24 @@ def test_required_field_log_column_removal_is_detected(tmp_path: Path) -> None:
     template.write_text(",".join(header) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="search_minutes"):
         validate_field_evaluation_contract(DEFAULT_CONTRACT, template)
+
+
+def test_analysis_unit_identity_is_frozen_before_schedule_instantiation(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["analysis_unit_and_repeated_visits"]["primary_analysis_unit_identity"] = "CHANGED_ANALYSIS_UNIT"
+    with pytest.raises(ValueError, match="analysis unit identity"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
+
+
+def test_repeated_visit_aggregation_identity_is_frozen_before_schedule_instantiation(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["analysis_unit_and_repeated_visits"]["repeated_visit_aggregation_identity"] = "CHANGED_REPEAT_RULE"
+    with pytest.raises(ValueError, match="repeated-visit aggregation"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
+
+
+def test_shared_candidate_handling_identity_is_frozen_before_schedule_instantiation(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["analysis_unit_and_repeated_visits"]["shared_candidate_handling_identity"] = "CHANGED_SHARED_RULE"
+    with pytest.raises(ValueError, match="shared-candidate handling"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
