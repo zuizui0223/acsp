@@ -11,6 +11,12 @@ from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 imp
 from research.validate_cirsium_fresh_sentinel_private_field_schedule_v1 import EXPECTED_ARMS, EXPECTED_UNITS, validate_private_field_schedule
 from research.validate_cirsium_fresh_sentinel_private_schedule_membership_v1 import validate_private_schedule_membership
 
+ANALYSIS_UNIT_IDENTITY = "COHORT_ARM_CANDIDATE_V1"
+REPEAT_IDENTITY = "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1"
+REPEAT_RULE = "Within one COHORT_ARM_CANDIDATE_V1 unit, any SEARCH_COMPLETED_DETECTED_VERIFIED visit makes the unit a verified detection success. If no verified detection occurs, classify the unit SEARCH_COMPLETED_NOT_DETECTED only when every scheduled visit is SEARCH_COMPLETED_NOT_DETECTED. Identity-unresolved or non-biological/non-evaluable visits never become absence; without a verified detection they keep the unit outside the resolved binary denominator."
+SHARED_IDENTITY = "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
+SHARED_RULE = "If the same physical candidate is selected by multiple frozen arms, retain one arm-specific analysis unit in every nominating arm; do not drop, substitute, or assign exclusive ownership. A single physical search may supply the same observed biological outcome to each nominating arm-specific unit, while PERSON_MINUTES_V1 is charged to each arm's preregistered counterfactual schedule. Cross-arm candidate overlap must be reported, and summed arm effort must not be interpreted as total expedition effort."
+
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -94,6 +100,25 @@ def _public_inputs(repo: Path, private_root: Path) -> tuple[Path, Path]:
     _write(evaluation, {
         "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
         "cohort_unit_ids": list(EXPECTED_UNITS),
+        "effort_accounting": {
+            "numeric_effort_metric": {
+                "identity": "PERSON_MINUTES_V1",
+                "unit": "person-minute",
+                "formula": "search_minutes * observer_count",
+            }
+        },
+        "schedule_selection_mechanics": {
+            "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+        },
+        "analysis_unit_and_repeated_visits": {
+            "primary_analysis_unit_identity": ANALYSIS_UNIT_IDENTITY,
+            "analysis_unit_id_must_map_one_to_one_to_cohort_arm_candidate": True,
+            "visit_indices_must_be_contiguous_from_one_within_analysis_unit": True,
+            "repeated_visit_aggregation_identity": REPEAT_IDENTITY,
+            "repeated_visit_aggregation_rule": REPEAT_RULE,
+            "shared_candidate_handling_identity": SHARED_IDENTITY,
+            "shared_candidate_handling_rule": SHARED_RULE,
+        },
     })
     return candidate, evaluation
 
@@ -118,11 +143,11 @@ def _schedule(candidate: Path, evaluation: Path, first: dict[str, dict[str, str]
         "cohort_unit_ids": list(EXPECTED_UNITS),
         "candidate_order_public_receipt_sha256": _sha256(candidate),
         "field_evaluation_contract_sha256": _sha256(evaluation),
-        "primary_analysis_unit_identity": "TEST_ANALYSIS_UNIT_V1",
-        "repeated_visit_aggregation_identity": "TEST_REPEAT_RULE_V1",
-        "repeated_visit_aggregation_rule": "fixture rule chosen before outcomes",
-        "shared_candidate_handling_identity": "TEST_SHARED_CANDIDATE_RULE_V1",
-        "shared_candidate_handling_rule": "fixture handling chosen before outcomes",
+        "primary_analysis_unit_identity": ANALYSIS_UNIT_IDENTITY,
+        "repeated_visit_aggregation_identity": REPEAT_IDENTITY,
+        "repeated_visit_aggregation_rule": REPEAT_RULE,
+        "shared_candidate_handling_identity": SHARED_IDENTITY,
+        "shared_candidate_handling_rule": SHARED_RULE,
         "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
         "numeric_effort_metric": {
             "identity": "PERSON_MINUTES_V1",
@@ -166,6 +191,45 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     rendered = json.dumps(receipt)
     assert "CIR02-candidate" not in rendered
     assert str(tmp_path) not in rendered
+
+
+def test_private_schedule_rejects_analysis_semantics_not_equal_to_contract(tmp_path: Path) -> None:
+    repo, _, _, candidate, evaluation, schedule_path, value = _fixture(tmp_path)
+    value["primary_analysis_unit_identity"] = "POSTHOC_ANALYSIS_UNIT"
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="analysis unit identity"):
+        validate_private_field_schedule(schedule_path, candidate, evaluation, repo_root=repo)
+
+    value = _schedule(candidate, evaluation, _private_root(tmp_path / "repeat-fixture")[1]) if False else value
+    value = json.loads(schedule_path.read_text())
+    value["primary_analysis_unit_identity"] = ANALYSIS_UNIT_IDENTITY
+    value["repeated_visit_aggregation_identity"] = "POSTHOC_REPEAT_RULE"
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="repeated-visit aggregation"):
+        validate_private_field_schedule(schedule_path, candidate, evaluation, repo_root=repo)
+
+    value = json.loads(schedule_path.read_text())
+    value["repeated_visit_aggregation_identity"] = REPEAT_IDENTITY
+    value["shared_candidate_handling_identity"] = "POSTHOC_SHARED_RULE"
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="shared-candidate handling"):
+        validate_private_field_schedule(schedule_path, candidate, evaluation, repo_root=repo)
+
+
+def test_private_schedule_rejects_analysis_unit_id_reused_for_different_arm_candidate(tmp_path: Path) -> None:
+    repo, _, _, candidate, evaluation, schedule_path, value = _fixture(tmp_path)
+    value["assignments"][1]["analysis_unit_id"] = value["assignments"][0]["analysis_unit_id"]
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="one-to-one"):
+        validate_private_field_schedule(schedule_path, candidate, evaluation, repo_root=repo)
+
+
+def test_private_schedule_rejects_noncontiguous_visit_indices(tmp_path: Path) -> None:
+    repo, _, _, candidate, evaluation, schedule_path, value = _fixture(tmp_path)
+    value["assignments"][0]["visit_index"] = 2
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="contiguous"):
+        validate_private_field_schedule(schedule_path, candidate, evaluation, repo_root=repo)
 
 
 def test_schedule_rejects_candidate_not_in_frozen_arm_order(tmp_path: Path) -> None:
