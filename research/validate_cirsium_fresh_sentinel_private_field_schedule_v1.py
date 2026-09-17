@@ -5,7 +5,9 @@ The instantiated schedule may contain sensitive candidate references and therefo
 must remain outside the public repository. This validator never reads field outcome
 logs. It binds the schedule to the exact public candidate/order receipt and static
 field-evaluation contract, requires all four frozen cohort units and all three arms,
-and enforces equal declared total effort across arms within each cohort unit.
+enforces the already-frozen analysis/repeat/shared-candidate semantics, requires a
+one-to-one analysis-unit mapping with contiguous visit indices, and enforces equal
+declared total effort across arms within each cohort unit.
 """
 from __future__ import annotations
 
@@ -105,6 +107,42 @@ def _positive_number(value: Any, label: str) -> float:
     return number
 
 
+def _require_exact_schedule_semantics(schedule: dict[str, Any], evaluation: dict[str, Any]) -> None:
+    analysis = evaluation.get("analysis_unit_and_repeated_visits")
+    if not isinstance(analysis, dict):
+        raise ValueError("field evaluation contract lacks frozen analysis-unit semantics")
+    mechanics = evaluation.get("schedule_selection_mechanics")
+    if not isinstance(mechanics, dict):
+        raise ValueError("field evaluation contract lacks frozen schedule-selection mechanics")
+    effort = evaluation.get("effort_accounting")
+    if not isinstance(effort, dict):
+        raise ValueError("field evaluation contract lacks frozen effort accounting")
+
+    exact_pairs = (
+        ("primary_analysis_unit_identity", analysis.get("primary_analysis_unit_identity"), "analysis unit identity"),
+        ("repeated_visit_aggregation_identity", analysis.get("repeated_visit_aggregation_identity"), "repeated-visit aggregation identity"),
+        ("repeated_visit_aggregation_rule", analysis.get("repeated_visit_aggregation_rule"), "repeated-visit aggregation rule"),
+        ("shared_candidate_handling_identity", analysis.get("shared_candidate_handling_identity"), "shared-candidate handling identity"),
+        ("shared_candidate_handling_rule", analysis.get("shared_candidate_handling_rule"), "shared-candidate handling rule"),
+        ("comparator_assignment_identity", mechanics.get("comparator_assignment_identity"), "comparator assignment identity"),
+    )
+    for schedule_key, expected, label in exact_pairs:
+        expected_text = _nonempty(expected, f"field evaluation contract {label}")
+        if schedule.get(schedule_key) != expected_text:
+            raise ValueError(f"private schedule {label} differs from the exact frozen field evaluation contract")
+
+    expected_metric = effort.get("numeric_effort_metric")
+    if not isinstance(expected_metric, dict) or set(expected_metric) != METRIC_KEYS:
+        raise ValueError("field evaluation contract numeric effort metric is malformed")
+    if schedule.get("numeric_effort_metric") != expected_metric:
+        raise ValueError("private schedule numeric effort metric differs from the exact frozen field evaluation contract")
+
+    if analysis.get("analysis_unit_id_must_map_one_to_one_to_cohort_arm_candidate") is not True:
+        raise ValueError("field evaluation contract must require one-to-one analysis-unit mapping")
+    if analysis.get("visit_indices_must_be_contiguous_from_one_within_analysis_unit") is not True:
+        raise ValueError("field evaluation contract must require contiguous visit indices")
+
+
 def validate_private_field_schedule(
     schedule_path: Path,
     candidate_receipt_path: Path,
@@ -175,6 +213,7 @@ def validate_private_field_schedule(
     evaluation_hash = _sha256(field_evaluation_contract_path)
     if schedule.get("field_evaluation_contract_sha256") != evaluation_hash:
         raise ValueError("private schedule is not bound to the exact field evaluation contract bytes")
+    _require_exact_schedule_semantics(schedule, evaluation)
 
     assignments = schedule.get("assignments")
     if not isinstance(assignments, list) or not assignments:
@@ -182,7 +221,11 @@ def validate_private_field_schedule(
 
     totals = {unit: {arm: 0.0 for arm in EXPECTED_ARMS} for unit in EXPECTED_UNITS}
     counts = {unit: {arm: 0 for arm in EXPECTED_ARMS} for unit in EXPECTED_UNITS}
-    seen: set[tuple[str, str, str, int]] = set()
+    seen_visits: set[tuple[str, int]] = set()
+    candidate_to_analysis: dict[tuple[str, str, str], str] = {}
+    analysis_to_candidate: dict[str, tuple[str, str, str]] = {}
+    visits_by_analysis: dict[str, list[int]] = {}
+
     for index, row in enumerate(assignments):
         if not isinstance(row, dict) or set(row) != ASSIGNMENT_KEYS:
             raise ValueError(f"assignment {index} keys do not match the frozen private schedule schema")
@@ -197,11 +240,21 @@ def validate_private_field_schedule(
         visit = row.get("visit_index")
         if isinstance(visit, bool) or not isinstance(visit, int) or visit < 1:
             raise ValueError(f"assignment {index}.visit_index must be an integer >=1")
-        key = (unit, analysis_unit, arm, visit)
-        if key in seen:
-            raise ValueError(f"duplicate scheduled visit identity: {key}")
-        seen.add(key)
-        _ = candidate_ref
+
+        candidate_key = (unit, arm, candidate_ref)
+        prior_analysis = candidate_to_analysis.setdefault(candidate_key, analysis_unit)
+        if prior_analysis != analysis_unit:
+            raise ValueError("analysis unit id must map one-to-one to cohort-arm-candidate identity")
+        prior_candidate = analysis_to_candidate.setdefault(analysis_unit, candidate_key)
+        if prior_candidate != candidate_key:
+            raise ValueError("analysis unit id must map one-to-one to cohort-arm-candidate identity")
+
+        visit_key = (analysis_unit, visit)
+        if visit_key in seen_visits:
+            raise ValueError(f"duplicate scheduled visit identity: {visit_key}")
+        seen_visits.add(visit_key)
+        visits_by_analysis.setdefault(analysis_unit, []).append(visit)
+
         effort = _positive_number(row.get("planned_effort_value"), f"assignment {index}.planned_effort_value")
         _positive_number(row.get("planned_search_minutes"), f"assignment {index}.planned_search_minutes")
         observers = row.get("planned_observer_count")
@@ -209,6 +262,11 @@ def validate_private_field_schedule(
             raise ValueError(f"assignment {index}.planned_observer_count must be an integer >=1")
         totals[unit][arm] += effort
         counts[unit][arm] += 1
+
+    for analysis_unit, visits in visits_by_analysis.items():
+        ordered = sorted(visits)
+        if ordered != list(range(1, len(ordered) + 1)):
+            raise ValueError(f"visit indices must be contiguous from one within analysis unit: {analysis_unit}")
 
     for unit in EXPECTED_UNITS:
         if any(counts[unit][arm] == 0 for arm in EXPECTED_ARMS):
@@ -229,6 +287,8 @@ def validate_private_field_schedule(
         "repeated_visit_aggregation_identity": schedule["repeated_visit_aggregation_identity"],
         "shared_candidate_handling_identity": schedule["shared_candidate_handling_identity"],
         "comparator_assignment_identity": schedule["comparator_assignment_identity"],
+        "analysis_unit_mapping_verified": True,
+        "visit_index_contiguity_verified": True,
         "assignment_count": len(assignments),
         "assignment_count_by_unit_arm": counts,
         "matched_effort_totals_by_unit_arm": totals,
