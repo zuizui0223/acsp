@@ -194,5 +194,14 @@
     "alternate_receipt_paths_allowed": false,
     "rationale": "First-add immutability is path-specific; canonical paths prevent a second post-hoc receipt from being pinned under an alternate filename.",
     "analysis_plan": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json"
+  },
+  "prospective_outcome_analysis": {
+    "analyzer": "research/analyze_cirsium_fresh_sentinel_outcomes_v1.py",
+    "field_log_schedule_validator": "research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py",
+    "first_read_of_prospective_outcome_rows_must_occur_after_final_pre_outcome_gate": true,
+    "primary_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+    "all_four_taxa_required_for_primary": true,
+    "pooled_micro_primary_allowed": false,
+    "retuning_on_opened_outcomes_allowed": false
   }
 }
