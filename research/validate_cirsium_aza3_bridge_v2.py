@@ -19,6 +19,8 @@ EXPECTED_FIELD_COLUMNS = [
     "discovery_regime",
     "method_arm",
     "comparator_assignment",
+    "analysis_unit_id",
+    "visit_index",
     "deidentified_locality_id",
     "visit_date",
     "phenology_status",
