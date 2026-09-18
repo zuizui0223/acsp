@@ -25,6 +25,10 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     require_canonical_repo_path,
 )
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_analysis_plan
+from research.build_cirsium_fresh_sentinel_private_field_schedule_v1 import (
+    UNITS as CAPACITY_UNITS,
+    _validate_capacity_profile,
+)
 from research.validate_cirsium_fresh_sentinel_private_field_schedule_v1 import (
     validate_private_field_schedule,
 )
@@ -49,6 +53,8 @@ def build_public_field_schedule_receipt(
     candidate_receipt_path: Path,
     field_evaluation_contract_path: Path,
     private_pre_field_root: Path,
+    operational_capacity_profile_path: Path,
+    standardized_effort_protocol_path: Path,
     analysis_plan_path: Path | None = None,
     field_log_template_path: Path | None = None,
     *,
@@ -93,7 +99,47 @@ def build_public_field_schedule_receipt(
         Path(private_pre_field_root),
         repo_root=repo_root,
     )
+
+    capacity_path = Path(operational_capacity_profile_path).resolve()
+    effort_protocol_path = Path(standardized_effort_protocol_path).resolve()
+    if not capacity_path.is_file() or not effort_protocol_path.is_file():
+        raise ValueError("operational capacity profile and standardized effort protocol must both exist")
+    capacity_profile = json.loads(capacity_path.read_text(encoding="utf-8"))
+    if not isinstance(capacity_profile, dict):
+        raise ValueError("operational capacity profile must be a JSON object")
+    capacity = _validate_capacity_profile(capacity_profile)
+    if capacity_profile["standardized_effort_protocol_sha256"] != _sha256(effort_protocol_path):
+        raise ValueError("operational capacity profile is not bound to the exact standardized effort protocol")
+
+    private_root = Path(private_pre_field_root).resolve()
+    frame_hashes = capacity_profile["private_candidate_frame_sha256_by_unit"]
+    for unit in CAPACITY_UNITS:
+        frame_path = private_root / unit / "candidate_frame_pre_field.csv"
+        if not frame_path.is_file() or frame_hashes[unit] != _sha256(frame_path):
+            raise ValueError(f"operational capacity profile is not bound to the exact private candidate frame for {unit}")
+
     counts = validated["assignment_count_by_unit_arm"]
+    selected_counts = membership["selected_unique_candidate_count_by_unit_arm"]
+    schedule_value = json.loads(private_schedule_path.read_text(encoding="utf-8"))
+    assignments = schedule_value.get("assignments") or []
+    for unit in CAPACITY_UNITS:
+        cap = capacity[unit]
+        for arm, selected_count in selected_counts[unit].items():
+            if int(selected_count) != int(cap["prefix_depth"]):
+                raise ValueError(f"private schedule prefix depth does not match movement-derived capacity for {unit}/{arm}")
+        unit_rows = [row for row in assignments if row.get("cohort_unit_id") == unit]
+        expected_visits = int(cap["visits_per_candidate"])
+        expected_minutes = float(cap["search_minutes_per_visit"])
+        expected_observers = int(cap["observer_count"])
+        by_analysis: dict[str, list[dict[str, Any]]] = {}
+        for row in unit_rows:
+            if float(row["planned_search_minutes"]) != expected_minutes:
+                raise ValueError(f"private schedule search minutes differ from standardized effort protocol for {unit}")
+            if int(row["planned_observer_count"]) != expected_observers:
+                raise ValueError(f"private schedule observer count differs from standardized effort protocol for {unit}")
+            by_analysis.setdefault(str(row["analysis_unit_id"]), []).append(row)
+        if any(len(rows) != expected_visits for rows in by_analysis.values()):
+            raise ValueError(f"private schedule visit count differs from standardized effort protocol for {unit}")
     return {
         "schema_version": "cirsium-fresh-sentinel-public-field-schedule-receipt-v1",
         "status": PUBLIC_STATUS,
@@ -103,6 +149,23 @@ def build_public_field_schedule_receipt(
         "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
         "field_log_template_repo_path": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "private_field_schedule_sha256": _sha256(private_schedule_path),
+        "operational_capacity_profile_sha256": _sha256(capacity_path),
+        "standardized_effort_protocol_sha256": _sha256(effort_protocol_path),
+        "movement_constraint_mode": capacity_profile["movement_constraint_mode"],
+        "max_network_transition_km": float(capacity_profile["max_network_transition_km"]),
+        "automatic_prefix_depth_method": capacity_profile["automatic_prefix_depth_method"],
+        "coarse_redundancy_scale_m": float(capacity_profile["coarse_redundancy_scale_m"]),
+        "coarse_representative_rule": capacity_profile["coarse_representative_rule"],
+        "frozen_common_candidate_geometry_used_for_movement_capacity": True,
+        "arm_rank_used_to_set_prefix_depth": False,
+        "structural_score_used_to_set_prefix_depth": False,
+        "candidate_identity_or_coordinates_exported_from_capacity": False,
+        "user_site_count_input": False,
+        "user_coverage_target_input": False,
+        "survey_days_input": False,
+        "monetary_budget_input": False,
+        "capacity_schedule_linkage_verified": True,
+        "standardized_effort_protocol_linkage_verified": True,
         "candidate_order_public_receipt_sha256": validated["candidate_order_public_receipt_sha256"],
         "field_evaluation_contract_sha256": validated["field_evaluation_contract_sha256"],
         "analysis_plan_sha256": _sha256(analysis_plan_path),
@@ -120,7 +183,7 @@ def build_public_field_schedule_receipt(
         "numeric_effort_metric": validated["numeric_effort_metric"],
         "assignment_count": validated["assignment_count"],
         "assignment_count_by_unit_arm": counts,
-        "selected_unique_candidate_count_by_unit_arm": membership["selected_unique_candidate_count_by_unit_arm"],
+        "selected_unique_candidate_count_by_unit_arm": selected_counts,
         "private_candidate_membership_verified": True,
         "private_pre_field_receipt_hash_linkage_verified": True,
         "frozen_order_hash_linkage_verified": True,
@@ -148,6 +211,8 @@ def main() -> int:
     parser.add_argument("--analysis-plan", type=Path, default=Path(CANONICAL_ANALYSIS_PLAN_REPO_PATH))
     parser.add_argument("--field-log-template", type=Path, default=Path(CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH))
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
+    parser.add_argument("--operational-capacity-profile", type=Path, required=True)
+    parser.add_argument("--standardized-effort-protocol", type=Path, required=True)
     parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     args = parser.parse_args()
     out_json = require_canonical_repo_path(
@@ -163,6 +228,8 @@ def main() -> int:
         args.candidate_receipt,
         args.field_evaluation_contract,
         args.private_pre_field_root,
+        args.operational_capacity_profile,
+        args.standardized_effort_protocol,
         args.analysis_plan,
         args.field_log_template,
     )
