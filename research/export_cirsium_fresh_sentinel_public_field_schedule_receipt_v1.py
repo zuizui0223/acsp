@@ -16,6 +16,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    require_canonical_repo_path,
+)
 from research.validate_cirsium_fresh_sentinel_private_field_schedule_v1 import (
     validate_private_field_schedule,
 )
@@ -44,15 +51,28 @@ def build_public_field_schedule_receipt(
     repo_root: Path = ROOT,
 ) -> dict[str, Any]:
     private_schedule_path = Path(private_schedule_path).resolve()
+    repo = Path(repo_root).resolve()
+    candidate_receipt_path = require_canonical_repo_path(
+        Path(candidate_receipt_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        label="candidate/order public receipt",
+    )
+    field_evaluation_contract_path = require_canonical_repo_path(
+        Path(field_evaluation_contract_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        label="field evaluation contract",
+    )
     validated = validate_private_field_schedule(
         private_schedule_path,
-        Path(candidate_receipt_path),
-        Path(field_evaluation_contract_path),
+        candidate_receipt_path,
+        field_evaluation_contract_path,
         repo_root=repo_root,
     )
     membership = validate_private_schedule_membership(
         private_schedule_path,
-        Path(candidate_receipt_path),
+        candidate_receipt_path,
         Path(private_pre_field_root),
         repo_root=repo_root,
     )
@@ -60,6 +80,10 @@ def build_public_field_schedule_receipt(
     return {
         "schema_version": "cirsium-fresh-sentinel-public-field-schedule-receipt-v1",
         "status": PUBLIC_STATUS,
+        "canonical_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        "candidate_order_public_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        "field_evaluation_contract_repo_path": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "field_log_template_repo_path": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "private_field_schedule_sha256": _sha256(private_schedule_path),
         "candidate_order_public_receipt_sha256": validated["candidate_order_public_receipt_sha256"],
         "field_evaluation_contract_sha256": validated["field_evaluation_contract_sha256"],
@@ -99,9 +123,15 @@ def main() -> int:
     parser.add_argument("--candidate-receipt", type=Path, required=True)
     parser.add_argument("--field-evaluation-contract", type=Path, required=True)
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
-    parser.add_argument("--out-json", type=Path, required=True)
+    parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     args = parser.parse_args()
-    if args.out_json.exists():
+    out_json = require_canonical_repo_path(
+        args.out_json,
+        repo_root=ROOT,
+        expected_repo_path=CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        label="public field-schedule receipt",
+    )
+    if out_json.exists():
         raise SystemExit("refusing to overwrite an existing public field-schedule receipt")
     receipt = build_public_field_schedule_receipt(
         args.private_schedule,
@@ -109,9 +139,9 @@ def main() -> int:
         args.field_evaluation_contract,
         args.private_pre_field_root,
     )
-    args.out_json.parent.mkdir(parents=True, exist_ok=True)
-    args.out_json.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"status": receipt["status"], "out_json": str(args.out_json)}, ensure_ascii=False))
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_json.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"status": receipt["status"], "out_json": str(out_json)}, ensure_ascii=False))
     return 0
 
 
