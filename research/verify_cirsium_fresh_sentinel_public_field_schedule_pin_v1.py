@@ -20,6 +20,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
 
@@ -110,6 +112,10 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("field-schedule receipt field-log template SHA-256 is malformed")
     if value.get("primary_cross_taxon_estimand_identity") != "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1":
         raise ValueError("field-schedule receipt primary cross-taxon estimand changed")
+    if value.get("operational_capacity_profile_repo_path") != CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve the canonical operational capacity profile path")
+    if value.get("standardized_effort_protocol_repo_path") != CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve the canonical standardized effort protocol path")
     for key in ("operational_capacity_profile_sha256", "standardized_effort_protocol_sha256"):
         digest = str(value.get(key) or "")
         if len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
