@@ -72,6 +72,7 @@ def _schedule_receipt(candidate: Path, evaluation: Path, analysis_plan: Path, *,
         "candidate_order_public_receipt_sha256": candidate_hash_override or _sha256(candidate),
         "field_evaluation_contract_sha256": _sha256(evaluation),
         "analysis_plan_sha256": _sha256(analysis_plan),
+        "field_log_template_sha256": _sha256(analysis_plan.parent / "cirsium_aza3_acsp_field_log_template_v1.csv"),
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "method_arms": [
             "COVERAGE_THEN_FINE_STRUCTURE_V1",
@@ -151,6 +152,7 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["candidate_order_pin_gate_satisfied"] is True
     assert final["field_schedule_pin_gate_satisfied"] is True
     assert final["analysis_plan_valid"] is True
+    assert final["field_log_template_sha256"] == _sha256(log_template)
     assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
@@ -273,3 +275,12 @@ def test_final_gate_rejects_alternate_analysis_plan_path(tmp_path: Path) -> None
     _git(repo, "commit", "-m", "Attempt alternate analysis-plan path")
     with pytest.raises(ValueError, match="canonical repo path"):
         verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, alternate, repo_root=repo)
+
+
+def test_field_log_template_change_after_schedule_pin_breaks_final_linkage(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
+    log_template.write_text(log_template.read_text() + "extra", encoding="utf-8")
+    _git(repo, "add", CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH)
+    _git(repo, "commit", "-m", "Attempt field-log template change")
+    with pytest.raises(ValueError, match="field-log template|missing required columns"):
+        verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
