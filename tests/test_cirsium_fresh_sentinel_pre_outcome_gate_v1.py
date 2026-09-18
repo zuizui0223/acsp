@@ -175,6 +175,14 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["private_candidate_membership_verified"] is True
     assert final["frozen_order_prefix_verified"] is True
     assert final["arm_symmetric_prefix_effort_template_verified"] is True
+    assert final["capacity_schedule_linkage_verified"] is True
+    assert final["standardized_effort_protocol_linkage_verified"] is True
+    assert final["movement_constraint_mode"] == "osm_weighted_transport_network"
+    assert final["max_network_transition_km"] == 5.0
+    assert final["automatic_prefix_depth_method"] == "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"
+    assert final["user_site_count_input"] is False
+    assert final["survey_days_input"] is False
+    assert final["monetary_budget_input"] is False
     assert final["prospective_field_outcomes_opened"] is False
     assert final["outcome_opening_gate_satisfied"] is True
 
