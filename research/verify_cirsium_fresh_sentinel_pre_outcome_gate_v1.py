@@ -17,12 +17,14 @@ from pathlib import Path
 from typing import Any
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     require_canonical_repo_path,
 )
+from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_analysis_plan
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import validate_field_evaluation_contract
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import verify_public_freeze_pin
@@ -51,6 +53,7 @@ def verify_pre_outcome_gate(
     field_schedule_receipt_path: Path,
     field_evaluation_contract_path: Path,
     field_log_template_path: Path,
+    analysis_plan_path: Path | None = None,
     *,
     repo_root: Path = ROOT,
     expected_candidate_pin_commit: str = "",
@@ -81,10 +84,19 @@ def verify_pre_outcome_gate(
         expected_repo_path=CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         label="field-log template",
     )
+    analysis_path = require_canonical_repo_path(
+        Path(analysis_plan_path or CANONICAL_ANALYSIS_PLAN_REPO_PATH),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_ANALYSIS_PLAN_REPO_PATH,
+        label="fresh-SENTINEL analysis plan",
+    )
 
     evaluation = validate_field_evaluation_contract(evaluation_path, log_template_path)
     if evaluation.get("prospective_outcome_opening_allowed_now") is not False:
         raise ValueError("static evaluation contract must remain pre-outcome and schedule-pending on its own")
+    analysis = validate_analysis_plan(analysis_path)
+    if analysis.get("prospective_outcomes_opened") is not False:
+        raise ValueError("analysis plan must remain outcome-blind")
 
     candidate_pin = verify_public_freeze_pin(candidate_path, repo_root=repo, expected_pin_commit=expected_candidate_pin_commit)
     if candidate_pin.get("pre_field_prescription_pin_gate_satisfied") is not True:
@@ -98,16 +110,21 @@ def verify_pre_outcome_gate(
     schedule_receipt = _load(schedule_path)
     candidate_hash = _sha256(candidate_path)
     evaluation_hash = _sha256(evaluation_path)
+    analysis_hash = _sha256(analysis_path)
     if schedule_receipt.get("candidate_order_public_receipt_sha256") != candidate_hash:
         raise ValueError("field schedule receipt is not linked to the exact immutable candidate/order receipt")
     if schedule_receipt.get("field_evaluation_contract_sha256") != evaluation_hash:
         raise ValueError("field schedule receipt is not linked to the exact current field evaluation contract")
+    if schedule_receipt.get("analysis_plan_sha256") != analysis_hash:
+        raise ValueError("field schedule receipt is not linked to the exact current fresh-SENTINEL analysis plan")
     if candidate_receipt.get("canonical_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
         raise ValueError("candidate/order receipt path identity is not canonical")
     if candidate_receipt.get("canonical_field_schedule_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
         raise ValueError("candidate/order receipt does not name the canonical field-schedule receipt")
     if candidate_receipt.get("field_evaluation_contract") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
         raise ValueError("candidate/order receipt does not name the frozen field evaluation contract")
+    if candidate_receipt.get("analysis_plan") != CANONICAL_ANALYSIS_PLAN_REPO_PATH:
+        raise ValueError("candidate/order receipt does not name the canonical frozen analysis plan")
     if candidate_receipt.get("field_log_template") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
         raise ValueError("candidate/order receipt does not name the frozen field-log template")
     if schedule_receipt.get("canonical_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
@@ -116,6 +133,10 @@ def verify_pre_outcome_gate(
         raise ValueError("field-schedule receipt does not name the canonical candidate/order receipt")
     if schedule_receipt.get("field_evaluation_contract_repo_path") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
         raise ValueError("field-schedule receipt does not name the canonical field evaluation contract")
+    if schedule_receipt.get("analysis_plan_repo_path") != CANONICAL_ANALYSIS_PLAN_REPO_PATH:
+        raise ValueError("field-schedule receipt does not name the canonical analysis plan")
+    if schedule_receipt.get("primary_cross_taxon_estimand_identity") != "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1":
+        raise ValueError("field-schedule receipt does not preserve the frozen primary cross-taxon estimand")
     if schedule_receipt.get("field_log_template_repo_path") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
         raise ValueError("field-schedule receipt does not name the canonical field-log template")
     if candidate_receipt.get("field_allocation_and_effort_schedule_required_before_outcome_opening") is not True:
@@ -155,6 +176,9 @@ def verify_pre_outcome_gate(
         "candidate_order_receipt_sha256": candidate_hash,
         "candidate_order_pin_commit": candidate_pin["pin_commit"],
         "field_evaluation_contract_sha256": evaluation_hash,
+        "analysis_plan_sha256": analysis_hash,
+        "analysis_plan_valid": True,
+        "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "field_schedule_receipt_sha256": _sha256(schedule_path),
         "field_schedule_pin_commit": schedule_pin["pin_commit"],
         "static_evaluation_semantics_valid": True,
@@ -176,6 +200,7 @@ def main() -> int:
     parser.add_argument("--field-schedule-receipt", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     parser.add_argument("--field-evaluation-contract", type=Path, default=Path(CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH))
     parser.add_argument("--field-log-template", type=Path, default=Path(CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH))
+    parser.add_argument("--analysis-plan", type=Path, default=Path(CANONICAL_ANALYSIS_PLAN_REPO_PATH))
     parser.add_argument("--expected-candidate-pin-commit", default="")
     parser.add_argument("--expected-schedule-pin-commit", default="")
     args = parser.parse_args()
@@ -184,6 +209,7 @@ def main() -> int:
         args.field_schedule_receipt,
         args.field_evaluation_contract,
         args.field_log_template,
+        args.analysis_plan,
         expected_candidate_pin_commit=args.expected_candidate_pin_commit,
         expected_schedule_pin_commit=args.expected_schedule_pin_commit,
     )
