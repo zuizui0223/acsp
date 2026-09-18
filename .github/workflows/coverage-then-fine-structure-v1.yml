@@ -300,6 +300,13 @@ jobs:
           assert opening['requires_exact_analysis_plan_hash_linkage'] is True
           assert opening['requires_valid_frozen_analysis_plan'] is True
           assert opening['requires_exact_field_log_template_hash_linkage'] is True
+          assert opening['requires_movement_capacity_schedule_linkage'] is True
+          assert opening['requires_standardized_effort_protocol_linkage'] is True
+          assert opening['requires_movement_constraint_mode'] == 'osm_weighted_transport_network'
+          assert opening['requires_automatic_prefix_depth_method'] == 'OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1'
+          assert opening['user_site_count_input_allowed'] is False
+          assert opening['survey_days_input_allowed'] is False
+          assert opening['monetary_budget_input_allowed'] is False
           outcome_analysis = o['prospective_outcome_analysis']
           assert outcome_analysis['analyzer'] == 'research/analyze_cirsium_fresh_sentinel_outcomes_v1.py'
           assert outcome_analysis['field_log_schedule_validator'] == 'research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py'
