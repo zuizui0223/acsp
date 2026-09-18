@@ -111,12 +111,15 @@ def verify_pre_outcome_gate(
     candidate_hash = _sha256(candidate_path)
     evaluation_hash = _sha256(evaluation_path)
     analysis_hash = _sha256(analysis_path)
+    field_log_template_hash = _sha256(log_template_path)
     if schedule_receipt.get("candidate_order_public_receipt_sha256") != candidate_hash:
         raise ValueError("field schedule receipt is not linked to the exact immutable candidate/order receipt")
     if schedule_receipt.get("field_evaluation_contract_sha256") != evaluation_hash:
         raise ValueError("field schedule receipt is not linked to the exact current field evaluation contract")
     if schedule_receipt.get("analysis_plan_sha256") != analysis_hash:
         raise ValueError("field schedule receipt is not linked to the exact current fresh-SENTINEL analysis plan")
+    if schedule_receipt.get("field_log_template_sha256") != field_log_template_hash:
+        raise ValueError("field schedule receipt is not linked to the exact current field-log template")
     if candidate_receipt.get("canonical_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
         raise ValueError("candidate/order receipt path identity is not canonical")
     if candidate_receipt.get("canonical_field_schedule_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
@@ -178,6 +181,7 @@ def verify_pre_outcome_gate(
         "field_evaluation_contract_sha256": evaluation_hash,
         "analysis_plan_sha256": analysis_hash,
         "analysis_plan_valid": True,
+        "field_log_template_sha256": field_log_template_hash,
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "field_schedule_receipt_sha256": _sha256(schedule_path),
         "field_schedule_pin_commit": schedule_pin["pin_commit"],
