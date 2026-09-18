@@ -236,13 +236,7 @@ def derive_operational_capacity_profile(
             "search_minutes_per_visit": row["search_minutes_per_visit"],
             "observer_count": row["observer_count"],
         }
-        audits[unit] = {
-            "coarse_representative_count": int(len(reps)),
-            "automatic_prefix_depth": depth,
-            "selection_audit": selection_audit,
-            "movement_provider_successful_area_count": int(provider.get("successful_area_count", 0)),
-            "movement_provider_failed_area_count": int(provider.get("failed_area_count", 0)),
-        }
+        provider_success[unit] = True
 
     result = {
         "schema_version": CAPACITY_SCHEMA,
@@ -257,7 +251,7 @@ def derive_operational_capacity_profile(
         "standardized_effort_protocol_sha256": _sha256(effort_path),
         "private_candidate_frame_sha256_by_unit": frame_hashes,
         "unit_capacity": capacity,
-        "operational_audit_by_unit": audits,
+        "movement_provider_successful_by_unit": provider_success,
         "prospective_field_outcomes_opened": False,
         "field_outcomes_used_to_set_capacity": False,
         "frozen_common_candidate_geometry_used_for_movement_capacity": True,
