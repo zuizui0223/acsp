@@ -94,6 +94,8 @@ def build_public_field_schedule_receipt(
         "repeated_visit_aggregation_identity": validated["repeated_visit_aggregation_identity"],
         "shared_candidate_handling_identity": validated["shared_candidate_handling_identity"],
         "comparator_assignment_identity": validated["comparator_assignment_identity"],
+        "arm_symmetry_identity": validated["arm_symmetry_identity"],
+        "arm_symmetric_prefix_effort_template_verified": membership["arm_symmetric_prefix_effort_template_verified"],
         "numeric_effort_metric": validated["numeric_effort_metric"],
         "assignment_count": validated["assignment_count"],
         "assignment_count_by_unit_arm": counts,
