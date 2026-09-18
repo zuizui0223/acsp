@@ -7,6 +7,12 @@ from pathlib import Path
 
 import pytest
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+)
 from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 import PUBLIC_STATUS, build_public_field_schedule_receipt
 from research.validate_cirsium_fresh_sentinel_private_field_schedule_v1 import EXPECTED_ARMS, EXPECTED_UNITS, validate_private_field_schedule
 from research.validate_cirsium_fresh_sentinel_private_schedule_membership_v1 import validate_private_schedule_membership
@@ -79,8 +85,8 @@ def _private_root(tmp_path: Path) -> tuple[Path, dict[str, dict[str, str]]]:
 
 
 def _public_inputs(repo: Path, private_root: Path) -> tuple[Path, Path]:
-    candidate = repo / "validation" / "candidate-receipt.json"
-    evaluation = repo / "validation" / "field-evaluation.json"
+    candidate = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    evaluation = repo / CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
     units = {}
     for unit in EXPECTED_UNITS:
         unit_dir = private_root / unit
@@ -183,6 +189,10 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     assert membership["numeric_effort_metric_verified"] is True
     receipt = build_public_field_schedule_receipt(schedule_path, candidate, evaluation, private_root, repo_root=repo)
     assert receipt["status"] == PUBLIC_STATUS
+    assert receipt["canonical_receipt_repo_path"] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
+    assert receipt["candidate_order_public_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    assert receipt["field_evaluation_contract_repo_path"] == CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
+    assert receipt["field_log_template_repo_path"] == CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
     assert receipt["private_candidate_membership_verified"] is True
     assert receipt["frozen_order_prefix_verified"] is True
     assert receipt["coordinate_bearing_data_included"] is False
