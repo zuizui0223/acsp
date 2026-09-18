@@ -115,6 +115,7 @@ def _public_inputs(repo: Path, private_root: Path) -> tuple[Path, Path]:
         },
         "schedule_selection_mechanics": {
             "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+            "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
         },
         "analysis_unit_and_repeated_visits": {
             "primary_analysis_unit_identity": ANALYSIS_UNIT_IDENTITY,
@@ -155,6 +156,7 @@ def _schedule(candidate: Path, evaluation: Path, first: dict[str, dict[str, str]
         "shared_candidate_handling_identity": SHARED_IDENTITY,
         "shared_candidate_handling_rule": SHARED_RULE,
         "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+        "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
         "numeric_effort_metric": {
             "identity": "PERSON_MINUTES_V1",
             "unit": "person-minute",
@@ -195,6 +197,8 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     assert receipt["field_log_template_repo_path"] == CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
     assert receipt["private_candidate_membership_verified"] is True
     assert receipt["frozen_order_prefix_verified"] is True
+    assert receipt["arm_symmetry_identity"] == "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
+    assert receipt["arm_symmetric_prefix_effort_template_verified"] is True
     assert receipt["coordinate_bearing_data_included"] is False
     assert receipt["private_candidate_refs_included"] is False
     assert receipt["private_paths_included"] is False
@@ -306,3 +310,30 @@ def test_private_schedule_rejects_outcome_field_in_assignment(tmp_path: Path) ->
     _write(schedule_path, value)
     with pytest.raises(ValueError, match="keys"):
         validate_private_field_schedule(schedule_path, candidate, evaluation, repo_root=repo)
+
+
+def test_schedule_rejects_unequal_prefix_depth_across_arms(tmp_path: Path) -> None:
+    repo, private_root, _, candidate, _, schedule_path, value = _fixture(tmp_path)
+    value["assignments"].append({
+        "cohort_unit_id": "CIR02",
+        "analysis_unit_id": "CIR02-analysis-primary-rank2",
+        "private_candidate_ref": "CIR02-candidate-2",
+        "method_arm": EXPECTED_ARMS[0],
+        "visit_index": 1,
+        "planned_effort_value": 60.0,
+        "planned_search_minutes": 30.0,
+        "planned_observer_count": 2,
+    })
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="equal unique-candidate prefix depth"):
+        validate_private_schedule_membership(schedule_path, candidate, private_root, repo_root=repo)
+
+
+def test_schedule_rejects_arm_specific_effort_pattern_with_equal_person_minutes(tmp_path: Path) -> None:
+    repo, private_root, _, candidate, _, schedule_path, value = _fixture(tmp_path)
+    value["assignments"][0]["planned_search_minutes"] = 20.0
+    value["assignments"][0]["planned_observer_count"] = 3
+    value["assignments"][0]["planned_effort_value"] = 60.0
+    _write(schedule_path, value)
+    with pytest.raises(ValueError, match="identical visit indices and observer counts|identical planned search minutes"):
+        validate_private_schedule_membership(schedule_path, candidate, private_root, repo_root=repo)
