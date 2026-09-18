@@ -73,6 +73,8 @@ def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_overr
             "MORTON_DYADIC_COVERAGE_ORDER_V1",
         ],
         "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+        "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
+        "arm_symmetric_prefix_effort_template_verified": True,
         "numeric_effort_metric": {
             "identity": "PERSON_MINUTES_V1",
             "unit": "person-minute",
@@ -143,6 +145,7 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
     assert final["frozen_order_prefix_verified"] is True
+    assert final["arm_symmetric_prefix_effort_template_verified"] is True
     assert final["prospective_field_outcomes_opened"] is False
     assert final["outcome_opening_gate_satisfied"] is True
 
