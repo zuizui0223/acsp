@@ -8,12 +8,14 @@ from pathlib import Path
 import pytest
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
 )
 from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 import PUBLIC_STATUS, build_public_field_schedule_receipt
+from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import DEFAULT_PLAN
 from research.validate_cirsium_fresh_sentinel_private_field_schedule_v1 import EXPECTED_ARMS, EXPECTED_UNITS, validate_private_field_schedule
 from research.validate_cirsium_fresh_sentinel_private_schedule_membership_v1 import validate_private_schedule_membership
 
@@ -103,6 +105,9 @@ def _public_inputs(repo: Path, private_root: Path) -> tuple[Path, Path]:
         "private_top_receipt_sha256": _sha256(private_root / "pre_field_freeze_receipt.json"),
         "units": units,
     })
+    analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
+    analysis_plan.parent.mkdir(parents=True, exist_ok=True)
+    analysis_plan.write_bytes(DEFAULT_PLAN.read_bytes())
     _write(evaluation, {
         "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
         "cohort_unit_ids": list(EXPECTED_UNITS),
@@ -194,6 +199,9 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     assert receipt["canonical_receipt_repo_path"] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     assert receipt["candidate_order_public_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     assert receipt["field_evaluation_contract_repo_path"] == CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
+    assert receipt["analysis_plan_repo_path"] == CANONICAL_ANALYSIS_PLAN_REPO_PATH
+    assert receipt["analysis_plan_sha256"] == _sha256(repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH)
+    assert receipt["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert receipt["field_log_template_repo_path"] == CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
     assert receipt["private_candidate_membership_verified"] is True
     assert receipt["frozen_order_prefix_verified"] is True
