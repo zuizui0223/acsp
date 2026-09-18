@@ -268,6 +268,11 @@ def summarize_outcomes(
             "role": "predeclared influence diagnostic only; never replaces the four-taxon primary",
         },
         "cross_arm_shared_candidate_overlap_counts": overlap_counts,
+        "coordinate_bearing_data_included": False,
+        "private_candidate_refs_included": False,
+        "private_paths_included": False,
+        "public_safe_aggregate": True,
+        "claim_scope": "predeclared four-taxon fresh-SENTINEL cohort under matched arm-symmetric field schedules",
         "universal_promotion_authorized": False,
         "retuning_on_these_outcomes_authorized": False,
     }
