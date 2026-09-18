@@ -162,7 +162,8 @@
     "equal_visit_count_by_rank_across_arms_within_unit": true,
     "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit": true,
     "arm_specific_effort_reallocation_allowed": false,
-    "analysis_plan_exact_hash_linkage_required": true
+    "analysis_plan_exact_hash_linkage_required": true,
+    "field_log_template_exact_hash_linkage_required": true
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -181,7 +182,8 @@
     "requires_canonical_public_paths": true,
     "requires_arm_symmetric_prefix_effort_schedule": true,
     "requires_exact_analysis_plan_hash_linkage": true,
-    "requires_valid_frozen_analysis_plan": true
+    "requires_valid_frozen_analysis_plan": true,
+    "requires_exact_field_log_template_hash_linkage": true
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
@@ -202,6 +204,7 @@
     "primary_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
     "all_four_taxa_required_for_primary": true,
     "pooled_micro_primary_allowed": false,
-    "retuning_on_opened_outcomes_allowed": false
+    "retuning_on_opened_outcomes_allowed": false,
+    "field_log_template_hash_must_match_pinned_schedule_receipt": true
   }
 }
