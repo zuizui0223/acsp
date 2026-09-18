@@ -16,6 +16,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    require_canonical_repo_path,
+)
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import validate_field_evaluation_contract
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import verify_public_freeze_pin
@@ -50,14 +57,30 @@ def verify_pre_outcome_gate(
     expected_schedule_pin_commit: str = "",
 ) -> dict[str, Any]:
     repo = Path(repo_root).resolve()
-    candidate_path = Path(candidate_receipt_path)
-    schedule_path = Path(field_schedule_receipt_path)
-    evaluation_path = Path(field_evaluation_contract_path)
-    log_template_path = Path(field_log_template_path)
-    candidate_path = (repo / candidate_path).resolve() if not candidate_path.is_absolute() else candidate_path.resolve()
-    schedule_path = (repo / schedule_path).resolve() if not schedule_path.is_absolute() else schedule_path.resolve()
-    evaluation_path = (repo / evaluation_path).resolve() if not evaluation_path.is_absolute() else evaluation_path.resolve()
-    log_template_path = (repo / log_template_path).resolve() if not log_template_path.is_absolute() else log_template_path.resolve()
+    candidate_path = require_canonical_repo_path(
+        Path(candidate_receipt_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        label="candidate/order public receipt",
+    )
+    schedule_path = require_canonical_repo_path(
+        Path(field_schedule_receipt_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        label="field-schedule public receipt",
+    )
+    evaluation_path = require_canonical_repo_path(
+        Path(field_evaluation_contract_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        label="field evaluation contract",
+    )
+    log_template_path = require_canonical_repo_path(
+        Path(field_log_template_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+        label="field-log template",
+    )
 
     evaluation = validate_field_evaluation_contract(evaluation_path, log_template_path)
     if evaluation.get("prospective_outcome_opening_allowed_now") is not False:
@@ -79,8 +102,22 @@ def verify_pre_outcome_gate(
         raise ValueError("field schedule receipt is not linked to the exact immutable candidate/order receipt")
     if schedule_receipt.get("field_evaluation_contract_sha256") != evaluation_hash:
         raise ValueError("field schedule receipt is not linked to the exact current field evaluation contract")
-    if candidate_receipt.get("field_evaluation_contract") != "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json":
+    if candidate_receipt.get("canonical_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
+        raise ValueError("candidate/order receipt path identity is not canonical")
+    if candidate_receipt.get("canonical_field_schedule_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
+        raise ValueError("candidate/order receipt does not name the canonical field-schedule receipt")
+    if candidate_receipt.get("field_evaluation_contract") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
         raise ValueError("candidate/order receipt does not name the frozen field evaluation contract")
+    if candidate_receipt.get("field_log_template") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
+        raise ValueError("candidate/order receipt does not name the frozen field-log template")
+    if schedule_receipt.get("canonical_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
+        raise ValueError("field-schedule receipt path identity is not canonical")
+    if schedule_receipt.get("candidate_order_public_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
+        raise ValueError("field-schedule receipt does not name the canonical candidate/order receipt")
+    if schedule_receipt.get("field_evaluation_contract_repo_path") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
+        raise ValueError("field-schedule receipt does not name the canonical field evaluation contract")
+    if schedule_receipt.get("field_log_template_repo_path") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
+        raise ValueError("field-schedule receipt does not name the canonical field-log template")
     if candidate_receipt.get("field_allocation_and_effort_schedule_required_before_outcome_opening") is not True:
         raise ValueError("candidate/order receipt does not preserve the field schedule gate")
     if candidate_receipt.get("field_allocation_and_effort_schedule_pinned") is not False:
