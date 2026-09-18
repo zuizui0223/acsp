@@ -159,6 +159,19 @@ def verify_pre_outcome_gate(
         if schedule_receipt.get(key) is not True:
             raise ValueError(f"field schedule receipt lacks required pre-outcome proof: {key}")
 
+    if schedule_receipt.get("capacity_schedule_linkage_verified") is not True:
+        raise ValueError("field schedule receipt lacks movement-derived capacity linkage proof")
+    if schedule_receipt.get("standardized_effort_protocol_linkage_verified") is not True:
+        raise ValueError("field schedule receipt lacks standardized effort protocol linkage proof")
+    if schedule_receipt.get("movement_constraint_mode") != "osm_weighted_transport_network":
+        raise ValueError("field schedule receipt movement constraint mode changed")
+    if schedule_receipt.get("automatic_prefix_depth_method") != "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1":
+        raise ValueError("field schedule receipt automatic prefix-depth method changed")
+    if schedule_receipt.get("user_site_count_input") is not False:
+        raise ValueError("field schedule receipt cannot use a user site-count input")
+    if schedule_receipt.get("survey_days_input") is not False or schedule_receipt.get("monetary_budget_input") is not False:
+        raise ValueError("field schedule receipt cannot use survey-day or monetary-budget inputs")
+
     expected_arms = [
         "COVERAGE_THEN_FINE_STRUCTURE_V1",
         "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
@@ -192,6 +205,14 @@ def verify_pre_outcome_gate(
         "private_candidate_membership_verified": True,
         "frozen_order_prefix_verified": True,
         "arm_symmetric_prefix_effort_template_verified": True,
+        "capacity_schedule_linkage_verified": True,
+        "standardized_effort_protocol_linkage_verified": True,
+        "movement_constraint_mode": schedule_receipt["movement_constraint_mode"],
+        "max_network_transition_km": float(schedule_receipt["max_network_transition_km"]),
+        "automatic_prefix_depth_method": schedule_receipt["automatic_prefix_depth_method"],
+        "user_site_count_input": False,
+        "survey_days_input": False,
+        "monetary_budget_input": False,
         "prospective_field_outcomes_opened": False,
         "outcome_opening_gate_satisfied": True,
         "authorization_scope": "provenance authorization to open the preregistered prospective outcomes; no biological result or field-efficiency claim is implied",
