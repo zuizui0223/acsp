@@ -5,6 +5,11 @@ from pathlib import Path
 
 import pytest
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+)
 from research.export_cirsium_fresh_sentinel_public_freeze_receipt_v1 import (
     EXPECTED_UNITS,
     FIELD_EVALUATION_CONTRACT,
@@ -70,7 +75,10 @@ def test_public_receipt_contains_only_hash_level_provenance(tmp_path: Path) -> N
     assert receipt["outcome_opening_authorized_by_generation_alone"] is False
     assert receipt["public_receipt_commit_required_before_outcome_opening"] is True
     assert receipt["public_receipt_commit_verified"] is False
+    assert receipt["canonical_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    assert receipt["canonical_field_schedule_receipt_repo_path"] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     assert receipt["field_evaluation_contract"] == FIELD_EVALUATION_CONTRACT
+    assert receipt["field_log_template"] == CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
     assert receipt["field_allocation_and_effort_schedule_required_before_outcome_opening"] is True
     assert receipt["field_allocation_and_effort_schedule_pinned"] is False
     assert "closes only the candidate/order prescription gate" in receipt["outcome_opening_gate"]
