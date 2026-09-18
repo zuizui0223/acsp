@@ -17,6 +17,7 @@ on:
       - "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
       - "research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py"
       - "research/analyze_cirsium_fresh_sentinel_outcomes_v1.py"
+      - "research/build_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_schedule_membership_v1.py"
       - "research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py"
@@ -33,6 +34,7 @@ on:
       - "tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
       - "tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py"
       - "tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_private_schedule_builder_v1.py"
       - "tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
@@ -43,6 +45,7 @@ on:
       - "validation/coverage_then_fine_structure_pre_field_orchestration_contract_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
+      - "validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json"
       - "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json"
       - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
@@ -81,6 +84,7 @@ jobs:
             tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py \
             tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py \
             tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py \
+            tests/test_cirsium_fresh_sentinel_private_schedule_builder_v1.py \
             tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py
       - name: Guard frozen architecture boundary
@@ -181,6 +185,13 @@ jobs:
           assert ap['analysis_unit_reporting_state']['identity'] == 'VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1'
           assert e['pre_outcome_gate_state']['prospective_outcome_opening_allowed_now'] is False
 
+          cap = json.loads(Path('validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json').read_text())
+          assert cap['properties']['schema_version']['const'] == 'cirsium-fresh-sentinel-operational-capacity-profile-v1'
+          assert cap['properties']['status']['const'] == 'PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN'
+          assert cap['properties']['field_outcomes_used_to_set_capacity']['const'] is False
+          assert cap['properties']['arm_specific_capacity_allowed']['const'] is False
+          assert cap['properties']['post_outcome_capacity_edits_allowed']['const'] is False
+
           fs = json.loads(Path('validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json').read_text())
           assert fs['properties']['status']['const'] == 'PRIVATE_FIELD_ALLOCATION_AND_EFFORT_SCHEDULE_FROZEN'
           assert fs['properties']['cohort_unit_ids']['const'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
@@ -219,6 +230,11 @@ jobs:
           assert gate['prescription_pin_alone_authorizes_outcome_opening'] is False
           assert gate['pin_verifier_requires_current_bytes_equal_first_add_commit'] is True
           allocation_gate = o['field_allocation_effort_gate']
+          assert allocation_gate['operational_capacity_profile_schema'] == 'validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json'
+          assert allocation_gate['deterministic_schedule_builder'] == 'research/build_cirsium_fresh_sentinel_private_field_schedule_v1.py'
+          assert allocation_gate['capacity_profile_contains_candidate_identity'] is False
+          assert allocation_gate['capacity_profile_arm_specific_values_allowed'] is False
+          assert allocation_gate['builder_selects_only_no_skip_frozen_order_prefixes'] is True
           assert allocation_gate['private_schema'] == 'validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json'
           assert allocation_gate['private_validator'] == 'research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py'
           assert allocation_gate['public_receipt_exporter'] == 'research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py'
