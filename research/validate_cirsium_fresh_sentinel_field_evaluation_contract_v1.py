@@ -169,7 +169,9 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         "exact_one_field_log_row_per_scheduled_visit_required",
         "validation_unit_id_must_equal_scheduled_cohort_unit_id",
         "method_arm_must_equal_scheduled_method_arm",
-        "completed_resolved_search_must_match_planned_search_minutes_and_observer_count",
+        "completed_search_states_must_match_planned_search_minutes_and_observer_count",
+        "verified_or_unresolved_detection_requires_positive_detection_count",
+        "resolved_non_detection_requires_zero_detection_count",
         "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence",
     ):
         if linkage.get(key) is not True:
@@ -178,6 +180,12 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         raise ValueError("unscheduled field-log rows must remain forbidden")
     if linkage.get("comparator_assignment_must_equal") != EXPECTED_ASSIGNMENT_IDENTITY:
         raise ValueError("field-log comparator assignment linkage changed")
+    if linkage.get("completed_search_states") != [
+        "SEARCH_COMPLETED_DETECTED_VERIFIED",
+        "SEARCH_COMPLETED_NOT_DETECTED",
+        "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED",
+    ]:
+        raise ValueError("completed-search state set/order changed for field-log linkage")
 
     gate = contract.get("pre_outcome_gate_state") or {}
     if gate.get("static_evaluation_semantics_frozen") is not True:
