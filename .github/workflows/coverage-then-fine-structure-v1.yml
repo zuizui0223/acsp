@@ -15,6 +15,7 @@ on:
       - "research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py"
       - "research/validate_cirsium_fresh_sentinel_analysis_plan_v1.py"
       - "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_schedule_membership_v1.py"
       - "research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py"
@@ -29,6 +30,7 @@ on:
       - "tests/test_cirsium_fresh_sentinel_freeze_entry_and_pin_v1.py"
       - "tests/test_cirsium_fresh_sentinel_analysis_plan_v1.py"
       - "tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py"
       - "tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
@@ -75,6 +77,7 @@ jobs:
             tests/test_cirsium_fresh_sentinel_freeze_entry_and_pin_v1.py \
             tests/test_cirsium_fresh_sentinel_analysis_plan_v1.py \
             tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py \
+            tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py \
             tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py
       - name: Guard frozen architecture boundary
@@ -150,6 +153,12 @@ jobs:
           assert e['analysis_plan']['equal_taxon_weights_required'] is True
           assert e['analysis_plan']['all_four_taxa_required_for_primary'] is True
           assert e['analysis_plan']['pooled_micro_allowed_as_primary'] is False
+          assert e['field_log_schedule_linkage']['identity'] == 'ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1'
+          assert e['field_log_schedule_linkage']['analysis_unit_id_required'] is True
+          assert e['field_log_schedule_linkage']['visit_index_required'] is True
+          assert e['field_log_schedule_linkage']['exact_one_field_log_row_per_scheduled_visit_required'] is True
+          assert e['field_log_schedule_linkage']['unscheduled_extra_field_log_rows_allowed'] is False
+          assert e['field_log_schedule_linkage']['completed_search_states_must_match_planned_search_minutes_and_observer_count'] is True
           assert e['pre_outcome_gate_state']['analysis_plan_frozen'] is True
           assert e['pre_outcome_gate_state']['field_allocation_and_effort_schedule_pinned'] is False
 
