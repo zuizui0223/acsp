@@ -135,6 +135,12 @@ jobs:
               'formula': 'search_minutes * observer_count',
           }
           assert e['effort_accounting']['numeric_effort_schedule_frozen_now'] is False
+          mechanics = e['schedule_selection_mechanics']
+          assert mechanics['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
+          assert mechanics['equal_unique_candidate_prefix_depth_across_arms_within_unit'] is True
+          assert mechanics['equal_visit_count_by_rank_across_arms_within_unit'] is True
+          assert mechanics['equal_planned_person_minute_pattern_by_rank_across_arms_within_unit'] is True
+          assert mechanics['arm_specific_effort_reallocation_allowed'] is False
           assert e['pre_outcome_gate_state']['field_allocation_and_effort_schedule_pinned'] is False
           assert e['pre_outcome_gate_state']['prospective_outcome_opening_allowed_now'] is False
 
@@ -142,6 +148,7 @@ jobs:
           assert fs['properties']['status']['const'] == 'PRIVATE_FIELD_ALLOCATION_AND_EFFORT_SCHEDULE_FROZEN'
           assert fs['properties']['cohort_unit_ids']['const'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert fs['properties']['matched_effort_scope']['const'] == 'WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS'
+          assert fs['properties']['arm_symmetry_identity']['const'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
           assert fs['properties']['prospective_field_outcomes_opened']['const'] is False
           assert fs['properties']['field_outcomes_used_to_allocate']['const'] is False
           assert fs['properties']['post_outcome_schedule_edits_allowed']['const'] is False
@@ -163,6 +170,7 @@ jobs:
           assert static_gate['matched_field_effort_required_for_promotion'] is True
           assert static_gate['numeric_effort_metric_frozen'] is True
           assert static_gate['numeric_effort_metric']['identity'] == 'PERSON_MINUTES_V1'
+          assert static_gate['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
           assert static_gate['prospective_outcome_opening_allowed_while_schedule_pending'] is False
           gate = o['public_freeze_gate']
           assert gate['single_execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
@@ -180,6 +188,11 @@ jobs:
           assert allocation_gate['must_be_publicly_pinned_before_outcome_opening'] is True
           assert allocation_gate['private_instantiated_schedule_must_remain_outside_repository'] is True
           assert allocation_gate['matched_effort_scope'] == 'WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS'
+          assert allocation_gate['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
+          assert allocation_gate['equal_unique_candidate_prefix_depth_across_arms_within_unit'] is True
+          assert allocation_gate['equal_visit_count_by_rank_across_arms_within_unit'] is True
+          assert allocation_gate['equal_planned_person_minute_pattern_by_rank_across_arms_within_unit'] is True
+          assert allocation_gate['arm_specific_effort_reallocation_allowed'] is False
           assert allocation_gate['all_three_arms_required_for_each_cohort_unit'] is True
           assert allocation_gate['outcome_data_allowed_to_define_schedule'] is False
           assert allocation_gate['post_outcome_schedule_edits_allowed'] is False
@@ -193,6 +206,7 @@ jobs:
           assert opening['requires_exact_field_evaluation_contract_hash_linkage'] is True
           assert opening['verifier_reads_prospective_field_outcomes'] is False
           assert opening['requires_canonical_public_paths'] is True
+          assert opening['requires_arm_symmetric_prefix_effort_schedule'] is True
           assert opening['all_requirements_satisfied_now'] is False
           assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
           assert o['outcome_opening_allowed_now'] is False
