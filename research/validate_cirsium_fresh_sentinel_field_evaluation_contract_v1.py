@@ -24,6 +24,7 @@ EXPECTED_EFFORT_METRIC = {
     "formula": "search_minutes * observer_count",
 }
 EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
+EXPECTED_ARM_SYMMETRY_IDENTITY = "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
 EXPECTED_ANALYSIS_UNIT_IDENTITY = "COHORT_ARM_CANDIDATE_V1"
 EXPECTED_REPEAT_AGGREGATION_IDENTITY = "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1"
 EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY = "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
@@ -104,7 +105,12 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
     mechanics = contract.get("schedule_selection_mechanics") or {}
     if mechanics.get("comparator_assignment_identity") != EXPECTED_ASSIGNMENT_IDENTITY:
         raise ValueError("schedule comparator assignment changed from FROZEN_ORDER_PREFIX_V1")
+    if mechanics.get("arm_symmetry_identity") != EXPECTED_ARM_SYMMETRY_IDENTITY:
+        raise ValueError("schedule arm symmetry changed from ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1")
     for key in (
+        "equal_unique_candidate_prefix_depth_across_arms_within_unit",
+        "equal_visit_count_by_rank_across_arms_within_unit",
+        "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit",
         "candidate_membership_in_exact_frozen_arm_order_required",
         "private_unit_receipt_hash_linkage_required",
         "private_order_hash_linkage_required",
@@ -113,6 +119,8 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
             raise ValueError(f"schedule selection mechanic weakened: {key}")
     if mechanics.get("post_outcome_candidate_substitution_allowed") is not False:
         raise ValueError("post-outcome candidate substitution must remain forbidden")
+    if mechanics.get("arm_specific_effort_reallocation_allowed") is not False:
+        raise ValueError("arm-specific effort reallocation must remain forbidden")
 
     analysis = contract.get("analysis_unit_and_repeated_visits") or {}
     if analysis.get("primary_analysis_unit_frozen_now") is not True:
@@ -159,6 +167,8 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         "resolved_binary_denominator_states": primary["resolved_binary_denominator_states"],
         "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
         "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
+        "arm_symmetry_identity": EXPECTED_ARM_SYMMETRY_IDENTITY,
+        "arm_symmetric_prefix_effort_template_required": True,
         "analysis_unit_frozen": True,
         "analysis_unit_identity": EXPECTED_ANALYSIS_UNIT_IDENTITY,
         "repeated_visit_aggregation_frozen": True,
