@@ -1,0 +1,335 @@
+name: Scale-separated coverage then fine structure checks
+
+on:
+  pull_request:
+    paths:
+      - "acsp/discovery/scale_separated.py"
+      - "acsp/discovery/__init__.py"
+      - "research/cirsium_fresh_sentinel_paths_v1.py"
+      - "research/materialize_cirsium_fresh_sentinel_public_sources_v1.py"
+      - "research/build_cirsium_private_sector_structural_grid_v1.py"
+      - "research/validate_cirsium_fresh_range_sector_bundle_v1.py"
+      - "research/orchestrate_cirsium_fresh_sentinel_pre_field_v1.py"
+      - "research/export_cirsium_fresh_sentinel_public_freeze_receipt_v1.py"
+      - "research/run_cirsium_fresh_sentinel_freeze_v1.py"
+      - "research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_analysis_plan_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py"
+      - "research/analyze_cirsium_fresh_sentinel_outcomes_v1.py"
+      - "research/build_cirsium_fresh_sentinel_private_field_schedule_v1.py"
+      - "research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py"
+      - "research/validate_cirsium_fresh_sentinel_private_schedule_membership_v1.py"
+      - "research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py"
+      - "research/verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1.py"
+      - "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
+      - "tests/test_coverage_then_fine_structure_v1.py"
+      - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_source_readiness_v1.py"
+      - "tests/test_cirsium_fresh_range_sector_bundle_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_pre_field_orchestration_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_public_freeze_receipt_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_freeze_entry_and_pin_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_analysis_plan_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_private_schedule_builder_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_movement_capacity_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
+      - "validation/coverage_then_fine_structure_architecture_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
+      - "validation/coverage_then_fine_structure_source_readiness_amendment_v1.json"
+      - "validation/coverage_then_fine_structure_private_range_sector_schema_v1.json"
+      - "validation/coverage_then_fine_structure_pre_field_orchestration_contract_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
+      - "validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json"
+      - "validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json"
+      - "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json"
+      - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
+      - ".github/workflows/coverage-then-fine-structure-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and test dependency
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run scale-separated, freeze/pin, field-schedule and final pre-outcome guards
+        run: |
+          pytest -q \
+            tests/test_coverage_then_fine_structure_v1.py \
+            tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py \
+            tests/test_cirsium_fresh_sentinel_source_readiness_v1.py \
+            tests/test_cirsium_fresh_range_sector_bundle_v1.py \
+            tests/test_cirsium_fresh_sentinel_pre_field_orchestration_v1.py \
+            tests/test_cirsium_fresh_sentinel_public_freeze_receipt_v1.py \
+            tests/test_cirsium_fresh_sentinel_freeze_entry_and_pin_v1.py \
+            tests/test_cirsium_fresh_sentinel_analysis_plan_v1.py \
+            tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py \
+            tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py \
+            tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py \
+            tests/test_cirsium_fresh_sentinel_private_schedule_builder_v1.py \
+            tests/test_cirsium_fresh_sentinel_movement_capacity_v1.py \
+            tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
+            tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py
+      - name: Guard frozen architecture boundary
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          from research.cirsium_fresh_sentinel_paths_v1 import (
+              CANONICAL_ANALYSIS_PLAN_REPO_PATH,
+              CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+          )
+
+          p = json.loads(Path('validation/coverage_then_fine_structure_architecture_v1.json').read_text())
+          assert p['status'] == 'FROZEN_BEFORE_FRESH_EVALUATION'
+          assert p['global_order']['method_identity'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
+          assert p['role_separation']['coarse_default_order_identity'] == 'MORTON_DYADIC_COVERAGE_ORDER_V1'
+          assert p['role_separation']['coverage_structure_weight'] is None
+          assert p['role_separation']['budget_parameter'] is None
+          assert p['role_separation']['cross_cell_structural_score_comparison'] is False
+          assert p['fresh_evaluation_requirements']['fresh_or_disjoint_outcomes_required'] is True
+          assert p['fresh_evaluation_requirements']['consumed_cirsium_12_folds_may_be_used_for_promotion'] is False
+
+          f = json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json').read_text())
+          assert f['status'] == 'FROZEN_PRE_FIELD_OUTCOME_SOURCE_BLOCKED'
+          assert f['method_identity'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
+          assert f['selection_rule']['selected_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert f['execution_blocker']['current'] is True
+          assert f['field_evaluation_contract'] == 'validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json'
+          assert f['frozen_method_boundary']['fine_candidate_spacing_m'] == 100
+          assert f['frozen_method_boundary']['coarse_coverage_cell_size_m'] == 5000
+          assert f['frozen_method_boundary']['coverage_structure_weight'] is None
+          assert f['frozen_method_boundary']['known_point_kernel_for_sentinel'] is False
+
+          with Path('validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv').open(newline='', encoding='utf-8') as handle:
+              rows = list(csv.DictReader(handle))
+          assert [row['cohort_unit_id'] for row in rows] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert all(row['outcome_opened'].lower() == 'false' for row in rows)
+          assert all(row['execution_status'] == 'BLOCKED_PRIVATE_SOURCE_FREEZE' for row in rows)
+
+          s = json.loads(Path('validation/coverage_then_fine_structure_source_readiness_amendment_v1.json').read_text())
+          assert s['status'] == 'PUBLIC_SOURCE_RECONSTRUCTION_READY_PRIVATE_RANGE_SECTOR_GEOMETRY_BLOCKED'
+          assert s['repo_and_upstream_audit']['aza3_required_slots_frozen_at_pinned_commit'] == 0
+          assert s['remaining_external_blocker']['single_input_class'] == 'PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY'
+          assert s['remaining_external_blocker']['required_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+
+          schema = json.loads(Path('validation/coverage_then_fine_structure_private_range_sector_schema_v1.json').read_text())
+          assert schema['properties']['type']['const'] == 'FeatureCollection'
+          assert schema['properties']['features']['minItems'] == 4
+          assert schema['properties']['features']['maxItems'] == 4
+
+          e = json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json').read_text())
+          assert e['status'] == 'FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING'
+          assert e['cohort_unit_ids'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert e['field_endpoint']['primary_success_state'] == 'SEARCH_COMPLETED_DETECTED_VERIFIED'
+          assert e['newly_frozen_primary_binary_endpoint']['resolved_binary_denominator_states'] == [
+              'SEARCH_COMPLETED_DETECTED_VERIFIED',
+              'SEARCH_COMPLETED_NOT_DETECTED',
+          ]
+          assert e['newly_frozen_primary_binary_endpoint']['favorable_subsetting_after_outcome'] is False
+          assert e['effort_accounting']['matched_field_effort_required_for_between_arm_promotion'] is True
+          assert e['effort_accounting']['numeric_effort_metric_frozen_now'] is True
+          assert e['effort_accounting']['numeric_effort_metric'] == {
+              'identity': 'PERSON_MINUTES_V1',
+              'unit': 'person-minute',
+              'formula': 'search_minutes * observer_count',
+          }
+          assert e['effort_accounting']['numeric_effort_schedule_frozen_now'] is False
+          mechanics = e['schedule_selection_mechanics']
+          assert mechanics['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
+          assert mechanics['equal_unique_candidate_prefix_depth_across_arms_within_unit'] is True
+          assert mechanics['equal_visit_count_by_rank_across_arms_within_unit'] is True
+          assert mechanics['equal_planned_person_minute_pattern_by_rank_across_arms_within_unit'] is True
+          assert mechanics['arm_specific_effort_reallocation_allowed'] is False
+          assert e['analysis_plan']['canonical_repo_path'] == 'validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json'
+          assert e['analysis_plan']['primary_estimand_identity'] == 'EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1'
+          assert e['analysis_plan']['equal_taxon_weights_required'] is True
+          assert e['analysis_plan']['all_four_taxa_required_for_primary'] is True
+          assert e['analysis_plan']['pooled_micro_allowed_as_primary'] is False
+          assert e['field_log_schedule_linkage']['identity'] == 'ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1'
+          assert e['field_log_schedule_linkage']['analysis_unit_id_required'] is True
+          assert e['field_log_schedule_linkage']['visit_index_required'] is True
+          assert e['field_log_schedule_linkage']['exact_one_field_log_row_per_scheduled_visit_required'] is True
+          assert e['field_log_schedule_linkage']['unscheduled_extra_field_log_rows_allowed'] is False
+          assert e['field_log_schedule_linkage']['completed_search_states_must_match_planned_search_minutes_and_observer_count'] is True
+          assert e['pre_outcome_gate_state']['analysis_plan_frozen'] is True
+          assert e['pre_outcome_gate_state']['field_allocation_and_effort_schedule_pinned'] is False
+
+          ap = json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json').read_text())
+          assert ap['status'] == 'FROZEN_PRE_OUTCOME_ANALYSIS_PLAN'
+          assert ap['cohort_unit_ids'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert ap['primary_estimand']['identity'] == 'EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1'
+          assert ap['primary_estimand']['taxon_weights'] == {'CIR02': 0.25, 'CIR06': 0.25, 'CIR12': 0.25, 'CIR13': 0.25}
+          assert ap['primary_evaluability']['all_four_taxa_required'] is True
+          assert ap['primary_evaluability']['drop_non_evaluable_taxon_and_recompute_allowed'] is False
+          assert ap['primary_evaluability']['if_requirement_fails'] == 'PRIMARY_FOUR_TAXON_MACRO_NOT_EVALUABLE'
+          assert ap['secondary_estimands'][2]['role'].startswith('secondary descriptive only')
+          assert ap['analysis_unit_reporting_state']['identity'] == 'VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1'
+          assert e['pre_outcome_gate_state']['prospective_outcome_opening_allowed_now'] is False
+
+          cap = json.loads(Path('validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json').read_text())
+          assert cap['properties']['schema_version']['const'] == 'cirsium-fresh-sentinel-operational-capacity-profile-v1'
+          assert cap['properties']['status']['const'] == 'PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN'
+          assert cap['properties']['capacity_source_identity']['const'] == 'OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1'
+          assert cap['properties']['movement_constraint_mode']['const'] == 'osm_weighted_transport_network'
+          assert cap['properties']['automatic_prefix_depth_method']['const'] == 'OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1'
+          assert cap['properties']['coarse_redundancy_scale_m']['const'] == 5000.0
+          assert cap['properties']['frozen_common_candidate_geometry_used_for_movement_capacity']['const'] is True
+          assert cap['properties']['arm_rank_used_to_set_prefix_depth']['const'] is False
+          assert cap['properties']['candidate_identity_or_coordinates_exported']['const'] is False
+          assert cap['properties']['structural_score_used_to_set_prefix_depth']['const'] is False
+          assert cap['properties']['field_outcomes_used_to_set_capacity']['const'] is False
+          assert cap['properties']['arm_specific_capacity_allowed']['const'] is False
+          assert cap['properties']['survey_days_input']['const'] is False
+          assert cap['properties']['monetary_budget_input']['const'] is False
+          assert cap['properties']['user_site_count_input']['const'] is False
+          assert cap['properties']['user_coverage_target_input']['const'] is False
+          assert all(cap['properties']['movement_provider_successful_by_unit']['properties'][unit]['const'] is True for unit in ['CIR02', 'CIR06', 'CIR12', 'CIR13'])
+          assert cap['properties']['post_outcome_capacity_edits_allowed']['const'] is False
+
+          effort_schema = json.loads(Path('validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json').read_text())
+          assert effort_schema['properties']['schema_version']['const'] == 'cirsium-fresh-sentinel-standardized-effort-protocol-v1'
+          assert effort_schema['properties']['status']['const'] == 'PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN'
+          assert effort_schema['properties']['field_outcomes_used_to_set_effort']['const'] is False
+          assert effort_schema['properties']['candidate_identity_used_to_set_effort']['const'] is False
+          assert effort_schema['properties']['arm_specific_effort_allowed']['const'] is False
+          assert effort_schema['properties']['movement_constraint_used_to_set_effort']['const'] is False
+          assert effort_schema['properties']['post_outcome_effort_edits_allowed']['const'] is False
+
+          fs = json.loads(Path('validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json').read_text())
+          assert fs['properties']['status']['const'] == 'PRIVATE_FIELD_ALLOCATION_AND_EFFORT_SCHEDULE_FROZEN'
+          assert fs['properties']['cohort_unit_ids']['const'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert fs['properties']['matched_effort_scope']['const'] == 'WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS'
+          assert fs['properties']['arm_symmetry_identity']['const'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
+          assert fs['properties']['prospective_field_outcomes_opened']['const'] is False
+          assert fs['properties']['field_outcomes_used_to_allocate']['const'] is False
+          assert fs['properties']['post_outcome_schedule_edits_allowed']['const'] is False
+
+          o = json.loads(Path('validation/coverage_then_fine_structure_pre_field_orchestration_contract_v1.json').read_text())
+          assert o['status'] == 'FROZEN_PRE_FIELD_ORCHESTRATION_MECHANICS'
+          assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert o['execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
+          assert o['spatial_scales']['fine_candidate_spacing_m'] == 100
+          assert o['spatial_scales']['coarse_coverage_cell_size_m'] == 5000
+          assert o['spatial_scales']['fine_cells_per_coarse_axis'] == 50
+          assert o['orders_frozen_before_field_outcomes']['primary'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
+          assert o['orders_frozen_before_field_outcomes']['coverage_only'] == 'COVERAGE_ONLY_STABLE_WITHIN_CELL_V1'
+          assert o['failure_semantics']['replacement_after_failure_allowed'] is False
+          assert o['privacy_boundary']['coordinate_bearing_outputs_public'] is False
+          assert o['privacy_boundary']['private_field_schedule_must_be_outside_repository'] is True
+          static_gate = o['static_field_evaluation_gate']
+          assert static_gate['contract'] == 'validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json'
+          assert static_gate['matched_field_effort_required_for_promotion'] is True
+          assert static_gate['numeric_effort_metric_frozen'] is True
+          assert static_gate['numeric_effort_metric']['identity'] == 'PERSON_MINUTES_V1'
+          assert static_gate['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
+          assert static_gate['analysis_plan'] == CANONICAL_ANALYSIS_PLAN_REPO_PATH
+          assert static_gate['primary_cross_taxon_estimand_identity'] == 'EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1'
+          assert static_gate['equal_taxon_weights_required'] is True
+          assert static_gate['prospective_outcome_opening_allowed_while_schedule_pending'] is False
+          gate = o['public_freeze_gate']
+          assert gate['single_execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
+          assert gate['pin_verifier'] == 'research/verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py'
+          assert gate['receipt_generation_alone_authorizes_outcome_opening'] is False
+          assert gate['prescription_pin_alone_authorizes_outcome_opening'] is False
+          assert gate['pin_verifier_requires_current_bytes_equal_first_add_commit'] is True
+          allocation_gate = o['field_allocation_effort_gate']
+          assert allocation_gate['operational_capacity_profile_schema'] == 'validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json'
+          assert allocation_gate['canonical_operational_capacity_profile_repo_path'] == 'validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json'
+          assert allocation_gate['canonical_standardized_effort_protocol_repo_path'] == 'validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json'
+          assert allocation_gate['public_schedule_receipt_must_hash_bind_operational_capacity_profile'] is True
+          assert allocation_gate['public_schedule_receipt_must_hash_bind_standardized_effort_protocol'] is True
+          assert allocation_gate['final_gate_revalidates_operational_capacity_profile'] is True
+          assert allocation_gate['final_gate_revalidates_standardized_effort_protocol'] is True
+          assert allocation_gate['post_schedule_pin_capacity_profile_edits_allowed'] is False
+          assert allocation_gate['post_schedule_pin_standardized_effort_edits_allowed'] is False
+          assert allocation_gate['standardized_effort_protocol_schema'] == 'validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json'
+          assert allocation_gate['movement_capacity_deriver'] == 'research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py'
+          assert allocation_gate['only_user_operational_tuning_input'] == 'max_network_transition_km'
+          assert allocation_gate['user_site_count_input_allowed'] is False
+          assert allocation_gate['survey_days_input_allowed'] is False
+          assert allocation_gate['monetary_budget_input_allowed'] is False
+          assert allocation_gate['prefix_depth_derived_from_common_frame_not_arm_order'] is True
+          assert allocation_gate['deterministic_schedule_builder'] == 'research/build_cirsium_fresh_sentinel_private_field_schedule_v1.py'
+          assert allocation_gate['capacity_profile_contains_candidate_identity'] is False
+          assert allocation_gate['capacity_profile_arm_specific_values_allowed'] is False
+          assert allocation_gate['builder_selects_only_no_skip_frozen_order_prefixes'] is True
+          assert allocation_gate['private_schema'] == 'validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json'
+          assert allocation_gate['private_validator'] == 'research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py'
+          assert allocation_gate['public_receipt_exporter'] == 'research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py'
+          assert allocation_gate['public_pin_verifier'] == 'research/verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1.py'
+          assert allocation_gate['final_pre_outcome_verifier'] == 'research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py'
+          assert allocation_gate['must_freeze_before_outcome_opening'] is True
+          assert allocation_gate['must_be_publicly_pinned_before_outcome_opening'] is True
+          assert allocation_gate['private_instantiated_schedule_must_remain_outside_repository'] is True
+          assert allocation_gate['matched_effort_scope'] == 'WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS'
+          assert allocation_gate['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
+          assert allocation_gate['equal_unique_candidate_prefix_depth_across_arms_within_unit'] is True
+          assert allocation_gate['equal_visit_count_by_rank_across_arms_within_unit'] is True
+          assert allocation_gate['equal_planned_person_minute_pattern_by_rank_across_arms_within_unit'] is True
+          assert allocation_gate['arm_specific_effort_reallocation_allowed'] is False
+          assert allocation_gate['analysis_plan_exact_hash_linkage_required'] is True
+          assert allocation_gate['field_log_template_exact_hash_linkage_required'] is True
+          assert allocation_gate['all_three_arms_required_for_each_cohort_unit'] is True
+          assert allocation_gate['outcome_data_allowed_to_define_schedule'] is False
+          assert allocation_gate['post_outcome_schedule_edits_allowed'] is False
+          assert allocation_gate['later_committed_public_schedule_receipt_byte_changes_allowed'] is False
+          assert allocation_gate['canonical_public_receipt_repo_path'] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
+          assert allocation_gate['alternate_public_receipt_paths_allowed'] is False
+          assert allocation_gate['status'] == 'MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES'
+          opening = o['outcome_opening_gate']
+          assert opening['verifier'] == 'research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py'
+          assert opening['requires_exact_candidate_receipt_hash_linkage'] is True
+          assert opening['requires_exact_field_evaluation_contract_hash_linkage'] is True
+          assert opening['verifier_reads_prospective_field_outcomes'] is False
+          assert opening['requires_canonical_public_paths'] is True
+          assert opening['requires_arm_symmetric_prefix_effort_schedule'] is True
+          assert opening['requires_exact_analysis_plan_hash_linkage'] is True
+          assert opening['requires_valid_frozen_analysis_plan'] is True
+          assert opening['requires_exact_field_log_template_hash_linkage'] is True
+          assert opening['requires_exact_operational_capacity_profile_hash_linkage'] is True
+          assert opening['requires_exact_standardized_effort_protocol_hash_linkage'] is True
+          assert opening['requires_canonical_operational_capacity_profile_path'] is True
+          assert opening['requires_canonical_standardized_effort_protocol_path'] is True
+          assert opening['requires_movement_capacity_schedule_linkage'] is True
+          assert opening['requires_standardized_effort_protocol_linkage'] is True
+          assert opening['requires_movement_constraint_mode'] == 'osm_weighted_transport_network'
+          assert opening['requires_automatic_prefix_depth_method'] == 'OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1'
+          assert opening['user_site_count_input_allowed'] is False
+          assert opening['survey_days_input_allowed'] is False
+          assert opening['monetary_budget_input_allowed'] is False
+          outcome_analysis = o['prospective_outcome_analysis']
+          assert outcome_analysis['analyzer'] == 'research/analyze_cirsium_fresh_sentinel_outcomes_v1.py'
+          assert outcome_analysis['field_log_schedule_validator'] == 'research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py'
+          assert outcome_analysis['first_read_of_prospective_outcome_rows_must_occur_after_final_pre_outcome_gate'] is True
+          assert outcome_analysis['primary_estimand_identity'] == 'EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1'
+          assert outcome_analysis['all_four_taxa_required_for_primary'] is True
+          assert outcome_analysis['pooled_micro_primary_allowed'] is False
+          assert outcome_analysis['retuning_on_opened_outcomes_allowed'] is False
+          assert outcome_analysis['field_log_template_hash_must_match_pinned_schedule_receipt'] is True
+          assert opening['all_requirements_satisfied_now'] is False
+          assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
+          assert o['outcome_opening_allowed_now'] is False
+          PY

@@ -1,0 +1,95 @@
+name: Global availability diagnosis v1
+
+on:
+  pull_request:
+    paths:
+      - "research/summarize_country_framed_failure_modes.py"
+      - "research/diagnose_country_frame_selection.py"
+      - "acsp/discovery/country_frames.py"
+      - "tests/test_country_framed_failure_modes.py"
+      - "tests/test_country_frame_selection_diagnosis.py"
+      - "validation/japan_global_prediction_gap_diagnosis_v1.json"
+      - ".github/workflows/global-availability-diagnosis-v1.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: global-availability-diagnosis-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test diagnosis mechanics
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          python tests/test_country_framed_failure_modes.py -v
+          python tests/test_country_frame_selection_diagnosis.py -v
+      - name: Download authoritative consumed fresh-48 aggregate artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32932865041
+          name: country-framed-fresh-heterogeneity-confirmation-results
+          path: /tmp/global-fresh48
+      - name: Reproduce availability and country-frame diagnosis
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          mkdir -p /tmp/global-availability-diagnosis-v1
+          python research/summarize_country_framed_failure_modes.py \
+            /tmp/global-fresh48/taxon_country_results.csv \
+            --output /tmp/global-availability-diagnosis-v1/failure_modes.json
+          python research/diagnose_country_frame_selection.py \
+            /tmp/global-fresh48/taxon_country_results.csv \
+            --detail-output /tmp/global-availability-diagnosis-v1/country_frame_detail.csv \
+            --summary-output /tmp/global-availability-diagnosis-v1/country_frame_summary.json
+      - name: Guard post-opened descriptive boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/global-availability-diagnosis-v1')
+          failure = json.loads((root / 'failure_modes.json').read_text())
+          country = json.loads((root / 'country_frame_summary.json').read_text())
+          assert failure['declared_units'] == 48
+          assert failure['candidate_generation_success'] == 40
+          assert failure['candidate_generation_failure'] == 8
+          assert failure['candidate_failure_modes']['country_declaration_failed'] == 2
+          assert failure['candidate_failure_modes']['insufficient_historical_evidence_or_complete_prototypes'] == 5
+          assert failure['candidate_failure_modes']['robust_core_returned_zero_candidate_patches'] == 1
+          assert failure['temporally_evaluable'] == 34
+          assert failure['temporal_failure_modes']['zero_recent_country_records'] == 12
+          assert failure['temporal_failure_modes']['no_declared_country'] == 2
+          assert failure['integrated_evaluable'] == 32
+          assert failure['scientific_method_changed'] is False
+          assert failure['subset_rescue_used'] is False
+          assert country['consumed_pair_count'] == 48
+          assert country['heldout_used_to_choose_country'] is False
+          assert country['robust_support_rerun'] is False
+          assert country['counterfactual_candidate_generation_success_claimed'] is False
+          assert country['counterfactual_predictive_lift_claimed'] is False
+          assert country['validated_japan_core_changed'] is False
+          detail = (root / 'country_frame_detail.csv').read_text().lower()
+          for forbidden in ('latitude', 'longitude', 'robust_recall', 'random_recall'):
+              assert forbidden not in detail
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-availability-diagnosis-v1
+          path: /tmp/global-availability-diagnosis-v1
+          if-no-files-found: error
+          retention-days: 90

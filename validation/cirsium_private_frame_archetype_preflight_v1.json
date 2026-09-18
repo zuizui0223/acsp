@@ -1,0 +1,46 @@
+{
+  "schema_version": "cirsium-private-frame-archetype-preflight-v1",
+  "scientific_role": "pre_field_execution_readiness_only",
+  "field_outcomes_used": false,
+  "exact_coordinates_used": false,
+  "generated_from": [
+    "validation/cirsium_private_frame_source_requirements_v1.csv",
+    "validation/cirsium_aza3_prospective_validation_cohort_v1.csv"
+  ],
+  "archetype_order": [
+    "CIR03",
+    "CIR08",
+    "CIR02"
+  ],
+  "units": 3,
+  "ready_units": 0,
+  "blocked_units": 3,
+  "status": "BLOCKED_PRIVATE_SOURCE_FREEZE",
+  "blockers_by_unit": {
+    "CIR03": [
+      "private_source_manifest",
+      "primary_anchor_geometry",
+      "gsi_dem_snapshot"
+    ],
+    "CIR08": [
+      "private_source_manifest",
+      "primary_anchor_geometry",
+      "esa_worldcover_2021_snapshot",
+      "gsi_coastline_snapshot",
+      "target_ecological_component"
+    ],
+    "CIR02": [
+      "private_source_manifest",
+      "gsi_dem_snapshot",
+      "esa_worldcover_2021_snapshot",
+      "sentinel_support_input"
+    ]
+  },
+  "execution_order_after_source_freeze": [
+    "CIR03: local alpine / single-anchor path",
+    "CIR08: local coastal-island / multiple-anchor + coastline path",
+    "CIR02: sentinel uncertainty-footprint path"
+  ],
+  "next_action": "Freeze the listed private source snapshots/manifests, then build CIR03 -> CIR08 -> CIR02 private frames without changing the frozen algorithms.",
+  "claim_boundary": "This preflight reports execution readiness only. It does not establish occupancy, field efficiency, selector superiority, or accessibility."
+}

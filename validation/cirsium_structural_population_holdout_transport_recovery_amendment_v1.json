@@ -1,0 +1,46 @@
+{
+  "schema_version": "cirsium-structural-population-holdout-transport-recovery-amendment-v1",
+  "status": "FROZEN_TRANSPORT_ONLY_RECOVERY_AFTER_PROVIDER_503",
+  "scientific_contract": {
+    "path": "validation/cirsium_structural_population_holdout_development_v1.json",
+    "git_blob_sha1": "3b1dd32e190f13a7c363a4bb6d12ec3beb822bd0"
+  },
+  "parent_partial_execution": {
+    "workflow_run_id": 34696675904,
+    "artifact_id": 10299905947,
+    "artifact_digest": "sha256:8e5a783057d1a92a23b5f191a27ba9ebf10d9d756940bb4ec868f474f081e974",
+    "executed_pairs": ["CIR01__chubu-mountains"],
+    "provider_failed_pairs": ["CIR04__chubu-mountains", "CIR07__tohoku"],
+    "failure_class": "GBIF HTTP 503 Backend fetch failed",
+    "failed_pair_outcomes_scored": false
+  },
+  "transport_retry": {
+    "provider": "GBIF",
+    "request_identity": "identical fetch_gbif_species request arguments; no taxon, country, period, precision, region, page-size, maximum-record, or source substitution",
+    "retryable_http_statuses": [429, 500, 501, 502, 503, 504, 505, 506, 507, 508, 510, 511],
+    "maximum_total_attempts": 5,
+    "sleep_before_retry_seconds": [2, 5, 10, 20],
+    "jitter": false,
+    "non_http_exception_retry": false
+  },
+  "scientific_semantics_changed": false,
+  "candidate_frame_changed": false,
+  "population_definition_changed": false,
+  "structural_family_changed": false,
+  "structural_formula_changed": false,
+  "comparators_changed": false,
+  "prefix_curve_changed": false,
+  "recovery_radius_changed": false,
+  "provider_relaxation": false,
+  "provider_substitution": false,
+  "pair_replacement": false,
+  "coastal_deferred_status_changed": false,
+  "interpretation": "This amendment repairs only transient transport availability after two declared pairs failed before outcome scoring. It does not rescue, retune, replace, or alter any scientific method or endpoint.",
+  "forbidden": [
+    "do not retry HTTP 4xx responses other than 429",
+    "do not substitute another biodiversity provider after GBIF failure",
+    "do not relax coordinate uncertainty, period, region, population clustering, candidate grid, source layers, selector formula, comparator, prefix, or recovery radius",
+    "do not use the opened CIR01 result to change any scientific setting",
+    "do not call a completed transport recovery independent confirmation"
+  ]
+}

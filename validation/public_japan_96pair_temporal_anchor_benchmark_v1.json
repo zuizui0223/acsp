@@ -1,0 +1,60 @@
+{
+  "schema_version": "public-japan-96pair-temporal-anchor-benchmark-v1",
+  "status": "DEVELOPMENT_ONLY_FROZEN_BEFORE_TEMPORAL_FETCH",
+  "scientific_role": "large public-data diagnosis of known-occurrence proximity within the fixed Japanese regional frame",
+  "validated_product_changed": false,
+  "new_independent_confirmation_claim": false,
+  "cohort_provenance": {
+    "role": "already-consumed untouched robust-core cohort reused for development only",
+    "workflow_run_id": 32335791948,
+    "artifact_id": 9394691112,
+    "artifact_name": "acsp-robust-patch-untouched-confirmation-cohort-v2",
+    "artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "declared_pairs": 96,
+    "unique_taxa": 96,
+    "plant_pairs": 48,
+    "animal_pairs": 48,
+    "region_cells": 12
+  },
+  "gbif_query": {
+    "country": "JP",
+    "hasCoordinate": true,
+    "hasGeospatialIssue": false,
+    "occurrenceStatus": "PRESENT",
+    "year": "2000,2025",
+    "page_size": 300,
+    "maximum_records_per_pair": 10000
+  },
+  "record_filter": {
+    "record_species_key_must_equal_frozen_species_key": true,
+    "coordinate_uncertainty_must_be_declared": true,
+    "coordinate_uncertainty_m_max": 1000,
+    "event_year_min": 2000,
+    "event_year_max": 2025,
+    "deduplicate_exact_coordinates_within_period": true
+  },
+  "temporal_split": {
+    "historical_anchor_years": [2000, 2020],
+    "recent_evaluation_years": [2021, 2025]
+  },
+  "cluster_rule": {
+    "algorithm": "deterministic_complete_link_greedy",
+    "maximum_within_cluster_distance_km": 0.5,
+    "reobservation_threshold_km": 0.5
+  },
+  "recovery_radii_km": [2.0, 5.0, 10.0],
+  "primary_questions": [
+    "What fraction of later novel clusters lie within 2 km of a historical cluster inside the same fixed region?",
+    "How much does that fraction increase at 5 km and at the validated 10-km screening scale?",
+    "Does the pattern recur across plants and animals rather than being driven by one taxon group?"
+  ],
+  "failure_handling": {
+    "no_historical_cluster": "SENTINEL_NOT_LOCAL_EVALUABLE",
+    "no_recent_cluster": "TEMPORALLY_NOT_EVALUABLE",
+    "api_or_generation_failure": "RETAIN_AS_DECLARED_FAILURE",
+    "replacement_allowed": false,
+    "post_result_radius_tuning_allowed": false,
+    "post_result_precision_relaxation_allowed": false
+  },
+  "claim_boundary": "This uses an already-consumed cohort and therefore can strengthen or weaken the development diagnosis of local proximity but cannot independently confirm a new local-discovery method. It does not alter the validated 2.5% robust candidate-patch claim."
+}

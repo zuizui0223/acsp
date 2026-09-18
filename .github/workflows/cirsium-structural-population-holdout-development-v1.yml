@@ -1,0 +1,100 @@
+name: Cirsium structural population holdout development v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_structural_population_holdout_preflight_result_v1.json"
+      - "validation/cirsium_structural_population_holdout_development_v1.json"
+      - "research/run_cirsium_structural_population_holdout_development_v1.py"
+      - "acsp/discovery/providers/worldcover_neighborhood_points.py"
+      - "tests/test_worldcover_neighborhood_points.py"
+      - "tests/test_cirsium_structural_population_holdout_development_v1.py"
+      - "acsp/discovery/**"
+      - "acsp/structural_graph.py"
+      - "acsp/structural_raw_adapters.py"
+      - "acsp/structural_support.py"
+      - "research/build_cirsium_private_alpine_local_grid_v1.py"
+      - "research/campanula_microterrain_discovery.py"
+      - "research/benchmark_public_japan_cirsium_temporal_anchor_v1.py"
+      - ".github/workflows/cirsium-structural-population-holdout-development-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  develop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and test dependency
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run focused mechanics tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          pytest -q \
+            tests/test_worldcover_neighborhood_points.py \
+            tests/test_cirsium_structural_population_holdout_development_v1.py
+      - name: Run frozen structural population holdout
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/cirsium-structural-population-holdout-development-v1
+          python research/run_cirsium_structural_population_holdout_development_v1.py \
+            --out-dir /tmp/cirsium-structural-population-holdout-development-v1
+      - name: Guard development boundary and public-safe artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('/tmp/cirsium-structural-population-holdout-development-v1')
+          summary = json.loads((root / 'summary.json').read_text())
+          curve = pd.read_csv(root / 'population_holdout_curve.csv')
+
+          assert summary['status'] == 'STRUCTURAL_POPULATION_HOLDOUT_DEVELOPMENT_COMPLETE'
+          assert summary['validated_product_changed'] is False
+          assert summary['automatic_global_adapter_changed'] is False
+          assert summary['new_confirmation_claim'] is False
+          assert summary['field_outcomes_used'] is False
+          assert summary['expected_total_folds'] == 12
+          assert summary['promotion_allowed'] is False
+          assert len(summary['explicitly_deferred_eligible_pairs']) == 1
+          assert summary['explicitly_deferred_eligible_pairs'][0]['pair_id'] == 'CIR08__ryukyu'
+
+          allowed_status = {'EXECUTED', 'SOURCE_PROVIDER_FAILURE', 'POPULATION_COUNT_DRIFT'}
+          assert {row['status'] for row in summary['pair_audits']}.issubset(allowed_status)
+          assert len(summary['pair_audits']) == 3
+
+          forbidden = {
+              'latitude','longitude','decimalLatitude','decimalLongitude',
+              'gbif_key','occurrence_id','hidden_latitude','hidden_longitude'
+          }
+          assert forbidden.isdisjoint(set(curve.columns))
+          if not curve.empty:
+              assert set(curve['prefix_fraction']) == {0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0}
+              assert set(curve['recovery_radius_km']) == {5.0, 10.0}
+              assert set(curve['pair_id']).issubset({
+                  'CIR01__chubu-mountains',
+                  'CIR04__chubu-mountains',
+                  'CIR07__tohoku',
+              })
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-structural-population-holdout-development-v1
+          path: |
+            /tmp/cirsium-structural-population-holdout-development-v1/population_holdout_curve.csv
+            /tmp/cirsium-structural-population-holdout-development-v1/summary.json
+          if-no-files-found: error
+          retention-days: 90

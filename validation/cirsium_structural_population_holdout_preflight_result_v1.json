@@ -1,0 +1,70 @@
+{
+  "schema_version": "cirsium-structural-population-holdout-preflight-terminal-v1",
+  "status": "DEVELOPMENT_PREFLIGHT_TERMINAL",
+  "source_issue": 192,
+  "source_pr": 184,
+  "source_commit": "bb80a660265f0b9ffc5e55c74aadc8aed80d3ea3",
+  "workflow_run_id": 34673622565,
+  "artifact_id": 10291980579,
+  "artifact_name": "cirsium-structural-population-holdout-preflight-v1",
+  "artifact_digest": "sha256:2842594b6dfa62fc1ccbb110b4245b6dc327d998cef85e5c9ea093d281e58bd8",
+  "source_cohort_git_blob_sha1": "4084355ae091ec992e4f9e64e26522341c65d058",
+  "selector_run": false,
+  "candidate_surface_built": false,
+  "raw_structural_layers_built": false,
+  "heldout_population_selected": false,
+  "declared_units": 13,
+  "declared_regions": 12,
+  "declared_pairs": 156,
+  "provider_failure_species": 0,
+  "provider_failure_pairs": 0,
+  "spatial_holdout_eligible_pairs": 4,
+  "spatial_holdout_eligible_unique_species": 4,
+  "eligible_pairs": [
+    {
+      "pair_id": "CIR01__chubu-mountains",
+      "cohort_unit_id": "CIR01",
+      "species_binomial": "Cirsium sieboldii",
+      "structural_feature_family": "WETLAND_MOISTURE_STRUCTURE",
+      "region_id": "chubu-mountains",
+      "strict_unique_coordinates": 4,
+      "population_clusters": 4
+    },
+    {
+      "pair_id": "CIR04__chubu-mountains",
+      "cohort_unit_id": "CIR04",
+      "species_binomial": "Cirsium otayae",
+      "structural_feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "region_id": "chubu-mountains",
+      "strict_unique_coordinates": 4,
+      "population_clusters": 4
+    },
+    {
+      "pair_id": "CIR07__tohoku",
+      "cohort_unit_id": "CIR07",
+      "species_binomial": "Cirsium pendulum",
+      "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "region_id": "tohoku",
+      "strict_unique_coordinates": 4,
+      "population_clusters": 4
+    },
+    {
+      "pair_id": "CIR08__ryukyu",
+      "cohort_unit_id": "CIR08",
+      "species_binomial": "Cirsium brevicaule",
+      "structural_feature_family": "COASTAL_ISLAND_STRUCTURE",
+      "region_id": "ryukyu",
+      "strict_unique_coordinates": 42,
+      "population_clusters": 23
+    }
+  ],
+  "eligible_pairs_by_structural_family": {
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": 1,
+    "COASTAL_ISLAND_STRUCTURE": 1,
+    "OPEN_GRASSLAND_STRUCTURE": 1,
+    "WETLAND_MOISTURE_STRUCTURE": 1
+  },
+  "baseline_only_pairs": 12,
+  "below_min_population_pairs": 140,
+  "claim_boundary": "Opened public-data evidence-adequacy preflight only. Does not validate or promote a structural selector, change the validated Japanese ACSP core, or identify occupancy, field efficiency, access, route, time, budget, stopping, or adaptive learning."
+}

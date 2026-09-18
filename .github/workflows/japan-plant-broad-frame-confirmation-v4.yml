@@ -1,0 +1,142 @@
+name: Japan plant broad-frame confirmation v4
+
+on:
+  push:
+    branches:
+      - research/occurrence-anchored-local-discovery-v1
+    paths:
+      - "validation/activate_japan_plant_broad_frame_confirmation_v4.marker"
+
+concurrency:
+  group: japan-plant-broad-frame-confirmation-v4-first-activation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+  PREFLIGHT_RUN_ID: "34575434739"
+  PREFLIGHT_ARTIFACT_ID: "10189768431"
+  PREFLIGHT_ARTIFACT: "japan-plant-broad-frame-historical-preflight-v4"
+  PREFLIGHT_SHA256: "9c4b9f1325f8cc680fabce6ff3c4fdded1f5055e152a2075facb65fdc81db7d3"
+
+jobs:
+  heldout-confirmation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify one-shot heldout activation and exact preflight receipt
+        run: |
+          python - <<'PY'
+          import hashlib, json, subprocess
+          from pathlib import Path
+
+          assert int('${{ github.run_number }}') == 1
+          assert int('${{ github.run_attempt }}') == 1
+          marker = json.loads(Path('validation/activate_japan_plant_broad_frame_confirmation_v4.marker').read_text())
+          receipt = json.load(open('validation/japan_plant_broad_frame_preflight_receipt_v4.json'))
+          parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
+          assert marker['activation'] == 'JAPAN_PLANT_BROAD_FRAME_CONFIRMATION_V4_FIRST'
+          assert marker['implementation_parent_sha'] == parent
+          assert marker['parent_issue'] == 203
+          assert marker['preflight_run_id'] == 34575434739
+          assert marker['preflight_artifact_id'] == 10189768431
+          assert marker['preflight_json_sha256'] == '9c4b9f1325f8cc680fabce6ff3c4fdded1f5055e152a2075facb65fdc81db7d3'
+          assert receipt['status'] == 'PREOUTCOME_24_TAXA_AND_CANDIDATE_UNIVERSES_PINNED'
+          assert receipt['source_workflow_run_id'] == marker['preflight_run_id']
+          assert receipt['source_artifact_id'] == marker['preflight_artifact_id']
+          assert receipt['preflight_json_sha256'] == marker['preflight_json_sha256']
+          assert receipt['source_artifact_digest'] == 'sha256:98c52261f01800e66e59bcf0d6e059632a9b356a31d8fdc7fec29149188f917d'
+          assert receipt['candidate_identity_count'] == 96
+          assert receipt['historically_qualified_identities'] == 48
+          assert receipt['final_taxa'] == 24
+          assert receipt['minimum_historical_population_clusters'] == 5
+          assert receipt['heldout_2021_2025_opened'] is False
+          assert receipt['no_reselection_after_pin'] is True
+          protocol = Path('validation/japan_plant_broad_frame_confirmation_v4.json')
+          assert hashlib.sha256(protocol.read_bytes()).hexdigest() == receipt['protocol_sha256']
+          PY
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Test heldout information barrier and frozen gates
+        run: python -m unittest -v tests/test_japan_plant_broad_frame_confirmation_v4.py
+
+      - name: Download exact historical-only preflight artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PREFLIGHT_ARTIFACT }}
+          path: preflight-source
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.PREFLIGHT_RUN_ID }}
+
+      - name: Verify exact preflight bytes before opening heldout
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          p = Path('preflight-source/preflight.json')
+          got = hashlib.sha256(p.read_bytes()).hexdigest()
+          assert got == '9c4b9f1325f8cc680fabce6ff3c4fdded1f5055e152a2075facb65fdc81db7d3', got
+          x = json.loads(p.read_text())
+          receipt = json.load(open('validation/japan_plant_broad_frame_preflight_receipt_v4.json'))
+          assert x['status'] == 'PREOUTCOME_24_TAXA_AND_CANDIDATE_UNIVERSES_FROZEN'
+          assert x['candidate_identity_count'] == 96
+          assert x['historically_qualified_identities'] == 48
+          assert x['final_taxa'] == 24
+          assert x['final_selection_sha256'] == receipt['final_selection_sha256']
+          assert [int(r['speciesKey']) for r in x['selected_taxa']] == [int(v) for v in receipt['selected_species_keys']]
+          assert x['heldout_2021_2025_opened'] is False
+          assert x['selector_evaluated'] is False
+          print('PREHELDOUT_EXACT_OBJECT_GATE_PASS')
+          PY
+
+      - name: Reconstruct all 24 frozen universes then open 2021-2025 heldout
+        run: |
+          rm -rf japan-plant-v4-outcome
+          mkdir -p japan-plant-v4-outcome
+          python research/run_japan_plant_broad_frame_confirmation_v4.py \
+            --preflight preflight-source/preflight.json \
+            --out-dir japan-plant-v4-outcome
+
+      - name: Verify terminal result and public-safe artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s = json.loads(Path('japan-plant-v4-outcome/summary.json').read_text())
+          assert s['status'] == 'JAPAN_PLANT_BROAD_FRAME_CONFIRMATION_COMPLETE'
+          assert s['primary']['frozen_taxa'] == 24
+          assert s['validated_japan_product_changed'] is False
+          assert s['automatic_global_adapter_changed'] is False
+          assert s['selector_evaluated'] is False
+          assert s['human_access_used'] is False
+          for path in Path('japan-plant-v4-outcome').glob('*'):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding='utf-8').lower()
+              for token in ('"latitude"', '"longitude"', 'occurrence_id'):
+                  assert token not in text, (path, token)
+          print(json.dumps({
+              'decision': s['decision'],
+              'primary': s['primary'],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: japan-plant-broad-frame-confirmation-v4
+          path: japan-plant-v4-outcome/
+          if-no-files-found: error
+          retention-days: 90

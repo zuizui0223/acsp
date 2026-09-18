@@ -1,0 +1,62 @@
+{
+  "schema_version": "public-japan-96pair-environment-nearest-overlap-result-v1",
+  "status": "POST_RESULT_DESCRIPTIVE_OVERLAP_COMPLETE",
+  "protocol": "validation/public_japan_96pair_environment_nearest_overlap_diagnostic_v1.json",
+  "parent_result": "validation/public_japan_96pair_environment_vs_distance_development_result_v1.json",
+  "workflow_run_id": 33939726385,
+  "artifact_id": 9961438867,
+  "artifact_digest": "sha256:cd4412949eb508b5410144c8a8d97606b8f79f8b95384bbb3cefe9191e3e236b",
+  "validated_product_changed": false,
+  "new_independent_confirmation_claim": false,
+  "declared_pairs": 96,
+  "classified_pairs": 12,
+  "status_counts": {
+    "no_novel_recent_target": 56,
+    "insufficient_historical_evidence": 24,
+    "classified": 12,
+    "parent_method_generation_failure": 4
+  },
+  "classified_novel_clusters": 334,
+  "both_environment_and_nearest": 134,
+  "environment_only": 21,
+  "nearest_only": 28,
+  "neither": 151,
+  "environment_recovered_clusters": 155,
+  "nearest_recovered_clusters": 162,
+  "environment_or_nearest_union_clusters": 183,
+  "environment_only_fraction_of_classified_clusters": 0.06287425149700598,
+  "nearest_only_fraction_of_classified_clusters": 0.08383233532934131,
+  "nearest_fraction_of_classified_clusters": 0.48502994011976047,
+  "union_fraction_of_classified_clusters": 0.5479041916167665,
+  "environment_increment_over_nearest_absolute": 0.06287425149700598,
+  "nearest_increment_over_environment_absolute": 0.08383233532934131,
+  "hit_set_jaccard": 0.73224043715847,
+  "subgroup": {
+    "plant": {
+      "classified_pairs": 5,
+      "classified_clusters": 136,
+      "both": 47,
+      "environment_only": 11,
+      "nearest_only": 9,
+      "environment_only_fraction_of_clusters": 0.08088235294117647,
+      "nearest_only_fraction_of_clusters": 0.0661764705882353
+    },
+    "animal": {
+      "classified_pairs": 7,
+      "classified_clusters": 198,
+      "both": 87,
+      "environment_only": 10,
+      "nearest_only": 19,
+      "environment_only_fraction_of_clusters": 0.050505050505050504,
+      "nearest_only_fraction_of_clusters": 0.09595959595959595
+    }
+  },
+  "interpretation": "Environmental support and nearest-known are substantially overlapping but not redundant. Environmental support recovers 21 later novel clusters missed by nearest-known (6.29% of the classified-cluster denominator), while nearest-known recovers 28 missed by environmental support. A hypothetical unbudgeted union would increase classified-cluster recovery from 48.5% for nearest-known alone to 54.8%, but this cannot be promoted because it doubles/changes the candidate set and has no matched field-effort allocation rule. Preserve LOCAL and DETACHED evidence as separate lanes rather than fit a distance-environment blend on these opened outcomes.",
+  "next_step": "Test genuinely new source-backed structural/continuity information against nearest-known within frozen development frames; do not tune an environment-distance mixture on the consumed 96 pairs.",
+  "forbidden_use": [
+    "do not treat the unbudgeted union as a validated selector",
+    "do not choose a LOCAL/DETACHED allocation fraction from these opened overlap counts",
+    "do not tune environment-distance weights on the consumed 96 pairs",
+    "do not alter the independently validated regional 0.025 robust-support core"
+  ]
+}

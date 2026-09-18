@@ -1,0 +1,81 @@
+name: Global availability parity identity freeze v2
+
+on:
+  pull_request:
+    paths:
+      - "validation/acsp_global_availability_parity_confirmation_v2.json"
+      - "research/freeze_global_availability_parity_identities_v2.py"
+      - "tests/test_global_availability_parity_identity_freeze_v2.py"
+      - ".github/workflows/global-availability-parity-identity-freeze-v2.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: global-availability-parity-identity-freeze-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze-identities-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test pooled-registry identity-only freeze mechanics
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python tests/test_global_availability_parity_identity_freeze_v2.py -v
+      - name: Download prior provider-supply identity exclusion artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 33031292325
+          name: provider-eligible-observability-stage1-candidate-snapshot
+          path: /tmp/prior-provider-supply
+      - name: Freeze 48 pooled-registry identities before focal historical country queries
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/global-availability-parity-identities-v2
+          mkdir -p /tmp/global-availability-parity-identities-v2
+          python research/freeze_global_availability_parity_identities_v2.py \
+            --prior-supply-snapshot /tmp/prior-provider-supply/candidate_snapshot.csv \
+            --identities-output /tmp/global-availability-parity-identities-v2/identities.csv \
+            --audit-output /tmp/global-availability-parity-identities-v2/audit.json
+      - name: Guard stage-1 v2 freeze boundary
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          a = json.load(open('/tmp/global-availability-parity-identities-v2/audit.json'))
+          x = pd.read_csv('/tmp/global-availability-parity-identities-v2/identities.csv')
+          assert a['status'] == 'IDENTITY_FREEZE_COMPLETE_PRE_HISTORICAL_COUNTRY_QUERY_V2'
+          assert a['identity_count'] == 48 and a['plant_count'] == 24 and a['animal_count'] == 24
+          assert len(x) == 48 and x['speciesKey'].nunique() == 48 and x['scientific_name'].nunique() == 48
+          assert a['focal_historical_country_facets_opened'] is False
+          assert a['country_geometry_opened'] is False
+          assert a['candidate_generation_run'] is False
+          assert a['heldout_2021_2025_opened'] is False
+          assert a['robust_support_run'] is False
+          assert a['random_baseline_run'] is False
+          assert a['recall_or_lift_read'] is False
+          assert a['outcome_driven_tuning'] is False
+          assert a['validated_japan_core_changed'] is False
+          for group in ('plant','animal'):
+              counts = x.loc[x['taxon_group'].eq(group), 'record_count_stratum'].value_counts().sort_index().to_dict()
+              assert counts == {0:6,1:6,2:6,3:6}, (group, counts)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-availability-parity-identities-v2
+          path: /tmp/global-availability-parity-identities-v2/
+          if-no-files-found: error
+          retention-days: 90
