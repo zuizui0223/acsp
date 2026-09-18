@@ -120,9 +120,18 @@ def verify_pre_outcome_gate(
     capacity_profile = _load(capacity_path)
     _validate_capacity_profile(capacity_profile)
     effort_protocol = _load(effort_protocol_path)
-    validate_effort_protocol(effort_protocol)
+    effort_by_unit = validate_effort_protocol(effort_protocol)
     if capacity_profile.get("standardized_effort_protocol_sha256") != _sha256(effort_protocol_path):
         raise ValueError("operational capacity profile is not linked to the exact standardized effort protocol")
+    capacity_by_unit = capacity_profile.get("unit_capacity") or {}
+    for unit, effort in effort_by_unit.items():
+        cap = capacity_by_unit.get(unit) or {}
+        if int(cap.get("visits_per_candidate", -1)) != int(effort["visits_per_candidate"]):
+            raise ValueError(f"operational capacity visit count differs from standardized effort protocol for {unit}")
+        if int(cap.get("observer_count", -1)) != int(effort["observer_count"]):
+            raise ValueError(f"operational capacity observer count differs from standardized effort protocol for {unit}")
+        if float(cap.get("search_minutes_per_visit", -1.0)) != float(effort["search_minutes_per_visit"]):
+            raise ValueError(f"operational capacity search minutes differ from standardized effort protocol for {unit}")
 
     candidate_pin = verify_public_freeze_pin(candidate_path, repo_root=repo, expected_pin_commit=expected_candidate_pin_commit)
     if candidate_pin.get("pre_field_prescription_pin_gate_satisfied") is not True:
