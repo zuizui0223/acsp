@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from research.cirsium_fresh_sentinel_paths_v1 import CANONICAL_ANALYSIS_PLAN_REPO_PATH
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONTRACT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
 DEFAULT_FIELD_LOG_TEMPLATE = ROOT / "validation" / "cirsium_aza3_acsp_field_log_template_v1.csv"
@@ -122,6 +124,24 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
     if mechanics.get("arm_specific_effort_reallocation_allowed") is not False:
         raise ValueError("arm-specific effort reallocation must remain forbidden")
 
+    analysis_plan = contract.get("analysis_plan") or {}
+    if analysis_plan.get("canonical_repo_path") != CANONICAL_ANALYSIS_PLAN_REPO_PATH:
+        raise ValueError("field evaluation contract does not name the canonical fresh-SENTINEL analysis plan")
+    if analysis_plan.get("status_required") != "FROZEN_PRE_OUTCOME_ANALYSIS_PLAN":
+        raise ValueError("field evaluation contract analysis-plan status requirement changed")
+    if analysis_plan.get("primary_estimand_identity") != "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1":
+        raise ValueError("field evaluation contract primary cross-taxon estimand changed")
+    if analysis_plan.get("equal_taxon_weights_required") is not True:
+        raise ValueError("equal taxon weighting must remain required")
+    if analysis_plan.get("all_four_taxa_required_for_primary") is not True:
+        raise ValueError("all four taxa must remain required for the primary macro estimand")
+    if analysis_plan.get("pooled_micro_allowed_as_primary") is not False:
+        raise ValueError("pooled micro analysis cannot replace the primary macro estimand")
+    if analysis_plan.get("exact_hash_linkage_in_public_field_schedule_receipt_required") is not True:
+        raise ValueError("analysis plan must be hash-linked in the public field-schedule receipt")
+    if analysis_plan.get("post_outcome_analysis_plan_switch_allowed") is not False:
+        raise ValueError("post-outcome analysis-plan switching must remain forbidden")
+
     analysis = contract.get("analysis_unit_and_repeated_visits") or {}
     if analysis.get("primary_analysis_unit_frozen_now") is not True:
         raise ValueError("primary analysis unit must remain frozen before schedule instantiation")
@@ -145,6 +165,8 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         raise ValueError("static evaluation semantics must be frozen")
     if gate.get("analysis_unit_and_repeat_semantics_frozen") is not True:
         raise ValueError("analysis-unit and repeat-visit semantics must remain frozen")
+    if gate.get("analysis_plan_frozen") is not True:
+        raise ValueError("fresh-SENTINEL cross-taxon analysis plan must remain frozen")
     if gate.get("field_allocation_and_effort_schedule_frozen") is not False:
         raise ValueError("field allocation/effort schedule is not frozen yet")
     if gate.get("field_allocation_and_effort_schedule_pinned") is not False:
@@ -169,6 +191,9 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
         "arm_symmetry_identity": EXPECTED_ARM_SYMMETRY_IDENTITY,
         "arm_symmetric_prefix_effort_template_required": True,
+        "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
+        "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+        "analysis_plan_frozen": True,
         "analysis_unit_frozen": True,
         "analysis_unit_identity": EXPECTED_ANALYSIS_UNIT_IDENTITY,
         "repeated_visit_aggregation_frozen": True,
