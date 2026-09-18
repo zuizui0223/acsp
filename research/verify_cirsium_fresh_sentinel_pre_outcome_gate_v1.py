@@ -144,6 +144,10 @@ def verify_pre_outcome_gate(
         raise ValueError("field schedule receipt method arms differ from the frozen comparison")
     if schedule_receipt.get("comparator_assignment_identity") != "FROZEN_ORDER_PREFIX_V1":
         raise ValueError("field schedule receipt does not preserve the frozen order-prefix assignment identity")
+    if schedule_receipt.get("arm_symmetry_identity") != "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1":
+        raise ValueError("field schedule receipt does not preserve the frozen arm-symmetry identity")
+    if schedule_receipt.get("arm_symmetric_prefix_effort_template_verified") is not True:
+        raise ValueError("field schedule receipt lacks arm-symmetric prefix/effort proof")
 
     return {
         "schema_version": "cirsium-fresh-sentinel-pre-outcome-gate-verification-v1",
@@ -159,6 +163,7 @@ def verify_pre_outcome_gate(
         "exact_hash_linkage_satisfied": True,
         "private_candidate_membership_verified": True,
         "frozen_order_prefix_verified": True,
+        "arm_symmetric_prefix_effort_template_verified": True,
         "prospective_field_outcomes_opened": False,
         "outcome_opening_gate_satisfied": True,
         "authorization_scope": "provenance authorization to open the preregistered prospective outcomes; no biological result or field-efficiency claim is implied",
