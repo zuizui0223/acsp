@@ -98,7 +98,9 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
         "operational_audit_by_unit",
         "prospective_field_outcomes_opened",
         "field_outcomes_used_to_set_capacity",
-        "candidate_identity_used_to_set_prefix_depth",
+        "frozen_common_candidate_geometry_used_for_movement_capacity",
+        "arm_rank_used_to_set_prefix_depth",
+        "candidate_identity_or_coordinates_exported",
         "structural_score_used_to_set_prefix_depth",
         "arm_specific_capacity_allowed",
         "survey_days_input",
@@ -136,7 +138,8 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
     for key in (
         "prospective_field_outcomes_opened",
         "field_outcomes_used_to_set_capacity",
-        "candidate_identity_used_to_set_prefix_depth",
+        "arm_rank_used_to_set_prefix_depth",
+        "candidate_identity_or_coordinates_exported",
         "structural_score_used_to_set_prefix_depth",
         "arm_specific_capacity_allowed",
         "survey_days_input",
@@ -147,6 +150,9 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
     ):
         if profile.get(key) is not False:
             raise ValueError(f"{key} must remain false in the frozen operational capacity profile")
+
+    if profile.get("frozen_common_candidate_geometry_used_for_movement_capacity") is not True:
+        raise ValueError("movement capacity must be derived from the frozen common candidate geometry")
 
     capacities = profile.get("unit_capacity")
     if not isinstance(capacities, dict) or set(capacities) != set(UNITS):
