@@ -18,7 +18,7 @@
     "standardized_effort_protocol_sha256",
     "private_candidate_frame_sha256_by_unit",
     "unit_capacity",
-    "operational_audit_by_unit",
+    "movement_provider_successful_by_unit",
     "prospective_field_outcomes_opened",
     "field_outcomes_used_to_set_capacity",
     "frozen_common_candidate_geometry_used_for_movement_capacity",
@@ -122,9 +122,6 @@
         }
       }
     },
-    "operational_audit_by_unit": {
-      "type": "object"
-    },
     "prospective_field_outcomes_opened": {
       "const": false
     },
@@ -160,6 +157,30 @@
     },
     "candidate_identity_or_coordinates_exported": {
       "const": false
+    },
+    "movement_provider_successful_by_unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "CIR02",
+        "CIR06",
+        "CIR12",
+        "CIR13"
+      ],
+      "properties": {
+        "CIR02": {
+          "const": true
+        },
+        "CIR06": {
+          "const": true
+        },
+        "CIR12": {
+          "const": true
+        },
+        "CIR13": {
+          "const": true
+        }
+      }
     }
   },
   "$defs": {
