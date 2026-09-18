@@ -138,6 +138,70 @@ def _public_inputs(repo: Path, private_root: Path) -> tuple[Path, Path]:
     return candidate, evaluation
 
 
+def _effort_protocol() -> dict:
+    return {
+        "schema_version": "cirsium-fresh-sentinel-standardized-effort-protocol-v1",
+        "status": "PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN",
+        "cohort_unit_ids": list(EXPECTED_UNITS),
+        "protocol_source_identity": "SYNTHETIC_TEST_PROTOCOL",
+        "unit_effort": {
+            unit: {
+                "visits_per_candidate": 1,
+                "search_minutes_per_visit": 30.0,
+                "observer_count": 2,
+            }
+            for unit in EXPECTED_UNITS
+        },
+        "prospective_field_outcomes_opened": False,
+        "field_outcomes_used_to_set_effort": False,
+        "candidate_identity_used_to_set_effort": False,
+        "arm_specific_effort_allowed": False,
+        "movement_constraint_used_to_set_effort": False,
+        "post_outcome_effort_edits_allowed": False,
+    }
+
+
+def _capacity_profile(private_root: Path, effort_path: Path) -> dict:
+    return {
+        "schema_version": "cirsium-fresh-sentinel-operational-capacity-profile-v1",
+        "status": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN",
+        "cohort_unit_ids": list(EXPECTED_UNITS),
+        "capacity_source_identity": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
+        "movement_constraint_mode": "osm_weighted_transport_network",
+        "max_network_transition_km": 5.0,
+        "automatic_prefix_depth_method": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
+        "coarse_redundancy_scale_m": 5000.0,
+        "coarse_representative_rule": "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1",
+        "standardized_effort_protocol_sha256": _sha256(effort_path),
+        "private_candidate_frame_sha256_by_unit": {
+            unit: _sha256(private_root / unit / "candidate_frame_pre_field.csv")
+            for unit in EXPECTED_UNITS
+        },
+        "unit_capacity": {
+            unit: {
+                "prefix_depth": 1,
+                "visits_per_candidate": 1,
+                "search_minutes_per_visit": 30.0,
+                "observer_count": 2,
+            }
+            for unit in EXPECTED_UNITS
+        },
+        "operational_audit_by_unit": {unit: {} for unit in EXPECTED_UNITS},
+        "prospective_field_outcomes_opened": False,
+        "field_outcomes_used_to_set_capacity": False,
+        "frozen_common_candidate_geometry_used_for_movement_capacity": True,
+        "arm_rank_used_to_set_prefix_depth": False,
+        "candidate_identity_or_coordinates_exported": False,
+        "structural_score_used_to_set_prefix_depth": False,
+        "arm_specific_capacity_allowed": False,
+        "survey_days_input": False,
+        "monetary_budget_input": False,
+        "user_site_count_input": False,
+        "user_coverage_target_input": False,
+        "post_outcome_capacity_edits_allowed": False,
+    }
+
+
 def _schedule(candidate: Path, evaluation: Path, first: dict[str, dict[str, str]]) -> dict:
     assignments = []
     for unit in EXPECTED_UNITS:
@@ -183,6 +247,10 @@ def _fixture(tmp_path: Path):
     repo.mkdir()
     private_root, first = _private_root(tmp_path)
     candidate, evaluation = _public_inputs(repo, private_root)
+    effort_path = tmp_path / "standardized-effort.json"
+    capacity_path = tmp_path / "operational-capacity.json"
+    _write(effort_path, _effort_protocol())
+    _write(capacity_path, _capacity_profile(private_root, effort_path))
     schedule_path = tmp_path / "private-field-schedule.json"
     value = _schedule(candidate, evaluation, first)
     _write(schedule_path, value)
@@ -197,7 +265,15 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     assert membership["private_candidate_membership_verified"] is True
     assert membership["frozen_order_prefix_verified"] is True
     assert membership["numeric_effort_metric_verified"] is True
-    receipt = build_public_field_schedule_receipt(schedule_path, candidate, evaluation, private_root, repo_root=repo)
+    receipt = build_public_field_schedule_receipt(
+        schedule_path,
+        candidate,
+        evaluation,
+        private_root,
+        tmp_path / "operational-capacity.json",
+        tmp_path / "standardized-effort.json",
+        repo_root=repo,
+    )
     assert receipt["status"] == PUBLIC_STATUS
     assert receipt["canonical_receipt_repo_path"] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     assert receipt["candidate_order_public_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
@@ -211,6 +287,14 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
     assert receipt["frozen_order_prefix_verified"] is True
     assert receipt["arm_symmetry_identity"] == "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
     assert receipt["arm_symmetric_prefix_effort_template_verified"] is True
+    assert receipt["movement_constraint_mode"] == "osm_weighted_transport_network"
+    assert receipt["max_network_transition_km"] == 5.0
+    assert receipt["automatic_prefix_depth_method"] == "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"
+    assert receipt["capacity_schedule_linkage_verified"] is True
+    assert receipt["standardized_effort_protocol_linkage_verified"] is True
+    assert receipt["user_site_count_input"] is False
+    assert receipt["survey_days_input"] is False
+    assert receipt["monetary_budget_input"] is False
     assert receipt["coordinate_bearing_data_included"] is False
     assert receipt["private_candidate_refs_included"] is False
     assert receipt["private_paths_included"] is False
