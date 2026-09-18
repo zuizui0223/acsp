@@ -22,6 +22,7 @@ import subprocess
 from typing import Any
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
@@ -79,6 +80,8 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("candidate/order receipt does not preserve the canonical field-schedule receipt path")
     if value.get("field_evaluation_contract") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
         raise ValueError("candidate/order receipt does not preserve the canonical field evaluation contract")
+    if value.get("analysis_plan") != CANONICAL_ANALYSIS_PLAN_REPO_PATH:
+        raise ValueError("candidate/order receipt does not preserve the canonical analysis plan")
     if value.get("field_log_template") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
         raise ValueError("candidate/order receipt does not preserve the canonical field-log template")
 
