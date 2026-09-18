@@ -26,6 +26,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
+from research.derive_cirsium_fresh_sentinel_movement_capacity_v1 import validate_effort_protocol
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_analysis_plan
 from research.build_cirsium_fresh_sentinel_private_field_schedule_v1 import (
     UNITS as CAPACITY_UNITS,
@@ -122,6 +123,19 @@ def build_public_field_schedule_receipt(
     capacity = _validate_capacity_profile(capacity_profile)
     if capacity_profile["standardized_effort_protocol_sha256"] != _sha256(effort_protocol_path):
         raise ValueError("operational capacity profile is not bound to the exact standardized effort protocol")
+
+    effort_protocol_value = json.loads(effort_protocol_path.read_text(encoding="utf-8"))
+    if not isinstance(effort_protocol_value, dict):
+        raise ValueError("standardized effort protocol must be a JSON object")
+    effort_by_unit = validate_effort_protocol(effort_protocol_value)
+    for unit in CAPACITY_UNITS:
+        cap = capacity[unit]
+        effort = effort_by_unit[unit]
+        for key in ("visits_per_candidate", "observer_count"):
+            if int(cap[key]) != int(effort[key]):
+                raise ValueError(f"operational capacity {key} differs from standardized effort protocol for {unit}")
+        if float(cap["search_minutes_per_visit"]) != float(effort["search_minutes_per_visit"]):
+            raise ValueError(f"operational capacity search minutes differ from standardized effort protocol for {unit}")
 
     private_root = Path(private_pre_field_root).resolve()
     frame_hashes = capacity_profile["private_candidate_frame_sha256_by_unit"]
