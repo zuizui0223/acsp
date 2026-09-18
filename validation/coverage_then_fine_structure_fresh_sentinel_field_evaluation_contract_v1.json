@@ -164,7 +164,14 @@
     "validation_unit_id_must_equal_scheduled_cohort_unit_id": true,
     "method_arm_must_equal_scheduled_method_arm": true,
     "comparator_assignment_must_equal": "FROZEN_ORDER_PREFIX_V1",
-    "completed_resolved_search_must_match_planned_search_minutes_and_observer_count": true,
-    "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence": true
+    "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence": true,
+    "completed_search_states_must_match_planned_search_minutes_and_observer_count": true,
+    "completed_search_states": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED",
+      "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED"
+    ],
+    "verified_or_unresolved_detection_requires_positive_detection_count": true,
+    "resolved_non_detection_requires_zero_detection_count": true
   }
 }
