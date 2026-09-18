@@ -16,6 +16,7 @@ on:
       - "research/validate_cirsium_fresh_sentinel_analysis_plan_v1.py"
       - "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
       - "research/validate_cirsium_fresh_sentinel_field_log_against_schedule_v1.py"
+      - "research/analyze_cirsium_fresh_sentinel_outcomes_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "research/validate_cirsium_fresh_sentinel_private_schedule_membership_v1.py"
       - "research/export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1.py"
@@ -31,6 +32,7 @@ on:
       - "tests/test_cirsium_fresh_sentinel_analysis_plan_v1.py"
       - "tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py"
       - "tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py"
       - "tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
@@ -78,6 +80,7 @@ jobs:
             tests/test_cirsium_fresh_sentinel_analysis_plan_v1.py \
             tests/test_cirsium_fresh_sentinel_field_evaluation_contract_v1.py \
             tests/test_cirsium_fresh_sentinel_field_log_schedule_linkage_v1.py \
+            tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py \
             tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py
       - name: Guard frozen architecture boundary
@@ -171,6 +174,7 @@ jobs:
           assert ap['primary_evaluability']['drop_non_evaluable_taxon_and_recompute_allowed'] is False
           assert ap['primary_evaluability']['if_requirement_fails'] == 'PRIMARY_FOUR_TAXON_MACRO_NOT_EVALUABLE'
           assert ap['secondary_estimands'][2]['role'].startswith('secondary descriptive only')
+          assert ap['analysis_unit_reporting_state']['identity'] == 'VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1'
           assert e['pre_outcome_gate_state']['prospective_outcome_opening_allowed_now'] is False
 
           fs = json.loads(Path('validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json').read_text())
