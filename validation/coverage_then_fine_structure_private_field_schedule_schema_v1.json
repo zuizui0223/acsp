@@ -17,6 +17,7 @@
     "shared_candidate_handling_identity",
     "shared_candidate_handling_rule",
     "comparator_assignment_identity",
+    "arm_symmetry_identity",
     "numeric_effort_metric",
     "matched_effort_scope",
     "assignments",
@@ -32,7 +33,12 @@
       "const": "PRIVATE_FIELD_ALLOCATION_AND_EFFORT_SCHEDULE_FROZEN"
     },
     "cohort_unit_ids": {
-      "const": ["CIR02", "CIR06", "CIR12", "CIR13"]
+      "const": [
+        "CIR02",
+        "CIR06",
+        "CIR12",
+        "CIR13"
+      ]
     },
     "candidate_order_public_receipt_sha256": {
       "type": "string",
@@ -69,11 +75,24 @@
     "numeric_effort_metric": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["identity", "unit", "formula"],
+      "required": [
+        "identity",
+        "unit",
+        "formula"
+      ],
       "properties": {
-        "identity": {"type": "string", "minLength": 1},
-        "unit": {"type": "string", "minLength": 1},
-        "formula": {"type": "string", "minLength": 1}
+        "identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "matched_effort_scope": {
@@ -97,10 +116,21 @@
         ],
         "properties": {
           "cohort_unit_id": {
-            "enum": ["CIR02", "CIR06", "CIR12", "CIR13"]
+            "enum": [
+              "CIR02",
+              "CIR06",
+              "CIR12",
+              "CIR13"
+            ]
           },
-          "analysis_unit_id": {"type": "string", "minLength": 1},
-          "private_candidate_ref": {"type": "string", "minLength": 1},
+          "analysis_unit_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "private_candidate_ref": {
+            "type": "string",
+            "minLength": 1
+          },
           "method_arm": {
             "enum": [
               "COVERAGE_THEN_FINE_STRUCTURE_V1",
@@ -108,15 +138,36 @@
               "MORTON_DYADIC_COVERAGE_ORDER_V1"
             ]
           },
-          "visit_index": {"type": "integer", "minimum": 1},
-          "planned_effort_value": {"type": "number", "exclusiveMinimum": 0},
-          "planned_search_minutes": {"type": "number", "exclusiveMinimum": 0},
-          "planned_observer_count": {"type": "integer", "minimum": 1}
+          "visit_index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "planned_effort_value": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "planned_search_minutes": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "planned_observer_count": {
+            "type": "integer",
+            "minimum": 1
+          }
         }
       }
     },
-    "prospective_field_outcomes_opened": {"const": false},
-    "field_outcomes_used_to_allocate": {"const": false},
-    "post_outcome_schedule_edits_allowed": {"const": false}
+    "prospective_field_outcomes_opened": {
+      "const": false
+    },
+    "field_outcomes_used_to_allocate": {
+      "const": false
+    },
+    "post_outcome_schedule_edits_allowed": {
+      "const": false
+    },
+    "arm_symmetry_identity": {
+      "const": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
+    }
   }
 }
