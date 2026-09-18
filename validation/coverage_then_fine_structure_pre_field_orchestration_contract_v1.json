@@ -95,7 +95,8 @@
       "formula": "search_minutes * observer_count"
     },
     "numeric_effort_schedule_frozen": false,
-    "prospective_outcome_opening_allowed_while_schedule_pending": false
+    "prospective_outcome_opening_allowed_while_schedule_pending": false,
+    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
   },
   "public_freeze_gate": {
     "exporter": "research/export_cirsium_fresh_sentinel_public_freeze_receipt_v1.py",
@@ -152,7 +153,12 @@
     "later_committed_public_schedule_receipt_byte_changes_allowed": false,
     "status": "MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES",
     "canonical_public_receipt_repo_path": "validation/cirsium_fresh_sentinel_public_field_schedule_receipt_v1.json",
-    "alternate_public_receipt_paths_allowed": false
+    "alternate_public_receipt_paths_allowed": false,
+    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
+    "equal_unique_candidate_prefix_depth_across_arms_within_unit": true,
+    "equal_visit_count_by_rank_across_arms_within_unit": true,
+    "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit": true,
+    "arm_specific_effort_reallocation_allowed": false
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -168,7 +174,8 @@
     "requires_exact_field_evaluation_contract_hash_linkage": true,
     "verifier_reads_prospective_field_outcomes": false,
     "all_requirements_satisfied_now": false,
-    "requires_canonical_public_paths": true
+    "requires_canonical_public_paths": true,
+    "requires_arm_symmetric_prefix_effort_schedule": true
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
