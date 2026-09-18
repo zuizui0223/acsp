@@ -103,6 +103,8 @@
     "discovery_regime",
     "method_arm",
     "comparator_assignment",
+    "visit_index",
+    "analysis_unit_id",
     "deidentified_locality_id",
     "visit_date",
     "phenology_status",
@@ -152,5 +154,17 @@
     "pooled_micro_allowed_as_primary": false,
     "exact_hash_linkage_in_public_field_schedule_receipt_required": true,
     "post_outcome_analysis_plan_switch_allowed": false
+  },
+  "field_log_schedule_linkage": {
+    "identity": "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1",
+    "analysis_unit_id_required": true,
+    "visit_index_required": true,
+    "exact_one_field_log_row_per_scheduled_visit_required": true,
+    "unscheduled_extra_field_log_rows_allowed": false,
+    "validation_unit_id_must_equal_scheduled_cohort_unit_id": true,
+    "method_arm_must_equal_scheduled_method_arm": true,
+    "comparator_assignment_must_equal": "FROZEN_ORDER_PREFIX_V1",
+    "completed_resolved_search_must_match_planned_search_minutes_and_observer_count": true,
+    "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence": true
   }
 }
