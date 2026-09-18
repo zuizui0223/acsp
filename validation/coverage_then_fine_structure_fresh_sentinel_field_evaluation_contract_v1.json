@@ -139,6 +139,18 @@
     "field_allocation_and_effort_schedule_frozen": false,
     "field_allocation_and_effort_schedule_pinned": false,
     "prospective_outcome_opening_allowed_now": false,
-    "next_gate": "After private candidate/order freeze and immutable public hash pin, instantiate a no-skip frozen-order schedule with matched PERSON_MINUTES_V1 effort, then publicly pin its receipt before any outcome-opening workflow."
+    "next_gate": "After private candidate/order freeze and immutable public hash pin, instantiate an arm-symmetric no-skip schedule with matched PERSON_MINUTES_V1 effort. Its public receipt must hash-link the canonical frozen four-taxon analysis plan, then be immutably pinned before any outcome-opening workflow.",
+    "analysis_plan_frozen": true,
+    "analysis_plan_hash_linked_in_field_schedule_receipt": false
+  },
+  "analysis_plan": {
+    "canonical_repo_path": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json",
+    "status_required": "FROZEN_PRE_OUTCOME_ANALYSIS_PLAN",
+    "primary_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+    "equal_taxon_weights_required": true,
+    "all_four_taxa_required_for_primary": true,
+    "pooled_micro_allowed_as_primary": false,
+    "exact_hash_linkage_in_public_field_schedule_receipt_required": true,
+    "post_outcome_analysis_plan_switch_allowed": false
   }
 }
