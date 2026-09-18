@@ -216,7 +216,15 @@
     "requires_arm_symmetric_prefix_effort_schedule": true,
     "requires_exact_analysis_plan_hash_linkage": true,
     "requires_valid_frozen_analysis_plan": true,
-    "requires_exact_field_log_template_hash_linkage": true
+    "requires_exact_field_log_template_hash_linkage": true,
+    "requires_movement_capacity_schedule_linkage": true,
+    "requires_standardized_effort_protocol_linkage": true,
+    "requires_movement_constraint_mode": "osm_weighted_transport_network",
+    "requires_automatic_prefix_depth_method": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
+    "user_site_count_input_allowed": false,
+    "survey_days_input_allowed": false,
+    "monetary_budget_input_allowed": false,
+    "capacity_or_effort_provenance_may_be_changed_after_schedule_pin": false
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
