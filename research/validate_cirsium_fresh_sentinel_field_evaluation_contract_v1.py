@@ -160,6 +160,25 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
     if analysis.get("shared_candidate_handling_identity") != EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY:
         raise ValueError("shared-candidate handling identity changed")
 
+    linkage = contract.get("field_log_schedule_linkage") or {}
+    if linkage.get("identity") != "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1":
+        raise ValueError("field-log schedule linkage identity changed")
+    for key in (
+        "analysis_unit_id_required",
+        "visit_index_required",
+        "exact_one_field_log_row_per_scheduled_visit_required",
+        "validation_unit_id_must_equal_scheduled_cohort_unit_id",
+        "method_arm_must_equal_scheduled_method_arm",
+        "completed_resolved_search_must_match_planned_search_minutes_and_observer_count",
+        "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence",
+    ):
+        if linkage.get(key) is not True:
+            raise ValueError(f"field-log schedule linkage weakened: {key}")
+    if linkage.get("unscheduled_extra_field_log_rows_allowed") is not False:
+        raise ValueError("unscheduled field-log rows must remain forbidden")
+    if linkage.get("comparator_assignment_must_equal") != EXPECTED_ASSIGNMENT_IDENTITY:
+        raise ValueError("field-log comparator assignment linkage changed")
+
     gate = contract.get("pre_outcome_gate_state") or {}
     if gate.get("static_evaluation_semantics_frozen") is not True:
         raise ValueError("static evaluation semantics must be frozen")
@@ -194,6 +213,7 @@ def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, f
         "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "analysis_plan_frozen": True,
+        "field_log_schedule_linkage_identity": "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1",
         "analysis_unit_frozen": True,
         "analysis_unit_identity": EXPECTED_ANALYSIS_UNIT_IDENTITY,
         "repeated_visit_aggregation_frozen": True,
