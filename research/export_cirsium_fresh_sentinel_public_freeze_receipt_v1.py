@@ -16,11 +16,19 @@ import json
 from pathlib import Path
 from typing import Any
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    require_canonical_repo_path,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_UNITS = ("CIR02", "CIR06", "CIR12", "CIR13")
 PRIVATE_TOP_STATUS = "ALL_FOUR_PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
 PRIVATE_UNIT_STATUS = "PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
-FIELD_EVALUATION_CONTRACT = "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
+FIELD_EVALUATION_CONTRACT = CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
 
 
 def _inside_repo(path: Path) -> bool:
@@ -115,7 +123,10 @@ def build_public_freeze_receipt(private_root: Path) -> dict[str, Any]:
         "outcome_opening_authorized_by_generation_alone": False,
         "public_receipt_commit_required_before_outcome_opening": True,
         "public_receipt_commit_verified": False,
+        "canonical_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        "canonical_field_schedule_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
         "field_evaluation_contract": FIELD_EVALUATION_CONTRACT,
+        "field_log_template": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "field_allocation_and_effort_schedule_required_before_outcome_opening": True,
         "field_allocation_and_effort_schedule_pinned": False,
         "outcome_opening_gate": "Pinning this exact receipt closes only the candidate/order prescription gate. Freeze and publicly pin the field analysis unit, repeated-visit rule, comparator assignment, numeric effort metric, and candidate-specific allocation/effort schedule before prospective outcomes are opened."
@@ -125,14 +136,20 @@ def build_public_freeze_receipt(private_root: Path) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--private-root", type=Path, required=True)
-    parser.add_argument("--out-json", type=Path, required=True)
+    parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH))
     args = parser.parse_args()
-    if args.out_json.exists():
+    out_json = require_canonical_repo_path(
+        args.out_json,
+        repo_root=ROOT,
+        expected_repo_path=CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        label="public candidate/order receipt",
+    )
+    if out_json.exists():
         raise SystemExit("refusing to overwrite an existing public freeze receipt")
     receipt = build_public_freeze_receipt(args.private_root)
-    args.out_json.parent.mkdir(parents=True, exist_ok=True)
-    args.out_json.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"status": receipt["status"], "out_json": str(args.out_json)}, ensure_ascii=False))
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_json.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"status": receipt["status"], "out_json": str(out_json)}, ensure_ascii=False))
     return 0
 
 
