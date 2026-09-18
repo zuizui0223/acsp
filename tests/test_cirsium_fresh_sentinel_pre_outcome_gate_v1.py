@@ -13,6 +13,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
 )
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import DEFAULT_PLAN
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import DEFAULT_CONTRACT, DEFAULT_FIELD_LOG_TEMPLATE
@@ -61,6 +63,71 @@ def _candidate_receipt() -> dict:
     }
 
 
+def _effort_protocol() -> dict:
+    return {
+        "schema_version": "cirsium-fresh-sentinel-standardized-effort-protocol-v1",
+        "status": "PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN",
+        "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+        "protocol_source_identity": "SYNTHETIC_PRE_OUTCOME_TEST_PROTOCOL",
+        "unit_effort": {
+            unit: {
+                "visits_per_candidate": 1,
+                "search_minutes_per_visit": 30.0,
+                "observer_count": 1,
+            }
+            for unit in ["CIR02", "CIR06", "CIR12", "CIR13"]
+        },
+        "prospective_field_outcomes_opened": False,
+        "field_outcomes_used_to_set_effort": False,
+        "candidate_identity_used_to_set_effort": False,
+        "arm_specific_effort_allowed": False,
+        "movement_constraint_used_to_set_effort": False,
+        "post_outcome_effort_edits_allowed": False,
+    }
+
+
+def _capacity_profile(effort_path: Path) -> dict:
+    return {
+        "schema_version": "cirsium-fresh-sentinel-operational-capacity-profile-v1",
+        "status": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN",
+        "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+        "capacity_source_identity": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
+        "movement_constraint_mode": "osm_weighted_transport_network",
+        "max_network_transition_km": 5.0,
+        "automatic_prefix_depth_method": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
+        "coarse_redundancy_scale_m": 5000.0,
+        "coarse_representative_rule": "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1",
+        "standardized_effort_protocol_sha256": _sha256(effort_path),
+        "private_candidate_frame_sha256_by_unit": {
+            unit: "0" * 64 for unit in ["CIR02", "CIR06", "CIR12", "CIR13"]
+        },
+        "unit_capacity": {
+            unit: {
+                "prefix_depth": 1,
+                "visits_per_candidate": 1,
+                "search_minutes_per_visit": 30.0,
+                "observer_count": 1,
+            }
+            for unit in ["CIR02", "CIR06", "CIR12", "CIR13"]
+        },
+        "movement_provider_successful_by_unit": {
+            unit: True for unit in ["CIR02", "CIR06", "CIR12", "CIR13"]
+        },
+        "prospective_field_outcomes_opened": False,
+        "field_outcomes_used_to_set_capacity": False,
+        "frozen_common_candidate_geometry_used_for_movement_capacity": True,
+        "arm_rank_used_to_set_prefix_depth": False,
+        "candidate_identity_or_coordinates_exported": False,
+        "structural_score_used_to_set_prefix_depth": False,
+        "arm_specific_capacity_allowed": False,
+        "survey_days_input": False,
+        "monetary_budget_input": False,
+        "user_site_count_input": False,
+        "user_coverage_target_input": False,
+        "post_outcome_capacity_edits_allowed": False,
+    }
+
+
 def _schedule_receipt(candidate: Path, evaluation: Path, analysis_plan: Path, *, candidate_hash_override: str = "") -> dict:
     return {
         "status": "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_READY_FOR_COMMIT",
@@ -87,8 +154,10 @@ def _schedule_receipt(candidate: Path, evaluation: Path, analysis_plan: Path, *,
             "unit": "person-minute",
             "formula": "search_minutes * observer_count",
         },
-        "operational_capacity_profile_sha256": "a" * 64,
-        "standardized_effort_protocol_sha256": "b" * 64,
+        "operational_capacity_profile_repo_path": CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+        "standardized_effort_protocol_repo_path": CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+        "operational_capacity_profile_sha256": _sha256(candidate.parents[1] / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH),
+        "standardized_effort_protocol_sha256": _sha256(candidate.parents[1] / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH),
         "movement_constraint_mode": "osm_weighted_transport_network",
         "max_network_transition_km": 5.0,
         "automatic_prefix_depth_method": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
@@ -131,6 +200,10 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     log_template.write_bytes(DEFAULT_FIELD_LOG_TEMPLATE.read_bytes())
     analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
     analysis_plan.write_bytes(DEFAULT_PLAN.read_bytes())
+    effort_protocol = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
+    _write(effort_protocol, _effort_protocol())
+    capacity_profile = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
+    _write(capacity_profile, _capacity_profile(effort_protocol))
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
 
@@ -170,6 +243,8 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["field_schedule_pin_gate_satisfied"] is True
     assert final["analysis_plan_valid"] is True
     assert final["field_log_template_sha256"] == _sha256(log_template)
+    assert final["operational_capacity_profile_sha256"] == _sha256(repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH)
+    assert final["standardized_effort_protocol_sha256"] == _sha256(repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH)
     assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
