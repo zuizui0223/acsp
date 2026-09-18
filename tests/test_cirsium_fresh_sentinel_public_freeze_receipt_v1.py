@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
@@ -78,6 +79,7 @@ def test_public_receipt_contains_only_hash_level_provenance(tmp_path: Path) -> N
     assert receipt["canonical_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     assert receipt["canonical_field_schedule_receipt_repo_path"] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     assert receipt["field_evaluation_contract"] == FIELD_EVALUATION_CONTRACT
+    assert receipt["analysis_plan"] == CANONICAL_ANALYSIS_PLAN_REPO_PATH
     assert receipt["field_log_template"] == CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
     assert receipt["field_allocation_and_effort_schedule_required_before_outcome_opening"] is True
     assert receipt["field_allocation_and_effort_schedule_pinned"] is False
