@@ -257,6 +257,14 @@ jobs:
           assert gate['pin_verifier_requires_current_bytes_equal_first_add_commit'] is True
           allocation_gate = o['field_allocation_effort_gate']
           assert allocation_gate['operational_capacity_profile_schema'] == 'validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json'
+          assert allocation_gate['canonical_operational_capacity_profile_repo_path'] == 'validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json'
+          assert allocation_gate['canonical_standardized_effort_protocol_repo_path'] == 'validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json'
+          assert allocation_gate['public_schedule_receipt_must_hash_bind_operational_capacity_profile'] is True
+          assert allocation_gate['public_schedule_receipt_must_hash_bind_standardized_effort_protocol'] is True
+          assert allocation_gate['final_gate_revalidates_operational_capacity_profile'] is True
+          assert allocation_gate['final_gate_revalidates_standardized_effort_protocol'] is True
+          assert allocation_gate['post_schedule_pin_capacity_profile_edits_allowed'] is False
+          assert allocation_gate['post_schedule_pin_standardized_effort_edits_allowed'] is False
           assert allocation_gate['standardized_effort_protocol_schema'] == 'validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json'
           assert allocation_gate['movement_capacity_deriver'] == 'research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py'
           assert allocation_gate['only_user_operational_tuning_input'] == 'max_network_transition_km'
@@ -301,6 +309,10 @@ jobs:
           assert opening['requires_exact_analysis_plan_hash_linkage'] is True
           assert opening['requires_valid_frozen_analysis_plan'] is True
           assert opening['requires_exact_field_log_template_hash_linkage'] is True
+          assert opening['requires_exact_operational_capacity_profile_hash_linkage'] is True
+          assert opening['requires_exact_standardized_effort_protocol_hash_linkage'] is True
+          assert opening['requires_canonical_operational_capacity_profile_path'] is True
+          assert opening['requires_canonical_standardized_effort_protocol_path'] is True
           assert opening['requires_movement_capacity_schedule_linkage'] is True
           assert opening['requires_standardized_effort_protocol_linkage'] is True
           assert opening['requires_movement_constraint_mode'] == 'osm_weighted_transport_network'
