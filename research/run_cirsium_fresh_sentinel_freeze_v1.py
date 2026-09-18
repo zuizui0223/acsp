@@ -14,6 +14,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    require_canonical_repo_path,
+)
 from research.export_cirsium_fresh_sentinel_public_freeze_receipt_v1 import build_public_freeze_receipt
 from research.orchestrate_cirsium_fresh_sentinel_pre_field_v1 import run_private_pre_field_pipeline
 
@@ -30,13 +34,12 @@ def _inside(path: Path, root: Path) -> bool:
 
 
 def _public_path(path: Path, *, repo_root: Path) -> Path:
-    value = path if path.is_absolute() else repo_root / path
-    value = value.resolve()
-    if not _inside(value, repo_root):
-        raise ValueError("public freeze receipt must be written inside the repository")
-    relative = value.relative_to(repo_root.resolve())
-    if not relative.parts or relative.parts[0] != "validation":
-        raise ValueError("public freeze receipt must be written under validation/")
+    value = require_canonical_repo_path(
+        path,
+        repo_root=repo_root,
+        expected_repo_path=CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        label="public candidate/order receipt",
+    )
     if value.exists():
         raise ValueError("refusing to overwrite an existing public freeze receipt")
     return value
@@ -94,7 +97,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle-geojson", type=Path, required=True)
     parser.add_argument("--private-root", type=Path, required=True)
-    parser.add_argument("--public-receipt", type=Path, required=True)
+    parser.add_argument(
+        "--public-receipt",
+        type=Path,
+        default=Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH),
+    )
     args = parser.parse_args()
     result = run_full_pre_field_freeze(args.bundle_geojson, args.private_root, args.public_receipt)
     print(json.dumps(result, ensure_ascii=False, indent=2))
