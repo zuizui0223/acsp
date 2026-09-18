@@ -114,6 +114,18 @@ def validate_analysis_plan(plan_path: Path = DEFAULT_PLAN) -> dict[str, Any]:
     if evaluability.get("if_requirement_fails") != "PRIMARY_FOUR_TAXON_MACRO_NOT_EVALUABLE":
         raise ValueError("primary non-evaluability status changed")
 
+    reporting_state = plan.get("analysis_unit_reporting_state") or {}
+    if reporting_state.get("identity") != "VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1":
+        raise ValueError("analysis-unit reporting-state identity changed")
+    expected_precedence = [
+        "SEARCH_COMPLETED_DETECTED_VERIFIED if any scheduled visit is verified",
+        "SEARCH_COMPLETED_NOT_DETECTED only if every scheduled visit is SEARCH_COMPLETED_NOT_DETECTED",
+        "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED if no verified detection and at least one identity-unresolved visit",
+        "NON_BIOLOGICAL_OR_NON_EVALUABLE otherwise",
+    ]
+    if reporting_state.get("precedence") != expected_precedence:
+        raise ValueError("analysis-unit reporting-state precedence changed")
+
     secondary = plan.get("secondary_estimands")
     if not isinstance(secondary, list) or [item.get("identity") for item in secondary if isinstance(item, dict)] != [
         "EQUAL_TAXON_MACRO_PRIMARY_MINUS_FINE_SPATIAL_V1",
@@ -160,6 +172,7 @@ def validate_analysis_plan(plan_path: Path = DEFAULT_PLAN) -> dict[str, Any]:
         "cohort_unit_ids": EXPECTED_UNITS,
         "primary_estimand_identity": EXPECTED_PRIMARY_IDENTITY,
         "unit_level_estimator_identity": EXPECTED_UNIT_ESTIMATOR,
+        "analysis_unit_reporting_state_identity": "VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1",
         "primary_taxon_weights": {unit_id: 0.25 for unit_id in EXPECTED_UNITS},
         "all_four_taxa_required": True,
         "non_evaluable_primary_status": "PRIMARY_FOUR_TAXON_MACRO_NOT_EVALUABLE",
