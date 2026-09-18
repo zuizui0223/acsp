@@ -38,6 +38,9 @@ def test_repository_contract_and_empty_field_log_template_are_valid() -> None:
     assert result["shared_candidate_handling_identity"] == "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
     assert result["arm_symmetry_identity"] == "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
     assert result["arm_symmetric_prefix_effort_template_required"] is True
+    assert result["analysis_plan_frozen"] is True
+    assert result["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
+    assert result["field_log_schedule_linkage_identity"] == "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1"
     assert result["numeric_effort_schedule_frozen"] is False
     assert result["prospective_outcome_opening_allowed_now"] is False
 
@@ -112,4 +115,18 @@ def test_arm_specific_effort_reallocation_cannot_be_enabled(tmp_path: Path) -> N
     value = _load_contract()
     value["schedule_selection_mechanics"]["arm_specific_effort_reallocation_allowed"] = True
     with pytest.raises(ValueError, match="arm-specific effort"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
+
+
+def test_field_log_schedule_join_cannot_be_weakened(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["field_log_schedule_linkage"]["exact_one_field_log_row_per_scheduled_visit_required"] = False
+    with pytest.raises(ValueError, match="field-log schedule linkage"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
+
+
+def test_unscheduled_field_log_rows_cannot_be_enabled(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["field_log_schedule_linkage"]["unscheduled_extra_field_log_rows_allowed"] = True
+    with pytest.raises(ValueError, match="unscheduled"):
         validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
