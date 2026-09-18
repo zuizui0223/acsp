@@ -50,6 +50,7 @@ def build_public_field_schedule_receipt(
     field_evaluation_contract_path: Path,
     private_pre_field_root: Path,
     analysis_plan_path: Path | None = None,
+    field_log_template_path: Path | None = None,
     *,
     repo_root: Path = ROOT,
 ) -> dict[str, Any]:
@@ -74,6 +75,12 @@ def build_public_field_schedule_receipt(
         label="fresh-SENTINEL analysis plan",
     )
     validate_analysis_plan(analysis_plan_path)
+    field_log_template_path = require_canonical_repo_path(
+        Path(field_log_template_path or CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+        label="field-log template",
+    )
     validated = validate_private_field_schedule(
         private_schedule_path,
         candidate_receipt_path,
@@ -99,6 +106,7 @@ def build_public_field_schedule_receipt(
         "candidate_order_public_receipt_sha256": validated["candidate_order_public_receipt_sha256"],
         "field_evaluation_contract_sha256": validated["field_evaluation_contract_sha256"],
         "analysis_plan_sha256": _sha256(analysis_plan_path),
+        "field_log_template_sha256": _sha256(field_log_template_path),
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "private_pre_field_top_receipt_sha256": membership["private_pre_field_top_receipt_sha256"],
         "cohort_unit_ids": validated["cohort_unit_ids"],
@@ -138,6 +146,7 @@ def main() -> int:
     parser.add_argument("--candidate-receipt", type=Path, default=Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH))
     parser.add_argument("--field-evaluation-contract", type=Path, default=Path(CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH))
     parser.add_argument("--analysis-plan", type=Path, default=Path(CANONICAL_ANALYSIS_PLAN_REPO_PATH))
+    parser.add_argument("--field-log-template", type=Path, default=Path(CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH))
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
     parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     args = parser.parse_args()
@@ -155,6 +164,7 @@ def main() -> int:
         args.field_evaluation_contract,
         args.private_pre_field_root,
         args.analysis_plan,
+        args.field_log_template,
     )
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
