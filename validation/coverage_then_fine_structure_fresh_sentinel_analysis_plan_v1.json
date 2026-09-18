@@ -133,5 +133,15 @@
   },
   "prospective_outcomes_opened": false,
   "outcome_data_used_to_choose_analysis": false,
-  "post_outcome_primary_estimand_change_allowed": false
+  "post_outcome_primary_estimand_change_allowed": false,
+  "analysis_unit_reporting_state": {
+    "identity": "VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1",
+    "precedence": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED if any scheduled visit is verified",
+      "SEARCH_COMPLETED_NOT_DETECTED only if every scheduled visit is SEARCH_COMPLETED_NOT_DETECTED",
+      "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED if no verified detection and at least one identity-unresolved visit",
+      "NON_BIOLOGICAL_OR_NON_EVALUABLE otherwise"
+    ],
+    "role": "Reporting classification for the already-frozen repeated-visit rule; only the first two states enter the resolved binary denominator."
+  }
 }
