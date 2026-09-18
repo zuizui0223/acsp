@@ -7,6 +7,12 @@ import subprocess
 import pytest
 
 import research.run_cirsium_fresh_sentinel_freeze_v1 as entry
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+)
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import (
     VERIFIED_STATUS,
     verify_public_freeze_pin,
@@ -24,6 +30,10 @@ def _public_receipt() -> dict:
         "outcome_opening_authorized_by_generation_alone": False,
         "public_receipt_commit_required_before_outcome_opening": True,
         "public_receipt_commit_verified": False,
+        "canonical_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        "canonical_field_schedule_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        "field_evaluation_contract": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "field_log_template": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "public_safe_to_commit": True,
     }
 
@@ -57,13 +67,13 @@ def test_single_entry_runs_private_then_writes_commit_ready_receipt(tmp_path: Pa
     result = entry.run_full_pre_field_freeze(
         bundle,
         private,
-        Path("validation/fresh-public-freeze.json"),
+        Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH),
         repo_root=repo,
     )
     assert calls == ["private", "public"]
     assert result["status"] == entry.ENTRYPOINT_STATUS
     assert result["outcome_opening_authorized"] is False
-    assert result["public_receipt_repo_path"] == "validation/fresh-public-freeze.json"
+    assert result["public_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     written = json.loads((repo / result["public_receipt_repo_path"]).read_text())
     assert written["outcome_opening_authorized_by_generation_alone"] is False
     assert written["public_receipt_commit_required_before_outcome_opening"] is True
@@ -72,7 +82,7 @@ def test_single_entry_runs_private_then_writes_commit_ready_receipt(tmp_path: Pa
 def test_single_entry_rejects_existing_public_receipt_before_private_execution(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     repo = tmp_path / "repo"
     (repo / "validation").mkdir(parents=True)
-    existing = repo / "validation" / "freeze.json"
+    existing = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     existing.write_text("{}", encoding="utf-8")
     bundle = tmp_path / "bundle.geojson"
     bundle.write_text("{}", encoding="utf-8")
@@ -89,16 +99,16 @@ def test_single_entry_rejects_existing_public_receipt_before_private_execution(t
     assert called is False
 
 
-def test_single_entry_requires_public_receipt_under_validation(tmp_path: Path) -> None:
+def test_single_entry_rejects_alternate_public_receipt_path(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     bundle = tmp_path / "bundle.geojson"
     bundle.write_text("{}", encoding="utf-8")
-    with pytest.raises(ValueError, match="validation"):
+    with pytest.raises(ValueError, match="canonical repo path"):
         entry.run_full_pre_field_freeze(
             bundle,
             tmp_path / "private",
-            Path("other/freeze.json"),
+            Path("validation/alternate-freeze.json"),
             repo_root=repo,
         )
 
@@ -115,10 +125,10 @@ def _init_repo(repo: Path) -> None:
 
 
 def _commit_initial_receipt(repo: Path) -> tuple[Path, str]:
-    receipt = repo / "validation" / "fresh-freeze.json"
-    receipt.parent.mkdir()
+    receipt = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(_public_receipt(), sort_keys=True) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/fresh-freeze.json")
+    _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin public fresh sentinel freeze")
     return receipt, _git(repo, "rev-parse", "HEAD")
 
@@ -126,14 +136,14 @@ def _commit_initial_receipt(repo: Path) -> tuple[Path, str]:
 def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _init_repo(repo)
-    receipt = repo / "validation" / "fresh-freeze.json"
-    receipt.parent.mkdir()
+    receipt = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(_public_receipt(), sort_keys=True) + "\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="not tracked"):
         verify_public_freeze_pin(receipt, repo_root=repo)
 
-    _git(repo, "add", "validation/fresh-freeze.json")
+    _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin public fresh sentinel freeze")
     pin = _git(repo, "rev-parse", "HEAD")
     verified = verify_public_freeze_pin(receipt, repo_root=repo, expected_pin_commit=pin)
@@ -168,7 +178,7 @@ def test_pin_verifier_rejects_clean_but_recommitted_receipt_change(tmp_path: Pat
     _init_repo(repo)
     receipt, original_pin = _commit_initial_receipt(repo)
     receipt.write_text(json.dumps({**_public_receipt(), "tampered_after_pin": True}, sort_keys=True) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/fresh-freeze.json")
+    _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Attempt to re-pin changed receipt")
     with pytest.raises(ValueError, match="first-add"):
         verify_public_freeze_pin(receipt, repo_root=repo)
