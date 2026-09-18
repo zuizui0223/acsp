@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "cirsium-fresh-sentinel-operational-capacity-profile-v1",
   "title": "Outcome-blind downstream G_F operational capacity profile",
-  "description": "Contains only per-cohort scalar survey capacity. It contains no candidate identity, coordinate, habitat score or field outcome. The deterministic schedule builder applies each unit's values symmetrically to all three frozen method arms.",
+  "description": "Public-safe scalar operational profile derived after candidate freeze. Prefix depth is computed automatically from the common frozen coarse-cell frame plus OSM movement reachability. It contains no candidate identity or coordinate and cannot alter any frozen arm order.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,17 +10,48 @@
     "status",
     "cohort_unit_ids",
     "capacity_source_identity",
+    "movement_constraint_mode",
+    "max_network_transition_km",
+    "automatic_prefix_depth_method",
+    "coarse_redundancy_scale_m",
+    "coarse_representative_rule",
+    "standardized_effort_protocol_sha256",
+    "private_candidate_frame_sha256_by_unit",
     "unit_capacity",
+    "operational_audit_by_unit",
     "prospective_field_outcomes_opened",
     "field_outcomes_used_to_set_capacity",
+    "candidate_identity_used_to_set_prefix_depth",
+    "structural_score_used_to_set_prefix_depth",
     "arm_specific_capacity_allowed",
+    "survey_days_input",
+    "monetary_budget_input",
+    "user_site_count_input",
+    "user_coverage_target_input",
     "post_outcome_capacity_edits_allowed"
   ],
   "properties": {
     "schema_version": {"const": "cirsium-fresh-sentinel-operational-capacity-profile-v1"},
     "status": {"const": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN"},
     "cohort_unit_ids": {"const": ["CIR02", "CIR06", "CIR12", "CIR13"]},
-    "capacity_source_identity": {"type": "string", "minLength": 1},
+    "capacity_source_identity": {"const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"},
+    "movement_constraint_mode": {"const": "osm_weighted_transport_network"},
+    "max_network_transition_km": {"type": "number", "exclusiveMinimum": 0},
+    "automatic_prefix_depth_method": {"const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"},
+    "coarse_redundancy_scale_m": {"const": 5000.0},
+    "coarse_representative_rule": {"const": "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1"},
+    "standardized_effort_protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "private_candidate_frame_sha256_by_unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "properties": {
+        "CIR02": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "CIR06": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "CIR12": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "CIR13": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
     "unit_capacity": {
       "type": "object",
       "additionalProperties": false,
@@ -32,9 +63,16 @@
         "CIR13": {"$ref": "#/$defs/unitCapacity"}
       }
     },
+    "operational_audit_by_unit": {"type": "object"},
     "prospective_field_outcomes_opened": {"const": false},
     "field_outcomes_used_to_set_capacity": {"const": false},
+    "candidate_identity_used_to_set_prefix_depth": {"const": false},
+    "structural_score_used_to_set_prefix_depth": {"const": false},
     "arm_specific_capacity_allowed": {"const": false},
+    "survey_days_input": {"const": false},
+    "monetary_budget_input": {"const": false},
+    "user_site_count_input": {"const": false},
+    "user_coverage_target_input": {"const": false},
     "post_outcome_capacity_edits_allowed": {"const": false}
   },
   "$defs": {
