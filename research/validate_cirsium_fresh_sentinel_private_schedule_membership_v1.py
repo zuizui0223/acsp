@@ -22,6 +22,7 @@ EXPECTED_CANDIDATE_STATUS = "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT"
 EXPECTED_PRIVATE_TOP_STATUS = "ALL_FOUR_PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
 EXPECTED_PRIVATE_UNIT_STATUS = "PRE_FIELD_METHOD_AND_COMPARATORS_FROZEN"
 EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
+EXPECTED_ARM_SYMMETRY_IDENTITY = "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
 EXPECTED_EFFORT_METRIC = {
     "identity": "PERSON_MINUTES_V1",
     "unit": "person-minute",
@@ -107,6 +108,8 @@ def validate_private_schedule_membership(
     schedule = _load_json(schedule_path)
     if schedule.get("comparator_assignment_identity") != EXPECTED_ASSIGNMENT_IDENTITY:
         raise ValueError("comparator assignment must use the frozen no-skip order-prefix identity")
+    if schedule.get("arm_symmetry_identity") != EXPECTED_ARM_SYMMETRY_IDENTITY:
+        raise ValueError("field schedule must use the frozen arm-symmetric prefix/effort identity")
     if schedule.get("numeric_effort_metric") != EXPECTED_EFFORT_METRIC:
         raise ValueError("numeric effort metric must remain PERSON_MINUTES_V1 = search_minutes * observer_count")
 
@@ -178,6 +181,9 @@ def validate_private_schedule_membership(
         raise ValueError("private field schedule must contain assignments")
 
     selected: dict[str, dict[str, list[str]]] = {unit: {arm: [] for arm in ARM_TO_ORDER} for unit in EXPECTED_UNITS}
+    rank_visit_patterns: dict[str, dict[str, dict[int, list[tuple[int, float, int, float]]]]] = {
+        unit: {arm: {} for arm in ARM_TO_ORDER} for unit in EXPECTED_UNITS
+    }
     for index, row in enumerate(assignments):
         if not isinstance(row, dict):
             raise ValueError(f"assignment {index} must be an object")
@@ -189,6 +195,7 @@ def validate_private_schedule_membership(
         if candidate_ref not in set(ordered_ids[unit][arm]):
             raise ValueError(f"assignment {index} candidate is not present in the exact frozen order for {unit}/{arm}")
         try:
+            visit_index = int(row.get("visit_index"))
             minutes = float(row.get("planned_search_minutes"))
             observers = int(row.get("planned_observer_count"))
             declared_effort = float(row.get("planned_effort_value"))
@@ -199,6 +206,10 @@ def validate_private_schedule_membership(
             raise ValueError(f"assignment {index} has invalid planned person-minute inputs")
         if not math.isclose(declared_effort, expected_effort, rel_tol=1e-9, abs_tol=1e-9):
             raise ValueError(f"assignment {index} planned_effort_value is not search_minutes * observer_count")
+        rank = ordered_ids[unit][arm].index(candidate_ref) + 1
+        rank_visit_patterns[unit][arm].setdefault(rank, []).append(
+            (visit_index, minutes, observers, declared_effort)
+        )
         if candidate_ref not in selected[unit][arm]:
             selected[unit][arm].append(candidate_ref)
 
@@ -211,12 +222,35 @@ def validate_private_schedule_membership(
                 raise ValueError(f"scheduled unique candidates are not a no-skip frozen-order prefix for {unit}/{arm}")
             prefix_lengths[unit][arm] = len(chosen)
 
+        depths = [prefix_lengths[unit][arm] for arm in ARM_TO_ORDER]
+        if len(set(depths)) != 1:
+            raise ValueError(f"arm-symmetric schedule requires equal unique-candidate prefix depth across arms within {unit}")
+        depth = depths[0]
+        reference_arm = next(iter(ARM_TO_ORDER))
+        for rank in range(1, depth + 1):
+            reference = sorted(rank_visit_patterns[unit][reference_arm].get(rank, []))
+            if not reference:
+                raise ValueError(f"missing planned visit pattern at frozen rank {rank} for {unit}/{reference_arm}")
+            for arm in ARM_TO_ORDER:
+                current = sorted(rank_visit_patterns[unit][arm].get(rank, []))
+                if len(current) != len(reference):
+                    raise ValueError(f"arm-symmetric schedule requires equal visit count by rank across arms within {unit}")
+                for left, right in zip(reference, current):
+                    if left[0] != right[0] or left[2] != right[2]:
+                        raise ValueError(f"arm-symmetric schedule requires identical visit indices and observer counts by rank within {unit}")
+                    if not math.isclose(left[1], right[1], rel_tol=1e-9, abs_tol=1e-9):
+                        raise ValueError(f"arm-symmetric schedule requires identical planned search minutes by rank within {unit}")
+                    if not math.isclose(left[3], right[3], rel_tol=1e-9, abs_tol=1e-9):
+                        raise ValueError(f"arm-symmetric schedule requires identical planned person-minutes by rank within {unit}")
+
     return {
         "status": "PRIVATE_FIELD_SCHEDULE_MEMBERSHIP_AND_PREFIX_VALID",
         "cohort_unit_ids": list(EXPECTED_UNITS),
         "private_pre_field_top_receipt_sha256": _sha256(top_path),
         "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
         "numeric_effort_metric_verified": True,
+        "arm_symmetry_identity": EXPECTED_ARM_SYMMETRY_IDENTITY,
+        "arm_symmetric_prefix_effort_template_verified": True,
         "private_candidate_membership_verified": True,
         "private_pre_field_receipt_hash_linkage_verified": True,
         "frozen_order_hash_linkage_verified": True,
