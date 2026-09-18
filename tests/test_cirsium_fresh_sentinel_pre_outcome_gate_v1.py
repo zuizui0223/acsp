@@ -384,3 +384,27 @@ def test_field_log_template_change_after_schedule_pin_breaks_final_linkage(tmp_p
     _git(repo, "commit", "-m", "Attempt field-log template change")
     with pytest.raises(ValueError, match="field-log template|missing required columns"):
         verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
+
+
+def test_capacity_profile_change_after_schedule_pin_breaks_final_linkage(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
+    capacity = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
+    value = json.loads(capacity.read_text())
+    value["max_network_transition_km"] = 6.0
+    capacity.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _git(repo, "add", CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH)
+    _git(repo, "commit", "-m", "Attempt movement-capacity change after schedule pin")
+    with pytest.raises(ValueError, match="exact current operational capacity profile"):
+        verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
+
+
+def test_standardized_effort_change_after_schedule_pin_breaks_final_linkage(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
+    effort = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
+    value = json.loads(effort.read_text())
+    value["unit_effort"]["CIR02"]["search_minutes_per_visit"] = 31.0
+    effort.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _git(repo, "add", CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH)
+    _git(repo, "commit", "-m", "Attempt standardized-effort change after schedule pin")
+    with pytest.raises(ValueError, match="not linked to the exact standardized effort protocol|exact current standardized effort protocol"):
+        verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
