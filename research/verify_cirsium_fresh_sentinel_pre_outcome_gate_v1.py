@@ -167,10 +167,10 @@ def verify_pre_outcome_gate(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--candidate-receipt", type=Path, required=True)
-    parser.add_argument("--field-schedule-receipt", type=Path, required=True)
-    parser.add_argument("--field-evaluation-contract", type=Path, required=True)
-    parser.add_argument("--field-log-template", type=Path, required=True)
+    parser.add_argument("--candidate-receipt", type=Path, default=Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH))
+    parser.add_argument("--field-schedule-receipt", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
+    parser.add_argument("--field-evaluation-contract", type=Path, default=Path(CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH))
+    parser.add_argument("--field-log-template", type=Path, default=Path(CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH))
     parser.add_argument("--expected-candidate-pin-commit", default="")
     parser.add_argument("--expected-schedule-pin-commit", default="")
     args = parser.parse_args()
