@@ -2,7 +2,12 @@
   "schema_version": "coverage-then-fine-structure-pre-field-orchestration-contract-v1",
   "status": "FROZEN_PRE_FIELD_ORCHESTRATION_MECHANICS",
   "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
-  "fresh_units": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "fresh_units": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
   "input_boundary": {
     "single_private_input_class": "PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY",
     "bundle_shape": "one FeatureCollection with exactly one Polygon/MultiPolygon per frozen cohort unit",
@@ -76,7 +81,10 @@
     "validator": "research/validate_cirsium_fresh_sentinel_field_evaluation_contract_v1.py",
     "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
     "primary_success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
-    "resolved_binary_denominator_states": ["SEARCH_COMPLETED_DETECTED_VERIFIED", "SEARCH_COMPLETED_NOT_DETECTED"],
+    "resolved_binary_denominator_states": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED"
+    ],
     "identity_unresolved_recode_as_absence_allowed": false,
     "access_permission_phenology_incomplete_recode_as_absence_allowed": false,
     "matched_field_effort_required_for_promotion": true,
@@ -106,7 +114,9 @@
     "pin_verifier_requires_current_bytes_equal_first_add_commit": true,
     "pin_verifier_requires_pin_commit_ancestor_of_head": true,
     "coordinate_or_private_paths_allowed_in_public_receipt": false,
-    "prospective_outcome_opening_allowed_before_public_receipt_commit": false
+    "prospective_outcome_opening_allowed_before_public_receipt_commit": false,
+    "canonical_receipt_repo_path": "validation/cirsium_fresh_sentinel_public_freeze_receipt_v1.json",
+    "alternate_receipt_paths_allowed": false
   },
   "field_allocation_effort_gate": {
     "private_schema": "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json",
@@ -140,7 +150,9 @@
     "post_outcome_schedule_edits_allowed": false,
     "public_schedule_receipt_pin_commit_identity": "first commit that adds the public field-schedule receipt path",
     "later_committed_public_schedule_receipt_byte_changes_allowed": false,
-    "status": "MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES"
+    "status": "MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES",
+    "canonical_public_receipt_repo_path": "validation/cirsium_fresh_sentinel_public_field_schedule_receipt_v1.json",
+    "alternate_public_receipt_paths_allowed": false
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -155,9 +167,18 @@
     "requires_exact_candidate_receipt_hash_linkage": true,
     "requires_exact_field_evaluation_contract_hash_linkage": true,
     "verifier_reads_prospective_field_outcomes": false,
-    "all_requirements_satisfied_now": false
+    "all_requirements_satisfied_now": false,
+    "requires_canonical_public_paths": true
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
-  "scientific_claim_added": false
+  "scientific_claim_added": false,
+  "canonical_public_paths": {
+    "candidate_order_receipt": "validation/cirsium_fresh_sentinel_public_freeze_receipt_v1.json",
+    "field_schedule_receipt": "validation/cirsium_fresh_sentinel_public_field_schedule_receipt_v1.json",
+    "field_evaluation_contract": "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json",
+    "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
+    "alternate_receipt_paths_allowed": false,
+    "rationale": "First-add immutability is path-specific; canonical paths prevent a second post-hoc receipt from being pinned under an alternate filename."
+  }
 }
