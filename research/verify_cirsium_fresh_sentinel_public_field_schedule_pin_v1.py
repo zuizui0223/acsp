@@ -162,7 +162,7 @@ def verify_public_field_schedule_pin(receipt_path: Path, *, repo_root: Path = RO
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--receipt", type=Path, required=True)
+    parser.add_argument("--receipt", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     parser.add_argument("--expected-pin-commit", default="")
     args = parser.parse_args()
     result = verify_public_field_schedule_pin(args.receipt, expected_pin_commit=args.expected_pin_commit)
