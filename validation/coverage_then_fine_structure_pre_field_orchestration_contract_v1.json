@@ -26,7 +26,8 @@
     "export_hash_only_public_freeze_receipt",
     "commit_and_pin_public_freeze_receipt",
     "verify_immutable_candidate_order_prescription_pin",
-    "instantiate_private_field_allocation_and_effort_schedule",
+    "freeze_outcome_blind_downstream_operational_capacity_profile",
+    "build_private_field_allocation_and_effort_schedule_from_frozen_order_prefixes",
     "validate_private_field_allocation_and_effort_schedule",
     "verify_private_schedule_membership_and_no_skip_frozen_order_prefix",
     "export_hash_only_public_field_schedule_receipt",
@@ -163,7 +164,16 @@
     "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit": true,
     "arm_specific_effort_reallocation_allowed": false,
     "analysis_plan_exact_hash_linkage_required": true,
-    "field_log_template_exact_hash_linkage_required": true
+    "field_log_template_exact_hash_linkage_required": true,
+    "operational_capacity_profile_schema": "validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json",
+    "deterministic_schedule_builder": "research/build_cirsium_fresh_sentinel_private_field_schedule_v1.py",
+    "capacity_profile_contains_candidate_identity": false,
+    "capacity_profile_contains_coordinates": false,
+    "capacity_profile_contains_field_outcomes": false,
+    "capacity_profile_arm_specific_values_allowed": false,
+    "builder_selects_only_no_skip_frozen_order_prefixes": true,
+    "capacity_profile_role": "downstream G_F operational capacity only; it cannot alter ecological support or frozen candidate order",
+    "schedule_builder_status": "READY_AFTER_PRIVATE_CANDIDATE_IDENTITIES_AND_OUTCOME_BLIND_CAPACITY_PROFILE_EXIST"
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -207,4 +217,4 @@
     "retuning_on_opened_outcomes_allowed": false,
     "field_log_template_hash_must_match_pinned_schedule_receipt": true
   }
-}
+}\n
