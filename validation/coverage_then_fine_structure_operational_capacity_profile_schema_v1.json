@@ -21,7 +21,9 @@
     "operational_audit_by_unit",
     "prospective_field_outcomes_opened",
     "field_outcomes_used_to_set_capacity",
-    "candidate_identity_used_to_set_prefix_depth",
+    "frozen_common_candidate_geometry_used_for_movement_capacity",
+    "arm_rank_used_to_set_prefix_depth",
+    "candidate_identity_or_coordinates_exported",
     "structural_score_used_to_set_prefix_depth",
     "arm_specific_capacity_allowed",
     "survey_days_input",
@@ -31,60 +33,162 @@
     "post_outcome_capacity_edits_allowed"
   ],
   "properties": {
-    "schema_version": {"const": "cirsium-fresh-sentinel-operational-capacity-profile-v1"},
-    "status": {"const": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN"},
-    "cohort_unit_ids": {"const": ["CIR02", "CIR06", "CIR12", "CIR13"]},
-    "capacity_source_identity": {"const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"},
-    "movement_constraint_mode": {"const": "osm_weighted_transport_network"},
-    "max_network_transition_km": {"type": "number", "exclusiveMinimum": 0},
-    "automatic_prefix_depth_method": {"const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"},
-    "coarse_redundancy_scale_m": {"const": 5000.0},
-    "coarse_representative_rule": {"const": "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1"},
-    "standardized_effort_protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "schema_version": {
+      "const": "cirsium-fresh-sentinel-operational-capacity-profile-v1"
+    },
+    "status": {
+      "const": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN"
+    },
+    "cohort_unit_ids": {
+      "const": [
+        "CIR02",
+        "CIR06",
+        "CIR12",
+        "CIR13"
+      ]
+    },
+    "capacity_source_identity": {
+      "const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"
+    },
+    "movement_constraint_mode": {
+      "const": "osm_weighted_transport_network"
+    },
+    "max_network_transition_km": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "automatic_prefix_depth_method": {
+      "const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"
+    },
+    "coarse_redundancy_scale_m": {
+      "const": 5000
+    },
+    "coarse_representative_rule": {
+      "const": "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1"
+    },
+    "standardized_effort_protocol_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "private_candidate_frame_sha256_by_unit": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "required": [
+        "CIR02",
+        "CIR06",
+        "CIR12",
+        "CIR13"
+      ],
       "properties": {
-        "CIR02": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "CIR06": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "CIR12": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "CIR13": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "CIR02": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "CIR06": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "CIR12": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "CIR13": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
     },
     "unit_capacity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "required": [
+        "CIR02",
+        "CIR06",
+        "CIR12",
+        "CIR13"
+      ],
       "properties": {
-        "CIR02": {"$ref": "#/$defs/unitCapacity"},
-        "CIR06": {"$ref": "#/$defs/unitCapacity"},
-        "CIR12": {"$ref": "#/$defs/unitCapacity"},
-        "CIR13": {"$ref": "#/$defs/unitCapacity"}
+        "CIR02": {
+          "$ref": "#/$defs/unitCapacity"
+        },
+        "CIR06": {
+          "$ref": "#/$defs/unitCapacity"
+        },
+        "CIR12": {
+          "$ref": "#/$defs/unitCapacity"
+        },
+        "CIR13": {
+          "$ref": "#/$defs/unitCapacity"
+        }
       }
     },
-    "operational_audit_by_unit": {"type": "object"},
-    "prospective_field_outcomes_opened": {"const": false},
-    "field_outcomes_used_to_set_capacity": {"const": false},
-    "candidate_identity_used_to_set_prefix_depth": {"const": false},
-    "structural_score_used_to_set_prefix_depth": {"const": false},
-    "arm_specific_capacity_allowed": {"const": false},
-    "survey_days_input": {"const": false},
-    "monetary_budget_input": {"const": false},
-    "user_site_count_input": {"const": false},
-    "user_coverage_target_input": {"const": false},
-    "post_outcome_capacity_edits_allowed": {"const": false}
+    "operational_audit_by_unit": {
+      "type": "object"
+    },
+    "prospective_field_outcomes_opened": {
+      "const": false
+    },
+    "field_outcomes_used_to_set_capacity": {
+      "const": false
+    },
+    "structural_score_used_to_set_prefix_depth": {
+      "const": false
+    },
+    "arm_specific_capacity_allowed": {
+      "const": false
+    },
+    "survey_days_input": {
+      "const": false
+    },
+    "monetary_budget_input": {
+      "const": false
+    },
+    "user_site_count_input": {
+      "const": false
+    },
+    "user_coverage_target_input": {
+      "const": false
+    },
+    "post_outcome_capacity_edits_allowed": {
+      "const": false
+    },
+    "frozen_common_candidate_geometry_used_for_movement_capacity": {
+      "const": true
+    },
+    "arm_rank_used_to_set_prefix_depth": {
+      "const": false
+    },
+    "candidate_identity_or_coordinates_exported": {
+      "const": false
+    }
   },
   "$defs": {
     "unitCapacity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["prefix_depth", "visits_per_candidate", "search_minutes_per_visit", "observer_count"],
+      "required": [
+        "prefix_depth",
+        "visits_per_candidate",
+        "search_minutes_per_visit",
+        "observer_count"
+      ],
       "properties": {
-        "prefix_depth": {"type": "integer", "minimum": 1},
-        "visits_per_candidate": {"type": "integer", "minimum": 1},
-        "search_minutes_per_visit": {"type": "number", "exclusiveMinimum": 0},
-        "observer_count": {"type": "integer", "minimum": 1}
+        "prefix_depth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "visits_per_candidate": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "search_minutes_per_visit": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "observer_count": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     }
   }
