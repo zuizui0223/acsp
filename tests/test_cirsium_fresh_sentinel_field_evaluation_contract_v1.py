@@ -36,6 +36,8 @@ def test_repository_contract_and_empty_field_log_template_are_valid() -> None:
     assert result["repeated_visit_aggregation_identity"] == "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1"
     assert result["shared_candidate_handling_frozen"] is True
     assert result["shared_candidate_handling_identity"] == "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
+    assert result["arm_symmetry_identity"] == "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
+    assert result["arm_symmetric_prefix_effort_template_required"] is True
     assert result["numeric_effort_schedule_frozen"] is False
     assert result["prospective_outcome_opening_allowed_now"] is False
 
@@ -96,4 +98,18 @@ def test_shared_candidate_handling_identity_is_frozen_before_schedule_instantiat
     value = _load_contract()
     value["analysis_unit_and_repeated_visits"]["shared_candidate_handling_identity"] = "CHANGED_SHARED_RULE"
     with pytest.raises(ValueError, match="shared-candidate handling"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
+
+
+def test_arm_symmetry_identity_is_frozen_before_schedule_instantiation(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["schedule_selection_mechanics"]["arm_symmetry_identity"] = "ARM_SPECIFIC_ALLOCATION"
+    with pytest.raises(ValueError, match="arm symmetry"):
+        validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
+
+
+def test_arm_specific_effort_reallocation_cannot_be_enabled(tmp_path: Path) -> None:
+    value = _load_contract()
+    value["schedule_selection_mechanics"]["arm_specific_effort_reallocation_allowed"] = True
+    with pytest.raises(ValueError, match="arm-specific effort"):
         validate_field_evaluation_contract(_write_contract(tmp_path, value), DEFAULT_FIELD_LOG_TEMPLATE)
