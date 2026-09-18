@@ -14,6 +14,14 @@ from pathlib import Path
 import subprocess
 from typing import Any
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    require_canonical_repo_path,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_STATUS = "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_READY_FOR_COMMIT"
 VERIFIED_STATUS = "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_COMMITTED_AND_PINNED"
@@ -80,19 +88,27 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("schedule receipt bytes cannot self-assert their commit verification")
     if value.get("final_pre_outcome_gate_required") is not True:
         raise ValueError("final pre-outcome linkage gate must remain required")
+    if value.get("canonical_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve its canonical repository path")
+    if value.get("candidate_order_public_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve the canonical candidate/order receipt path")
+    if value.get("field_evaluation_contract_repo_path") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve the canonical field evaluation contract path")
+    if value.get("field_log_template_repo_path") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve the canonical field-log template path")
 
 
 def verify_public_field_schedule_pin(receipt_path: Path, *, repo_root: Path = ROOT, expected_pin_commit: str = "") -> dict[str, Any]:
     repo = Path(repo_root).resolve()
-    path = Path(receipt_path)
-    path = (repo / path).resolve() if not path.is_absolute() else path.resolve()
-    if not _inside(path, repo):
-        raise ValueError("public field-schedule receipt must be inside the repository")
+    path = require_canonical_repo_path(
+        Path(receipt_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        label="public field-schedule receipt",
+    )
     if not path.is_file():
         raise ValueError(f"missing public field-schedule receipt: {path}")
     relative = path.relative_to(repo).as_posix()
-    if not relative.startswith("validation/"):
-        raise ValueError("public field-schedule receipt must be under validation/")
 
     payload = path.read_bytes()
     value = json.loads(payload.decode("utf-8"))
