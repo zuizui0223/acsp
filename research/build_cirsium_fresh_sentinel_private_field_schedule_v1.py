@@ -87,10 +87,24 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
         "status",
         "cohort_unit_ids",
         "capacity_source_identity",
+        "movement_constraint_mode",
+        "max_network_transition_km",
+        "automatic_prefix_depth_method",
+        "coarse_redundancy_scale_m",
+        "coarse_representative_rule",
+        "standardized_effort_protocol_sha256",
+        "private_candidate_frame_sha256_by_unit",
         "unit_capacity",
+        "operational_audit_by_unit",
         "prospective_field_outcomes_opened",
         "field_outcomes_used_to_set_capacity",
+        "candidate_identity_used_to_set_prefix_depth",
+        "structural_score_used_to_set_prefix_depth",
         "arm_specific_capacity_allowed",
+        "survey_days_input",
+        "monetary_budget_input",
+        "user_site_count_input",
+        "user_coverage_target_input",
         "post_outcome_capacity_edits_allowed",
     }
     if set(profile) != required:
@@ -99,16 +113,40 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
         raise ValueError("operational capacity profile schema/status changed")
     if tuple(profile.get("cohort_unit_ids") or ()) != UNITS:
         raise ValueError("operational capacity profile must contain the exact four frozen cohort units")
-    if not str(profile.get("capacity_source_identity") or "").strip():
-        raise ValueError("capacity_source_identity must be non-empty")
-    if profile.get("prospective_field_outcomes_opened") is not False:
-        raise ValueError("capacity cannot be frozen after outcomes are opened")
-    if profile.get("field_outcomes_used_to_set_capacity") is not False:
-        raise ValueError("field outcomes cannot define operational capacity")
-    if profile.get("arm_specific_capacity_allowed") is not False:
-        raise ValueError("arm-specific capacity is forbidden")
-    if profile.get("post_outcome_capacity_edits_allowed") is not False:
-        raise ValueError("post-outcome capacity edits are forbidden")
+    if profile.get("capacity_source_identity") != "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1":
+        raise ValueError("capacity source must remain the frozen movement-derived method")
+    if profile.get("movement_constraint_mode") != "osm_weighted_transport_network":
+        raise ValueError("movement constraint mode changed")
+    if profile.get("automatic_prefix_depth_method") != "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1":
+        raise ValueError("automatic prefix-depth method changed")
+    if float(profile.get("coarse_redundancy_scale_m") or 0.0) != 5000.0:
+        raise ValueError("coarse redundancy scale changed")
+    if profile.get("coarse_representative_rule") != "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1":
+        raise ValueError("coarse representative rule changed")
+    if not isinstance(profile.get("max_network_transition_km"), (int, float)) or isinstance(profile.get("max_network_transition_km"), bool) or float(profile["max_network_transition_km"]) <= 0:
+        raise ValueError("max_network_transition_km must be positive")
+    effort_hash = str(profile.get("standardized_effort_protocol_sha256") or "")
+    if len(effort_hash) != 64:
+        raise ValueError("standardized effort protocol hash is malformed")
+    frame_hashes = profile.get("private_candidate_frame_sha256_by_unit")
+    if not isinstance(frame_hashes, dict) or set(frame_hashes) != set(UNITS):
+        raise ValueError("capacity profile must hash-bind all four private candidate frames")
+    if any(len(str(frame_hashes[unit])) != 64 for unit in UNITS):
+        raise ValueError("private candidate-frame hash is malformed")
+    for key in (
+        "prospective_field_outcomes_opened",
+        "field_outcomes_used_to_set_capacity",
+        "candidate_identity_used_to_set_prefix_depth",
+        "structural_score_used_to_set_prefix_depth",
+        "arm_specific_capacity_allowed",
+        "survey_days_input",
+        "monetary_budget_input",
+        "user_site_count_input",
+        "user_coverage_target_input",
+        "post_outcome_capacity_edits_allowed",
+    ):
+        if profile.get(key) is not False:
+            raise ValueError(f"{key} must remain false in the frozen operational capacity profile")
 
     capacities = profile.get("unit_capacity")
     if not isinstance(capacities, dict) or set(capacities) != set(UNITS):
@@ -131,7 +169,6 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
             "observer_count": _positive_int(row["observer_count"], f"{unit}.observer_count"),
         }
     return normalized
-
 
 def _order_prefix(private_root: Path, unit: str, order_name: str, depth: int) -> list[str]:
     unit_receipt_path = private_root / unit / "pre_field_freeze_receipt.json"
@@ -173,6 +210,7 @@ def build_private_field_schedule(
     candidate_receipt_path: Path,
     field_evaluation_contract_path: Path,
     capacity_profile_path: Path,
+    standardized_effort_protocol_path: Path,
     out_schedule_path: Path,
     *,
     repo_root: Path = ROOT,
@@ -182,6 +220,7 @@ def build_private_field_schedule(
     candidate_receipt = Path(candidate_receipt_path).resolve()
     evaluation_path = Path(field_evaluation_contract_path).resolve()
     capacity_path = Path(capacity_profile_path).resolve()
+    effort_protocol_path = Path(standardized_effort_protocol_path).resolve()
     out_path = Path(out_schedule_path).resolve()
 
     if _inside(private_root, repo):
@@ -190,11 +229,18 @@ def build_private_field_schedule(
         raise ValueError("private field schedule must remain outside the public repository")
     if out_path.exists():
         raise ValueError("refusing to overwrite an existing private field schedule")
-    if not candidate_receipt.is_file() or not evaluation_path.is_file() or not capacity_path.is_file():
-        raise ValueError("candidate receipt, evaluation contract and capacity profile must all exist")
+    if not candidate_receipt.is_file() or not evaluation_path.is_file() or not capacity_path.is_file() or not effort_protocol_path.is_file():
+        raise ValueError("candidate receipt, evaluation contract, capacity profile and standardized effort protocol must all exist")
 
     profile = _load_json(capacity_path)
     capacity = _validate_capacity_profile(profile)
+    if str(profile["standardized_effort_protocol_sha256"]) != _sha256(effort_protocol_path):
+        raise ValueError("capacity profile does not match the exact standardized effort protocol bytes")
+    frame_hashes = profile["private_candidate_frame_sha256_by_unit"]
+    for unit in UNITS:
+        frame_path = private_root / unit / "candidate_frame_pre_field.csv"
+        if not frame_path.is_file() or str(frame_hashes[unit]) != _sha256(frame_path):
+            raise ValueError(f"capacity profile does not match the exact frozen private candidate frame for {unit}")
     evaluation = _load_json(evaluation_path)
     analysis = evaluation["analysis_unit_and_repeated_visits"]
     mechanics = evaluation["schedule_selection_mechanics"]
@@ -265,6 +311,10 @@ def build_private_field_schedule(
         "status": "PRIVATE_FIELD_SCHEDULE_BUILT_AND_VALIDATED",
         "out_schedule": str(out_path),
         "capacity_profile_sha256": _sha256(capacity_path),
+        "standardized_effort_protocol_sha256": _sha256(effort_protocol_path),
+        "movement_constraint_mode": profile["movement_constraint_mode"],
+        "max_network_transition_km": float(profile["max_network_transition_km"]),
+        "automatic_prefix_depth_method": profile["automatic_prefix_depth_method"],
         "assignment_count": len(assignments),
         "selected_unique_candidate_count_by_unit_arm": selected_counts,
         "schedule_validation_status": schedule_validation["status"],
@@ -279,6 +329,7 @@ def main() -> int:
     parser.add_argument("--candidate-receipt", type=Path, required=True)
     parser.add_argument("--field-evaluation-contract", type=Path, required=True)
     parser.add_argument("--capacity-profile", type=Path, required=True)
+    parser.add_argument("--standardized-effort-protocol", type=Path, required=True)
     parser.add_argument("--out-schedule", type=Path, required=True)
     args = parser.parse_args()
     result = build_private_field_schedule(
@@ -286,6 +337,7 @@ def main() -> int:
         args.candidate_receipt,
         args.field_evaluation_contract,
         args.capacity_profile,
+        args.standardized_effort_protocol,
         args.out_schedule,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
