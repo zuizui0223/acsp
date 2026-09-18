@@ -13,6 +13,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
 )
 from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 import PUBLIC_STATUS, build_public_field_schedule_receipt
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import DEFAULT_PLAN
@@ -247,8 +249,8 @@ def _fixture(tmp_path: Path):
     repo.mkdir()
     private_root, first = _private_root(tmp_path)
     candidate, evaluation = _public_inputs(repo, private_root)
-    effort_path = tmp_path / "standardized-effort.json"
-    capacity_path = tmp_path / "operational-capacity.json"
+    effort_path = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
+    capacity_path = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
     _write(effort_path, _effort_protocol())
     _write(capacity_path, _capacity_profile(private_root, effort_path))
     schedule_path = tmp_path / "private-field-schedule.json"
@@ -270,13 +272,15 @@ def test_private_schedule_validates_and_public_receipt_leaks_no_candidate_refs(t
         candidate,
         evaluation,
         private_root,
-        tmp_path / "operational-capacity.json",
-        tmp_path / "standardized-effort.json",
+        repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+        repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
         repo_root=repo,
     )
     assert receipt["status"] == PUBLIC_STATUS
     assert receipt["canonical_receipt_repo_path"] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     assert receipt["candidate_order_public_receipt_repo_path"] == CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    assert receipt["operational_capacity_profile_repo_path"] == CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
+    assert receipt["standardized_effort_protocol_repo_path"] == CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
     assert receipt["field_evaluation_contract_repo_path"] == CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
     assert receipt["analysis_plan_repo_path"] == CANONICAL_ANALYSIS_PLAN_REPO_PATH
     assert receipt["analysis_plan_sha256"] == _sha256(repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH)
