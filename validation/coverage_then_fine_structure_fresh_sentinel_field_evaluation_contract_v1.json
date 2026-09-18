@@ -2,7 +2,12 @@
   "schema_version": "coverage-then-fine-structure-fresh-sentinel-field-evaluation-contract-v1",
   "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
   "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
-  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
   "source_basis": {
     "prospective_contract": "research/CIRSIUM_AZA3_PROSPECTIVE_LOCAL_DISCOVERY.md",
     "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
@@ -30,7 +35,7 @@
     ],
     "identity_unresolved_handling": "report separately; exclude from the resolved binary denominator until identity is resolved by the predeclared verification process; never recode as absence",
     "non_biological_negative_handling": "report separately; exclude from the biological detection/non-detection denominator; never recode as absence",
-    "primary_between_arm_contrast": "difference in verified-current-occurrence success proportion between the frozen primary method and each frozen comparator, evaluated only under the pre-outcome matched-effort allocation schedule",
+    "primary_between_arm_contrast": "difference in verified-current-occurrence success proportion between the frozen primary method and each frozen comparator under the same within-unit unique-candidate prefix depth and the same rank-level visit/person-minute template across all three arms",
     "favorable_subsetting_after_outcome": false,
     "switching_primary_endpoint_after_outcome": false
   },
@@ -41,8 +46,14 @@
     "nearest_known": "NOT_DEFINED_FOR_SENTINEL"
   },
   "effort_accounting": {
-    "minimum_required_fields": ["search_minutes", "observer_count"],
-    "record_when_defensibly_measured": ["traversed_length_m", "searched_area_m2"],
+    "minimum_required_fields": [
+      "search_minutes",
+      "observer_count"
+    ],
+    "record_when_defensibly_measured": [
+      "traversed_length_m",
+      "searched_area_m2"
+    ],
     "matched_field_effort_required_for_between_arm_promotion": true,
     "complete_visited_patch_detection_and_non_detection_logs_required": true,
     "numeric_effort_metric_frozen_now": true,
@@ -53,7 +64,7 @@
     },
     "numeric_effort_schedule_frozen_now": false,
     "reason_pending": "The candidate-specific visit allocation and numerical person-minute schedule cannot be instantiated until the still-missing private range-sector geometry produces exact frozen candidate identities.",
-    "forbidden_inference": "Do not change the person-minute metric, choose a new effort threshold, visit count, stopping rule, or favorable subset after field outcomes are opened."
+    "forbidden_inference": "Do not change PERSON_MINUTES_V1, use arm-specific prefix depths or rank-level effort patterns, choose a new effort threshold, visit count, stopping rule, or favorable subset after field outcomes are opened."
   },
   "schedule_selection_mechanics": {
     "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
@@ -61,7 +72,13 @@
     "candidate_membership_in_exact_frozen_arm_order_required": true,
     "private_unit_receipt_hash_linkage_required": true,
     "private_order_hash_linkage_required": true,
-    "post_outcome_candidate_substitution_allowed": false
+    "post_outcome_candidate_substitution_allowed": false,
+    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
+    "equal_unique_candidate_prefix_depth_across_arms_within_unit": true,
+    "equal_visit_count_by_rank_across_arms_within_unit": true,
+    "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit": true,
+    "arm_specific_effort_reallocation_allowed": false,
+    "rationale": "The prospective comparison isolates candidate ordering/selection. Arm-specific candidate counts, repeat patterns, or rank-level planned effort would confound ranking with field-effort allocation."
   },
   "analysis_unit_and_repeated_visits": {
     "field_log_row_semantics": "one logged search/visit record",
