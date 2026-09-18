@@ -95,7 +95,7 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
         "standardized_effort_protocol_sha256",
         "private_candidate_frame_sha256_by_unit",
         "unit_capacity",
-        "operational_audit_by_unit",
+        "movement_provider_successful_by_unit",
         "prospective_field_outcomes_opened",
         "field_outcomes_used_to_set_capacity",
         "frozen_common_candidate_geometry_used_for_movement_capacity",
@@ -153,6 +153,10 @@ def _validate_capacity_profile(profile: dict[str, Any]) -> dict[str, dict[str, A
 
     if profile.get("frozen_common_candidate_geometry_used_for_movement_capacity") is not True:
         raise ValueError("movement capacity must be derived from the frozen common candidate geometry")
+
+    provider_success = profile.get("movement_provider_successful_by_unit")
+    if not isinstance(provider_success, dict) or set(provider_success) != set(UNITS) or any(provider_success[unit] is not True for unit in UNITS):
+        raise ValueError("movement provider must have succeeded for all four frozen cohort units")
 
     capacities = profile.get("unit_capacity")
     if not isinstance(capacities, dict) or set(capacities) != set(UNITS):
