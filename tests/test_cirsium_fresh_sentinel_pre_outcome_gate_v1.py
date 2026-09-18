@@ -7,6 +7,12 @@ import subprocess
 
 import pytest
 
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+    CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
+    CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+)
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import DEFAULT_CONTRACT, DEFAULT_FIELD_LOG_TEMPLATE
 from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import FINAL_STATUS, verify_pre_outcome_gate
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
@@ -43,7 +49,10 @@ def _candidate_receipt() -> dict:
         "outcome_opening_authorized_by_generation_alone": False,
         "public_receipt_commit_required_before_outcome_opening": True,
         "public_receipt_commit_verified": False,
-        "field_evaluation_contract": "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json",
+        "canonical_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        "canonical_field_schedule_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        "field_evaluation_contract": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "field_log_template": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "field_allocation_and_effort_schedule_required_before_outcome_opening": True,
         "field_allocation_and_effort_schedule_pinned": False,
     }
@@ -52,6 +61,10 @@ def _candidate_receipt() -> dict:
 def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_override: str = "") -> dict:
     return {
         "status": "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_READY_FOR_COMMIT",
+        "canonical_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+        "candidate_order_public_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+        "field_evaluation_contract_repo_path": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "field_log_template_repo_path": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "candidate_order_public_receipt_sha256": candidate_hash_override or _sha256(candidate),
         "field_evaluation_contract_sha256": _sha256(evaluation),
         "method_arms": [
@@ -85,23 +98,23 @@ def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_overr
 def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple[Path, Path, Path, Path, Path, str, str]:
     repo = tmp_path / "repo"
     _init_repo(repo)
-    evaluation = repo / "validation" / "coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
-    log_template = repo / "validation" / "cirsium_aza3_acsp_field_log_template_v1.csv"
+    evaluation = repo / CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
+    log_template = repo / CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
     evaluation.parent.mkdir(parents=True)
     evaluation.write_bytes(DEFAULT_CONTRACT.read_bytes())
     log_template.write_bytes(DEFAULT_FIELD_LOG_TEMPLATE.read_bytes())
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
 
-    candidate = repo / "validation" / "candidate-receipt.json"
+    candidate = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     _write(candidate, _candidate_receipt())
-    _git(repo, "add", "validation/candidate-receipt.json")
+    _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin candidate order receipt")
     candidate_pin = _git(repo, "rev-parse", "HEAD")
 
-    schedule = repo / "validation" / "field-schedule-receipt.json"
+    schedule = repo / CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     _write(schedule, _schedule_receipt(candidate, evaluation, candidate_hash_override=candidate_hash_override))
-    _git(repo, "add", "validation/field-schedule-receipt.json")
+    _git(repo, "add", CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin field schedule receipt")
     schedule_pin = _git(repo, "rev-parse", "HEAD")
     return repo, candidate, schedule, evaluation, log_template, candidate_pin, schedule_pin
@@ -136,7 +149,7 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
 
 def test_candidate_pin_alone_cannot_authorize_outcome_opening(tmp_path: Path) -> None:
     repo, candidate, schedule, evaluation, log_template, candidate_pin, _ = _prepare_repo(tmp_path)
-    _git(repo, "rm", "validation/field-schedule-receipt.json")
+    _git(repo, "rm", CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Remove schedule receipt for negative test")
     candidate_result = verify_public_freeze_pin(candidate, repo_root=repo, expected_pin_commit=candidate_pin)
     assert candidate_result["outcome_opening_gate_satisfied"] is False
@@ -157,7 +170,7 @@ def test_schedule_pin_rejects_missing_membership_proof(tmp_path: Path) -> None:
     value = json.loads(schedule.read_text())
     value["private_candidate_membership_verified"] = False
     schedule.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/field-schedule-receipt.json")
+    _git(repo, "add", CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Create invalid membership receipt")
     with pytest.raises(ValueError, match="private_candidate_membership_verified"):
         verify_public_field_schedule_pin(schedule, repo_root=repo)
@@ -168,7 +181,7 @@ def test_schedule_pin_rejects_non_frozen_effort_metric(tmp_path: Path) -> None:
     value = json.loads(schedule.read_text())
     value["numeric_effort_metric"]["identity"] = "POSTHOC_METRIC"
     schedule.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/field-schedule-receipt.json")
+    _git(repo, "add", CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Create invalid effort metric receipt")
     with pytest.raises(ValueError, match="PERSON_MINUTES_V1"):
         verify_public_field_schedule_pin(schedule, repo_root=repo)
@@ -179,7 +192,7 @@ def test_clean_recommit_of_changed_schedule_receipt_cannot_repin(tmp_path: Path)
     value = json.loads(schedule.read_text())
     value["tampered_after_pin"] = True
     schedule.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    _git(repo, "add", "validation/field-schedule-receipt.json")
+    _git(repo, "add", CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Attempt schedule re-pin")
     with pytest.raises(ValueError, match="first-add"):
         verify_public_field_schedule_pin(schedule, repo_root=repo, expected_pin_commit=original_schedule_pin)
@@ -194,3 +207,33 @@ def test_evaluation_contract_change_after_schedule_pin_breaks_final_linkage(tmp_
     _git(repo, "commit", "-m", "Attempt evaluation contract change")
     with pytest.raises(ValueError, match="exact current field evaluation contract"):
         verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
+
+
+def test_candidate_pin_rejects_alternate_receipt_path_even_with_valid_bytes(tmp_path: Path) -> None:
+    repo, candidate, _, _, _, _, _ = _prepare_repo(tmp_path)
+    alternate = repo / "validation" / "alternate-candidate-receipt.json"
+    alternate.write_bytes(candidate.read_bytes())
+    _git(repo, "add", "validation/alternate-candidate-receipt.json")
+    _git(repo, "commit", "-m", "Attempt alternate candidate pin")
+    with pytest.raises(ValueError, match="canonical repo path"):
+        verify_public_freeze_pin(alternate, repo_root=repo)
+
+
+def test_schedule_pin_rejects_alternate_receipt_path_even_with_valid_bytes(tmp_path: Path) -> None:
+    repo, _, schedule, _, _, _, _ = _prepare_repo(tmp_path)
+    alternate = repo / "validation" / "alternate-field-schedule-receipt.json"
+    alternate.write_bytes(schedule.read_bytes())
+    _git(repo, "add", "validation/alternate-field-schedule-receipt.json")
+    _git(repo, "commit", "-m", "Attempt alternate schedule pin")
+    with pytest.raises(ValueError, match="canonical repo path"):
+        verify_public_field_schedule_pin(alternate, repo_root=repo)
+
+
+def test_final_gate_rejects_alternate_evaluation_contract_path(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
+    alternate = repo / "validation" / "alternate-field-evaluation.json"
+    alternate.write_bytes(evaluation.read_bytes())
+    _git(repo, "add", "validation/alternate-field-evaluation.json")
+    _git(repo, "commit", "-m", "Attempt alternate evaluation path")
+    with pytest.raises(ValueError, match="canonical repo path"):
+        verify_pre_outcome_gate(candidate, schedule, alternate, log_template, repo_root=repo)
