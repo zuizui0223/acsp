@@ -206,6 +206,7 @@ jobs:
           assert cap['properties']['monetary_budget_input']['const'] is False
           assert cap['properties']['user_site_count_input']['const'] is False
           assert cap['properties']['user_coverage_target_input']['const'] is False
+          assert all(cap['properties']['movement_provider_successful_by_unit']['properties'][unit]['const'] is True for unit in ['CIR02', 'CIR06', 'CIR12', 'CIR13'])
           assert cap['properties']['post_outcome_capacity_edits_allowed']['const'] is False
 
           effort_schema = json.loads(Path('validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json').read_text())
