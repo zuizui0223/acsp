@@ -106,7 +106,7 @@ def _capacity(private: Path, effort_path: Path, depth: int = 2) -> dict:
             for unit in builder.UNITS
         },
         "unit_capacity": {unit: dict(row) for unit in builder.UNITS},
-        "operational_audit_by_unit": {unit: {} for unit in builder.UNITS},
+        "movement_provider_successful_by_unit": {unit: True for unit in builder.UNITS},
         "prospective_field_outcomes_opened": False,
         "field_outcomes_used_to_set_capacity": False,
         "frozen_common_candidate_geometry_used_for_movement_capacity": True,
