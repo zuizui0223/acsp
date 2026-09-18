@@ -89,6 +89,10 @@ jobs:
           import csv
           import json
           from pathlib import Path
+          from research.cirsium_fresh_sentinel_paths_v1 import (
+              CANONICAL_ANALYSIS_PLAN_REPO_PATH,
+              CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+          )
 
           p = json.loads(Path('validation/coverage_then_fine_structure_architecture_v1.json').read_text())
           assert p['status'] == 'FROZEN_BEFORE_FRESH_EVALUATION'
@@ -204,7 +208,7 @@ jobs:
           assert static_gate['numeric_effort_metric_frozen'] is True
           assert static_gate['numeric_effort_metric']['identity'] == 'PERSON_MINUTES_V1'
           assert static_gate['arm_symmetry_identity'] == 'ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1'
-          assert static_gate['analysis_plan'] == canonical['analysis_plan']
+          assert static_gate['analysis_plan'] == CANONICAL_ANALYSIS_PLAN_REPO_PATH
           assert static_gate['primary_cross_taxon_estimand_identity'] == 'EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1'
           assert static_gate['equal_taxon_weights_required'] is True
           assert static_gate['prospective_outcome_opening_allowed_while_schedule_pending'] is False
@@ -235,7 +239,7 @@ jobs:
           assert allocation_gate['outcome_data_allowed_to_define_schedule'] is False
           assert allocation_gate['post_outcome_schedule_edits_allowed'] is False
           assert allocation_gate['later_committed_public_schedule_receipt_byte_changes_allowed'] is False
-          assert allocation_gate['canonical_public_receipt_repo_path'] == canonical['field_schedule_receipt']
+          assert allocation_gate['canonical_public_receipt_repo_path'] == CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
           assert allocation_gate['alternate_public_receipt_paths_allowed'] is False
           assert allocation_gate['status'] == 'MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES'
           opening = o['outcome_opening_gate']
