@@ -186,7 +186,7 @@ def _capacity_profile(private_root: Path, effort_path: Path) -> dict:
             }
             for unit in EXPECTED_UNITS
         },
-        "operational_audit_by_unit": {unit: {} for unit in EXPECTED_UNITS},
+        "movement_provider_successful_by_unit": {unit: True for unit in EXPECTED_UNITS},
         "prospective_field_outcomes_opened": False,
         "field_outcomes_used_to_set_capacity": False,
         "frozen_common_candidate_geometry_used_for_movement_capacity": True,
