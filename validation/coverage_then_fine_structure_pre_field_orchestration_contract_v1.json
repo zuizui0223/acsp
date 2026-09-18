@@ -96,7 +96,10 @@
     },
     "numeric_effort_schedule_frozen": false,
     "prospective_outcome_opening_allowed_while_schedule_pending": false,
-    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
+    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
+    "analysis_plan": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json",
+    "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+    "equal_taxon_weights_required": true
   },
   "public_freeze_gate": {
     "exporter": "research/export_cirsium_fresh_sentinel_public_freeze_receipt_v1.py",
@@ -158,7 +161,8 @@
     "equal_unique_candidate_prefix_depth_across_arms_within_unit": true,
     "equal_visit_count_by_rank_across_arms_within_unit": true,
     "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit": true,
-    "arm_specific_effort_reallocation_allowed": false
+    "arm_specific_effort_reallocation_allowed": false,
+    "analysis_plan_exact_hash_linkage_required": true
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -175,7 +179,9 @@
     "verifier_reads_prospective_field_outcomes": false,
     "all_requirements_satisfied_now": false,
     "requires_canonical_public_paths": true,
-    "requires_arm_symmetric_prefix_effort_schedule": true
+    "requires_arm_symmetric_prefix_effort_schedule": true,
+    "requires_exact_analysis_plan_hash_linkage": true,
+    "requires_valid_frozen_analysis_plan": true
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
@@ -186,6 +192,7 @@
     "field_evaluation_contract": "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json",
     "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
     "alternate_receipt_paths_allowed": false,
-    "rationale": "First-add immutability is path-specific; canonical paths prevent a second post-hoc receipt from being pinned under an alternate filename."
+    "rationale": "First-add immutability is path-specific; canonical paths prevent a second post-hoc receipt from being pinned under an alternate filename.",
+    "analysis_plan": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json"
   }
 }
