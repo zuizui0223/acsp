@@ -22,6 +22,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_analysis_plan
@@ -91,6 +93,21 @@ def verify_pre_outcome_gate(
         label="fresh-SENTINEL analysis plan",
     )
 
+    capacity_path = require_canonical_repo_path(
+        Path(CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+        label="operational capacity profile",
+    )
+    effort_protocol_path = require_canonical_repo_path(
+        Path(CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+        label="standardized effort protocol",
+    )
+    if not capacity_path.is_file() or not effort_protocol_path.is_file():
+        raise ValueError("missing canonical operational capacity profile or standardized effort protocol")
+
     evaluation = validate_field_evaluation_contract(evaluation_path, log_template_path)
     if evaluation.get("prospective_outcome_opening_allowed_now") is not False:
         raise ValueError("static evaluation contract must remain pre-outcome and schedule-pending on its own")
@@ -112,6 +129,8 @@ def verify_pre_outcome_gate(
     evaluation_hash = _sha256(evaluation_path)
     analysis_hash = _sha256(analysis_path)
     field_log_template_hash = _sha256(log_template_path)
+    capacity_hash = _sha256(capacity_path)
+    effort_protocol_hash = _sha256(effort_protocol_path)
     if schedule_receipt.get("candidate_order_public_receipt_sha256") != candidate_hash:
         raise ValueError("field schedule receipt is not linked to the exact immutable candidate/order receipt")
     if schedule_receipt.get("field_evaluation_contract_sha256") != evaluation_hash:
@@ -120,6 +139,14 @@ def verify_pre_outcome_gate(
         raise ValueError("field schedule receipt is not linked to the exact current fresh-SENTINEL analysis plan")
     if schedule_receipt.get("field_log_template_sha256") != field_log_template_hash:
         raise ValueError("field schedule receipt is not linked to the exact current field-log template")
+    if schedule_receipt.get("operational_capacity_profile_repo_path") != CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH:
+        raise ValueError("field schedule receipt does not name the canonical operational capacity profile")
+    if schedule_receipt.get("standardized_effort_protocol_repo_path") != CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH:
+        raise ValueError("field schedule receipt does not name the canonical standardized effort protocol")
+    if schedule_receipt.get("operational_capacity_profile_sha256") != capacity_hash:
+        raise ValueError("field schedule receipt is not linked to the exact current operational capacity profile")
+    if schedule_receipt.get("standardized_effort_protocol_sha256") != effort_protocol_hash:
+        raise ValueError("field schedule receipt is not linked to the exact current standardized effort protocol")
     if candidate_receipt.get("canonical_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
         raise ValueError("candidate/order receipt path identity is not canonical")
     if candidate_receipt.get("canonical_field_schedule_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
@@ -195,6 +222,8 @@ def verify_pre_outcome_gate(
         "analysis_plan_sha256": analysis_hash,
         "analysis_plan_valid": True,
         "field_log_template_sha256": field_log_template_hash,
+        "operational_capacity_profile_sha256": capacity_hash,
+        "standardized_effort_protocol_sha256": effort_protocol_hash,
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "field_schedule_receipt_sha256": _sha256(schedule_path),
         "field_schedule_pin_commit": schedule_pin["pin_commit"],
