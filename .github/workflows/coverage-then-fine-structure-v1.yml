@@ -196,7 +196,9 @@ jobs:
           assert cap['properties']['movement_constraint_mode']['const'] == 'osm_weighted_transport_network'
           assert cap['properties']['automatic_prefix_depth_method']['const'] == 'OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1'
           assert cap['properties']['coarse_redundancy_scale_m']['const'] == 5000.0
-          assert cap['properties']['candidate_identity_used_to_set_prefix_depth']['const'] is False
+          assert cap['properties']['frozen_common_candidate_geometry_used_for_movement_capacity']['const'] is True
+          assert cap['properties']['arm_rank_used_to_set_prefix_depth']['const'] is False
+          assert cap['properties']['candidate_identity_or_coordinates_exported']['const'] is False
           assert cap['properties']['structural_score_used_to_set_prefix_depth']['const'] is False
           assert cap['properties']['field_outcomes_used_to_set_capacity']['const'] is False
           assert cap['properties']['arm_specific_capacity_allowed']['const'] is False
