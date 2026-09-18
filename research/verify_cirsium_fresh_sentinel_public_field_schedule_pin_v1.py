@@ -15,6 +15,7 @@ import subprocess
 from typing import Any
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
@@ -99,6 +100,13 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("field-schedule receipt does not preserve the canonical candidate/order receipt path")
     if value.get("field_evaluation_contract_repo_path") != CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH:
         raise ValueError("field-schedule receipt does not preserve the canonical field evaluation contract path")
+    if value.get("analysis_plan_repo_path") != CANONICAL_ANALYSIS_PLAN_REPO_PATH:
+        raise ValueError("field-schedule receipt does not preserve the canonical analysis-plan path")
+    analysis_hash = str(value.get("analysis_plan_sha256") or "")
+    if len(analysis_hash) != 64 or any(ch not in "0123456789abcdef" for ch in analysis_hash):
+        raise ValueError("field-schedule receipt analysis-plan SHA-256 is malformed")
+    if value.get("primary_cross_taxon_estimand_identity") != "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1":
+        raise ValueError("field-schedule receipt primary cross-taxon estimand changed")
     if value.get("field_log_template_repo_path") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
         raise ValueError("field-schedule receipt does not preserve the canonical field-log template path")
 
@@ -156,6 +164,9 @@ def verify_public_field_schedule_pin(receipt_path: Path, *, repo_root: Path = RO
         "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
         "arm_symmetry_identity": EXPECTED_ARM_SYMMETRY_IDENTITY,
         "arm_symmetric_prefix_effort_template_verified": True,
+        "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
+        "analysis_plan_sha256": value["analysis_plan_sha256"],
+        "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
         "private_candidate_membership_verified": True,
         "frozen_order_prefix_verified": True,
