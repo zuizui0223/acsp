@@ -120,8 +120,8 @@ def build_public_field_schedule_receipt(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--private-schedule", type=Path, required=True)
-    parser.add_argument("--candidate-receipt", type=Path, required=True)
-    parser.add_argument("--field-evaluation-contract", type=Path, required=True)
+    parser.add_argument("--candidate-receipt", type=Path, default=Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH))
+    parser.add_argument("--field-evaluation-contract", type=Path, default=Path(CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH))
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
     parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     args = parser.parse_args()
