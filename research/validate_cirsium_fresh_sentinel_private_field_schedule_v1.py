@@ -28,6 +28,7 @@ EXPECTED_ARMS = (
 EXPECTED_SCHEMA = "cirsium-fresh-sentinel-private-field-schedule-v1"
 EXPECTED_STATUS = "PRIVATE_FIELD_ALLOCATION_AND_EFFORT_SCHEDULE_FROZEN"
 EXPECTED_MATCH_SCOPE = "WITHIN_COHORT_UNIT_ACROSS_ALL_THREE_ARMS"
+EXPECTED_ARM_SYMMETRY_IDENTITY = "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
 CANDIDATE_RECEIPT_STATUS = "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT"
 EVALUATION_STATUS = "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING"
 
@@ -43,6 +44,7 @@ TOP_KEYS = {
     "shared_candidate_handling_identity",
     "shared_candidate_handling_rule",
     "comparator_assignment_identity",
+    "arm_symmetry_identity",
     "numeric_effort_metric",
     "matched_effort_scope",
     "assignments",
@@ -125,6 +127,7 @@ def _require_exact_schedule_semantics(schedule: dict[str, Any], evaluation: dict
         ("shared_candidate_handling_identity", analysis.get("shared_candidate_handling_identity"), "shared-candidate handling identity"),
         ("shared_candidate_handling_rule", analysis.get("shared_candidate_handling_rule"), "shared-candidate handling rule"),
         ("comparator_assignment_identity", mechanics.get("comparator_assignment_identity"), "comparator assignment identity"),
+        ("arm_symmetry_identity", mechanics.get("arm_symmetry_identity"), "arm symmetry identity"),
     )
     for schedule_key, expected, label in exact_pairs:
         expected_text = _nonempty(expected, f"field evaluation contract {label}")
@@ -287,6 +290,7 @@ def validate_private_field_schedule(
         "repeated_visit_aggregation_identity": schedule["repeated_visit_aggregation_identity"],
         "shared_candidate_handling_identity": schedule["shared_candidate_handling_identity"],
         "comparator_assignment_identity": schedule["comparator_assignment_identity"],
+        "arm_symmetry_identity": schedule["arm_symmetry_identity"],
         "analysis_unit_mapping_verified": True,
         "visit_index_contiguity_verified": True,
         "assignment_count": len(assignments),
