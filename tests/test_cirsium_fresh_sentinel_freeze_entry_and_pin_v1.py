@@ -8,6 +8,7 @@ import pytest
 
 import research.run_cirsium_fresh_sentinel_freeze_v1 as entry
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
@@ -33,6 +34,7 @@ def _public_receipt() -> dict:
         "canonical_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
         "canonical_field_schedule_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
         "field_evaluation_contract": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "analysis_plan": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
         "field_log_template": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "public_safe_to_commit": True,
     }
