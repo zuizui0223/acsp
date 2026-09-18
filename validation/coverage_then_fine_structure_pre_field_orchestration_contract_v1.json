@@ -12,7 +12,11 @@
     "single_private_input_class": "PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY",
     "bundle_shape": "one FeatureCollection with exactly one Polygon/MultiPolygon per frozen cohort unit",
     "text_to_geometry_inference_allowed": false,
-    "replacement_taxon_allowed": false
+    "replacement_taxon_allowed": false,
+    "user_operational_input": "max_network_transition_km only after private candidate/order freeze",
+    "user_site_count_input_allowed": false,
+    "user_survey_days_input_allowed": false,
+    "user_monetary_budget_input_allowed": false
   },
   "pipeline": [
     "validate_static_field_evaluation_contract",
@@ -26,6 +30,8 @@
     "export_hash_only_public_freeze_receipt",
     "commit_and_pin_public_freeze_receipt",
     "verify_immutable_candidate_order_prescription_pin",
+    "freeze_standardized_per_candidate_effort_protocol_pre_outcome",
+    "derive_movement_only_operational_prefix_depth_from_common_coarse_frame",
     "freeze_outcome_blind_downstream_operational_capacity_profile",
     "build_private_field_allocation_and_effort_schedule_from_frozen_order_prefixes",
     "validate_private_field_allocation_and_effort_schedule",
@@ -173,7 +179,24 @@
     "capacity_profile_arm_specific_values_allowed": false,
     "builder_selects_only_no_skip_frozen_order_prefixes": true,
     "capacity_profile_role": "downstream G_F operational capacity only; it cannot alter ecological support or frozen candidate order",
-    "schedule_builder_status": "READY_AFTER_PRIVATE_CANDIDATE_IDENTITIES_AND_OUTCOME_BLIND_CAPACITY_PROFILE_EXIST"
+    "schedule_builder_status": "READY_AFTER_PRIVATE_CANDIDATE_IDENTITIES_AND_OUTCOME_BLIND_CAPACITY_PROFILE_EXIST",
+    "standardized_effort_protocol_schema": "validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json",
+    "movement_capacity_deriver": "research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py",
+    "only_user_operational_tuning_input": "max_network_transition_km",
+    "movement_constraint_mode": "osm_weighted_transport_network",
+    "automatic_prefix_depth_method": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
+    "prefix_depth_derived_from_common_frame_not_arm_order": true,
+    "coarse_redundancy_scale_m": 5000,
+    "coarse_representative_rule": "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1",
+    "user_site_count_input_allowed": false,
+    "user_coverage_target_input_allowed": false,
+    "survey_days_input_allowed": false,
+    "monetary_budget_input_allowed": false,
+    "standardized_effort_protocol_is_budget_input": false,
+    "standardized_effort_protocol_role": "pre-outcome per-candidate biological observation standard; not site-count, day-count, or monetary budget",
+    "provider_failure_can_define_prefix_depth": false,
+    "operational_capacity_profile_hash_binds_private_candidate_frames": true,
+    "operational_capacity_profile_hash_binds_standardized_effort_protocol": true
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -217,4 +240,4 @@
     "retuning_on_opened_outcomes_allowed": false,
     "field_log_template_hash_must_match_pinned_schedule_receipt": true
   }
-}\n
+}
