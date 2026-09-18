@@ -22,6 +22,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_analysis_plan
@@ -100,8 +102,18 @@ def build_public_field_schedule_receipt(
         repo_root=repo_root,
     )
 
-    capacity_path = Path(operational_capacity_profile_path).resolve()
-    effort_protocol_path = Path(standardized_effort_protocol_path).resolve()
+    capacity_path = require_canonical_repo_path(
+        Path(operational_capacity_profile_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+        label="operational capacity profile",
+    )
+    effort_protocol_path = require_canonical_repo_path(
+        Path(standardized_effort_protocol_path),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+        label="standardized effort protocol",
+    )
     if not capacity_path.is_file() or not effort_protocol_path.is_file():
         raise ValueError("operational capacity profile and standardized effort protocol must both exist")
     capacity_profile = json.loads(capacity_path.read_text(encoding="utf-8"))
@@ -149,6 +161,8 @@ def build_public_field_schedule_receipt(
         "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
         "field_log_template_repo_path": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "private_field_schedule_sha256": _sha256(private_schedule_path),
+        "operational_capacity_profile_repo_path": CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+        "standardized_effort_protocol_repo_path": CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
         "operational_capacity_profile_sha256": _sha256(capacity_path),
         "standardized_effort_protocol_sha256": _sha256(effort_protocol_path),
         "movement_constraint_mode": capacity_profile["movement_constraint_mode"],
@@ -211,8 +225,8 @@ def main() -> int:
     parser.add_argument("--analysis-plan", type=Path, default=Path(CANONICAL_ANALYSIS_PLAN_REPO_PATH))
     parser.add_argument("--field-log-template", type=Path, default=Path(CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH))
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
-    parser.add_argument("--operational-capacity-profile", type=Path, required=True)
-    parser.add_argument("--standardized-effort-protocol", type=Path, required=True)
+    parser.add_argument("--operational-capacity-profile", type=Path, default=Path(CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH))
+    parser.add_argument("--standardized-effort-protocol", type=Path, default=Path(CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH))
     parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH))
     args = parser.parse_args()
     out_json = require_canonical_repo_path(
