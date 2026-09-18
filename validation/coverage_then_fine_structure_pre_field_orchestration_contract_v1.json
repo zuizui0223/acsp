@@ -196,7 +196,15 @@
     "standardized_effort_protocol_role": "pre-outcome per-candidate biological observation standard; not site-count, day-count, or monetary budget",
     "provider_failure_can_define_prefix_depth": false,
     "operational_capacity_profile_hash_binds_private_candidate_frames": true,
-    "operational_capacity_profile_hash_binds_standardized_effort_protocol": true
+    "operational_capacity_profile_hash_binds_standardized_effort_protocol": true,
+    "canonical_operational_capacity_profile_repo_path": "validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json",
+    "canonical_standardized_effort_protocol_repo_path": "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json",
+    "public_schedule_receipt_must_hash_bind_operational_capacity_profile": true,
+    "public_schedule_receipt_must_hash_bind_standardized_effort_protocol": true,
+    "final_gate_revalidates_operational_capacity_profile": true,
+    "final_gate_revalidates_standardized_effort_protocol": true,
+    "post_schedule_pin_capacity_profile_edits_allowed": false,
+    "post_schedule_pin_standardized_effort_edits_allowed": false
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -224,7 +232,11 @@
     "user_site_count_input_allowed": false,
     "survey_days_input_allowed": false,
     "monetary_budget_input_allowed": false,
-    "capacity_or_effort_provenance_may_be_changed_after_schedule_pin": false
+    "capacity_or_effort_provenance_may_be_changed_after_schedule_pin": false,
+    "requires_exact_operational_capacity_profile_hash_linkage": true,
+    "requires_exact_standardized_effort_protocol_hash_linkage": true,
+    "requires_canonical_operational_capacity_profile_path": true,
+    "requires_canonical_standardized_effort_protocol_path": true
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
