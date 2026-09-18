@@ -204,7 +204,12 @@
     "final_gate_revalidates_operational_capacity_profile": true,
     "final_gate_revalidates_standardized_effort_protocol": true,
     "post_schedule_pin_capacity_profile_edits_allowed": false,
-    "post_schedule_pin_standardized_effort_edits_allowed": false
+    "post_schedule_pin_standardized_effort_edits_allowed": false,
+    "standardized_effort_protocol_schema_status": "SCHEMA_FROZEN_INSTANCE_VALUES_PENDING",
+    "standardized_effort_protocol_values_are_external_source_data": false,
+    "standardized_effort_protocol_values_are_candidate_selection_inputs": false,
+    "standardized_effort_protocol_values_are_budget_or_day_inputs": false,
+    "standardized_effort_protocol_must_be_frozen_before_movement_capacity_derivation": true
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
