@@ -26,6 +26,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
+from research.build_cirsium_fresh_sentinel_private_field_schedule_v1 import _validate_capacity_profile
+from research.derive_cirsium_fresh_sentinel_movement_capacity_v1 import validate_effort_protocol
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_analysis_plan
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import validate_field_evaluation_contract
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
@@ -115,6 +117,13 @@ def verify_pre_outcome_gate(
     if analysis.get("prospective_outcomes_opened") is not False:
         raise ValueError("analysis plan must remain outcome-blind")
 
+    capacity_profile = _load(capacity_path)
+    _validate_capacity_profile(capacity_profile)
+    effort_protocol = _load(effort_protocol_path)
+    validate_effort_protocol(effort_protocol)
+    if capacity_profile.get("standardized_effort_protocol_sha256") != _sha256(effort_protocol_path):
+        raise ValueError("operational capacity profile is not linked to the exact standardized effort protocol")
+
     candidate_pin = verify_public_freeze_pin(candidate_path, repo_root=repo, expected_pin_commit=expected_candidate_pin_commit)
     if candidate_pin.get("pre_field_prescription_pin_gate_satisfied") is not True:
         raise ValueError("candidate/order immutable pin gate not satisfied")
@@ -147,6 +156,12 @@ def verify_pre_outcome_gate(
         raise ValueError("field schedule receipt is not linked to the exact current operational capacity profile")
     if schedule_receipt.get("standardized_effort_protocol_sha256") != effort_protocol_hash:
         raise ValueError("field schedule receipt is not linked to the exact current standardized effort protocol")
+    if schedule_receipt.get("movement_constraint_mode") != capacity_profile.get("movement_constraint_mode"):
+        raise ValueError("field schedule receipt movement mode differs from the canonical operational capacity profile")
+    if float(schedule_receipt.get("max_network_transition_km")) != float(capacity_profile.get("max_network_transition_km")):
+        raise ValueError("field schedule receipt movement constraint differs from the canonical operational capacity profile")
+    if schedule_receipt.get("automatic_prefix_depth_method") != capacity_profile.get("automatic_prefix_depth_method"):
+        raise ValueError("field schedule receipt prefix-depth method differs from the canonical operational capacity profile")
     if candidate_receipt.get("canonical_receipt_repo_path") != CANONICAL_CANDIDATE_RECEIPT_REPO_PATH:
         raise ValueError("candidate/order receipt path identity is not canonical")
     if candidate_receipt.get("canonical_field_schedule_receipt_repo_path") != CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH:
