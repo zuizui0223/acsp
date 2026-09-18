@@ -5,6 +5,7 @@ on:
     paths:
       - "acsp/discovery/scale_separated.py"
       - "acsp/discovery/__init__.py"
+      - "research/cirsium_fresh_sentinel_paths_v1.py"
       - "research/materialize_cirsium_fresh_sentinel_public_sources_v1.py"
       - "research/build_cirsium_private_sector_structural_grid_v1.py"
       - "research/validate_cirsium_fresh_range_sector_bundle_v1.py"
@@ -183,12 +184,15 @@ jobs:
           assert allocation_gate['outcome_data_allowed_to_define_schedule'] is False
           assert allocation_gate['post_outcome_schedule_edits_allowed'] is False
           assert allocation_gate['later_committed_public_schedule_receipt_byte_changes_allowed'] is False
+          assert allocation_gate['canonical_public_receipt_repo_path'] == canonical['field_schedule_receipt']
+          assert allocation_gate['alternate_public_receipt_paths_allowed'] is False
           assert allocation_gate['status'] == 'MECHANICS_READY_INSTANCE_PENDING_PRIVATE_CANDIDATE_IDENTITIES'
           opening = o['outcome_opening_gate']
           assert opening['verifier'] == 'research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py'
           assert opening['requires_exact_candidate_receipt_hash_linkage'] is True
           assert opening['requires_exact_field_evaluation_contract_hash_linkage'] is True
           assert opening['verifier_reads_prospective_field_outcomes'] is False
+          assert opening['requires_canonical_public_paths'] is True
           assert opening['all_requirements_satisfied_now'] is False
           assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
           assert o['outcome_opening_allowed_now'] is False
