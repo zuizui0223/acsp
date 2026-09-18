@@ -110,6 +110,38 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("field-schedule receipt field-log template SHA-256 is malformed")
     if value.get("primary_cross_taxon_estimand_identity") != "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1":
         raise ValueError("field-schedule receipt primary cross-taxon estimand changed")
+    for key in ("operational_capacity_profile_sha256", "standardized_effort_protocol_sha256"):
+        digest = str(value.get(key) or "")
+        if len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
+            raise ValueError(f"field-schedule receipt {key} is malformed")
+    if value.get("movement_constraint_mode") != "osm_weighted_transport_network":
+        raise ValueError("field-schedule receipt movement constraint mode changed")
+    movement_km = value.get("max_network_transition_km")
+    if isinstance(movement_km, bool) or not isinstance(movement_km, (int, float)) or float(movement_km) <= 0:
+        raise ValueError("field-schedule receipt movement constraint must be positive")
+    if value.get("automatic_prefix_depth_method") != "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1":
+        raise ValueError("field-schedule receipt automatic prefix-depth method changed")
+    if float(value.get("coarse_redundancy_scale_m") or 0.0) != 5000.0:
+        raise ValueError("field-schedule receipt coarse redundancy scale changed")
+    if value.get("coarse_representative_rule") != "STABLE_HASH_WITHIN_FROZEN_COARSE_CELL_V1":
+        raise ValueError("field-schedule receipt coarse representative rule changed")
+    if value.get("frozen_common_candidate_geometry_used_for_movement_capacity") is not True:
+        raise ValueError("field-schedule receipt must declare frozen common geometry use for movement capacity")
+    for key in (
+        "arm_rank_used_to_set_prefix_depth",
+        "structural_score_used_to_set_prefix_depth",
+        "candidate_identity_or_coordinates_exported_from_capacity",
+        "user_site_count_input",
+        "user_coverage_target_input",
+        "survey_days_input",
+        "monetary_budget_input",
+    ):
+        if value.get(key) is not False:
+            raise ValueError(f"field-schedule receipt must preserve {key}=false")
+    if value.get("capacity_schedule_linkage_verified") is not True:
+        raise ValueError("field-schedule receipt must prove movement-capacity schedule linkage")
+    if value.get("standardized_effort_protocol_linkage_verified") is not True:
+        raise ValueError("field-schedule receipt must prove standardized effort protocol linkage")
     if value.get("field_log_template_repo_path") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
         raise ValueError("field-schedule receipt does not preserve the canonical field-log template path")
 
@@ -172,6 +204,13 @@ def verify_public_field_schedule_pin(receipt_path: Path, *, repo_root: Path = RO
         "field_log_template_sha256": value["field_log_template_sha256"],
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
+        "movement_constraint_mode": value["movement_constraint_mode"],
+        "max_network_transition_km": float(value["max_network_transition_km"]),
+        "automatic_prefix_depth_method": value["automatic_prefix_depth_method"],
+        "operational_capacity_profile_sha256": value["operational_capacity_profile_sha256"],
+        "standardized_effort_protocol_sha256": value["standardized_effort_protocol_sha256"],
+        "capacity_schedule_linkage_verified": True,
+        "standardized_effort_protocol_linkage_verified": True,
         "private_candidate_membership_verified": True,
         "frozen_order_prefix_verified": True,
         "prospective_field_outcomes_opened": False,
