@@ -160,7 +160,7 @@ def verify_public_freeze_pin(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--receipt", type=Path, required=True)
+    parser.add_argument("--receipt", type=Path, default=Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH))
     parser.add_argument("--expected-pin-commit", default="")
     args = parser.parse_args()
     result = verify_public_freeze_pin(args.receipt, expected_pin_commit=args.expected_pin_commit)
