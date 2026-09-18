@@ -8,11 +8,13 @@ import subprocess
 import pytest
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_ANALYSIS_PLAN_REPO_PATH,
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
 )
+from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import DEFAULT_PLAN
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import DEFAULT_CONTRACT, DEFAULT_FIELD_LOG_TEMPLATE
 from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import FINAL_STATUS, verify_pre_outcome_gate
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
@@ -52,21 +54,25 @@ def _candidate_receipt() -> dict:
         "canonical_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
         "canonical_field_schedule_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
         "field_evaluation_contract": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "analysis_plan": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
         "field_log_template": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "field_allocation_and_effort_schedule_required_before_outcome_opening": True,
         "field_allocation_and_effort_schedule_pinned": False,
     }
 
 
-def _schedule_receipt(candidate: Path, evaluation: Path, *, candidate_hash_override: str = "") -> dict:
+def _schedule_receipt(candidate: Path, evaluation: Path, analysis_plan: Path, *, candidate_hash_override: str = "") -> dict:
     return {
         "status": "PUBLIC_FIELD_ALLOCATION_EFFORT_SCHEDULE_READY_FOR_COMMIT",
         "canonical_receipt_repo_path": CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
         "candidate_order_public_receipt_repo_path": CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
         "field_evaluation_contract_repo_path": CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
+        "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
         "field_log_template_repo_path": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "candidate_order_public_receipt_sha256": candidate_hash_override or _sha256(candidate),
         "field_evaluation_contract_sha256": _sha256(evaluation),
+        "analysis_plan_sha256": _sha256(analysis_plan),
+        "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "method_arms": [
             "COVERAGE_THEN_FINE_STRUCTURE_V1",
             "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
@@ -105,6 +111,8 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     evaluation.parent.mkdir(parents=True)
     evaluation.write_bytes(DEFAULT_CONTRACT.read_bytes())
     log_template.write_bytes(DEFAULT_FIELD_LOG_TEMPLATE.read_bytes())
+    analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
+    analysis_plan.write_bytes(DEFAULT_PLAN.read_bytes())
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
 
@@ -115,7 +123,7 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     candidate_pin = _git(repo, "rev-parse", "HEAD")
 
     schedule = repo / CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
-    _write(schedule, _schedule_receipt(candidate, evaluation, candidate_hash_override=candidate_hash_override))
+    _write(schedule, _schedule_receipt(candidate, evaluation, analysis_plan, candidate_hash_override=candidate_hash_override))
     _git(repo, "add", CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin field schedule receipt")
     schedule_pin = _git(repo, "rev-parse", "HEAD")
@@ -142,6 +150,8 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["static_evaluation_semantics_valid"] is True
     assert final["candidate_order_pin_gate_satisfied"] is True
     assert final["field_schedule_pin_gate_satisfied"] is True
+    assert final["analysis_plan_valid"] is True
+    assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
     assert final["frozen_order_prefix_verified"] is True
@@ -240,3 +250,26 @@ def test_final_gate_rejects_alternate_evaluation_contract_path(tmp_path: Path) -
     _git(repo, "commit", "-m", "Attempt alternate evaluation path")
     with pytest.raises(ValueError, match="canonical repo path"):
         verify_pre_outcome_gate(candidate, schedule, alternate, log_template, repo_root=repo)
+
+
+def test_analysis_plan_change_after_schedule_pin_breaks_final_linkage(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
+    analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
+    value = json.loads(analysis_plan.read_text())
+    value["sensitivity_reporting"]["post_pin_tamper"] = "not allowed"
+    analysis_plan.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _git(repo, "add", CANONICAL_ANALYSIS_PLAN_REPO_PATH)
+    _git(repo, "commit", "-m", "Attempt analysis plan change")
+    with pytest.raises(ValueError, match="exact current fresh-SENTINEL analysis plan|analysis plan"):
+        verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, repo_root=repo)
+
+
+def test_final_gate_rejects_alternate_analysis_plan_path(tmp_path: Path) -> None:
+    repo, candidate, schedule, evaluation, log_template, _, _ = _prepare_repo(tmp_path)
+    analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
+    alternate = repo / "validation" / "alternate-analysis-plan.json"
+    alternate.write_bytes(analysis_plan.read_bytes())
+    _git(repo, "add", "validation/alternate-analysis-plan.json")
+    _git(repo, "commit", "-m", "Attempt alternate analysis-plan path")
+    with pytest.raises(ValueError, match="canonical repo path"):
+        verify_pre_outcome_gate(candidate, schedule, evaluation, log_template, alternate, repo_root=repo)
