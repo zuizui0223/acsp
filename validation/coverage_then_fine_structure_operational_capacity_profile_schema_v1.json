@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cirsium-fresh-sentinel-operational-capacity-profile-v1",
+  "title": "Outcome-blind downstream G_F operational capacity profile",
+  "description": "Contains only per-cohort scalar survey capacity. It contains no candidate identity, coordinate, habitat score or field outcome. The deterministic schedule builder applies each unit's values symmetrically to all three frozen method arms.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "cohort_unit_ids",
+    "capacity_source_identity",
+    "unit_capacity",
+    "prospective_field_outcomes_opened",
+    "field_outcomes_used_to_set_capacity",
+    "arm_specific_capacity_allowed",
+    "post_outcome_capacity_edits_allowed"
+  ],
+  "properties": {
+    "schema_version": {"const": "cirsium-fresh-sentinel-operational-capacity-profile-v1"},
+    "status": {"const": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN"},
+    "cohort_unit_ids": {"const": ["CIR02", "CIR06", "CIR12", "CIR13"]},
+    "capacity_source_identity": {"type": "string", "minLength": 1},
+    "unit_capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "properties": {
+        "CIR02": {"$ref": "#/$defs/unitCapacity"},
+        "CIR06": {"$ref": "#/$defs/unitCapacity"},
+        "CIR12": {"$ref": "#/$defs/unitCapacity"},
+        "CIR13": {"$ref": "#/$defs/unitCapacity"}
+      }
+    },
+    "prospective_field_outcomes_opened": {"const": false},
+    "field_outcomes_used_to_set_capacity": {"const": false},
+    "arm_specific_capacity_allowed": {"const": false},
+    "post_outcome_capacity_edits_allowed": {"const": false}
+  },
+  "$defs": {
+    "unitCapacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prefix_depth", "visits_per_candidate", "search_minutes_per_visit", "observer_count"],
+      "properties": {
+        "prefix_depth": {"type": "integer", "minimum": 1},
+        "visits_per_candidate": {"type": "integer", "minimum": 1},
+        "search_minutes_per_visit": {"type": "number", "exclusiveMinimum": 0},
+        "observer_count": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}
