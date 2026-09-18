@@ -12,6 +12,7 @@ from pathlib import Path
 CANONICAL_CANDIDATE_RECEIPT_REPO_PATH = "validation/cirsium_fresh_sentinel_public_freeze_receipt_v1.json"
 CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH = "validation/cirsium_fresh_sentinel_public_field_schedule_receipt_v1.json"
 CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH = "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
+CANONICAL_ANALYSIS_PLAN_REPO_PATH = "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json"
 CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH = "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
 
 
