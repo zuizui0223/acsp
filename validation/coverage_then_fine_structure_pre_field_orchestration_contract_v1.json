@@ -20,6 +20,7 @@
   },
   "pipeline": [
     "validate_static_field_evaluation_contract",
+    "verify_immutable_standardized_effort_protocol_pin",
     "validate_and_split_private_range_sector_bundle",
     "materialize_frozen_public_sources",
     "build_100m_private_raw_grid",
@@ -30,7 +31,6 @@
     "export_hash_only_public_freeze_receipt",
     "commit_and_pin_public_freeze_receipt",
     "verify_immutable_candidate_order_prescription_pin",
-    "freeze_standardized_per_candidate_effort_protocol_pre_outcome",
     "derive_movement_only_operational_prefix_depth_from_common_coarse_frame",
     "freeze_outcome_blind_downstream_operational_capacity_profile",
     "build_private_field_allocation_and_effort_schedule_from_frozen_order_prefixes",
@@ -220,7 +220,11 @@
     },
     "standardized_effort_protocol_rationale": "validation/coverage_then_fine_structure_standardized_effort_rationale_v1.json",
     "standardized_effort_protocol_optimality_claimed": false,
-    "movement_capacity_cli_default_uses_canonical_effort_protocol": true
+    "movement_capacity_cli_default_uses_canonical_effort_protocol": true,
+    "standardized_effort_protocol_pin_verifier": "research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py",
+    "standardized_effort_protocol_must_be_immutably_pinned_before_private_geometry_execution": true,
+    "standardized_effort_protocol_pin_commit_identity": "first commit that adds the canonical standardized effort protocol path",
+    "later_committed_standardized_effort_protocol_byte_changes_allowed": false
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -252,7 +256,8 @@
     "requires_exact_operational_capacity_profile_hash_linkage": true,
     "requires_exact_standardized_effort_protocol_hash_linkage": true,
     "requires_canonical_operational_capacity_profile_path": true,
-    "requires_canonical_standardized_effort_protocol_path": true
+    "requires_canonical_standardized_effort_protocol_path": true,
+    "requires_immutable_standardized_effort_protocol_pin": true
   },
   "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
@@ -264,7 +269,9 @@
     "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
     "alternate_receipt_paths_allowed": false,
     "rationale": "First-add immutability is path-specific; canonical paths prevent a second post-hoc receipt from being pinned under an alternate filename.",
-    "analysis_plan": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json"
+    "analysis_plan": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json",
+    "operational_capacity_profile": "validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json",
+    "standardized_effort_protocol": "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json"
   },
   "prospective_outcome_analysis": {
     "analyzer": "research/analyze_cirsium_fresh_sentinel_outcomes_v1.py",
