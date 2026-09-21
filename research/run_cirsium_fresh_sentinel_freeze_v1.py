@@ -16,10 +16,14 @@ from typing import Any
 
 from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
 from research.export_cirsium_fresh_sentinel_public_freeze_receipt_v1 import build_public_freeze_receipt
 from research.orchestrate_cirsium_fresh_sentinel_pre_field_v1 import run_private_pre_field_pipeline
+from research.verify_cirsium_fresh_sentinel_movement_constraint_pin_v1 import verify_movement_constraint_pin
+from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import verify_standardized_effort_pin
 
 ROOT = Path(__file__).resolve().parents[1]
 ENTRYPOINT_STATUS = "PRIVATE_AND_PUBLIC_HASH_FREEZE_GENERATED_AWAITING_COMMIT"
@@ -57,6 +61,16 @@ def run_full_pre_field_freeze(
     repo = Path(repo_root).resolve()
     public = _public_path(Path(public_receipt), repo_root=repo)
 
+    # These checks must finish before the private bundle is inspected.
+    effort_pin = verify_standardized_effort_pin(
+        repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+        repo_root=repo,
+    )
+    movement_pin = verify_movement_constraint_pin(
+        repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+        repo_root=repo,
+    )
+
     if not bundle.is_file():
         raise ValueError(f"missing private range-sector bundle: {bundle}")
     if _inside(bundle, repo):
@@ -78,6 +92,12 @@ def run_full_pre_field_freeze(
     if receipt.get("public_receipt_commit_required_before_outcome_opening") is not True:
         raise ValueError("public receipt must require commit/pin before outcome opening")
 
+    receipt["pre_geometry_standardized_effort_pin_commit"] = effort_pin["pin_commit"]
+    receipt["pre_geometry_standardized_effort_sha256"] = effort_pin["protocol_sha256"]
+    receipt["pre_geometry_movement_constraint_pin_commit"] = movement_pin["pin_commit"]
+    receipt["pre_geometry_movement_constraint_sha256"] = movement_pin["protocol_sha256"]
+    receipt["pre_geometry_protocol_pins_verified_before_private_execution"] = True
+
     public.parent.mkdir(parents=True, exist_ok=True)
     public.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     relative_public = public.relative_to(repo).as_posix()
@@ -87,6 +107,8 @@ def run_full_pre_field_freeze(
         "private_freeze_status": str(private_receipt.get("status") or ""),
         "public_receipt_status": str(receipt.get("status") or ""),
         "public_receipt_repo_path": relative_public,
+        "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+        "movement_constraint_pin_commit": movement_pin["pin_commit"],
         "field_outcomes_opened": False,
         "outcome_opening_authorized": False,
         "next_gate": "Commit the public receipt, then pass verify_cirsium_fresh_sentinel_public_freeze_pin_v1.py on that committed checkout.",
