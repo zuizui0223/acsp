@@ -24,12 +24,29 @@
       "structural_feature_family != GENERAL_SPATIAL_BASELINE_ONLY"
     ],
     "no_replacement_after_source_or_frame_failure": true,
-    "selected_units": ["CIR02", "CIR06", "CIR12", "CIR13"]
+    "selected_units": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ]
   },
   "explicit_exclusions": {
-    "opened_structural_holdout_units": ["CIR01", "CIR04", "CIR07"],
-    "opened_coastal_development_unit": ["CIR08"],
-    "local_lane_not_in_v1_scope": ["CIR03", "CIR05", "CIR09", "CIR10", "CIR11"],
+    "opened_structural_holdout_units": [
+      "CIR01",
+      "CIR04",
+      "CIR07"
+    ],
+    "opened_coastal_development_unit": [
+      "CIR08"
+    ],
+    "local_lane_not_in_v1_scope": [
+      "CIR03",
+      "CIR05",
+      "CIR09",
+      "CIR10",
+      "CIR11"
+    ],
     "reason": "Fresh v1 is restricted to the architecture's predeclared SENTINEL/DETACHED scope; opened development units cannot be recycled for promotion."
   },
   "cohort": [
@@ -38,7 +55,12 @@
       "species_binomial": "Cirsium inundatum",
       "sentinel_subregime": "UNCERTAINTY_FOOTPRINT",
       "structural_feature_family": "WETLAND_MOISTURE_STRUCTURE",
-      "required_sources": ["private_source_manifest", "gsi_dem_snapshot", "esa_worldcover_2021_snapshot", "sentinel_support_input"],
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "esa_worldcover_2021_snapshot",
+        "sentinel_support_input"
+      ],
       "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
     },
     {
@@ -46,7 +68,11 @@
       "species_binomial": "Cirsium yezoalpinum",
       "sentinel_subregime": "LEGACY_RANGE_CONTEXT",
       "structural_feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
-      "required_sources": ["private_source_manifest", "gsi_dem_snapshot", "declared_range_sector_geometry"],
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "declared_range_sector_geometry"
+      ],
       "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
     },
     {
@@ -54,7 +80,12 @@
       "species_binomial": "Cirsium dipsacolepis",
       "sentinel_subregime": "UNCERTAINTY_FOOTPRINT",
       "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE",
-      "required_sources": ["private_source_manifest", "gsi_dem_snapshot", "esa_worldcover_2021_snapshot", "sentinel_support_input"],
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "esa_worldcover_2021_snapshot",
+        "sentinel_support_input"
+      ],
       "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
     },
     {
@@ -62,7 +93,12 @@
       "species_binomial": "Cirsium lineare",
       "sentinel_subregime": "COARSE_RANGE_CONTEXT",
       "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE",
-      "required_sources": ["private_source_manifest", "gsi_dem_snapshot", "esa_worldcover_2021_snapshot", "declared_range_sector_geometry"],
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "esa_worldcover_2021_snapshot",
+        "declared_range_sector_geometry"
+      ],
       "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
     }
   ],
@@ -84,7 +120,15 @@
     "nearest_known": "NOT_DEFINED_FOR_SENTINEL because the frozen candidate-frame contract forbids a known-point local kernel when primary anchors are absent"
   },
   "prefix_curve": {
-    "fractions": [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0],
+    "fractions": [
+      0.01,
+      0.025,
+      0.05,
+      0.1,
+      0.2,
+      0.5,
+      1
+    ],
     "selected_count_rule": "ceil(fraction * candidate count), minimum one when nonempty",
     "favorable_prefix_selection_allowed": false,
     "note": "These are ranking diagnostics. External field-performance promotion still requires matched search effort and complete detection/non-detection logs."
@@ -99,8 +143,10 @@
   },
   "execution_blocker": {
     "current": true,
-    "reason": "The four fresh sentinel units do not yet have complete private source manifests and executable declared range-sector/candidate-frame inputs. Running now would require inventing or weakening source geometry after method freeze.",
-    "next_legal_step": "Materialize and hash the already-declared source snapshots/sector geometry, build the 100-m candidate frame, freeze all method/comparator rankings, pin the coordinate-free candidate/order receipt, then freeze and pin the candidate-specific field allocation/effort schedule before opening prospective outcomes."
+    "reason": "The four fresh sentinel units still lack executable private range-sector/candidate-frame inputs, and the single human movement constraint must be declared and immutably pinned before those private geometries are opened.",
+    "next_legal_step": "declare and commit the canonical max_network_transition_km movement constraint first; verify its immutable pin; only then supply the four-feature private range-sector GeoJSON, materialize/hash the declared sources, build the 100-m candidate frame, and freeze all method/comparator rankings before prospective field outcomes are opened",
+    "pre_geometry_movement_constraint_required": true,
+    "movement_constraint_canonical_path": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
   },
   "forbidden": [
     "do not recycle CIR01/CIR04/CIR07/CIR08 as fresh promotion outcomes",
