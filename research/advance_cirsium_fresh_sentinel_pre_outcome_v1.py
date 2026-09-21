@@ -29,9 +29,13 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
 from research.derive_cirsium_fresh_sentinel_movement_capacity_v1 import (
     derive_operational_capacity_profile,
+)
+from research.freeze_cirsium_fresh_sentinel_movement_constraint_v1 import (
+    freeze_movement_constraint,
 )
 from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 import (
     build_public_field_schedule_receipt,
@@ -49,6 +53,9 @@ from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import (
 from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import (
     verify_standardized_effort_pin,
 )
+from research.verify_cirsium_fresh_sentinel_movement_constraint_pin_v1 import (
+    verify_movement_constraint_pin,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,7 +70,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 def advance_pre_outcome_pipeline(
     private_pre_field_root: Path,
     *,
-    max_network_transition_km: float,
+    max_network_transition_km: float | None = None,
     bundle_geojson: Path | None = None,
     private_schedule_path: Path | None = None,
     repo_root: Path = ROOT,
@@ -79,12 +86,57 @@ def advance_pre_outcome_pipeline(
     schedule_receipt = repo / CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH
     capacity = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
     effort = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
+    movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
     evaluation = repo / CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
     analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
     field_log_template = repo / CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
 
-    # This must happen before private geometry is read or constructed.
+    # Both protocol pins must be satisfied before private geometry is read or constructed.
     effort_pin = verify_standardized_effort_pin(effort, repo_root=repo)
+
+    if not movement.exists():
+        if max_network_transition_km is None:
+            return {
+                "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
+                "status": "BLOCKED_MOVEMENT_CONSTRAINT_DECLARATION",
+                "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+                "prospective_field_outcomes_opened": False,
+                "outcome_opening_gate_satisfied": False,
+                "next_required_input": "declare max_network_transition_km once before private geometry is opened",
+            }
+        movement_value = freeze_movement_constraint(
+            max_network_transition_km,
+            out_json=movement,
+            repo_root=repo,
+        )
+        return {
+            "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
+            "status": "MOVEMENT_CONSTRAINT_READY_FOR_COMMIT",
+            "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "max_network_transition_km": movement_value["max_network_transition_km"],
+            "public_paths_to_commit": [CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH],
+            "prospective_field_outcomes_opened": False,
+            "outcome_opening_gate_satisfied": False,
+            "next_gate": "Commit the canonical movement constraint, then rerun before supplying private geometry.",
+        }
+
+    try:
+        movement_pin = verify_movement_constraint_pin(movement, repo_root=repo)
+    except ValueError as exc:
+        return {
+            "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
+            "status": "MOVEMENT_CONSTRAINT_PIN_NOT_SATISFIED",
+            "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
+            "prospective_field_outcomes_opened": False,
+            "outcome_opening_gate_satisfied": False,
+            "pin_error": str(exc),
+            "next_gate": "Commit the exact canonical movement constraint without modifying its bytes.",
+        }
+
+    movement_km = float(movement_pin["max_network_transition_km"])
+    if max_network_transition_km is not None and float(max_network_transition_km) != movement_km:
+        raise ValueError("requested movement constraint differs from the immutable pre-geometry movement constraint")
 
     if not candidate.exists():
         if private_root.exists():
@@ -97,6 +149,7 @@ def advance_pre_outcome_pipeline(
                 "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
                 "status": "BLOCKED_PRIVATE_RANGE_SECTOR_GEOMETRY",
                 "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+                "movement_constraint_pin_commit": movement_pin["pin_commit"],
                 "prospective_field_outcomes_opened": False,
                 "next_required_input": "one private four-feature range-sector GeoJSON bundle",
             }
@@ -111,6 +164,7 @@ def advance_pre_outcome_pipeline(
             "status": "CANDIDATE_RECEIPT_READY_FOR_COMMIT",
             "freeze_status": result["status"],
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
             "public_paths_to_commit": [CANONICAL_CANDIDATE_RECEIPT_REPO_PATH],
             "prospective_field_outcomes_opened": False,
             "outcome_opening_gate_satisfied": False,
@@ -132,10 +186,6 @@ def advance_pre_outcome_pipeline(
             "pin_error": str(exc),
             "next_gate": "Commit the exact canonical candidate/order receipt without modifying its bytes.",
         }
-
-    movement_km = float(max_network_transition_km)
-    if not movement_km > 0:
-        raise ValueError("max_network_transition_km must be >0")
 
     if capacity.exists():
         capacity_value = _load_json(capacity)
@@ -185,6 +235,7 @@ def advance_pre_outcome_pipeline(
             "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
             "status": "FIELD_SCHEDULE_RECEIPT_READY_FOR_COMMIT",
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
             "candidate_order_pin_commit": candidate_pin["pin_commit"],
             "max_network_transition_km": movement_km,
             "private_schedule_path": str(private_schedule),
@@ -204,6 +255,7 @@ def advance_pre_outcome_pipeline(
             "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
             "status": "FIELD_SCHEDULE_RECEIPT_PIN_NOT_SATISFIED",
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
             "candidate_order_pin_commit": candidate_pin["pin_commit"],
             "prospective_field_outcomes_opened": False,
             "outcome_opening_gate_satisfied": False,
@@ -226,6 +278,7 @@ def advance_pre_outcome_pipeline(
         "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
         "status": final["status"],
         "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+        "movement_constraint_pin_commit": movement_pin["pin_commit"],
         "candidate_order_pin_commit": candidate_pin["pin_commit"],
         "field_schedule_pin_commit": schedule_pin["pin_commit"],
         "max_network_transition_km": movement_km,
@@ -240,7 +293,7 @@ def main() -> int:
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
     parser.add_argument("--bundle-geojson", type=Path)
     parser.add_argument("--private-schedule", type=Path)
-    parser.add_argument("--max-network-transition-km", type=float, required=True)
+    parser.add_argument("--max-network-transition-km", type=float)
     args = parser.parse_args()
     result = advance_pre_outcome_pipeline(
         args.private_pre_field_root,
