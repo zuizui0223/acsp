@@ -15,8 +15,10 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import DEFAULT_PLAN
+from research.freeze_cirsium_fresh_sentinel_movement_constraint_v1 import build_movement_constraint
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import DEFAULT_CONTRACT, DEFAULT_FIELD_LOG_TEMPLATE
 from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import FINAL_STATUS, verify_pre_outcome_gate
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
@@ -204,6 +206,8 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     _write(effort_protocol, _effort_protocol())
     capacity_profile = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
     _write(capacity_profile, _capacity_profile(effort_protocol))
+    movement_constraint = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    _write(movement_constraint, build_movement_constraint(5.0))
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
 
@@ -247,6 +251,9 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["standardized_effort_protocol_sha256"] == _sha256(repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH)
     assert final["standardized_effort_protocol_pin_gate_satisfied"] is True
     assert final["standardized_effort_protocol_pin_commit"]
+    assert final["movement_constraint_pin_gate_satisfied"] is True
+    assert final["movement_constraint_pin_commit"]
+    assert final["movement_constraint_pinned_before_candidate_prescription"] is True
     assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
