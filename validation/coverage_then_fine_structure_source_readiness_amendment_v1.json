@@ -89,6 +89,9 @@
     "observer_count": 1,
     "planned_person_minutes_per_candidate": 90,
     "optimality_claimed": false,
-    "only_user_operational_tuning_input_after_candidate_freeze": "max_network_transition_km"
+    "only_user_operational_tuning_input_after_candidate_freeze": "max_network_transition_km",
+    "standardized_effort_protocol_pin_verifier": "research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py",
+    "standardized_effort_protocol_first_add_pin_commit": "486242891b23e7340584b9206a978dfbfd47882d",
+    "later_effort_repin_allowed": false
   }
 }
