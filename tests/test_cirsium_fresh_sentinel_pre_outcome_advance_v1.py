@@ -130,6 +130,40 @@ def test_movement_declaration_stops_at_commit_gate_before_geometry(
     assert touched is False
 
 
+def test_unpinned_movement_constraint_blocks_before_private_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    movement.parent.mkdir(parents=True)
+    movement.write_text("{}\n", encoding="utf-8")
+    touched = False
+    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    monkeypatch.setattr(
+        advance,
+        "verify_movement_constraint_pin",
+        lambda *a, **k: (_ for _ in ()).throw(ValueError("movement not committed")),
+    )
+
+    def should_not_run(*args, **kwargs):
+        nonlocal touched
+        touched = True
+        raise AssertionError("private geometry must wait for movement pin")
+
+    monkeypatch.setattr(advance, "run_full_pre_field_freeze", should_not_run)
+    result = advance.advance_pre_outcome_pipeline(
+        tmp_path / "private",
+        max_network_transition_km=5.0,
+        bundle_geojson=tmp_path / "bundle.geojson",
+        repo_root=repo,
+    )
+    assert result["status"] == "MOVEMENT_CONSTRAINT_PIN_NOT_SATISFIED"
+    assert "movement not committed" in result["pin_error"]
+    assert touched is False
+
+
 def test_missing_bundle_reports_only_external_geometry_blocker(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
