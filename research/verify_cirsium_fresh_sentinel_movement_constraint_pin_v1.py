@@ -148,8 +148,11 @@ def verify_movement_constraint_pin(
     except subprocess.CalledProcessError as exc:
         raise ValueError("movement constraint pin commit is not an ancestor of HEAD") from exc
     if must_be_ancestor_of:
+        target = str(must_be_ancestor_of).strip()
+        if pin_commit == target:
+            raise ValueError("movement constraint must be pinned in an earlier commit than the candidate/order prescription")
         try:
-            _git(repo, "merge-base", "--is-ancestor", pin_commit, str(must_be_ancestor_of).strip())
+            _git(repo, "merge-base", "--is-ancestor", pin_commit, target)
         except subprocess.CalledProcessError as exc:
             raise ValueError("movement constraint was not pinned before the candidate/order prescription") from exc
 
