@@ -205,11 +205,22 @@
     "final_gate_revalidates_standardized_effort_protocol": true,
     "post_schedule_pin_capacity_profile_edits_allowed": false,
     "post_schedule_pin_standardized_effort_edits_allowed": false,
-    "standardized_effort_protocol_schema_status": "SCHEMA_FROZEN_INSTANCE_VALUES_PENDING",
+    "standardized_effort_protocol_schema_status": "INSTANCE_FROZEN_PRE_OUTCOME",
     "standardized_effort_protocol_values_are_external_source_data": false,
     "standardized_effort_protocol_values_are_candidate_selection_inputs": false,
     "standardized_effort_protocol_values_are_budget_or_day_inputs": false,
-    "standardized_effort_protocol_must_be_frozen_before_movement_capacity_derivation": true
+    "standardized_effort_protocol_must_be_frozen_before_movement_capacity_derivation": true,
+    "standardized_effort_protocol_instance": "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json",
+    "standardized_effort_protocol_source_identity": "ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1",
+    "standardized_effort_protocol_values": {
+      "visits_per_candidate": 3,
+      "search_minutes_per_visit": 30,
+      "observer_count": 1,
+      "planned_person_minutes_per_candidate": 90
+    },
+    "standardized_effort_protocol_rationale": "validation/coverage_then_fine_structure_standardized_effort_rationale_v1.json",
+    "standardized_effort_protocol_optimality_claimed": false,
+    "movement_capacity_cli_default_uses_canonical_effort_protocol": true
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
