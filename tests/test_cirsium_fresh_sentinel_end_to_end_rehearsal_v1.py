@@ -162,11 +162,11 @@ def _effort_protocol() -> dict:
         "schema_version": "cirsium-fresh-sentinel-standardized-effort-protocol-v1",
         "status": "PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN",
         "cohort_unit_ids": list(UNITS),
-        "protocol_source_identity": "SYNTHETIC_END_TO_END_REHEARSAL_V1",
+        "protocol_source_identity": "ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1",
         "unit_effort": {
             unit: {
-                "visits_per_candidate": 2,
-                "search_minutes_per_visit": 20.0,
+                "visits_per_candidate": 3,
+                "search_minutes_per_visit": 30.0,
                 "observer_count": 1,
             }
             for unit in UNITS
@@ -337,6 +337,7 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
     assert gate["status"] == FINAL_STATUS
     assert gate["outcome_opening_gate_satisfied"] is True
     assert gate["prospective_field_outcomes_opened"] is False
+    assert gate["standardized_effort_protocol_pin_gate_satisfied"] is True
 
     _write_synthetic_complete_field_log(
         field_log,
