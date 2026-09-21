@@ -24,6 +24,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
     require_canonical_repo_path,
 )
 from research.build_cirsium_fresh_sentinel_private_field_schedule_v1 import _validate_capacity_profile
@@ -33,6 +34,7 @@ from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 impor
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import verify_public_freeze_pin
 from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import verify_standardized_effort_pin
+from research.verify_cirsium_fresh_sentinel_movement_constraint_pin_v1 import verify_movement_constraint_pin
 
 ROOT = Path(__file__).resolve().parents[1]
 FINAL_STATUS = "ALL_FRESH_SENTINEL_PRE_OUTCOME_GATES_SATISFIED"
@@ -64,6 +66,7 @@ def verify_pre_outcome_gate(
     expected_candidate_pin_commit: str = "",
     expected_schedule_pin_commit: str = "",
     expected_effort_pin_commit: str = "",
+    expected_movement_pin_commit: str = "",
 ) -> dict[str, Any]:
     repo = Path(repo_root).resolve()
     candidate_path = require_canonical_repo_path(
@@ -109,8 +112,14 @@ def verify_pre_outcome_gate(
         expected_repo_path=CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
         label="standardized effort protocol",
     )
-    if not capacity_path.is_file() or not effort_protocol_path.is_file():
-        raise ValueError("missing canonical operational capacity profile or standardized effort protocol")
+    movement_constraint_path = require_canonical_repo_path(
+        Path(CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH),
+        repo_root=repo,
+        expected_repo_path=CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+        label="movement constraint protocol",
+    )
+    if not capacity_path.is_file() or not effort_protocol_path.is_file() or not movement_constraint_path.is_file():
+        raise ValueError("missing canonical operational capacity profile, standardized effort protocol, or movement constraint")
 
     evaluation = validate_field_evaluation_contract(evaluation_path, log_template_path)
     if evaluation.get("prospective_outcome_opening_allowed_now") is not False:
@@ -145,6 +154,19 @@ def verify_pre_outcome_gate(
     candidate_pin = verify_public_freeze_pin(candidate_path, repo_root=repo, expected_pin_commit=expected_candidate_pin_commit)
     if candidate_pin.get("pre_field_prescription_pin_gate_satisfied") is not True:
         raise ValueError("candidate/order immutable pin gate not satisfied")
+
+    movement_pin = verify_movement_constraint_pin(
+        movement_constraint_path,
+        repo_root=repo,
+        expected_pin_commit=expected_movement_pin_commit,
+        must_be_ancestor_of=candidate_pin["pin_commit"],
+    )
+    if movement_pin.get("movement_constraint_pin_gate_satisfied") is not True:
+        raise ValueError("movement constraint immutable pin gate not satisfied")
+    if capacity_profile.get("movement_constraint_mode") != movement_pin.get("movement_constraint_mode"):
+        raise ValueError("operational capacity movement mode differs from the pinned pre-geometry movement constraint")
+    if float(capacity_profile.get("max_network_transition_km")) != float(movement_pin.get("max_network_transition_km")):
+        raise ValueError("operational capacity movement distance differs from the pinned pre-geometry movement constraint")
 
     schedule_pin = verify_public_field_schedule_pin(schedule_path, repo_root=repo, expected_pin_commit=expected_schedule_pin_commit)
     if schedule_pin.get("field_schedule_pin_gate_satisfied") is not True:
@@ -259,6 +281,10 @@ def verify_pre_outcome_gate(
         "standardized_effort_protocol_sha256": effort_protocol_hash,
         "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
         "standardized_effort_protocol_pin_gate_satisfied": True,
+        "movement_constraint_sha256": movement_pin["protocol_sha256"],
+        "movement_constraint_pin_commit": movement_pin["pin_commit"],
+        "movement_constraint_pin_gate_satisfied": True,
+        "movement_constraint_pinned_before_candidate_prescription": True,
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "field_schedule_receipt_sha256": _sha256(schedule_path),
         "field_schedule_pin_commit": schedule_pin["pin_commit"],
@@ -293,6 +319,7 @@ def main() -> int:
     parser.add_argument("--expected-candidate-pin-commit", default="")
     parser.add_argument("--expected-schedule-pin-commit", default="")
     parser.add_argument("--expected-effort-pin-commit", default="")
+    parser.add_argument("--expected-movement-pin-commit", default="")
     args = parser.parse_args()
     result = verify_pre_outcome_gate(
         args.candidate_receipt,
@@ -303,6 +330,7 @@ def main() -> int:
         expected_candidate_pin_commit=args.expected_candidate_pin_commit,
         expected_schedule_pin_commit=args.expected_schedule_pin_commit,
         expected_effort_pin_commit=args.expected_effort_pin_commit,
+        expected_movement_pin_commit=args.expected_movement_pin_commit,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
