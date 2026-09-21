@@ -163,10 +163,6 @@ def verify_pre_outcome_gate(
     )
     if movement_pin.get("movement_constraint_pin_gate_satisfied") is not True:
         raise ValueError("movement constraint immutable pin gate not satisfied")
-    if capacity_profile.get("movement_constraint_mode") != movement_pin.get("movement_constraint_mode"):
-        raise ValueError("operational capacity movement mode differs from the pinned pre-geometry movement constraint")
-    if float(capacity_profile.get("max_network_transition_km")) != float(movement_pin.get("max_network_transition_km")):
-        raise ValueError("operational capacity movement distance differs from the pinned pre-geometry movement constraint")
 
     schedule_pin = verify_public_field_schedule_pin(schedule_path, repo_root=repo, expected_pin_commit=expected_schedule_pin_commit)
     if schedule_pin.get("field_schedule_pin_gate_satisfied") is not True:
@@ -196,6 +192,10 @@ def verify_pre_outcome_gate(
         raise ValueError("field schedule receipt is not linked to the exact current operational capacity profile")
     if schedule_receipt.get("standardized_effort_protocol_sha256") != effort_protocol_hash:
         raise ValueError("field schedule receipt is not linked to the exact current standardized effort protocol")
+    if capacity_profile.get("movement_constraint_mode") != movement_pin.get("movement_constraint_mode"):
+        raise ValueError("operational capacity movement mode differs from the pinned pre-geometry movement constraint")
+    if float(capacity_profile.get("max_network_transition_km")) != float(movement_pin.get("max_network_transition_km")):
+        raise ValueError("operational capacity movement distance differs from the pinned pre-geometry movement constraint")
     if schedule_receipt.get("movement_constraint_mode") != capacity_profile.get("movement_constraint_mode"):
         raise ValueError("field schedule receipt movement mode differs from the canonical operational capacity profile")
     if float(schedule_receipt.get("max_network_transition_km")) != float(capacity_profile.get("max_network_transition_km")):
