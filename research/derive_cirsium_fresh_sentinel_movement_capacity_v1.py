@@ -212,7 +212,7 @@ def derive_operational_capacity_profile(
 
     capacity: dict[str, Any] = {}
     frame_hashes: dict[str, str] = {}
-    audits: dict[str, Any] = {}
+    provider_success: dict[str, bool] = {}
     for unit in UNITS:
         frame_path = private_root / unit / "candidate_frame_pre_field.csv"
         if not frame_path.is_file():
