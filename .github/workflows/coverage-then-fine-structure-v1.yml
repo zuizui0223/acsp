@@ -248,6 +248,11 @@ jobs:
           assert o['status'] == 'FROZEN_PRE_FIELD_ORCHESTRATION_MECHANICS'
           assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert o['execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
+          assert o['state_aware_pre_outcome_entrypoint'] == 'research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py'
+          assert o['state_aware_entrypoint_semantics']['only_tuning_value'] == 'max_network_transition_km'
+          assert o['state_aware_entrypoint_semantics']['creates_git_commits'] is False
+          assert o['state_aware_entrypoint_semantics']['opens_prospective_outcomes'] is False
+          assert o['state_aware_entrypoint_semantics']['refuses_movement_constraint_change_after_capacity_freeze'] is True
           assert o['spatial_scales']['fine_candidate_spacing_m'] == 100
           assert o['spatial_scales']['coarse_coverage_cell_size_m'] == 5000
           assert o['spatial_scales']['fine_cells_per_coarse_axis'] == 50
