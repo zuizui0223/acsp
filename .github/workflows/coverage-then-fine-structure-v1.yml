@@ -209,6 +209,23 @@ jobs:
           assert all(cap['properties']['movement_provider_successful_by_unit']['properties'][unit]['const'] is True for unit in ['CIR02', 'CIR06', 'CIR12', 'CIR13'])
           assert cap['properties']['post_outcome_capacity_edits_allowed']['const'] is False
 
+          effort_instance = json.loads(Path('validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json').read_text())
+          assert effort_instance['status'] == 'PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN'
+          assert effort_instance['protocol_source_identity'] == 'ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1'
+          assert effort_instance['cohort_unit_ids'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert all(row == {'visits_per_candidate': 3, 'search_minutes_per_visit': 30.0, 'observer_count': 1} for row in effort_instance['unit_effort'].values())
+          assert effort_instance['prospective_field_outcomes_opened'] is False
+          assert effort_instance['field_outcomes_used_to_set_effort'] is False
+          assert effort_instance['candidate_identity_used_to_set_effort'] is False
+          assert effort_instance['arm_specific_effort_allowed'] is False
+          assert effort_instance['movement_constraint_used_to_set_effort'] is False
+          assert effort_instance['post_outcome_effort_edits_allowed'] is False
+
+          effort_rationale = json.loads(Path('validation/coverage_then_fine_structure_standardized_effort_rationale_v1.json').read_text())
+          assert effort_rationale['status'] == 'FROZEN_PRE_OUTCOME_METHOD_DEFAULT_NOT_OPTIMALITY_CLAIM'
+          assert effort_rationale['frozen_values']['planned_person_minutes_per_candidate'] == 90.0
+          assert effort_rationale['outcome_opened'] is False
+
           effort_schema = json.loads(Path('validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json').read_text())
           assert effort_schema['properties']['schema_version']['const'] == 'cirsium-fresh-sentinel-standardized-effort-protocol-v1'
           assert effort_schema['properties']['status']['const'] == 'PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN'
@@ -266,6 +283,12 @@ jobs:
           assert allocation_gate['post_schedule_pin_capacity_profile_edits_allowed'] is False
           assert allocation_gate['post_schedule_pin_standardized_effort_edits_allowed'] is False
           assert allocation_gate['standardized_effort_protocol_schema'] == 'validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json'
+          assert allocation_gate['standardized_effort_protocol_schema_status'] == 'INSTANCE_FROZEN_PRE_OUTCOME'
+          assert allocation_gate['standardized_effort_protocol_instance'] == 'validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json'
+          assert allocation_gate['standardized_effort_protocol_source_identity'] == 'ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1'
+          assert allocation_gate['standardized_effort_protocol_values'] == {'visits_per_candidate': 3, 'search_minutes_per_visit': 30.0, 'observer_count': 1, 'planned_person_minutes_per_candidate': 90.0}
+          assert allocation_gate['standardized_effort_protocol_optimality_claimed'] is False
+          assert allocation_gate['movement_capacity_cli_default_uses_canonical_effort_protocol'] is True
           assert allocation_gate['movement_capacity_deriver'] == 'research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py'
           assert allocation_gate['only_user_operational_tuning_input'] == 'max_network_transition_km'
           assert allocation_gate['user_site_count_input_allowed'] is False
