@@ -97,8 +97,12 @@ jobs:
             tests/test_cirsium_fresh_sentinel_outcome_analysis_v1.py \
             tests/test_cirsium_fresh_sentinel_private_schedule_builder_v1.py \
             tests/test_cirsium_fresh_sentinel_movement_capacity_v1.py \
+            tests/test_cirsium_fresh_sentinel_standardized_effort_protocol_v1.py \
+            tests/test_cirsium_fresh_sentinel_standardized_effort_pin_v1.py \
             tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
-            tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py
+            tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py \
+            tests/test_cirsium_fresh_sentinel_pre_outcome_advance_v1.py \
+            tests/test_cirsium_fresh_sentinel_end_to_end_rehearsal_v1.py
       - name: Guard frozen architecture boundary
         run: |
           python - <<'PY'
