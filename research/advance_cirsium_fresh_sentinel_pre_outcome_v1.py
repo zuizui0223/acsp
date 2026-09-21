@@ -7,9 +7,10 @@ protocol must already be immutably pinned before private range-sector geometry i
 processed. Public candidate/order and field-schedule receipts still require real
 Git commits between stages; this command never creates those commits itself.
 
-The only scientific/operational tuning value accepted by this front door is the
-maximum network transition distance. File paths identify private/public artifacts
-but do not alter ecological candidate support or method rankings.
+The only scientific/operational value that can be declared through this front door
+is the maximum network transition distance. It is written once to a canonical
+public-safe protocol, must be immutably pinned before private geometry is processed,
+and is then read from that pinned protocol. File paths identify artifacts only.
 """
 from __future__ import annotations
 
@@ -127,7 +128,7 @@ def advance_pre_outcome_pipeline(
             "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
             "status": "MOVEMENT_CONSTRAINT_PIN_NOT_SATISFIED",
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
-            "movement_constraint_pin_commit": movement_pin["pin_commit"],
+            "movement_constraint_repo_path": CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
             "prospective_field_outcomes_opened": False,
             "outcome_opening_gate_satisfied": False,
             "pin_error": str(exc),
@@ -181,6 +182,7 @@ def advance_pre_outcome_pipeline(
             "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
             "status": "CANDIDATE_RECEIPT_PIN_NOT_SATISFIED",
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
             "prospective_field_outcomes_opened": False,
             "outcome_opening_gate_satisfied": False,
             "pin_error": str(exc),
