@@ -285,7 +285,15 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
 
     _prepare_private_freeze(private_root)
     candidate_path = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
-    _write_json(candidate_path, build_public_freeze_receipt(private_root))
+    candidate_receipt = build_public_freeze_receipt(private_root)
+    candidate_receipt.update({
+        "pre_geometry_standardized_effort_pin_commit": movement_pin,
+        "pre_geometry_standardized_effort_sha256": _sha256(effort_path),
+        "pre_geometry_movement_constraint_pin_commit": movement_pin,
+        "pre_geometry_movement_constraint_sha256": _sha256(movement_path),
+        "pre_geometry_protocol_pins_verified_before_private_execution": True,
+    })
+    _write_json(candidate_path, candidate_receipt)
     _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Freeze synthetic candidate prescription")
     candidate_pin = _git(repo, "rev-parse", "HEAD")
