@@ -10,6 +10,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_CANDIDATE_RECEIPT_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
 
 
@@ -25,6 +26,23 @@ def _candidate_pin() -> dict:
         "pin_commit": "candidate-pin",
         "pre_field_prescription_pin_gate_satisfied": True,
     }
+
+
+def _movement_pin(km: float = 5.0) -> dict:
+    return {
+        "pin_commit": "movement-pin",
+        "movement_constraint_pin_gate_satisfied": True,
+        "movement_constraint_mode": "osm_weighted_transport_network",
+        "max_network_transition_km": km,
+    }
+
+
+def _stub_protocol_pins(repo: Path, monkeypatch: pytest.MonkeyPatch, *, movement_km: float = 5.0) -> None:
+    movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    movement.parent.mkdir(parents=True, exist_ok=True)
+    movement.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    monkeypatch.setattr(advance, "verify_movement_constraint_pin", lambda *a, **k: _movement_pin(movement_km))
 
 
 def test_effort_pin_is_checked_before_private_geometry_is_processed(
@@ -59,13 +77,66 @@ def test_effort_pin_is_checked_before_private_geometry_is_processed(
     assert touched is False
 
 
+def test_missing_movement_constraint_blocks_before_private_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    touched = False
+    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+
+    def should_not_run(*args, **kwargs):
+        nonlocal touched
+        touched = True
+        raise AssertionError("private geometry must not be processed")
+
+    monkeypatch.setattr(advance, "run_full_pre_field_freeze", should_not_run)
+    result = advance.advance_pre_outcome_pipeline(
+        tmp_path / "private",
+        repo_root=repo,
+    )
+    assert result["status"] == "BLOCKED_MOVEMENT_CONSTRAINT_DECLARATION"
+    assert result["outcome_opening_gate_satisfied"] is False
+    assert touched is False
+
+
+def test_movement_declaration_stops_at_commit_gate_before_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    bundle = tmp_path / "bundle.geojson"
+    bundle.write_text("{}", encoding="utf-8")
+    touched = False
+    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+
+    def should_not_run(*args, **kwargs):
+        nonlocal touched
+        touched = True
+        raise AssertionError("private geometry must wait for movement pin")
+
+    monkeypatch.setattr(advance, "run_full_pre_field_freeze", should_not_run)
+    result = advance.advance_pre_outcome_pipeline(
+        tmp_path / "private",
+        max_network_transition_km=5.0,
+        bundle_geojson=bundle,
+        repo_root=repo,
+    )
+    assert result["status"] == "MOVEMENT_CONSTRAINT_READY_FOR_COMMIT"
+    assert result["public_paths_to_commit"] == [CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH]
+    assert (repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH).is_file()
+    assert touched is False
+
+
 def test_missing_bundle_reports_only_external_geometry_blocker(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
-    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    _stub_protocol_pins(repo, monkeypatch)
 
     result = advance.advance_pre_outcome_pipeline(
         tmp_path / "private",
@@ -86,7 +157,7 @@ def test_new_private_freeze_stops_at_candidate_receipt_commit_gate(
     private = tmp_path / "private"
     bundle = tmp_path / "bundle.geojson"
     bundle.write_text("{}", encoding="utf-8")
-    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    _stub_protocol_pins(repo, monkeypatch)
 
     def fake_freeze(bundle_path, private_root, candidate_path, *, repo_root):
         private_root.mkdir()
@@ -119,7 +190,7 @@ def test_unpinned_candidate_receipt_blocks_capacity_derivation(
     candidate.write_text("{}\n", encoding="utf-8")
     called = False
 
-    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    _stub_protocol_pins(repo, monkeypatch)
     monkeypatch.setattr(
         advance,
         "verify_public_freeze_pin",
@@ -155,7 +226,7 @@ def test_existing_capacity_freezes_the_only_movement_tuning_value(
     capacity = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
     capacity.write_text(json.dumps({"max_network_transition_km": 4.0}), encoding="utf-8")
 
-    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    _stub_protocol_pins(repo, monkeypatch)
     monkeypatch.setattr(advance, "verify_public_freeze_pin", lambda *a, **k: _candidate_pin())
 
     with pytest.raises(ValueError, match="differs from the already-frozen"):
@@ -178,7 +249,7 @@ def test_pinned_candidate_advances_to_commit_ready_schedule_receipt(
     candidate.parent.mkdir(parents=True)
     candidate.write_text("{}\n", encoding="utf-8")
 
-    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    _stub_protocol_pins(repo, monkeypatch)
     monkeypatch.setattr(advance, "verify_public_freeze_pin", lambda *a, **k: _candidate_pin())
 
     def fake_capacity(private_root, effort_path, *, max_network_transition_km, out_json, repo_root):
