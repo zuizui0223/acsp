@@ -45,7 +45,12 @@ def _init_repo(repo: Path) -> None:
     _git(repo, "config", "user.name", "ACSP test")
 
 
-def _candidate_receipt() -> dict:
+def _candidate_receipt(
+    *,
+    pregeometry_pin_commit: str,
+    effort_sha256: str,
+    movement_sha256: str,
+) -> dict:
     return {
         "status": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
         "coordinate_bearing_data_included": False,
@@ -62,6 +67,11 @@ def _candidate_receipt() -> dict:
         "field_log_template": CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
         "field_allocation_and_effort_schedule_required_before_outcome_opening": True,
         "field_allocation_and_effort_schedule_pinned": False,
+        "pre_geometry_standardized_effort_pin_commit": pregeometry_pin_commit,
+        "pre_geometry_standardized_effort_sha256": effort_sha256,
+        "pre_geometry_movement_constraint_pin_commit": pregeometry_pin_commit,
+        "pre_geometry_movement_constraint_sha256": movement_sha256,
+        "pre_geometry_protocol_pins_verified_before_private_execution": True,
     }
 
 
@@ -210,9 +220,17 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     _write(movement_constraint, build_movement_constraint(5.0))
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
+    pregeometry_pin = _git(repo, "rev-parse", "HEAD")
 
     candidate = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
-    _write(candidate, _candidate_receipt())
+    _write(
+        candidate,
+        _candidate_receipt(
+            pregeometry_pin_commit=pregeometry_pin,
+            effort_sha256=_sha256(effort_protocol),
+            movement_sha256=_sha256(movement_constraint),
+        ),
+    )
     _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin candidate order receipt")
     candidate_pin = _git(repo, "rev-parse", "HEAD")
