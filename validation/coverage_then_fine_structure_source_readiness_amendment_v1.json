@@ -5,7 +5,12 @@
   "source_pr": 184,
   "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
   "fresh_cohort_commit": "0e022165b80c618c1f6ad70832c36060c5952507",
-  "fresh_units": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "fresh_units": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
   "repo_and_upstream_audit": {
     "acsp_coordinate_bearing_range_sector_geojson_present": false,
     "aza3_pinned_commit": "b4ef6b45da377a0be1f0265935aafa20ec411450",
@@ -17,18 +22,30 @@
   },
   "public_sources_now_reconstructible_without_user_files": {
     "gbif_uncertainty_evidence": {
-      "units": ["CIR02", "CIR12"],
+      "units": [
+        "CIR02",
+        "CIR12"
+      ],
       "rule": "RECENT_2000_2025_AND_DECLARED_UNCERTAINTY_GT_1000M_AND_NOT_OBSCURED_AND_NO_SERIOUS_GEOSPATIAL_ISSUE",
       "source_identity": "frozen aza3 occurrence audit v1/v2 logic",
       "coordinate_output": "private only"
     },
     "gsi_dem": {
-      "units": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "units": [
+        "CIR02",
+        "CIR06",
+        "CIR12",
+        "CIR13"
+      ],
       "source_identity": "existing build_gsi_dem_for_bounds provider used by public structural smoke",
       "selection_depends_on_field_outcome": false
     },
     "esa_worldcover_2021_v200": {
-      "units": ["CIR02", "CIR12", "CIR13"],
+      "units": [
+        "CIR02",
+        "CIR12",
+        "CIR13"
+      ],
       "source_identity": "existing build_worldcover_2021_map_crop provider used by public structural smoke",
       "selection_depends_on_field_outcome": false
     }
@@ -44,7 +61,12 @@
   ],
   "remaining_external_blocker": {
     "single_input_class": "PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY",
-    "required_units": ["CIR02", "CIR06", "CIR12", "CIR13"],
+    "required_units": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ],
     "preferred_delivery": "one GeoJSON FeatureCollection with one Polygon/MultiPolygon feature per frozen cohort_unit_id",
     "required_feature_key": "cohort_unit_id",
     "forbidden_substitute": "do not infer polygons from textual prefecture/mountain/range-sector labels",
@@ -58,5 +80,15 @@
     "run the frozen structural graph/raw-adapter/support pipeline",
     "freeze method and comparator orderings before any prospective field outcome is opened"
   ],
-  "claim_boundary": "This receipt improves source readiness only. It does not provide a fresh performance result, does not unblock field-outcome evaluation by itself, and does not change the validated 2.5%-10-km product."
+  "claim_boundary": "This receipt improves source readiness only. It does not provide a fresh performance result, does not unblock field-outcome evaluation by itself, and does not change the validated 2.5%-10-km product.",
+  "internal_pre_outcome_defaults_now_frozen": {
+    "standardized_effort_protocol": "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json",
+    "protocol_source_identity": "ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1",
+    "visits_per_candidate": 3,
+    "search_minutes_per_visit": 30,
+    "observer_count": 1,
+    "planned_person_minutes_per_candidate": 90,
+    "optimality_claimed": false,
+    "only_user_operational_tuning_input_after_candidate_freeze": "max_network_transition_km"
+  }
 }
