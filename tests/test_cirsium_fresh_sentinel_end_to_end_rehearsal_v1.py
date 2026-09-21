@@ -27,6 +27,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
 from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 import (
     build_public_field_schedule_receipt,
@@ -34,6 +35,7 @@ from research.export_cirsium_fresh_sentinel_public_field_schedule_receipt_v1 imp
 from research.export_cirsium_fresh_sentinel_public_freeze_receipt_v1 import (
     build_public_freeze_receipt,
 )
+from research.freeze_cirsium_fresh_sentinel_movement_constraint_v1 import build_movement_constraint
 from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import DEFAULT_PLAN
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import (
     DEFAULT_CONTRACT,
@@ -275,11 +277,16 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
 
     effort_path = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
     _write_json(effort_path, _effort_protocol())
+    movement_path = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    _write_json(movement_path, build_movement_constraint(5.0))
+
+    _git(repo, "add", "validation")
+    _git(repo, "commit", "-m", "Freeze synthetic pre-geometry protocols")
+    movement_pin = _git(repo, "rev-parse", "HEAD")
 
     candidate_path = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     _write_json(candidate_path, build_public_freeze_receipt(private_root))
-
-    _git(repo, "add", "validation")
+    _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
     _git(repo, "commit", "-m", "Freeze synthetic candidate prescription")
     candidate_pin = _git(repo, "rev-parse", "HEAD")
 
@@ -333,11 +340,14 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
         repo_root=repo,
         expected_candidate_pin_commit=candidate_pin,
         expected_schedule_pin_commit=schedule_pin,
+        expected_movement_pin_commit=movement_pin,
     )
     assert gate["status"] == FINAL_STATUS
     assert gate["outcome_opening_gate_satisfied"] is True
     assert gate["prospective_field_outcomes_opened"] is False
     assert gate["standardized_effort_protocol_pin_gate_satisfied"] is True
+    assert gate["movement_constraint_pin_gate_satisfied"] is True
+    assert gate["movement_constraint_pinned_before_candidate_prescription"] is True
 
     _write_synthetic_complete_field_log(
         field_log,
