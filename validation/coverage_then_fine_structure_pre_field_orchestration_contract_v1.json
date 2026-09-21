@@ -282,5 +282,14 @@
     "pooled_micro_primary_allowed": false,
     "retuning_on_opened_outcomes_allowed": false,
     "field_log_template_hash_must_match_pinned_schedule_receipt": true
+  },
+  "state_aware_pre_outcome_entrypoint": "research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py",
+  "state_aware_entrypoint_semantics": {
+    "creates_git_commits": false,
+    "opens_prospective_outcomes": false,
+    "only_tuning_value": "max_network_transition_km",
+    "stops_at_candidate_receipt_commit_gate": true,
+    "stops_at_field_schedule_receipt_commit_gate": true,
+    "refuses_movement_constraint_change_after_capacity_freeze": true
   }
 }
