@@ -272,7 +272,6 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
     private_root = tmp_path / "private-pre-field"
     private_schedule = tmp_path / "private-field-schedule.json"
     field_log = tmp_path / "synthetic-field-log.csv"
-    _prepare_private_freeze(private_root)
     _copy_static_contracts(repo)
 
     effort_path = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
@@ -284,6 +283,7 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
     _git(repo, "commit", "-m", "Freeze synthetic pre-geometry protocols")
     movement_pin = _git(repo, "rev-parse", "HEAD")
 
+    _prepare_private_freeze(private_root)
     candidate_path = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     _write_json(candidate_path, build_public_freeze_receipt(private_root))
     _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
