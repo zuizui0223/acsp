@@ -297,6 +297,16 @@ jobs:
           assert gate['receipt_generation_alone_authorizes_outcome_opening'] is False
           assert gate['prescription_pin_alone_authorizes_outcome_opening'] is False
           assert gate['pin_verifier_requires_current_bytes_equal_first_add_commit'] is True
+          assert gate['low_level_freeze_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
+          assert gate['low_level_entrypoint_requires_standardized_effort_pin_before_private_bundle_read'] is True
+          assert gate['low_level_entrypoint_requires_movement_constraint_pin_before_private_bundle_read'] is True
+          assert gate['candidate_receipt_records_pre_geometry_standardized_effort_pin_commit_and_sha256'] is True
+          assert gate['candidate_receipt_records_pre_geometry_movement_pin_commit_and_sha256'] is True
+          assert gate['candidate_receipt_attests_protocol_pins_verified_before_private_execution'] is True
+          assert gate['candidate_pin_verifier_revalidates_pre_geometry_standardized_effort_pin'] is True
+          assert gate['candidate_pin_verifier_revalidates_pre_geometry_movement_pin'] is True
+          assert gate['candidate_pin_verifier_requires_protocol_pin_commits_strictly_precede_candidate_pin'] is True
+          assert gate['candidate_pin_verifier_requires_recorded_protocol_hashes_match_canonical_pins'] is True
           allocation_gate = o['field_allocation_effort_gate']
           assert allocation_gate['operational_capacity_profile_schema'] == 'validation/coverage_then_fine_structure_operational_capacity_profile_schema_v1.json'
           assert allocation_gate['canonical_operational_capacity_profile_repo_path'] == 'validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json'
