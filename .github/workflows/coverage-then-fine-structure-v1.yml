@@ -25,6 +25,8 @@ on:
       - "research/verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1.py"
       - "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
       - "research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py"
+      - "research/freeze_cirsium_fresh_sentinel_movement_constraint_v1.py"
+      - "research/verify_cirsium_fresh_sentinel_movement_constraint_pin_v1.py"
       - "research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
@@ -41,6 +43,7 @@ on:
       - "tests/test_cirsium_fresh_sentinel_movement_capacity_v1.py"
       - "tests/test_cirsium_fresh_sentinel_standardized_effort_protocol_v1.py"
       - "tests/test_cirsium_fresh_sentinel_standardized_effort_pin_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_movement_constraint_pin_v1.py"
       - "tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_advance_v1.py"
@@ -57,6 +60,7 @@ on:
       - "validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json"
       - "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json"
       - "validation/coverage_then_fine_structure_standardized_effort_rationale_v1.json"
+      - "validation/coverage_then_fine_structure_movement_constraint_schema_v1.json"
       - "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json"
       - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
@@ -99,6 +103,7 @@ jobs:
             tests/test_cirsium_fresh_sentinel_movement_capacity_v1.py \
             tests/test_cirsium_fresh_sentinel_standardized_effort_protocol_v1.py \
             tests/test_cirsium_fresh_sentinel_standardized_effort_pin_v1.py \
+            tests/test_cirsium_fresh_sentinel_movement_constraint_pin_v1.py \
             tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_advance_v1.py \
@@ -261,7 +266,10 @@ jobs:
           assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert o['execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
           assert o['state_aware_pre_outcome_entrypoint'] == 'research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py'
-          assert o['state_aware_entrypoint_semantics']['only_tuning_value'] == 'max_network_transition_km'
+          assert o['state_aware_entrypoint_semantics']['only_tuning_value'] == 'max_network_transition_km, declarable only before private geometry'
+          assert o['state_aware_entrypoint_semantics']['movement_constraint_declaration_stops_before_private_geometry'] is True
+          assert o['state_aware_entrypoint_semantics']['movement_constraint_must_be_immutably_pinned_before_private_geometry'] is True
+          assert o['state_aware_entrypoint_semantics']['movement_constraint_change_after_pin_allowed'] is False
           assert o['state_aware_entrypoint_semantics']['creates_git_commits'] is False
           assert o['state_aware_entrypoint_semantics']['opens_prospective_outcomes'] is False
           assert o['state_aware_entrypoint_semantics']['refuses_movement_constraint_change_after_capacity_freeze'] is True
@@ -310,7 +318,15 @@ jobs:
           assert allocation_gate['later_committed_standardized_effort_protocol_byte_changes_allowed'] is False
           assert allocation_gate['movement_capacity_cli_default_uses_canonical_effort_protocol'] is True
           assert allocation_gate['movement_capacity_deriver'] == 'research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py'
-          assert allocation_gate['only_user_operational_tuning_input'] == 'max_network_transition_km'
+          assert allocation_gate['only_user_operational_tuning_input'] == 'max_network_transition_km declared once before private geometry'
+          assert allocation_gate['movement_constraint_schema'] == 'validation/coverage_then_fine_structure_movement_constraint_schema_v1.json'
+          assert allocation_gate['canonical_movement_constraint_repo_path'] == 'validation/cirsium_fresh_sentinel_movement_constraint_v1.json'
+          assert allocation_gate['movement_constraint_pin_verifier'] == 'research/verify_cirsium_fresh_sentinel_movement_constraint_pin_v1.py'
+          assert allocation_gate['movement_constraint_must_be_immutably_pinned_before_private_geometry_execution'] is True
+          assert allocation_gate['movement_constraint_pin_commit_must_strictly_precede_candidate_receipt_pin_commit'] is True
+          assert allocation_gate['later_committed_movement_constraint_byte_changes_allowed'] is False
+          assert allocation_gate['final_gate_revalidates_movement_constraint'] is True
+          assert allocation_gate['final_gate_requires_capacity_match_pinned_movement_constraint'] is True
           assert allocation_gate['user_site_count_input_allowed'] is False
           assert allocation_gate['survey_days_input_allowed'] is False
           assert allocation_gate['monetary_budget_input_allowed'] is False
@@ -360,6 +376,10 @@ jobs:
           assert opening['requires_movement_capacity_schedule_linkage'] is True
           assert opening['requires_standardized_effort_protocol_linkage'] is True
           assert opening['requires_movement_constraint_mode'] == 'osm_weighted_transport_network'
+          assert opening['requires_immutable_pre_geometry_movement_constraint_pin'] is True
+          assert opening['requires_movement_constraint_pin_strictly_precede_candidate_order_pin'] is True
+          assert opening['requires_operational_capacity_match_pinned_movement_constraint'] is True
+          assert opening['requires_canonical_movement_constraint_path'] is True
           assert opening['requires_automatic_prefix_depth_method'] == 'OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1'
           assert opening['user_site_count_input_allowed'] is False
           assert opening['survey_days_input_allowed'] is False
@@ -374,6 +394,13 @@ jobs:
           assert outcome_analysis['retuning_on_opened_outcomes_allowed'] is False
           assert outcome_analysis['field_log_template_hash_must_match_pinned_schedule_receipt'] is True
           assert opening['all_requirements_satisfied_now'] is False
-          assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
+          movement_schema = json.loads(Path('validation/coverage_then_fine_structure_movement_constraint_schema_v1.json').read_text())
+          assert movement_schema['properties']['status']['const'] == 'PRE_GEOMETRY_MOVEMENT_CONSTRAINT_FROZEN'
+          assert movement_schema['properties']['movement_constraint_mode']['const'] == 'osm_weighted_transport_network'
+          assert movement_schema['properties']['private_range_sector_geometry_opened_when_declared']['const'] is False
+          assert movement_schema['properties']['candidate_identity_used_to_set_constraint']['const'] is False
+          assert movement_schema['properties']['post_geometry_edits_allowed']['const'] is False
+
+          assert o['current_execution_state'] == 'BLOCKED_UNTIL_MOVEMENT_CONSTRAINT_PIN_AND_PRIVATE_RANGE_SECTOR_BUNDLE_EXIST'
           assert o['outcome_opening_allowed_now'] is False
           PY
