@@ -131,7 +131,17 @@
     "coordinate_or_private_paths_allowed_in_public_receipt": false,
     "prospective_outcome_opening_allowed_before_public_receipt_commit": false,
     "canonical_receipt_repo_path": "validation/cirsium_fresh_sentinel_public_freeze_receipt_v1.json",
-    "alternate_receipt_paths_allowed": false
+    "alternate_receipt_paths_allowed": false,
+    "low_level_freeze_entrypoint": "research/run_cirsium_fresh_sentinel_freeze_v1.py",
+    "low_level_entrypoint_requires_standardized_effort_pin_before_private_bundle_read": true,
+    "low_level_entrypoint_requires_movement_constraint_pin_before_private_bundle_read": true,
+    "candidate_receipt_records_pre_geometry_standardized_effort_pin_commit_and_sha256": true,
+    "candidate_receipt_records_pre_geometry_movement_pin_commit_and_sha256": true,
+    "candidate_receipt_attests_protocol_pins_verified_before_private_execution": true,
+    "candidate_pin_verifier_revalidates_pre_geometry_standardized_effort_pin": true,
+    "candidate_pin_verifier_revalidates_pre_geometry_movement_pin": true,
+    "candidate_pin_verifier_requires_protocol_pin_commits_strictly_precede_candidate_pin": true,
+    "candidate_pin_verifier_requires_recorded_protocol_hashes_match_canonical_pins": true
   },
   "field_allocation_effort_gate": {
     "private_schema": "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json",
