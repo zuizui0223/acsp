@@ -288,6 +288,9 @@ jobs:
           assert allocation_gate['standardized_effort_protocol_source_identity'] == 'ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1'
           assert allocation_gate['standardized_effort_protocol_values'] == {'visits_per_candidate': 3, 'search_minutes_per_visit': 30.0, 'observer_count': 1, 'planned_person_minutes_per_candidate': 90.0}
           assert allocation_gate['standardized_effort_protocol_optimality_claimed'] is False
+          assert allocation_gate['standardized_effort_protocol_pin_verifier'] == 'research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py'
+          assert allocation_gate['standardized_effort_protocol_must_be_immutably_pinned_before_private_geometry_execution'] is True
+          assert allocation_gate['later_committed_standardized_effort_protocol_byte_changes_allowed'] is False
           assert allocation_gate['movement_capacity_cli_default_uses_canonical_effort_protocol'] is True
           assert allocation_gate['movement_capacity_deriver'] == 'research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py'
           assert allocation_gate['only_user_operational_tuning_input'] == 'max_network_transition_km'
@@ -334,6 +337,7 @@ jobs:
           assert opening['requires_exact_field_log_template_hash_linkage'] is True
           assert opening['requires_exact_operational_capacity_profile_hash_linkage'] is True
           assert opening['requires_exact_standardized_effort_protocol_hash_linkage'] is True
+          assert opening['requires_immutable_standardized_effort_protocol_pin'] is True
           assert opening['requires_canonical_operational_capacity_profile_path'] is True
           assert opening['requires_canonical_standardized_effort_protocol_path'] is True
           assert opening['requires_movement_capacity_schedule_linkage'] is True
