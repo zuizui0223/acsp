@@ -27,6 +27,8 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH,
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
 
@@ -84,6 +86,21 @@ def _validate_receipt(value: dict[str, Any]) -> None:
         raise ValueError("candidate/order receipt does not preserve the canonical analysis plan")
     if value.get("field_log_template") != CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH:
         raise ValueError("candidate/order receipt does not preserve the canonical field-log template")
+    if value.get("pre_geometry_protocol_pins_verified_before_private_execution") is not True:
+        raise ValueError("candidate/order receipt lacks verified pre-geometry protocol-pin provenance")
+    for key in (
+        "pre_geometry_standardized_effort_pin_commit",
+        "pre_geometry_movement_constraint_pin_commit",
+    ):
+        if not str(value.get(key) or "").strip():
+            raise ValueError(f"candidate/order receipt lacks {key}")
+    for key in (
+        "pre_geometry_standardized_effort_sha256",
+        "pre_geometry_movement_constraint_sha256",
+    ):
+        digest = str(value.get(key) or "")
+        if len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest.lower()):
+            raise ValueError(f"candidate/order receipt has malformed {key}")
 
 
 def _first_add_commit(repo: Path, relative: str) -> str:
@@ -144,6 +161,32 @@ def verify_public_freeze_pin(
     except subprocess.CalledProcessError as exc:
         raise ValueError("public receipt pin commit is not an ancestor of HEAD") from exc
 
+    effort_pin = verify_standardized_effort_pin(
+        repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+        repo_root=repo,
+    )
+    movement_pin = verify_movement_constraint_pin(
+        repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+        repo_root=repo,
+        must_be_ancestor_of=pin_commit,
+    )
+    effort_commit = str(effort_pin["pin_commit"])
+    if effort_commit == pin_commit:
+        raise ValueError("standardized effort protocol must be pinned in an earlier commit than the candidate/order prescription")
+    try:
+        _git(repo, "merge-base", "--is-ancestor", effort_commit, pin_commit)
+    except subprocess.CalledProcessError as exc:
+        raise ValueError("standardized effort protocol was not pinned before the candidate/order prescription") from exc
+
+    if value.get("pre_geometry_standardized_effort_pin_commit") != effort_commit:
+        raise ValueError("candidate/order receipt standardized-effort pin commit does not match the immutable canonical pin")
+    if value.get("pre_geometry_standardized_effort_sha256") != effort_pin.get("protocol_sha256"):
+        raise ValueError("candidate/order receipt standardized-effort hash does not match the immutable canonical pin")
+    if value.get("pre_geometry_movement_constraint_pin_commit") != movement_pin.get("pin_commit"):
+        raise ValueError("candidate/order receipt movement pin commit does not match the immutable canonical pin")
+    if value.get("pre_geometry_movement_constraint_sha256") != movement_pin.get("protocol_sha256"):
+        raise ValueError("candidate/order receipt movement hash does not match the immutable canonical pin")
+
     return {
         "schema_version": "cirsium-fresh-sentinel-public-freeze-pin-verification-v1",
         "status": VERIFIED_STATUS,
@@ -155,6 +198,9 @@ def verify_public_freeze_pin(
         "public_receipt_commit_verified": True,
         "prospective_field_outcomes_opened": False,
         "pre_field_prescription_pin_gate_satisfied": True,
+        "pre_geometry_standardized_effort_pin_commit": effort_commit,
+        "pre_geometry_movement_constraint_pin_commit": movement_pin["pin_commit"],
+        "pre_geometry_protocol_pins_verified": True,
         "outcome_opening_gate_satisfied": False,
         "remaining_pre_outcome_gate": "Freeze and publicly pin the field analysis unit, repeated-visit aggregation rule, comparator assignment, numeric effort metric, and candidate-specific allocation/effort schedule before prospective outcomes are opened.",
         "authorization_scope": "candidate/order prescription provenance only; does not authorize outcome opening or assert biological success or field efficiency",
