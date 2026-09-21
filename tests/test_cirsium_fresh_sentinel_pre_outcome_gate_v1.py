@@ -68,10 +68,10 @@ def _effort_protocol() -> dict:
         "schema_version": "cirsium-fresh-sentinel-standardized-effort-protocol-v1",
         "status": "PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN",
         "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
-        "protocol_source_identity": "SYNTHETIC_PRE_OUTCOME_TEST_PROTOCOL",
+        "protocol_source_identity": "ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1",
         "unit_effort": {
             unit: {
-                "visits_per_candidate": 1,
+                "visits_per_candidate": 3,
                 "search_minutes_per_visit": 30.0,
                 "observer_count": 1,
             }
@@ -104,7 +104,7 @@ def _capacity_profile(effort_path: Path) -> dict:
         "unit_capacity": {
             unit: {
                 "prefix_depth": 1,
-                "visits_per_candidate": 1,
+                "visits_per_candidate": 3,
                 "search_minutes_per_visit": 30.0,
                 "observer_count": 1,
             }
@@ -245,6 +245,8 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["field_log_template_sha256"] == _sha256(log_template)
     assert final["operational_capacity_profile_sha256"] == _sha256(repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH)
     assert final["standardized_effort_protocol_sha256"] == _sha256(repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH)
+    assert final["standardized_effort_protocol_pin_gate_satisfied"] is True
+    assert final["standardized_effort_protocol_pin_commit"]
     assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
