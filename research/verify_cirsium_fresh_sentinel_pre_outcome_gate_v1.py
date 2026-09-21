@@ -32,6 +32,7 @@ from research.validate_cirsium_fresh_sentinel_analysis_plan_v1 import validate_a
 from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 import validate_field_evaluation_contract
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import verify_public_freeze_pin
+from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import verify_standardized_effort_pin
 
 ROOT = Path(__file__).resolve().parents[1]
 FINAL_STATUS = "ALL_FRESH_SENTINEL_PRE_OUTCOME_GATES_SATISFIED"
@@ -62,6 +63,7 @@ def verify_pre_outcome_gate(
     repo_root: Path = ROOT,
     expected_candidate_pin_commit: str = "",
     expected_schedule_pin_commit: str = "",
+    expected_effort_pin_commit: str = "",
 ) -> dict[str, Any]:
     repo = Path(repo_root).resolve()
     candidate_path = require_canonical_repo_path(
@@ -121,6 +123,13 @@ def verify_pre_outcome_gate(
     _validate_capacity_profile(capacity_profile)
     effort_protocol = _load(effort_protocol_path)
     effort_by_unit = validate_effort_protocol(effort_protocol)
+    effort_pin = verify_standardized_effort_pin(
+        effort_protocol_path,
+        repo_root=repo,
+        expected_pin_commit=expected_effort_pin_commit,
+    )
+    if effort_pin.get("standardized_effort_protocol_pin_gate_satisfied") is not True:
+        raise ValueError("standardized effort immutable pin gate not satisfied")
     if capacity_profile.get("standardized_effort_protocol_sha256") != _sha256(effort_protocol_path):
         raise ValueError("operational capacity profile is not linked to the exact standardized effort protocol")
     capacity_by_unit = capacity_profile.get("unit_capacity") or {}
@@ -248,6 +257,8 @@ def verify_pre_outcome_gate(
         "field_log_template_sha256": field_log_template_hash,
         "operational_capacity_profile_sha256": capacity_hash,
         "standardized_effort_protocol_sha256": effort_protocol_hash,
+        "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+        "standardized_effort_protocol_pin_gate_satisfied": True,
         "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
         "field_schedule_receipt_sha256": _sha256(schedule_path),
         "field_schedule_pin_commit": schedule_pin["pin_commit"],
@@ -281,6 +292,7 @@ def main() -> int:
     parser.add_argument("--analysis-plan", type=Path, default=Path(CANONICAL_ANALYSIS_PLAN_REPO_PATH))
     parser.add_argument("--expected-candidate-pin-commit", default="")
     parser.add_argument("--expected-schedule-pin-commit", default="")
+    parser.add_argument("--expected-effort-pin-commit", default="")
     args = parser.parse_args()
     result = verify_pre_outcome_gate(
         args.candidate_receipt,
@@ -290,6 +302,7 @@ def main() -> int:
         args.analysis_plan,
         expected_candidate_pin_commit=args.expected_candidate_pin_commit,
         expected_schedule_pin_commit=args.expected_schedule_pin_commit,
+        expected_effort_pin_commit=args.expected_effort_pin_commit,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
