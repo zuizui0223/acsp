@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ACSP fresh-SENTINEL pre-geometry movement constraint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "source_identity",
+    "movement_constraint_mode",
+    "max_network_transition_km",
+    "private_range_sector_geometry_opened_when_declared",
+    "candidate_identity_used_to_set_constraint",
+    "prospective_field_outcomes_opened",
+    "field_outcomes_used_to_set_constraint",
+    "survey_days_input",
+    "monetary_budget_input",
+    "user_site_count_input",
+    "user_coverage_target_input",
+    "post_geometry_edits_allowed",
+    "post_outcome_edits_allowed"
+  ],
+  "properties": {
+    "schema_version": {"const": "cirsium-fresh-sentinel-movement-constraint-v1"},
+    "status": {"const": "PRE_GEOMETRY_MOVEMENT_CONSTRAINT_FROZEN"},
+    "source_identity": {"const": "USER_DECLARED_HUMAN_NETWORK_TRANSITION_LIMIT_V1"},
+    "movement_constraint_mode": {"const": "osm_weighted_transport_network"},
+    "max_network_transition_km": {"type": "number", "exclusiveMinimum": 0},
+    "private_range_sector_geometry_opened_when_declared": {"const": false},
+    "candidate_identity_used_to_set_constraint": {"const": false},
+    "prospective_field_outcomes_opened": {"const": false},
+    "field_outcomes_used_to_set_constraint": {"const": false},
+    "survey_days_input": {"const": false},
+    "monetary_budget_input": {"const": false},
+    "user_site_count_input": {"const": false},
+    "user_coverage_target_input": {"const": false},
+    "post_geometry_edits_allowed": {"const": false},
+    "post_outcome_edits_allowed": {"const": false}
+  }
+}
