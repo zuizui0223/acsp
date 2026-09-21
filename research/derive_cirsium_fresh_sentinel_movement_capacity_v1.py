@@ -29,6 +29,10 @@ import pandas as pd
 
 from acsp.osm_reachability import build_osm_patch_reachability_edges
 from acsp.reachability import select_reachability_constrained_patches
+from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 UNITS = ("CIR02", "CIR06", "CIR12", "CIR13")
@@ -273,9 +277,9 @@ def derive_operational_capacity_profile(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
-    parser.add_argument("--effort-protocol", type=Path, required=True)
+    parser.add_argument("--effort-protocol", type=Path, default=Path(CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH))
     parser.add_argument("--max-network-transition-km", type=float, required=True)
-    parser.add_argument("--out-json", type=Path, required=True)
+    parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH))
     args = parser.parse_args()
     result = derive_operational_capacity_profile(
         args.private_pre_field_root,
