@@ -288,6 +288,29 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
     assert descendant["outcome_opening_gate_satisfied"] is False
 
 
+def test_pin_verifier_rejects_receipt_with_false_pregeometry_hash_provenance(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    protocol_pin, effort_sha, movement_sha = _commit_pregeometry_protocols(repo)
+    receipt = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
+    receipt.write_text(
+        json.dumps(
+            _public_receipt(
+                effort_pin_commit=protocol_pin,
+                movement_pin_commit=protocol_pin,
+                effort_sha256="0" * 64,
+                movement_sha256=movement_sha,
+            ),
+            sort_keys=True,
+        ) + "\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
+    _git(repo, "commit", "-m", "Attempt false pre-geometry provenance")
+    with pytest.raises(ValueError, match="standardized-effort hash"):
+        verify_public_freeze_pin(receipt, repo_root=repo)
+
+
 def test_pin_verifier_rejects_uncommitted_receipt_change(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _init_repo(repo)
