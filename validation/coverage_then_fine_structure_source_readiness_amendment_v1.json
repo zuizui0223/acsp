@@ -70,9 +70,12 @@
     "preferred_delivery": "one GeoJSON FeatureCollection with one Polygon/MultiPolygon feature per frozen cohort_unit_id",
     "required_feature_key": "cohort_unit_id",
     "forbidden_substitute": "do not infer polygons from textual prefecture/mountain/range-sector labels",
-    "why_not_reconstructible": "The pinned aza3 contract explicitly reports zero required exact sites frozen and keeps exact coordinate data outside the public repository. CIR12/CIR13 also depend on the first P02-validated wild-population sector, which is not a repository-defined polygon."
+    "why_not_reconstructible": "The pinned aza3 contract explicitly reports zero required exact sites frozen and keeps exact coordinate data outside the public repository. CIR12/CIR13 also depend on the first P02-validated wild-population sector, which is not a repository-defined polygon.",
+    "scope": "SOURCE_RECONSTRUCTION_ONLY",
+    "not_the_only_pre_outcome_gate": true
   },
   "once_geometry_exists": [
+    "only after the canonical movement constraint has been immutably pinned, open the frozen private range-sector bundle",
     "materialize/hash GSI DEM and required ESA WorldCover crops",
     "materialize private GBIF >1-km uncertainty evidence for CIR02/CIR12",
     "build 100-m raw grids with no known-point kernel",
@@ -89,9 +92,17 @@
     "observer_count": 1,
     "planned_person_minutes_per_candidate": 90,
     "optimality_claimed": false,
-    "only_user_operational_tuning_input_after_candidate_freeze": "max_network_transition_km",
     "standardized_effort_protocol_pin_verifier": "research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py",
     "standardized_effort_protocol_first_add_pin_commit": "486242891b23e7340584b9206a978dfbfd47882d",
-    "later_effort_repin_allowed": false
+    "later_effort_repin_allowed": false,
+    "only_user_operational_tuning_input_before_private_geometry": "max_network_transition_km"
+  },
+  "execution_precondition_before_private_source_use": {
+    "movement_constraint_required": true,
+    "canonical_path": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json",
+    "declaration_identity": "max_network_transition_km",
+    "must_be_immutably_pinned_before_private_range_sector_geometry_is_opened": true,
+    "movement_constraint_is_ecological_support_input": false,
+    "movement_constraint_role": "downstream G_F operational constraint only"
   }
 }
