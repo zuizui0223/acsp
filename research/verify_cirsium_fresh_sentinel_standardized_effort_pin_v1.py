@@ -67,7 +67,7 @@ def _validate_frozen_values(value: dict[str, Any]) -> None:
         raise ValueError("standardized effort protocol cohort changed")
     for unit in EXPECTED_UNITS:
         if normalized[unit] != EXPECTED_EFFORT:
-            raise ValueError(f"standardized effort protocol values changed for {unit}; current bytes are not the exact pinned standardized effort protocol")
+            raise ValueError(f"standardized effort protocol values changed for {unit}; current bytes are not the exact current standardized effort protocol")
 
 
 def verify_standardized_effort_pin(
