@@ -195,7 +195,7 @@ def test_new_private_freeze_stops_at_candidate_receipt_commit_gate(
 
     def fake_freeze(bundle_path, private_root, candidate_path, *, repo_root):
         private_root.mkdir()
-        candidate_path.parent.mkdir(parents=True)
+        candidate_path.parent.mkdir(parents=True, exist_ok=True)
         candidate_path.write_text("{}\n", encoding="utf-8")
         return {"status": "PRIVATE_AND_PUBLIC_HASH_FREEZE_GENERATED_AWAITING_COMMIT"}
 
