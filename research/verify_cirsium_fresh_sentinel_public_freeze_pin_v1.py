@@ -31,6 +31,12 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
+from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import (
+    verify_standardized_effort_pin,
+)
+from research.verify_cirsium_fresh_sentinel_movement_constraint_pin_v1 import (
+    verify_movement_constraint_pin,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_STATUS = "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT"
