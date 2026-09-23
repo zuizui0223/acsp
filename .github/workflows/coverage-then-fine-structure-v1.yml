@@ -154,6 +154,12 @@ jobs:
           assert s['repo_and_upstream_audit']['aza3_required_slots_frozen_at_pinned_commit'] == 0
           assert s['remaining_external_blocker']['single_input_class'] == 'PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY'
           assert s['remaining_external_blocker']['required_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert s['remaining_external_blocker']['scope'] == 'SOURCE_RECONSTRUCTION_ONLY'
+          assert s['remaining_external_blocker']['not_the_only_pre_outcome_gate'] is True
+          assert s['execution_precondition_before_private_source_use']['movement_constraint_required'] is True
+          assert s['execution_precondition_before_private_source_use']['must_be_immutably_pinned_before_private_range_sector_geometry_is_opened'] is True
+          assert s['execution_precondition_before_private_source_use']['movement_constraint_is_ecological_support_input'] is False
+          assert s['internal_pre_outcome_defaults_now_frozen']['only_user_operational_tuning_input_before_private_geometry'] == 'max_network_transition_km'
 
           schema = json.loads(Path('validation/coverage_then_fine_structure_private_range_sector_schema_v1.json').read_text())
           assert schema['properties']['type']['const'] == 'FeatureCollection'
