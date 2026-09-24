@@ -439,6 +439,6 @@ jobs:
           assert movement_schema['properties']['candidate_identity_used_to_set_constraint']['const'] is False
           assert movement_schema['properties']['post_geometry_edits_allowed']['const'] is False
 
-          assert o['current_execution_state'] == 'BLOCKED_UNTIL_MOVEMENT_CONSTRAINT_PIN_AND_PRIVATE_RANGE_SECTOR_BUNDLE_EXIST'
+          assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
           assert o['outcome_opening_allowed_now'] is False
           PY
