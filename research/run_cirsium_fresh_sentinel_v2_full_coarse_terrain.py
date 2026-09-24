@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from acsp.global_geometry import fetch_geoboundaries_country_geometry
@@ -207,11 +208,19 @@ def assemble_shards(
     ordered = raw_by_id.loc[reference_ids].reset_index(drop=True)
     if ordered["candidate_cell_id"].astype(str).tolist() != reference_ids:
         raise AssertionError("assembled terrain candidate order does not match frozen outer frame")
-    for column in ("latitude", "longitude", "regional_tile_id"):
-        left = reference[column].astype(str if column == "regional_tile_id" else float).reset_index(drop=True)
-        right = ordered[column].astype(str if column == "regional_tile_id" else float).reset_index(drop=True)
-        if not left.equals(right):
-            raise ValueError(f"assembled terrain {column} differs from frozen outer frame")
+    if not reference["regional_tile_id"].astype(str).reset_index(drop=True).equals(
+        ordered["regional_tile_id"].astype(str).reset_index(drop=True)
+    ):
+        raise ValueError("assembled terrain regional_tile_id differs from frozen outer frame")
+    for column in ("latitude", "longitude"):
+        left = pd.to_numeric(reference[column], errors="raise").to_numpy(float)
+        right = pd.to_numeric(ordered[column], errors="raise").to_numpy(float)
+        if not np.allclose(left, right, rtol=0.0, atol=1e-12, equal_nan=False):
+            delta = float(np.max(np.abs(left - right)))
+            raise ValueError(
+                f"assembled terrain {column} differs from frozen outer frame beyond CSV round-trip tolerance; "
+                f"max_abs_delta={delta}"
+            )
 
     counts = ordered["coarse_terrain_status"].astype(str).value_counts().to_dict()
     provider_failure_tiles = sorted(
