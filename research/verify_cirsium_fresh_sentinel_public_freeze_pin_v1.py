@@ -28,6 +28,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+    CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     require_canonical_repo_path,
 )
@@ -36,6 +37,9 @@ from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import (
 )
 from research.verify_cirsium_fresh_sentinel_movement_constraint_pin_v1 import (
     verify_movement_constraint_pin,
+)
+from research.verify_cirsium_fresh_sentinel_range_sector_provenance_pin_v1 import (
+    verify_range_sector_provenance_pin,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,12 +101,14 @@ def _validate_receipt(value: dict[str, Any]) -> None:
     for key in (
         "pre_geometry_standardized_effort_pin_commit",
         "pre_geometry_movement_constraint_pin_commit",
+        "pre_geometry_range_sector_provenance_pin_commit",
     ):
         if not str(value.get(key) or "").strip():
             raise ValueError(f"candidate/order receipt lacks {key}")
     for key in (
         "pre_geometry_standardized_effort_sha256",
         "pre_geometry_movement_constraint_sha256",
+        "pre_geometry_range_sector_provenance_sha256",
     ):
         digest = str(value.get(key) or "")
         if len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest.lower()):
@@ -176,6 +182,11 @@ def verify_public_freeze_pin(
         repo_root=repo,
         must_be_ancestor_of=pin_commit,
     )
+    range_provenance_pin = verify_range_sector_provenance_pin(
+        repo / CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
+        repo_root=repo,
+        must_be_ancestor_of=pin_commit,
+    )
     effort_commit = str(effort_pin["pin_commit"])
     if effort_commit == pin_commit:
         raise ValueError("standardized effort protocol must be pinned in an earlier commit than the candidate/order prescription")
@@ -193,6 +204,11 @@ def verify_public_freeze_pin(
     if value.get("pre_geometry_movement_constraint_sha256") != movement_pin.get("protocol_sha256"):
         raise ValueError("candidate/order receipt movement hash does not match the immutable canonical pin")
 
+    if value.get("pre_geometry_range_sector_provenance_pin_commit") != range_provenance_pin.get("pin_commit"):
+        raise ValueError("candidate/order receipt range-sector provenance pin commit does not match the immutable canonical pin")
+    if value.get("pre_geometry_range_sector_provenance_sha256") != range_provenance_pin.get("provenance_sha256"):
+        raise ValueError("candidate/order receipt range-sector provenance hash does not match the immutable canonical pin")
+
     return {
         "schema_version": "cirsium-fresh-sentinel-public-freeze-pin-verification-v1",
         "status": VERIFIED_STATUS,
@@ -206,6 +222,7 @@ def verify_public_freeze_pin(
         "pre_field_prescription_pin_gate_satisfied": True,
         "pre_geometry_standardized_effort_pin_commit": effort_commit,
         "pre_geometry_movement_constraint_pin_commit": movement_pin["pin_commit"],
+        "pre_geometry_range_sector_provenance_pin_commit": range_provenance_pin["pin_commit"],
         "pre_geometry_protocol_pins_verified": True,
         "outcome_opening_gate_satisfied": False,
         "remaining_pre_outcome_gate": "Freeze and publicly pin the field analysis unit, repeated-visit aggregation rule, comparator assignment, numeric effort metric, and candidate-specific allocation/effort schedule before prospective outcomes are opened.",
