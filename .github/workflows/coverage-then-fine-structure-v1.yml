@@ -61,6 +61,7 @@ on:
       - "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json"
       - "validation/coverage_then_fine_structure_standardized_effort_rationale_v1.json"
       - "validation/coverage_then_fine_structure_movement_constraint_schema_v1.json"
+      - "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
       - "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json"
       - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
