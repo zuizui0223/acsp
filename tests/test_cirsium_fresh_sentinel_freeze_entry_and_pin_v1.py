@@ -153,6 +153,48 @@ def test_single_entry_rejects_missing_pregeometry_pin_before_private_execution(
     assert touched is False
 
 
+def test_single_entry_rejects_missing_range_provenance_pin_before_private_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    bundle = tmp_path / "bundle.geojson"
+    bundle.write_text("{}", encoding="utf-8")
+    touched = False
+
+    monkeypatch.setattr(
+        entry,
+        "verify_standardized_effort_pin",
+        lambda *a, **k: {"pin_commit": "effort-pin", "protocol_sha256": "e" * 64},
+    )
+    monkeypatch.setattr(
+        entry,
+        "verify_movement_constraint_pin",
+        lambda *a, **k: {"pin_commit": "movement-pin", "protocol_sha256": "a" * 64},
+    )
+    monkeypatch.setattr(
+        entry,
+        "verify_range_sector_provenance_pin",
+        lambda *a, **k: (_ for _ in ()).throw(ValueError("range provenance missing")),
+    )
+
+    def should_not_run(*args, **kwargs):
+        nonlocal touched
+        touched = True
+        raise AssertionError("private execution must not start before range provenance pin")
+
+    monkeypatch.setattr(entry, "run_private_pre_field_pipeline", should_not_run)
+    with pytest.raises(ValueError, match="range provenance missing"):
+        entry.run_full_pre_field_freeze(
+            bundle,
+            tmp_path / "private",
+            Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH),
+            repo_root=repo,
+        )
+    assert touched is False
+
+
 def test_single_entry_rejects_existing_public_receipt_before_private_execution(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     repo = tmp_path / "repo"
     (repo / "validation").mkdir(parents=True)
