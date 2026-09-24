@@ -41,9 +41,10 @@ UNITS = ("CIR02", "CIR06", "CIR12", "CIR13")
 METHOD_IDENTITY = "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1"
 
 
-def _inside_repo(path: Path, repo_root: Path = ROOT) -> bool:
+def _inside_repo(path: Path, repo_root: Path | None = None) -> bool:
+    root = ROOT if repo_root is None else Path(repo_root)
     try:
-        path.resolve().relative_to(repo_root.resolve())
+        path.resolve().relative_to(root.resolve())
         return True
     except ValueError:
         return False
