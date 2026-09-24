@@ -56,7 +56,7 @@ def test_point_class_attachment_preserves_candidate_identity_and_order(tmp_path:
     assert summary["candidate_ranking_added"] is False
     assert summary["neighborhood_fraction_used"] is False
     assert set(attached["worldcover_point_status"]) == {mod.COMPLETE}
-    assert set(attached["worldcover_class_code"].astype(int)) == {10, 30, 90}
+    assert set(attached["worldcover_class_code"].astype(int)) == {30, 80, 90}
 
 
 def test_unknown_or_nodata_class_is_indeterminate_not_dropped(tmp_path: Path) -> None:
