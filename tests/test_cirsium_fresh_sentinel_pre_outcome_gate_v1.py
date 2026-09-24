@@ -217,7 +217,7 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     capacity_profile = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
     _write(capacity_profile, _capacity_profile(effort_protocol))
     movement_constraint = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
-    _write(movement_constraint, build_movement_constraint(5.0))
+    _write(movement_constraint, build_movement_constraint())
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
     pregeometry_pin = _git(repo, "rev-parse", "HEAD")
