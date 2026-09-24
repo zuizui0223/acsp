@@ -26,6 +26,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
@@ -48,6 +49,7 @@ from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import (
     FINAL_STATUS,
     verify_pre_outcome_gate,
 )
+from research.verify_cirsium_fresh_sentinel_range_sector_provenance_pin_v1 import EXPECTED
 
 
 SPECIES = {
@@ -182,6 +184,41 @@ def _effort_protocol() -> dict:
     }
 
 
+def _range_provenance() -> dict:
+    units = {}
+    for unit in UNITS:
+        expected = EXPECTED[unit]
+        p02 = bool(expected["p02_required"])
+        units[unit] = {
+            "species_binomial": expected["species_binomial"],
+            "aza3_slot_id": expected["aza3_slot_id"],
+            "range_sector_label": expected["range_sector_label"],
+            "freeze_status": "FROZEN_FOR_FIELD_COLLECTION",
+            "current_occurrence_supported": True,
+            "permission_gate_satisfied": True,
+            "target_locality_id": f"{unit}-LOCALITY",
+            "private_exact_site_record_exists": True,
+            "range_sector_geometry_may_now_be_materialized": True,
+            "p02_first_validated_wild_population_required": p02,
+            "p02_first_validated_wild_population_link_satisfied": p02,
+        }
+    return {
+        "schema_version": "cirsium-fresh-sentinel-range-sector-provenance-v1",
+        "status": "PRE_GEOMETRY_RANGE_SECTOR_PROVENANCE_FROZEN",
+        "cohort_unit_ids": list(UNITS),
+        "aza3_exact_site_contract_version": "chapter3_exact_site_freeze_v8",
+        "upstream_snapshot_commit": "a" * 40,
+        "unit_provenance": units,
+        "exact_coordinates_included": False,
+        "sensitive_access_instructions_included": False,
+        "prospective_acsp_field_outcomes_opened": False,
+        "acsp_field_outcomes_used_to_define_sector": False,
+        "post_geometry_edits_allowed": False,
+        "post_outcome_edits_allowed": False,
+        "public_safe_to_commit": True,
+    }
+
+
 def _fake_osm_reachability(
     representatives: pd.DataFrame,
     *,
@@ -278,6 +315,8 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
     _write_json(effort_path, _effort_protocol())
     movement_path = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
     _write_json(movement_path, build_movement_constraint())
+    provenance_path = repo / CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH
+    _write_json(provenance_path, _range_provenance())
 
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze synthetic pre-geometry protocols")
@@ -291,6 +330,8 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
         "pre_geometry_standardized_effort_sha256": _sha256(effort_path),
         "pre_geometry_movement_constraint_pin_commit": movement_pin,
         "pre_geometry_movement_constraint_sha256": _sha256(movement_path),
+        "pre_geometry_range_sector_provenance_pin_commit": movement_pin,
+        "pre_geometry_range_sector_provenance_sha256": _sha256(provenance_path),
         "pre_geometry_protocol_pins_verified_before_private_execution": True,
     })
     _write_json(candidate_path, candidate_receipt)
