@@ -315,6 +315,9 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["movement_constraint_pin_gate_satisfied"] is True
     assert final["movement_constraint_pin_commit"]
     assert final["movement_constraint_pinned_before_candidate_prescription"] is True
+    assert final["range_sector_provenance_pin_gate_satisfied"] is True
+    assert final["range_sector_provenance_pin_commit"]
+    assert final["range_sector_provenance_pinned_before_candidate_prescription"] is True
     assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
