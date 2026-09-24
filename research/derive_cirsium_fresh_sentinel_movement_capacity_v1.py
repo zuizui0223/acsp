@@ -6,7 +6,7 @@ candidate frame or any arm order. For each cohort unit it:
 
 1. collapses the common 100-m candidate frame to one outcome-blind representative
    per already-frozen 5-km coarse coverage cell using only a stable candidate hash;
-2. retrieves OSM road/trail/ferry reachability using one movement input;
+2. retrieves OSM road/trail/ferry reachability using the immutable movement constraint;
 3. runs the existing complete-coverage downstream selector at the frozen 5-km
    coarse redundancy scale;
 4. uses only the resulting automatic selected count as the common no-skip prefix
@@ -14,8 +14,8 @@ candidate frame or any arm order. For each cohort unit it:
 5. combines that count with a separately frozen, outcome-blind per-candidate
    observation-effort protocol.
 
-No site-count, Top-k, target-coverage, survey-day, monetary-budget, structural
-score, field outcome, or arm-specific effort input is accepted.
+No site-count, Top-k, target-coverage, survey-day, monetary-budget, movement-distance,
+structural score, field outcome, or arm-specific effort input is accepted.
 """
 from __future__ import annotations
 
@@ -30,8 +30,12 @@ import pandas as pd
 from acsp.osm_reachability import build_osm_patch_reachability_edges
 from acsp.reachability import select_reachability_constrained_patches
 from research.cirsium_fresh_sentinel_paths_v1 import (
+    CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+)
+from research.verify_cirsium_fresh_sentinel_movement_constraint_pin_v1 import (
+    verify_movement_constraint_pin,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -192,15 +196,18 @@ def derive_operational_capacity_profile(
     private_pre_field_root: Path,
     effort_protocol_path: Path,
     *,
-    max_network_transition_km: float,
+    movement_constraint_path: Path = Path(CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH),
     out_json: Path,
     repo_root: Path = ROOT,
 ) -> dict[str, Any]:
-    movement_km = _positive_float(max_network_transition_km, "max_network_transition_km")
     repo = Path(repo_root).resolve()
     private_root = Path(private_pre_field_root).resolve()
     effort_path = Path(effort_protocol_path).resolve()
+    movement_path = Path(movement_constraint_path)
+    movement_path = (repo / movement_path).resolve() if not movement_path.is_absolute() else movement_path.resolve()
     out_path = Path(out_json).resolve()
+    movement_pin = verify_movement_constraint_pin(movement_path, repo_root=repo)
+    movement_km = float(movement_pin["max_network_transition_km"])
 
     if _inside(private_root, repo):
         raise ValueError("private pre-field root must remain outside the public repository")
@@ -278,13 +285,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
     parser.add_argument("--effort-protocol", type=Path, default=Path(CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH))
-    parser.add_argument("--max-network-transition-km", type=float, required=True)
+    parser.add_argument("--movement-constraint", type=Path, default=Path(CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH))
     parser.add_argument("--out-json", type=Path, default=Path(CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH))
     args = parser.parse_args()
     result = derive_operational_capacity_profile(
         args.private_pre_field_root,
         args.effort_protocol,
-        max_network_transition_km=args.max_network_transition_km,
+        movement_constraint_path=args.movement_constraint,
         out_json=args.out_json,
     )
     print(json.dumps({
