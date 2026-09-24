@@ -219,7 +219,7 @@ def _commit_pregeometry_protocols(repo: Path) -> tuple[str, str, str]:
     movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
     effort.parent.mkdir(parents=True, exist_ok=True)
     effort.write_text(json.dumps(_effort_protocol(), sort_keys=True) + "\n", encoding="utf-8")
-    movement.write_text(json.dumps(build_movement_constraint(5.0), sort_keys=True) + "\n", encoding="utf-8")
+    movement.write_text(json.dumps(build_movement_constraint(), sort_keys=True) + "\n", encoding="utf-8")
     _git(repo, "add", CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH, CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin pre-geometry protocols")
     return _git(repo, "rev-parse", "HEAD"), _sha256(effort), _sha256(movement)
