@@ -143,6 +143,8 @@ def attach_worldcover_point_classes(
         "candidate_identity_order_preserved": True,
         "complete_candidate_count": int(known.sum()),
         "incomplete_candidate_count": int(len(work) - known.sum()),
+        "provider_failure_is_biological_negative": False,
+        "missing_worldcover_is_biological_negative": False,
         "status_counts": {str(k): int(v) for k, v in sorted(counts.items())},
         "candidate_selection_added": False,
         "candidate_ranking_added": False,
