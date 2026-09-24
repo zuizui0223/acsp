@@ -23,7 +23,9 @@
     "private_geometry_crs": "RFC7946_WGS84",
     "private_geometry_coordinate_order": "longitude_latitude",
     "projected_private_coordinates_allowed": false,
-    "nonfinite_private_coordinates_allowed": false
+    "nonfinite_private_coordinates_allowed": false,
+    "public_pre_geometry_provenance_gate": "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json",
+    "range_sector_provenance_must_precede_private_geometry": true
   },
   "pipeline": [
     "validate_static_field_evaluation_contract",
@@ -31,6 +33,7 @@
     "derive_public_safe_movement_constraint_from_frozen_coarse_scale",
     "commit_and_pin_movement_constraint_before_private_geometry",
     "verify_immutable_pre_geometry_movement_constraint_pin",
+    "verify_immutable_pre_geometry_range_sector_provenance_pin",
     "validate_and_split_private_range_sector_bundle",
     "materialize_frozen_public_sources",
     "build_100m_private_raw_grid",
@@ -147,7 +150,10 @@
     "candidate_pin_verifier_revalidates_pre_geometry_standardized_effort_pin": true,
     "candidate_pin_verifier_revalidates_pre_geometry_movement_pin": true,
     "candidate_pin_verifier_requires_protocol_pin_commits_strictly_precede_candidate_pin": true,
-    "candidate_pin_verifier_requires_recorded_protocol_hashes_match_canonical_pins": true
+    "candidate_pin_verifier_requires_recorded_protocol_hashes_match_canonical_pins": true,
+    "low_level_entrypoint_requires_range_sector_provenance_pin_before_private_bundle_read": true,
+    "candidate_receipt_records_pre_geometry_range_sector_provenance_pin_commit_and_sha256": true,
+    "candidate_pin_verifier_revalidates_pre_geometry_range_sector_provenance_pin": true
   },
   "field_allocation_effort_gate": {
     "private_schema": "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json",
@@ -256,7 +262,8 @@
     "final_gate_requires_capacity_match_pinned_movement_constraint": true,
     "movement_constraint_user_tunable": false,
     "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
-    "max_network_transition_km": 5
+    "max_network_transition_km": 5,
+    "canonical_range_sector_provenance_repo_path": "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json"
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -293,9 +300,11 @@
     "requires_immutable_pre_geometry_movement_constraint_pin": true,
     "requires_movement_constraint_pin_strictly_precede_candidate_order_pin": true,
     "requires_operational_capacity_match_pinned_movement_constraint": true,
-    "requires_canonical_movement_constraint_path": true
+    "requires_canonical_movement_constraint_path": true,
+    "requires_immutable_pre_geometry_range_sector_provenance_pin": true,
+    "requires_range_sector_provenance_pin_strictly_precede_candidate_order_pin": true
   },
-  "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
+  "current_execution_state": "BLOCKED_UNTIL_UPSTREAM_EXACT_SITE_PROVENANCE_PIN_AND_PRIVATE_RANGE_SECTOR_BUNDLE_EXIST",
   "outcome_opening_allowed_now": false,
   "scientific_claim_added": false,
   "canonical_public_paths": {
@@ -308,7 +317,8 @@
     "analysis_plan": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json",
     "operational_capacity_profile": "validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json",
     "standardized_effort_protocol": "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json",
-    "movement_constraint": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
+    "movement_constraint": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json",
+    "range_sector_provenance": "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json"
   },
   "prospective_outcome_analysis": {
     "analyzer": "research/analyze_cirsium_fresh_sentinel_outcomes_v1.py",
@@ -332,6 +342,17 @@
     "movement_constraint_must_be_immutably_pinned_before_private_geometry": true,
     "movement_constraint_change_after_pin_allowed": false,
     "user_movement_distance_input_allowed": false,
-    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1"
+    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
+    "range_sector_provenance_required_before_private_geometry": true,
+    "upstream_exact_site_freeze_required_for": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ],
+    "p02_first_validated_wild_population_dependency_units": [
+      "CIR12",
+      "CIR13"
+    ]
   }
 }
