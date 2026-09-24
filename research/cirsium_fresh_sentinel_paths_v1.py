@@ -17,6 +17,7 @@ CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH = "validation/cirsium_aza3_acsp_field_log
 CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH = "validation/cirsium_fresh_sentinel_operational_capacity_profile_v1.json"
 CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH = "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json"
 CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH = "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
+CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH = "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json"
 
 
 def require_canonical_repo_path(
