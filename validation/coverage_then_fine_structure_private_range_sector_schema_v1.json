@@ -2,37 +2,67 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "acsp://coverage-then-fine-structure/private-range-sector-bundle-v1",
   "title": "Private fresh Cirsium range-sector bundle",
-  "description": "Private coordinate-bearing input for CIR02/CIR06/CIR12/CIR13. The repository validator additionally enforces exactly one feature per cohort_unit_id.",
+  "description": "Private coordinate-bearing RFC 7946 GeoJSON input for CIR02/CIR06/CIR12/CIR13. Coordinates must be finite WGS84 longitude/latitude pairs; projected coordinates and latitude/longitude order are rejected by the repository validator. Exactly one feature per cohort_unit_id is required.",
   "type": "object",
-  "required": ["type", "features"],
+  "required": [
+    "type",
+    "features"
+  ],
   "additionalProperties": true,
   "properties": {
-    "type": {"const": "FeatureCollection"},
+    "type": {
+      "const": "FeatureCollection"
+    },
     "features": {
       "type": "array",
       "minItems": 4,
       "maxItems": 4,
       "items": {
         "type": "object",
-        "required": ["type", "properties", "geometry"],
+        "required": [
+          "type",
+          "properties",
+          "geometry"
+        ],
         "properties": {
-          "type": {"const": "Feature"},
+          "type": {
+            "const": "Feature"
+          },
           "properties": {
             "type": "object",
-            "required": ["cohort_unit_id"],
+            "required": [
+              "cohort_unit_id"
+            ],
             "properties": {
               "cohort_unit_id": {
-                "enum": ["CIR02", "CIR06", "CIR12", "CIR13"]
+                "enum": [
+                  "CIR02",
+                  "CIR06",
+                  "CIR12",
+                  "CIR13"
+                ]
               }
             },
             "additionalProperties": true
           },
           "geometry": {
             "type": "object",
-            "required": ["type", "coordinates"],
+            "required": [
+              "type",
+              "coordinates"
+            ],
             "properties": {
-              "type": {"enum": ["Polygon", "MultiPolygon"]},
-              "coordinates": {"type": "array", "minItems": 1}
+              "type": {
+                "enum": [
+                  "Polygon",
+                  "MultiPolygon"
+                ]
+              },
+              "coordinates": {
+                "type": "array",
+                "minItems": 1,
+                "description": "RFC 7946 WGS84 coordinates in longitude, latitude order. Runtime validation requires finite longitude in [-180,180] and latitude in [-90,90]."
+              }
             },
             "additionalProperties": true
           }
