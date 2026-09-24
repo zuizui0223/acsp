@@ -26,6 +26,8 @@ from audit_cirsium_aza3_gbif_occurrences_v1 import (
     spatial_class,
 )
 
+PROVIDER_FAILURE_REGIME = "INDETERMINATE_PROVIDER_FAILURE"
+
 
 def search_page(taxon_key: str, year_range: str, offset: int = 0, limit: int = 300) -> dict[str, Any]:
     params = {
@@ -60,8 +62,43 @@ def has_eligible_precise_record(taxon_key: str, year_range: str, max_pages: int)
     return False, inspected, precise_found, provider_count
 
 
+def _provider_failure_result(
+    species: str,
+    *,
+    base: dict[str, Any] | None = None,
+    exc: RuntimeError,
+) -> dict[str, Any]:
+    out = dict(base or {
+        "species_binomial": species,
+        "gbif_taxon_match_classification": "PROVIDER_UNAVAILABLE",
+        "gbif_usage_key": "",
+        "recent_georeferenced_provider_count": None,
+        "recent_records_scanned": None,
+        "primary_anchor_available": "indeterminate",
+        "legacy_georeferenced_provider_count": None,
+        "legacy_records_scanned": None,
+        "legacy_precise_anchor_available": "indeterminate",
+        "preflight_regime": PROVIDER_FAILURE_REGIME,
+        "public_exact_coordinates_written": "false",
+        "provider_status": "unavailable",
+        "provider_error_class": type(exc).__name__,
+    })
+    out["provider_status"] = "unavailable"
+    out["provider_error_class"] = type(exc).__name__
+    out["preflight_regime"] = PROVIDER_FAILURE_REGIME
+    if out.get("primary_anchor_available") != "true":
+        out["primary_anchor_available"] = "indeterminate"
+    if out.get("legacy_precise_anchor_available") != "true":
+        out["legacy_precise_anchor_available"] = "indeterminate"
+    return out
+
+
 def one_species(species: str) -> dict[str, Any]:
-    match = gbif_taxon_match(species)
+    try:
+        match = gbif_taxon_match(species)
+    except RuntimeError as exc:
+        return _provider_failure_result(species, exc=exc)
+
     out: dict[str, Any] = {
         "species_binomial": species,
         "gbif_taxon_match_classification": match["classification"],
@@ -74,28 +111,38 @@ def one_species(species: str) -> dict[str, Any]:
         "legacy_precise_anchor_available": "false",
         "preflight_regime": "TAXON_MATCH_REVIEW_BEFORE_OCCURRENCE_QUERY",
         "public_exact_coordinates_written": "false",
+        "provider_status": "ok",
+        "provider_error_class": "",
     }
     if match["classification"] != "AUTO_EXACT_ACCEPTED":
         return out
-    primary, scanned, _, total = has_eligible_precise_record(match["usage_key"], "2000,2025", max_pages=5)
-    out["recent_georeferenced_provider_count"] = total
-    out["recent_records_scanned"] = scanned
-    out["primary_anchor_available"] = "true" if primary else "false"
-    if primary:
-        out["preflight_regime"] = "LOCAL_CONTINUATION_INPUT_AVAILABLE"
-        return out
-    legacy, scanned_l, _, total_l = has_eligible_precise_record(match["usage_key"], "1950,1999", max_pages=3)
-    out["legacy_georeferenced_provider_count"] = total_l
-    out["legacy_records_scanned"] = scanned_l
-    out["legacy_precise_anchor_available"] = "true" if legacy else "false"
-    if legacy:
-        out["preflight_regime"] = "SENTINEL_OR_ABSTAIN_WITH_LEGACY_CONTEXT"
-    elif total > 0 or total_l > 0:
-        out["preflight_regime"] = "SENTINEL_OR_ABSTAIN_NO_PRIMARY_ANCHOR"
-    else:
-        out["preflight_regime"] = "SENTINEL_OR_ABSTAIN_ZERO_GEOREFERENCED_RECORDS"
-    return out
 
+    try:
+        primary, scanned, _, total = has_eligible_precise_record(
+            match["usage_key"], "2000,2025", max_pages=5
+        )
+        out["recent_georeferenced_provider_count"] = total
+        out["recent_records_scanned"] = scanned
+        out["primary_anchor_available"] = "true" if primary else "false"
+        if primary:
+            out["preflight_regime"] = "LOCAL_CONTINUATION_INPUT_AVAILABLE"
+            return out
+
+        legacy, scanned_l, _, total_l = has_eligible_precise_record(
+            match["usage_key"], "1950,1999", max_pages=3
+        )
+        out["legacy_georeferenced_provider_count"] = total_l
+        out["legacy_records_scanned"] = scanned_l
+        out["legacy_precise_anchor_available"] = "true" if legacy else "false"
+        if legacy:
+            out["preflight_regime"] = "SENTINEL_OR_ABSTAIN_WITH_LEGACY_CONTEXT"
+        elif total > 0 or total_l > 0:
+            out["preflight_regime"] = "SENTINEL_OR_ABSTAIN_NO_PRIMARY_ANCHOR"
+        else:
+            out["preflight_regime"] = "SENTINEL_OR_ABSTAIN_ZERO_GEOREFERENCED_RECORDS"
+        return out
+    except RuntimeError as exc:
+        return _provider_failure_result(species, base=out, exc=exc)
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -108,11 +155,14 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", type=Path, default=Path("validation/cirsium_aza3_anchor_preflight_v1"))
+    parser.add_argument("--max-workers", type=int, default=2)
     args = parser.parse_args()
     queue = build_query_queue()
     species = sorted({r["species_binomial"] for r in queue})
     results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    if args.max_workers < 1:
+        raise ValueError("--max-workers must be >=1")
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         futures = {executor.submit(one_species, name): name for name in species}
         for future in as_completed(futures):
             name = futures[future]
@@ -135,6 +185,8 @@ def main() -> int:
                 "primary_anchor_available": r["primary_anchor_available"],
                 "legacy_precise_anchor_available": r["legacy_precise_anchor_available"],
                 "preflight_regime": r["preflight_regime"],
+                "provider_status": r["provider_status"],
+                "provider_error_class": r["provider_error_class"],
                 "candidate_patch_status": "NOT_BUILT_PENDING_STRUCTURAL_SELECTOR",
                 "public_exact_coordinates_written": "false",
             }
@@ -144,6 +196,9 @@ def main() -> int:
     write_csv(args.out_dir / "slot_anchor_preflight.csv", slot_rows)
     regimes_species = Counter(r["preflight_regime"] for r in results)
     regimes_slots = Counter(r["preflight_regime"] for r in slot_rows)
+    provider_failure_species_count = sum(
+        r["preflight_regime"] == PROVIDER_FAILURE_REGIME for r in results
+    )
     summary = {
         "schema_version": "cirsium-aza3-anchor-preflight-v1",
         "scientific_role": "fast_anchor_availability_preflight_not_exhaustive_occurrence_audit",
@@ -156,9 +211,19 @@ def main() -> int:
         "slot_regime_counts": dict(sorted(regimes_slots.items())),
         "species_primary_anchor_available": sum(r["primary_anchor_available"] == "true" for r in results),
         "slots_primary_anchor_available": sum(r["primary_anchor_available"] == "true" for r in slot_rows),
-        "species_taxon_match_review_required": sum(r["gbif_taxon_match_classification"] != "AUTO_EXACT_ACCEPTED" for r in results),
+        "species_taxon_match_review_required": sum(r["gbif_taxon_match_classification"] not in {"AUTO_EXACT_ACCEPTED", "PROVIDER_UNAVAILABLE"} for r in results),
+        "provider_failure_species_count": provider_failure_species_count,
+        "preliminary_regime_assignment_complete": provider_failure_species_count == 0,
+        "provider_failure_regime": PROVIDER_FAILURE_REGIME,
+        "provider_failure_is_biological_negative": False,
+        "provider_failure_may_be_recoded_as_zero_records_or_anchor_absence": False,
+        "max_parallel_gbif_species_queries": args.max_workers,
         "public_exact_coordinates_written": False,
-        "next_gate": "Use this only to assign preliminary local-vs-sentinel regimes; exhaustive audit and structural candidate generation remain required before field use."
+        "next_gate": (
+            "Provider-incomplete rows remain indeterminate and must be retried before using this artifact as a complete preliminary regime assignment."
+            if provider_failure_species_count
+            else "Use this only to assign preliminary local-vs-sentinel regimes; exhaustive audit and structural candidate generation remain required before field use."
+        )
     }
     (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2, ensure_ascii=False))
