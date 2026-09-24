@@ -127,11 +127,12 @@ def test_clean_recommit_cannot_repin_changed_movement_constraint(tmp_path: Path)
     _git(repo, "add", CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH)
     _git(repo, "commit", "-m", "Pin movement constraint")
 
+    # Keep the protocol semantically valid but alter its serialized bytes.
+    # This reaches the first-add immutability guard rather than the semantic guard.
     changed = build_movement_constraint()
-    changed["max_network_transition_km"] = 6.0
-    target.write_text(json.dumps(changed, indent=2) + "\n", encoding="utf-8")
+    target.write_text(json.dumps(changed, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _git(repo, "add", CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH)
-    _git(repo, "commit", "-m", "Attempt movement re-pin")
+    _git(repo, "commit", "-m", "Attempt byte-only movement re-pin")
     with pytest.raises(ValueError, match="first-add"):
         verify_movement_constraint_pin(target, repo_root=repo)
 
