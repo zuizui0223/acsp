@@ -304,6 +304,7 @@ def advance_pre_outcome_pipeline(
         expected_schedule_pin_commit=schedule_pin["pin_commit"],
         expected_effort_pin_commit=effort_pin["pin_commit"],
         expected_movement_pin_commit=movement_pin["pin_commit"],
+        expected_range_provenance_pin_commit=range_provenance_pin["pin_commit"],
     )
     return {
         "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
