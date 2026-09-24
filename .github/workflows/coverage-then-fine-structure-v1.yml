@@ -169,6 +169,7 @@ jobs:
           assert schema['properties']['type']['const'] == 'FeatureCollection'
           assert schema['properties']['features']['minItems'] == 4
           assert schema['properties']['features']['maxItems'] == 4
+          assert 'longitude, latitude order' in schema['properties']['features']['items']['properties']['geometry']['properties']['coordinates']['description']
 
           e = json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json').read_text())
           assert e['status'] == 'FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING'
@@ -289,6 +290,10 @@ jobs:
           assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert o['execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
           assert o['state_aware_pre_outcome_entrypoint'] == 'research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py'
+          assert o['input_boundary']['private_geometry_crs'] == 'RFC7946_WGS84'
+          assert o['input_boundary']['private_geometry_coordinate_order'] == 'longitude_latitude'
+          assert o['input_boundary']['projected_private_coordinates_allowed'] is False
+          assert o['input_boundary']['nonfinite_private_coordinates_allowed'] is False
           assert o['state_aware_entrypoint_semantics']['only_tuning_value'] is None
           assert o['state_aware_entrypoint_semantics']['user_movement_distance_input_allowed'] is False
           assert o['state_aware_entrypoint_semantics']['movement_constraint_derivation_identity'] == 'MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1'

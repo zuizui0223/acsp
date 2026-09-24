@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,35 @@ def _inside_repo(path: Path) -> bool:
 
 def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _iter_positions(coordinates: Any):
+    if not isinstance(coordinates, (list, tuple)) or not coordinates:
+        raise ValueError("GeoJSON coordinates must be non-empty arrays")
+    if (
+        len(coordinates) >= 2
+        and isinstance(coordinates[0], (int, float))
+        and not isinstance(coordinates[0], bool)
+        and isinstance(coordinates[1], (int, float))
+        and not isinstance(coordinates[1], bool)
+    ):
+        yield float(coordinates[0]), float(coordinates[1])
+        return
+    for child in coordinates:
+        yield from _iter_positions(child)
+
+
+def _validate_rfc7946_lonlat(geometry_payload: dict[str, Any], *, unit_id: str) -> None:
+    positions = list(_iter_positions(geometry_payload.get("coordinates")))
+    if not positions:
+        raise ValueError(f"{unit_id} geometry contains no coordinate positions")
+    for longitude, latitude in positions:
+        if not math.isfinite(longitude) or not math.isfinite(latitude):
+            raise ValueError(f"{unit_id} coordinates must be finite RFC 7946 longitude/latitude values")
+        if not -180.0 <= longitude <= 180.0:
+            raise ValueError(f"{unit_id} longitude is outside [-180, 180]; projected or swapped coordinates are not allowed")
+        if not -90.0 <= latitude <= 90.0:
+            raise ValueError(f"{unit_id} latitude is outside [-90, 90]; projected or swapped coordinates are not allowed")
 
 
 def validate_bundle(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -52,6 +82,7 @@ def validate_bundle(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
         geometry_payload = feature.get("geometry")
         if not isinstance(geometry_payload, dict) or geometry_payload.get("type") not in {"Polygon", "MultiPolygon"}:
             raise ValueError(f"{unit_id} geometry must be Polygon or MultiPolygon")
+        _validate_rfc7946_lonlat(geometry_payload, unit_id=unit_id)
         geometry = shape(geometry_payload)
         if geometry.is_empty or not geometry.is_valid or float(geometry.area) <= 0.0:
             raise ValueError(f"{unit_id} geometry must be non-empty, valid, and positive-area")
@@ -89,6 +120,8 @@ def split_private_bundle(bundle_path: Path, private_out_dir: Path) -> dict[str, 
         "files": files,
         "field_outcomes_used": False,
         "textual_sector_geometry_inference_used": False,
+        "coordinate_reference_system": "RFC7946_WGS84_LONGITUDE_LATITUDE",
+        "coordinate_range_validated": True,
         "exact_coordinates_public": False,
     }
     summary_path = private_out_dir / "range_sector_bundle_summary.json"
