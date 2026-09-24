@@ -19,7 +19,11 @@
     "user_monetary_budget_input_allowed": false,
     "movement_constraint_must_precede_private_geometry": true,
     "user_movement_distance_input_allowed": false,
-    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1"
+    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
+    "private_geometry_crs": "RFC7946_WGS84",
+    "private_geometry_coordinate_order": "longitude_latitude",
+    "projected_private_coordinates_allowed": false,
+    "nonfinite_private_coordinates_allowed": false
   },
   "pipeline": [
     "validate_static_field_evaluation_contract",
