@@ -13,16 +13,18 @@
     "bundle_shape": "one FeatureCollection with exactly one Polygon/MultiPolygon per frozen cohort unit",
     "text_to_geometry_inference_allowed": false,
     "replacement_taxon_allowed": false,
-    "user_operational_input": "max_network_transition_km declared once and immutably pinned before private range-sector geometry is opened",
+    "user_operational_input": "none; movement limit is algorithmically derived from the already-frozen 5-km coarse coverage scale",
     "user_site_count_input_allowed": false,
     "user_survey_days_input_allowed": false,
     "user_monetary_budget_input_allowed": false,
-    "movement_constraint_must_precede_private_geometry": true
+    "movement_constraint_must_precede_private_geometry": true,
+    "user_movement_distance_input_allowed": false,
+    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1"
   },
   "pipeline": [
     "validate_static_field_evaluation_contract",
     "verify_immutable_standardized_effort_protocol_pin",
-    "declare_public_safe_movement_constraint",
+    "derive_public_safe_movement_constraint_from_frozen_coarse_scale",
     "commit_and_pin_movement_constraint_before_private_geometry",
     "verify_immutable_pre_geometry_movement_constraint_pin",
     "validate_and_split_private_range_sector_bundle",
@@ -196,7 +198,7 @@
     "schedule_builder_status": "READY_AFTER_PRIVATE_CANDIDATE_IDENTITIES_AND_OUTCOME_BLIND_CAPACITY_PROFILE_EXIST",
     "standardized_effort_protocol_schema": "validation/coverage_then_fine_structure_standardized_effort_protocol_schema_v1.json",
     "movement_capacity_deriver": "research/derive_cirsium_fresh_sentinel_movement_capacity_v1.py",
-    "only_user_operational_tuning_input": "max_network_transition_km declared once before private geometry",
+    "only_user_operational_tuning_input": null,
     "movement_constraint_mode": "osm_weighted_transport_network",
     "automatic_prefix_depth_method": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1",
     "prefix_depth_derived_from_common_frame_not_arm_order": true,
@@ -247,7 +249,10 @@
     "movement_constraint_pin_commit_must_strictly_precede_candidate_receipt_pin_commit": true,
     "later_committed_movement_constraint_byte_changes_allowed": false,
     "final_gate_revalidates_movement_constraint": true,
-    "final_gate_requires_capacity_match_pinned_movement_constraint": true
+    "final_gate_requires_capacity_match_pinned_movement_constraint": true,
+    "movement_constraint_user_tunable": false,
+    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
+    "max_network_transition_km": 5
   },
   "outcome_opening_gate": {
     "verifier": "research/verify_cirsium_fresh_sentinel_pre_outcome_gate_v1.py",
@@ -286,7 +291,7 @@
     "requires_operational_capacity_match_pinned_movement_constraint": true,
     "requires_canonical_movement_constraint_path": true
   },
-  "current_execution_state": "BLOCKED_UNTIL_MOVEMENT_CONSTRAINT_PIN_AND_PRIVATE_RANGE_SECTOR_BUNDLE_EXIST",
+  "current_execution_state": "BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS",
   "outcome_opening_allowed_now": false,
   "scientific_claim_added": false,
   "canonical_public_paths": {
@@ -315,12 +320,14 @@
   "state_aware_entrypoint_semantics": {
     "creates_git_commits": false,
     "opens_prospective_outcomes": false,
-    "only_tuning_value": "max_network_transition_km, declarable only before private geometry",
+    "only_tuning_value": null,
     "stops_at_candidate_receipt_commit_gate": true,
     "stops_at_field_schedule_receipt_commit_gate": true,
     "refuses_movement_constraint_change_after_capacity_freeze": true,
     "movement_constraint_declaration_stops_before_private_geometry": true,
     "movement_constraint_must_be_immutably_pinned_before_private_geometry": true,
-    "movement_constraint_change_after_pin_allowed": false
+    "movement_constraint_change_after_pin_allowed": false,
+    "user_movement_distance_input_allowed": false,
+    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1"
   }
 }
