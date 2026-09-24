@@ -95,14 +95,21 @@
     "standardized_effort_protocol_pin_verifier": "research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py",
     "standardized_effort_protocol_first_add_pin_commit": "486242891b23e7340584b9206a978dfbfd47882d",
     "later_effort_repin_allowed": false,
-    "only_user_operational_tuning_input_before_private_geometry": "max_network_transition_km"
+    "only_user_operational_tuning_input_before_private_geometry": null,
+    "movement_constraint_derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
+    "max_network_transition_km": 5,
+    "movement_constraint_user_tunable": false
   },
   "execution_precondition_before_private_source_use": {
     "movement_constraint_required": true,
     "canonical_path": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json",
-    "declaration_identity": "max_network_transition_km",
+    "declaration_identity": "ALGORITHM_DERIVED_NETWORK_TRANSITION_LIMIT_V1",
     "must_be_immutably_pinned_before_private_range_sector_geometry_is_opened": true,
     "movement_constraint_is_ecological_support_input": false,
-    "movement_constraint_role": "downstream G_F operational constraint only"
+    "movement_constraint_role": "downstream G_F operational constraint only",
+    "derivation_identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
+    "derived_from_coarse_coverage_cell_size_m": 5000,
+    "max_network_transition_km": 5,
+    "user_value_required": false
   }
 }
