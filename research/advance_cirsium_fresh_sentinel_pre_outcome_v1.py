@@ -7,10 +7,10 @@ protocol must already be immutably pinned before private range-sector geometry i
 processed. Public candidate/order and field-schedule receipts still require real
 Git commits between stages; this command never creates those commits itself.
 
-The only scientific/operational value that can be declared through this front door
-is the maximum network transition distance. It is written once to a canonical
-public-safe protocol, must be immutably pinned before private geometry is processed,
-and is then read from that pinned protocol. File paths identify artifacts only.
+The movement limit is not a user tuning input. It is deterministically derived
+from the already-frozen 5-km coarse coverage scale, written once to a canonical
+public-safe protocol, and immutably pinned before private geometry is processed.
+File paths identify artifacts only.
 """
 from __future__ import annotations
 
@@ -71,7 +71,6 @@ def _load_json(path: Path) -> dict[str, Any]:
 def advance_pre_outcome_pipeline(
     private_pre_field_root: Path,
     *,
-    max_network_transition_km: float | None = None,
     bundle_geojson: Path | None = None,
     private_schedule_path: Path | None = None,
     repo_root: Path = ROOT,
@@ -96,17 +95,7 @@ def advance_pre_outcome_pipeline(
     effort_pin = verify_standardized_effort_pin(effort, repo_root=repo)
 
     if not movement.exists():
-        if max_network_transition_km is None:
-            return {
-                "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
-                "status": "BLOCKED_MOVEMENT_CONSTRAINT_DECLARATION",
-                "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
-                "prospective_field_outcomes_opened": False,
-                "outcome_opening_gate_satisfied": False,
-                "next_required_input": "declare max_network_transition_km once before private geometry is opened",
-            }
         movement_value = freeze_movement_constraint(
-            max_network_transition_km,
             out_json=movement,
             repo_root=repo,
         )
@@ -115,10 +104,11 @@ def advance_pre_outcome_pipeline(
             "status": "MOVEMENT_CONSTRAINT_READY_FOR_COMMIT",
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
             "max_network_transition_km": movement_value["max_network_transition_km"],
+            "movement_derivation_identity": movement_value["derivation_identity"],
             "public_paths_to_commit": [CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH],
             "prospective_field_outcomes_opened": False,
             "outcome_opening_gate_satisfied": False,
-            "next_gate": "Commit the canonical movement constraint, then rerun before supplying private geometry.",
+            "next_gate": "Commit the deterministic canonical movement constraint, then rerun before supplying private geometry.",
         }
 
     try:
@@ -136,8 +126,6 @@ def advance_pre_outcome_pipeline(
         }
 
     movement_km = float(movement_pin["max_network_transition_km"])
-    if max_network_transition_km is not None and float(max_network_transition_km) != movement_km:
-        raise ValueError("requested movement constraint differs from the immutable pre-geometry movement constraint")
 
     if not candidate.exists():
         if private_root.exists():
@@ -200,7 +188,7 @@ def advance_pre_outcome_pipeline(
         derive_operational_capacity_profile(
             private_root,
             effort,
-            max_network_transition_km=movement_km,
+            movement_constraint_path=movement,
             out_json=capacity,
             repo_root=repo,
         )
@@ -296,11 +284,9 @@ def main() -> int:
     parser.add_argument("--private-pre-field-root", type=Path, required=True)
     parser.add_argument("--bundle-geojson", type=Path)
     parser.add_argument("--private-schedule", type=Path)
-    parser.add_argument("--max-network-transition-km", type=float)
     args = parser.parse_args()
     result = advance_pre_outcome_pipeline(
         args.private_pre_field_root,
-        max_network_transition_km=args.max_network_transition_km,
         bundle_geojson=args.bundle_geojson,
         private_schedule_path=args.private_schedule,
     )
