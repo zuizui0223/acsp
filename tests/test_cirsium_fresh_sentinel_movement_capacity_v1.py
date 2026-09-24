@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
@@ -68,6 +69,12 @@ def _effort() -> dict:
     }
 
 
+def test_capacity_deriver_has_no_manual_movement_distance_parameter() -> None:
+    parameters = inspect.signature(mod.derive_operational_capacity_profile).parameters
+    assert "max_network_transition_km" not in parameters
+    assert "movement_constraint_path" in parameters
+
+
 def test_effort_protocol_rejects_outcome_informed_or_arm_specific_values() -> None:
     value = _effort()
     value["field_outcomes_used_to_set_effort"] = True
@@ -97,11 +104,15 @@ def test_live_derivation_fails_closed_on_movement_provider_failure(tmp_path: Pat
         }
 
     monkeypatch.setattr(mod, "build_osm_patch_reachability_edges", fake_osm)
+    monkeypatch.setattr(
+        mod,
+        "verify_movement_constraint_pin",
+        lambda *a, **k: {"max_network_transition_km": 5.0},
+    )
     with pytest.raises(RuntimeError, match="provider unavailable"):
         mod.derive_operational_capacity_profile(
             private,
             effort_path,
-            max_network_transition_km=5.0,
             out_json=tmp_path / "capacity.json",
             repo_root=repo,
         )

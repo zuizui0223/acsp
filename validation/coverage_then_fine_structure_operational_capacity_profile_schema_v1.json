@@ -54,8 +54,7 @@
       "const": "osm_weighted_transport_network"
     },
     "max_network_transition_km": {
-      "type": "number",
-      "exclusiveMinimum": 0
+      "const": 5
     },
     "automatic_prefix_depth_method": {
       "const": "OSM_COMPLETE_COARSE_COVERAGE_SELECTED_COUNT_V1"

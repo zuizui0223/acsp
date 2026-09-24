@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -15,6 +14,9 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     require_canonical_repo_path,
 )
 from research.freeze_cirsium_fresh_sentinel_movement_constraint_v1 import (
+    ALGORITHM_DERIVED_MAX_NETWORK_TRANSITION_KM,
+    DERIVATION_IDENTITY,
+    FROZEN_COARSE_COVERAGE_CELL_SIZE_M,
     SCHEMA,
     SOURCE_IDENTITY,
     STATUS,
@@ -26,8 +28,11 @@ EXPECTED_KEYS = {
     "schema_version",
     "status",
     "source_identity",
+    "derivation_identity",
     "movement_constraint_mode",
     "max_network_transition_km",
+    "derived_from_coarse_coverage_cell_size_m",
+    "user_declared_value",
     "private_range_sector_geometry_opened_when_declared",
     "candidate_identity_used_to_set_constraint",
     "prospective_field_outcomes_opened",
@@ -73,17 +78,23 @@ def _validate(value: dict[str, Any]) -> float:
         raise ValueError("movement constraint schema/status changed")
     if value.get("source_identity") != SOURCE_IDENTITY:
         raise ValueError("movement constraint source identity changed")
+    if value.get("derivation_identity") != DERIVATION_IDENTITY:
+        raise ValueError("movement constraint derivation identity changed")
     if value.get("movement_constraint_mode") != "osm_weighted_transport_network":
         raise ValueError("movement constraint mode changed")
-    raw = value.get("max_network_transition_km")
-    if isinstance(raw, bool):
-        raise ValueError("max_network_transition_km must be numeric")
+    if value.get("user_declared_value") is not False:
+        raise ValueError("fresh-SENTINEL movement value must not be user-declared")
+
     try:
-        movement_km = float(raw)
+        coarse_m = float(value.get("derived_from_coarse_coverage_cell_size_m"))
+        movement_km = float(value.get("max_network_transition_km"))
     except (TypeError, ValueError) as exc:
-        raise ValueError("max_network_transition_km must be numeric") from exc
-    if not math.isfinite(movement_km) or movement_km <= 0:
-        raise ValueError("max_network_transition_km must be finite and >0")
+        raise ValueError("movement derivation values must be numeric") from exc
+    if coarse_m != FROZEN_COARSE_COVERAGE_CELL_SIZE_M:
+        raise ValueError("movement constraint is not bound to the frozen coarse coverage scale")
+    if movement_km != ALGORITHM_DERIVED_MAX_NETWORK_TRANSITION_KM:
+        raise ValueError("movement constraint differs from the deterministic frozen-scale derivation")
+
     for key in (
         "private_range_sector_geometry_opened_when_declared",
         "candidate_identity_used_to_set_constraint",
@@ -165,7 +176,9 @@ def verify_movement_constraint_pin(
         "pin_rule": "first commit adding the canonical movement constraint; later byte changes are forbidden",
         "verified_head": head,
         "movement_constraint_mode": "osm_weighted_transport_network",
+        "derivation_identity": DERIVATION_IDENTITY,
         "max_network_transition_km": movement_km,
+        "user_declared_value": False,
         "movement_constraint_pin_gate_satisfied": True,
         "prospective_field_outcomes_opened": False,
         "private_candidate_geometry_opened_by_verifier": False,

@@ -277,7 +277,7 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
     effort_path = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
     _write_json(effort_path, _effort_protocol())
     movement_path = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
-    _write_json(movement_path, build_movement_constraint(5.0))
+    _write_json(movement_path, build_movement_constraint())
 
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze synthetic pre-geometry protocols")
@@ -303,7 +303,6 @@ def test_synthetic_downstream_protocol_rehearsal_reaches_analysis_without_openin
     capacity = movement.derive_operational_capacity_profile(
         private_root,
         effort_path,
-        max_network_transition_km=5.0,
         out_json=capacity_path,
         repo_root=repo,
     )

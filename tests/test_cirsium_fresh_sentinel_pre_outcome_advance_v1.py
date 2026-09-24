@@ -70,14 +70,13 @@ def test_effort_pin_is_checked_before_private_geometry_is_processed(
     with pytest.raises(ValueError, match="effort pin missing"):
         advance.advance_pre_outcome_pipeline(
             private,
-            max_network_transition_km=5.0,
             bundle_geojson=bundle,
             repo_root=repo,
         )
     assert touched is False
 
 
-def test_missing_movement_constraint_blocks_before_private_geometry(
+def test_missing_movement_constraint_is_derived_before_private_geometry(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -96,12 +95,15 @@ def test_missing_movement_constraint_blocks_before_private_geometry(
         tmp_path / "private",
         repo_root=repo,
     )
-    assert result["status"] == "BLOCKED_MOVEMENT_CONSTRAINT_DECLARATION"
+    assert result["status"] == "MOVEMENT_CONSTRAINT_READY_FOR_COMMIT"
+    assert result["max_network_transition_km"] == 5.0
+    assert result["movement_derivation_identity"] == "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1"
     assert result["outcome_opening_gate_satisfied"] is False
+    assert (repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH).is_file()
     assert touched is False
 
 
-def test_movement_declaration_stops_at_commit_gate_before_geometry(
+def test_algorithmic_movement_derivation_stops_at_commit_gate_before_geometry(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -120,7 +122,6 @@ def test_movement_declaration_stops_at_commit_gate_before_geometry(
     monkeypatch.setattr(advance, "run_full_pre_field_freeze", should_not_run)
     result = advance.advance_pre_outcome_pipeline(
         tmp_path / "private",
-        max_network_transition_km=5.0,
         bundle_geojson=bundle,
         repo_root=repo,
     )
@@ -155,7 +156,6 @@ def test_unpinned_movement_constraint_blocks_before_private_geometry(
     monkeypatch.setattr(advance, "run_full_pre_field_freeze", should_not_run)
     result = advance.advance_pre_outcome_pipeline(
         tmp_path / "private",
-        max_network_transition_km=5.0,
         bundle_geojson=tmp_path / "bundle.geojson",
         repo_root=repo,
     )
@@ -174,7 +174,6 @@ def test_missing_bundle_reports_only_external_geometry_blocker(
 
     result = advance.advance_pre_outcome_pipeline(
         tmp_path / "private",
-        max_network_transition_km=5.0,
         repo_root=repo,
     )
     assert result["status"] == "BLOCKED_PRIVATE_RANGE_SECTOR_GEOMETRY"
@@ -202,7 +201,6 @@ def test_new_private_freeze_stops_at_candidate_receipt_commit_gate(
     monkeypatch.setattr(advance, "run_full_pre_field_freeze", fake_freeze)
     result = advance.advance_pre_outcome_pipeline(
         private,
-        max_network_transition_km=5.0,
         bundle_geojson=bundle,
         repo_root=repo,
     )
@@ -239,7 +237,6 @@ def test_unpinned_candidate_receipt_blocks_capacity_derivation(
     monkeypatch.setattr(advance, "derive_operational_capacity_profile", should_not_derive)
     result = advance.advance_pre_outcome_pipeline(
         private,
-        max_network_transition_km=5.0,
         repo_root=repo,
     )
     assert result["status"] == "CANDIDATE_RECEIPT_PIN_NOT_SATISFIED"
@@ -266,7 +263,6 @@ def test_existing_capacity_freezes_the_only_movement_tuning_value(
     with pytest.raises(ValueError, match="differs from the already-frozen"):
         advance.advance_pre_outcome_pipeline(
             private,
-            max_network_transition_km=5.0,
             repo_root=repo,
         )
 
@@ -286,10 +282,10 @@ def test_pinned_candidate_advances_to_commit_ready_schedule_receipt(
     _stub_protocol_pins(repo, monkeypatch)
     monkeypatch.setattr(advance, "verify_public_freeze_pin", lambda *a, **k: _candidate_pin())
 
-    def fake_capacity(private_root, effort_path, *, max_network_transition_km, out_json, repo_root):
+    def fake_capacity(private_root, effort_path, *, movement_constraint_path, out_json, repo_root):
         out_json.parent.mkdir(parents=True, exist_ok=True)
         out_json.write_text(
-            json.dumps({"max_network_transition_km": max_network_transition_km}) + "\n",
+            json.dumps({"max_network_transition_km": 5.0}) + "\n",
             encoding="utf-8",
         )
         return {"status": "PRE_OUTCOME_OPERATIONAL_CAPACITY_FROZEN"}
@@ -310,7 +306,6 @@ def test_pinned_candidate_advances_to_commit_ready_schedule_receipt(
 
     result = advance.advance_pre_outcome_pipeline(
         private,
-        max_network_transition_km=5.0,
         repo_root=repo,
     )
     assert result["status"] == "FIELD_SCHEDULE_RECEIPT_READY_FOR_COMMIT"
