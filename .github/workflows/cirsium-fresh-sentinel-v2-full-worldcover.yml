@@ -1,0 +1,136 @@
+name: Fresh-SENTINEL v2 full WorldCover
+
+on:
+  pull_request:
+    paths:
+      - "research/attach_cirsium_fresh_sentinel_v2_worldcover_points.py"
+      - "research/run_cirsium_fresh_sentinel_v2_full_worldcover.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_full_worldcover.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_point_primitives_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_full_worldcover_execution_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-full-worldcover.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  mechanics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test exact shard/assembly mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_full_worldcover.py
+
+  worldcover-shard:
+    needs: mechanics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_id: [0, 1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Execute seven frozen tiles
+        run: |
+          python research/run_cirsium_fresh_sentinel_v2_full_worldcover.py shard \
+            --shard-id ${{ matrix.shard_id }} \
+            --output-dir /tmp/acsp-fs-v2-worldcover/shard-${{ matrix.shard_id }}
+      - name: Guard shard denominator
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          shard = "${{ matrix.shard_id }}"
+          root = Path(f"/tmp/acsp-fs-v2-worldcover/shard-{shard}")
+          value = json.loads((root / "manifest.json").read_text())
+          assert value["shard_id"] == int(shard)
+          assert value["shard_count"] == 7
+          assert value["selected_tile_count"] == 7
+          assert value["candidate_count"] == 5600
+          assert value["expected_candidate_count"] == 5600
+          assert value["candidate_rows_dropped"] == 0
+          assert value["candidate_selection_added"] is False
+          assert value["candidate_ranking_added"] is False
+          assert value["neighborhood_fraction_used"] is False
+          assert value["field_outcomes_used"] is False
+          assert value["private_exact_site_geometry_used"] is False
+          assert (root / f"worldcover_shard_{int(shard):02d}.csv.gz").is_file()
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-worldcover-shard-${{ matrix.shard_id }}
+          path: /tmp/acsp-fs-v2-worldcover/shard-${{ matrix.shard_id }}/
+          if-no-files-found: error
+
+  assemble:
+    needs: worldcover-shard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cirsium-fresh-sentinel-v2-worldcover-shard-*
+          path: /tmp/acsp-fs-v2-worldcover/input
+      - name: Assemble exact frozen denominator
+        run: |
+          python research/run_cirsium_fresh_sentinel_v2_full_worldcover.py assemble \
+            --input-root /tmp/acsp-fs-v2-worldcover/input \
+            --output-csv /tmp/acsp-fs-v2-worldcover/full_worldcover.csv.gz \
+            --summary-json /tmp/acsp-fs-v2-worldcover/summary.json
+      - name: Guard full 49-tile result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          value = json.loads(Path("/tmp/acsp-fs-v2-worldcover/summary.json").read_text())
+          assert value["status"] == "FULL_49_TILE_WORLDCOVER_EXECUTION_COMPLETE"
+          assert value["intersecting_tile_count"] == 49
+          assert value["points_per_tile"] == 800
+          assert value["input_candidate_count"] == 39200
+          assert value["output_candidate_count"] == 39200
+          assert value["candidate_rows_dropped"] == 0
+          assert value["exact_candidate_id_set_match"] is True
+          assert value["exact_candidate_id_order_match"] is True
+          assert value["provider_failure_is_biological_negative"] is False
+          assert value["worldcover_missing_is_biological_negative"] is False
+          assert value["candidate_selection_added"] is False
+          assert value["candidate_ranking_added"] is False
+          assert value["habitat_threshold_added"] is False
+          assert value["neighborhood_fraction_used"] is False
+          assert value["focal_occurrence_prototypes_used"] is False
+          assert value["private_exact_site_geometry_used"] is False
+          assert value["p02_result_used"] is False
+          assert value["prospective_field_outcomes_opened"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-full-worldcover
+          path: |
+            /tmp/acsp-fs-v2-worldcover/summary.json
+            /tmp/acsp-fs-v2-worldcover/full_worldcover.csv.gz
+          if-no-files-found: error
