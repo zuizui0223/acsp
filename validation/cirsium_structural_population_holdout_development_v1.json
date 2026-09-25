@@ -1,0 +1,146 @@
+{
+  "schema_version": "cirsium-structural-population-holdout-development-v1",
+  "status": "FROZEN_BEFORE_STRUCTURAL_POPULATION_HOLDOUT_EXECUTION",
+  "scientific_role": "small public-data known-truth development holdout for source-backed structural ranking; not confirmation",
+  "source_issue": 192,
+  "source_pr": 184,
+  "preflight_terminal": {
+    "path": "validation/cirsium_structural_population_holdout_preflight_result_v1.json",
+    "git_blob_sha1": "1762e52e1afdd1ff19d89ea7db9d0c3bd2f0ec28",
+    "workflow_run_id": 34673622565,
+    "artifact_id": 10291980579,
+    "artifact_digest": "sha256:2842594b6dfa62fc1ccbb110b4245b6dc327d998cef85e5c9ea093d281e58bd8"
+  },
+  "validated_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "new_confirmation_claim": false,
+  "field_outcomes_used": false,
+  "execution_pairs": [
+    {
+      "pair_id": "CIR01__chubu-mountains",
+      "cohort_unit_id": "CIR01",
+      "species_binomial": "Cirsium sieboldii",
+      "structural_feature_family": "WETLAND_MOISTURE_STRUCTURE",
+      "region_id": "chubu-mountains",
+      "expected_population_clusters": 4
+    },
+    {
+      "pair_id": "CIR04__chubu-mountains",
+      "cohort_unit_id": "CIR04",
+      "species_binomial": "Cirsium otayae",
+      "structural_feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "region_id": "chubu-mountains",
+      "expected_population_clusters": 4
+    },
+    {
+      "pair_id": "CIR07__tohoku",
+      "cohort_unit_id": "CIR07",
+      "species_binomial": "Cirsium pendulum",
+      "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "region_id": "tohoku",
+      "expected_population_clusters": 4
+    }
+  ],
+  "explicitly_deferred_eligible_pairs": [
+    {
+      "pair_id": "CIR08__ryukyu",
+      "cohort_unit_id": "CIR08",
+      "species_binomial": "Cirsium brevicaule",
+      "structural_feature_family": "COASTAL_ISLAND_STRUCTURE",
+      "region_id": "ryukyu",
+      "population_clusters": 23,
+      "reason": "The current frozen coastal component semantics require a native WorldCover land-component representation. Broad fixed-region sparse component semantics are not qualified in v1; do not substitute a coarser component definition after the opened CIR08 coastal result."
+    }
+  ],
+  "candidate_frame": {
+    "region_registry": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS",
+    "grid_type": "regular rectangular metric grid",
+    "grid_spacing_m": 5000,
+    "grid_spacing_rationale": "For the preregistered 5-km primary recovery radius, an unmasked square grid at 5-km spacing has a maximum planar quantization distance of sqrt(2)/2 * 5 km = 3.536 km, below the endpoint radius; source masking is measured separately by full-frame reachability.",
+    "worldcover_land_filter": "ESA WorldCover 2021 v200 point classification; permanent water and invalid/no-data candidate cells removed",
+    "known_population_exclusion_km": 0.5,
+    "same_fold_candidate_frame_for_all_methods": true,
+    "region_replacement_allowed": false
+  },
+  "public_structural_sources": {
+    "terrain": {
+      "provider": "GSI DEM via production build_gsi_dem_for_bounds",
+      "sampling_semantics": "research.build_cirsium_private_alpine_local_grid_v1._sample_terrain / Campanula frozen microterrain semantics",
+      "required_columns": ["elev", "slope100", "tpi300", "rough300"],
+      "candidate_chunk_grid_cells": 8,
+      "chunk_margin_degrees": 0.02,
+      "max_gsi_tiles_per_chunk": 900
+    },
+    "landcover": {
+      "provider": "ESA WorldCover 2021 v200 official COG",
+      "point_land_filter": "acsp.discovery.providers.worldcover_points.retain_worldcover_land_points",
+      "neighbourhood_provider": "acsp.discovery.providers.worldcover_neighborhood_points.attach_worldcover_neighbourhood_fractions",
+      "neighbourhood_radius_m": 250,
+      "tile_boundary_policy": "drop a candidate if its 250-m neighbourhood would cross the assigned official 3-degree source tile; no clipped neighbourhood rescue"
+    },
+    "field_outcomes_used": false,
+    "human_access_used": false
+  },
+  "structural_method": {
+    "graph": "REGULAR_GRID_MOORE_8_NEIGHBOUR",
+    "graph_radius_cells": 1,
+    "raw_adapter": "frozen family-specific acsp.structural_raw_adapters",
+    "support_composition": "ROW_MIN_CONJUNCTIVE_SUPPORT",
+    "fitted_feature_weights": false,
+    "family_formula_retuning_allowed": false
+  },
+  "population_holdout": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2000, 2025],
+    "declared_coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_exact": false,
+    "exact_coordinate_deduplication_over_full_period": true,
+    "population_cluster_method": "deterministic complete-link greedy",
+    "maximum_within_population_distance_km": 0.5,
+    "fold_rule": "leave every full population cluster out once; retain every other population as known evidence",
+    "expected_total_folds": 12,
+    "population_count_drift_policy": "abstain that pair; no threshold, region, species, or identity repair"
+  },
+  "comparators": {
+    "nearest_known": "ANNULAR_NEAREST_KNOWN full deterministic order on the same fold-specific candidate frame",
+    "spatial_balance": "MORTON_DYADIC_COVERAGE_ORDER_V1 full deterministic order on the same fold-specific candidate frame"
+  },
+  "prefix_curve": {
+    "fractions": [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0],
+    "selected_count_rule": "ceil(fraction * fold candidate count), minimum one when nonempty",
+    "favorable_prefix_selection_allowed": false
+  },
+  "outcome": {
+    "primary_recovery_radius_km": 5.0,
+    "sensitivity_recovery_radius_km": 10.0,
+    "score": "binary full-population recovery: at least one selected candidate cell lies within the declared radius of at least one member of the hidden population",
+    "unreachable_full_frame": "retain the fold with zero recovery for every method; also report full-frame reachability separately"
+  },
+  "aggregate_reporting": {
+    "primary": "unweighted mean recovery across all executed folds and all seven frozen prefix fractions at 5 km; compare structural-minus-nearest and structural-minus-spatial-balance",
+    "secondary": [
+      "fold-prefix win/tie/loss at 5 km",
+      "family-specific mean recovery curves",
+      "10-km sensitivity",
+      "full-frame recovery ceiling at 5 and 10 km"
+    ],
+    "promotion_gate": false,
+    "reason_no_promotion_gate": "Only one species per executed structural family is available in this opened development set. Any later promotion requires a new disjoint source-qualified cohort."
+  },
+  "source_failure_policy": {
+    "pair_replacement": false,
+    "provider_relaxation": false,
+    "partial_execution_allowed": true,
+    "failed_pair_status": "SOURCE_PROVIDER_FAILURE",
+    "interpretation": "provider/source failure is unavailable evidence, not a negative biological selector result"
+  },
+  "forbidden": [
+    "do not retune family formulas, graph radius, grid spacing, prefix fractions, recovery radius, precision rule, population rule, or fixed region after hidden-population scoring",
+    "do not fit structural feature weights from these opened populations",
+    "do not substitute a new coastal component definition for CIR08 in this v1",
+    "do not remove full-frame-unreachable folds from the primary aggregate",
+    "do not call this independent confirmation, prospective field validation, occupancy prediction, or field efficiency",
+    "do not infer access, route, survey days, money, discoveries per hour, or stopping"
+  ]
+}

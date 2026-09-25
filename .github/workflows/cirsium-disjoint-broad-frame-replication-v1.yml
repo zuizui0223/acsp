@@ -1,0 +1,89 @@
+name: Cirsium disjoint broad-frame replication v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_disjoint_broad_frame_replication_v1.json"
+      - "validation/cirsium_disjoint_broad_frame_replication_preflight_result_v1.json"
+      - "validation/cirsium_disjoint_broad_frame_replication_execution_gate_v1.json"
+      - "research/prepare_cirsium_disjoint_broad_frame_replication_v1.py"
+      - "research/run_cirsium_disjoint_broad_frame_replication_v1.py"
+      - "acsp/discovery/providers/worldcover_points.py"
+      - "acsp/discovery/providers/worldcover.py"
+      - "acsp/discovery/providers/gbif.py"
+      - "acsp/discovery/broad_frames.py"
+      - "acsp/discovery/evidence.py"
+      - "tests/test_cirsium_disjoint_broad_frame_replication.py"
+      - ".github/workflows/cirsium-disjoint-broad-frame-replication-v1.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: cirsium-disjoint-broad-frame-replication-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  replicate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test outcome gate before opening public outcomes
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python tests/test_cirsium_disjoint_broad_frame_replication.py -v
+      - name: Verify frozen universes then open 2021-2025 outcomes
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/cirsium-disjoint-broad-frame-replication-v1
+          mkdir -p /tmp/cirsium-disjoint-broad-frame-replication-v1
+          python research/run_cirsium_disjoint_broad_frame_replication_v1.py \
+            --out-dir /tmp/cirsium-disjoint-broad-frame-replication-v1
+      - name: Guard aggregate-only public outcome artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('/tmp/cirsium-disjoint-broad-frame-replication-v1')
+          summary_path = root / 'summary.json'
+          metrics_path = root / 'ceiling_metrics.csv'
+          summary = json.loads(summary_path.read_text())
+          assert summary['status'] == 'DISJOINT_BROAD_FRAME_REPLICATION_COMPLETE'
+          assert summary['validated_product_changed'] is False
+          assert summary['selector_evaluated'] is False
+          assert summary['human_access_used'] is False
+          by_id = {row['unit_id']: row for row in summary['units']}
+          assert by_id['DBR01']['status'] == 'NOT_EVALUABLE_NO_HISTORICAL_ANCHOR'
+          assert by_id['DBR01']['recent_fetch_performed'] is False
+          assert by_id['DBR02']['recent_fetch_performed'] is True
+          assert by_id['DBR03']['recent_fetch_performed'] is True
+          text = summary_path.read_text() + metrics_path.read_text()
+          forbidden = ('latitude', 'longitude', 'occurrence_id', 'decimalLatitude', 'decimalLongitude', 'gbif_key')
+          for token in forbidden:
+              assert token not in text, token
+          if metrics_path.stat().st_size > 1:
+              metrics = pd.read_csv(metrics_path)
+              if not metrics.empty:
+                  assert set(metrics['lane_id']).issubset({'BROAD_LAND', 'LOCAL_2KM_LAND', 'LOCAL_5KM_LAND', 'LOCAL_10KM_LAND'})
+                  assert set(metrics['recovery_radius_km']).issubset({0.5, 1.0})
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-disjoint-broad-frame-replication-v1
+          path: |
+            /tmp/cirsium-disjoint-broad-frame-replication-v1/summary.json
+            /tmp/cirsium-disjoint-broad-frame-replication-v1/ceiling_metrics.csv
+          if-no-files-found: error
+          retention-days: 90

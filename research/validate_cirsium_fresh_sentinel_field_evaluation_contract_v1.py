@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+"""Validate the fresh-SENTINEL field-evaluation contract without opening outcomes.
+
+This validator intentionally reads only the public pre-outcome evaluation contract
+and the empty field-log template. It must never inspect prospective field rows.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from pathlib import Path
+from typing import Any
+
+from research.cirsium_fresh_sentinel_paths_v1 import CANONICAL_ANALYSIS_PLAN_REPO_PATH
+
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CONTRACT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json"
+DEFAULT_FIELD_LOG_TEMPLATE = ROOT / "validation" / "cirsium_aza3_acsp_field_log_template_v1.csv"
+EXPECTED_UNITS = ["CIR02", "CIR06", "CIR12", "CIR13"]
+EXPECTED_NON_BIOLOGICAL_STATES = ["ACCESS_FAILED", "PERMISSION_BLOCKED", "PHENOLOGY_NOT_EVALUABLE", "SEARCH_INCOMPLETE_OTHER"]
+EXPECTED_RESOLVED_DENOMINATOR_STATES = ["SEARCH_COMPLETED_DETECTED_VERIFIED", "SEARCH_COMPLETED_NOT_DETECTED"]
+EXPECTED_EFFORT_METRIC = {
+    "identity": "PERSON_MINUTES_V1",
+    "unit": "person-minute",
+    "formula": "search_minutes * observer_count",
+}
+EXPECTED_ASSIGNMENT_IDENTITY = "FROZEN_ORDER_PREFIX_V1"
+EXPECTED_ARM_SYMMETRY_IDENTITY = "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1"
+EXPECTED_ANALYSIS_UNIT_IDENTITY = "COHORT_ARM_CANDIDATE_V1"
+EXPECTED_REPEAT_AGGREGATION_IDENTITY = "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1"
+EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY = "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1"
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("field evaluation contract must be a JSON object")
+    return value
+
+
+def _field_log_header(path: Path) -> list[str]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle)
+        try:
+            return next(reader)
+        except StopIteration as exc:
+            raise ValueError("field log template is empty") from exc
+
+
+def validate_field_evaluation_contract(contract_path: Path = DEFAULT_CONTRACT, field_log_template: Path = DEFAULT_FIELD_LOG_TEMPLATE) -> dict[str, Any]:
+    contract = _load_json(Path(contract_path))
+    if contract.get("status") != "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING":
+        raise ValueError("unexpected field evaluation contract status")
+    if contract.get("method_identity") != "COVERAGE_THEN_FINE_STRUCTURE_V1":
+        raise ValueError("unexpected primary method identity")
+    if contract.get("cohort_unit_ids") != EXPECTED_UNITS:
+        raise ValueError("fresh cohort unit set/order changed")
+
+    endpoint = contract.get("field_endpoint") or {}
+    if endpoint.get("primary_success_state") != "SEARCH_COMPLETED_DETECTED_VERIFIED":
+        raise ValueError("primary verified-occurrence success state changed")
+    if endpoint.get("resolved_completed_non_detection_state") != "SEARCH_COMPLETED_NOT_DETECTED":
+        raise ValueError("resolved biological non-detection state changed")
+    if endpoint.get("identity_unresolved_state") != "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED":
+        raise ValueError("identity-unresolved state changed")
+    if endpoint.get("non_biological_negative_states") != EXPECTED_NON_BIOLOGICAL_STATES:
+        raise ValueError("non-biological-negative state set/order changed")
+    if endpoint.get("tissue_collection_is_secondary") is not True:
+        raise ValueError("tissue collection must remain secondary to location discovery")
+
+    primary = contract.get("newly_frozen_primary_binary_endpoint") or {}
+    if primary.get("resolved_binary_denominator_states") != EXPECTED_RESOLVED_DENOMINATOR_STATES:
+        raise ValueError("resolved binary denominator states changed")
+    if "never recode as absence" not in str(primary.get("identity_unresolved_handling") or ""):
+        raise ValueError("identity-unresolved records must not be recoded as absence")
+    if "never recode as absence" not in str(primary.get("non_biological_negative_handling") or ""):
+        raise ValueError("operational/non-evaluable states must not be recoded as absence")
+    if primary.get("favorable_subsetting_after_outcome") is not False:
+        raise ValueError("favorable post-outcome subsetting must remain forbidden")
+    if primary.get("switching_primary_endpoint_after_outcome") is not False:
+        raise ValueError("post-outcome endpoint switching must remain forbidden")
+
+    arms = contract.get("frozen_method_arms") or {}
+    if arms != {
+        "primary": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+        "coverage_only": "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
+        "fine_spatial_balance": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+        "nearest_known": "NOT_DEFINED_FOR_SENTINEL",
+    }:
+        raise ValueError("fresh-SENTINEL method/comparator arms changed")
+
+    effort = contract.get("effort_accounting") or {}
+    if effort.get("minimum_required_fields") != ["search_minutes", "observer_count"]:
+        raise ValueError("minimum field-effort columns changed")
+    if effort.get("matched_field_effort_required_for_between_arm_promotion") is not True:
+        raise ValueError("matched field effort must be required for promotion")
+    if effort.get("complete_visited_patch_detection_and_non_detection_logs_required") is not True:
+        raise ValueError("complete visited-patch logs must be required")
+    if effort.get("numeric_effort_metric_frozen_now") is not True:
+        raise ValueError("PERSON_MINUTES_V1 must remain frozen before outcomes")
+    if effort.get("numeric_effort_metric") != EXPECTED_EFFORT_METRIC:
+        raise ValueError("numeric effort metric changed from PERSON_MINUTES_V1")
+    if effort.get("numeric_effort_schedule_frozen_now") is not False:
+        raise ValueError("numeric effort schedule cannot be claimed frozen before candidate-specific allocation")
+
+    mechanics = contract.get("schedule_selection_mechanics") or {}
+    if mechanics.get("comparator_assignment_identity") != EXPECTED_ASSIGNMENT_IDENTITY:
+        raise ValueError("schedule comparator assignment changed from FROZEN_ORDER_PREFIX_V1")
+    if mechanics.get("arm_symmetry_identity") != EXPECTED_ARM_SYMMETRY_IDENTITY:
+        raise ValueError("schedule arm symmetry changed from ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1")
+    for key in (
+        "equal_unique_candidate_prefix_depth_across_arms_within_unit",
+        "equal_visit_count_by_rank_across_arms_within_unit",
+        "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit",
+        "candidate_membership_in_exact_frozen_arm_order_required",
+        "private_unit_receipt_hash_linkage_required",
+        "private_order_hash_linkage_required",
+    ):
+        if mechanics.get(key) is not True:
+            raise ValueError(f"schedule selection mechanic weakened: {key}")
+    if mechanics.get("post_outcome_candidate_substitution_allowed") is not False:
+        raise ValueError("post-outcome candidate substitution must remain forbidden")
+    if mechanics.get("arm_specific_effort_reallocation_allowed") is not False:
+        raise ValueError("arm-specific effort reallocation must remain forbidden")
+
+    analysis_plan = contract.get("analysis_plan") or {}
+    if analysis_plan.get("canonical_repo_path") != CANONICAL_ANALYSIS_PLAN_REPO_PATH:
+        raise ValueError("field evaluation contract does not name the canonical fresh-SENTINEL analysis plan")
+    if analysis_plan.get("status_required") != "FROZEN_PRE_OUTCOME_ANALYSIS_PLAN":
+        raise ValueError("field evaluation contract analysis-plan status requirement changed")
+    if analysis_plan.get("primary_estimand_identity") != "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1":
+        raise ValueError("field evaluation contract primary cross-taxon estimand changed")
+    if analysis_plan.get("equal_taxon_weights_required") is not True:
+        raise ValueError("equal taxon weighting must remain required")
+    if analysis_plan.get("all_four_taxa_required_for_primary") is not True:
+        raise ValueError("all four taxa must remain required for the primary macro estimand")
+    if analysis_plan.get("pooled_micro_allowed_as_primary") is not False:
+        raise ValueError("pooled micro analysis cannot replace the primary macro estimand")
+    if analysis_plan.get("exact_hash_linkage_in_public_field_schedule_receipt_required") is not True:
+        raise ValueError("analysis plan must be hash-linked in the public field-schedule receipt")
+    if analysis_plan.get("post_outcome_analysis_plan_switch_allowed") is not False:
+        raise ValueError("post-outcome analysis-plan switching must remain forbidden")
+
+    analysis = contract.get("analysis_unit_and_repeated_visits") or {}
+    if analysis.get("primary_analysis_unit_frozen_now") is not True:
+        raise ValueError("primary analysis unit must remain frozen before schedule instantiation")
+    if analysis.get("primary_analysis_unit_identity") != EXPECTED_ANALYSIS_UNIT_IDENTITY:
+        raise ValueError("analysis unit identity changed from COHORT_ARM_CANDIDATE_V1")
+    if analysis.get("analysis_unit_id_must_map_one_to_one_to_cohort_arm_candidate") is not True:
+        raise ValueError("analysis unit must remain one-to-one with cohort-arm-candidate identity")
+    if analysis.get("visit_indices_must_be_contiguous_from_one_within_analysis_unit") is not True:
+        raise ValueError("visit indices must remain contiguous from one within each analysis unit")
+    if analysis.get("repeated_visit_aggregation_frozen_now") is not True:
+        raise ValueError("repeated-visit aggregation must remain frozen before schedule instantiation")
+    if analysis.get("repeated_visit_aggregation_identity") != EXPECTED_REPEAT_AGGREGATION_IDENTITY:
+        raise ValueError("repeated-visit aggregation identity changed")
+    if analysis.get("shared_candidate_handling_frozen_now") is not True:
+        raise ValueError("shared-candidate handling must remain frozen before schedule instantiation")
+    if analysis.get("shared_candidate_handling_identity") != EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY:
+        raise ValueError("shared-candidate handling identity changed")
+
+    linkage = contract.get("field_log_schedule_linkage") or {}
+    if linkage.get("identity") != "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1":
+        raise ValueError("field-log schedule linkage identity changed")
+    for key in (
+        "analysis_unit_id_required",
+        "visit_index_required",
+        "exact_one_field_log_row_per_scheduled_visit_required",
+        "validation_unit_id_must_equal_scheduled_cohort_unit_id",
+        "method_arm_must_equal_scheduled_method_arm",
+        "completed_search_states_must_match_planned_search_minutes_and_observer_count",
+        "verified_or_unresolved_detection_requires_positive_detection_count",
+        "resolved_non_detection_requires_zero_detection_count",
+        "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence",
+    ):
+        if linkage.get(key) is not True:
+            raise ValueError(f"field-log schedule linkage weakened: {key}")
+    if linkage.get("unscheduled_extra_field_log_rows_allowed") is not False:
+        raise ValueError("unscheduled field-log rows must remain forbidden")
+    if linkage.get("comparator_assignment_must_equal") != EXPECTED_ASSIGNMENT_IDENTITY:
+        raise ValueError("field-log comparator assignment linkage changed")
+    if linkage.get("completed_search_states") != [
+        "SEARCH_COMPLETED_DETECTED_VERIFIED",
+        "SEARCH_COMPLETED_NOT_DETECTED",
+        "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED",
+    ]:
+        raise ValueError("completed-search state set/order changed for field-log linkage")
+
+    gate = contract.get("pre_outcome_gate_state") or {}
+    if gate.get("static_evaluation_semantics_frozen") is not True:
+        raise ValueError("static evaluation semantics must be frozen")
+    if gate.get("analysis_unit_and_repeat_semantics_frozen") is not True:
+        raise ValueError("analysis-unit and repeat-visit semantics must remain frozen")
+    if gate.get("analysis_plan_frozen") is not True:
+        raise ValueError("fresh-SENTINEL cross-taxon analysis plan must remain frozen")
+    if gate.get("field_allocation_and_effort_schedule_frozen") is not False:
+        raise ValueError("field allocation/effort schedule is not frozen yet")
+    if gate.get("field_allocation_and_effort_schedule_pinned") is not False:
+        raise ValueError("field allocation/effort schedule is not pinned yet")
+    if gate.get("prospective_outcome_opening_allowed_now") is not False:
+        raise ValueError("prospective outcome opening must remain blocked")
+
+    header = _field_log_header(Path(field_log_template))
+    required = contract.get("field_log_schema_required_columns") or []
+    if not isinstance(required, list) or not required:
+        raise ValueError("field log required-column contract is empty")
+    missing = [column for column in required if column not in header]
+    if missing:
+        raise ValueError(f"field log template is missing required columns: {missing}")
+
+    return {
+        "status": "FRESH_SENTINEL_FIELD_EVALUATION_CONTRACT_VALID",
+        "cohort_unit_ids": EXPECTED_UNITS,
+        "primary_success_state": endpoint["primary_success_state"],
+        "resolved_binary_denominator_states": primary["resolved_binary_denominator_states"],
+        "numeric_effort_metric": EXPECTED_EFFORT_METRIC,
+        "comparator_assignment_identity": EXPECTED_ASSIGNMENT_IDENTITY,
+        "arm_symmetry_identity": EXPECTED_ARM_SYMMETRY_IDENTITY,
+        "arm_symmetric_prefix_effort_template_required": True,
+        "analysis_plan_repo_path": CANONICAL_ANALYSIS_PLAN_REPO_PATH,
+        "primary_cross_taxon_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+        "analysis_plan_frozen": True,
+        "field_log_schedule_linkage_identity": "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1",
+        "analysis_unit_frozen": True,
+        "analysis_unit_identity": EXPECTED_ANALYSIS_UNIT_IDENTITY,
+        "repeated_visit_aggregation_frozen": True,
+        "repeated_visit_aggregation_identity": EXPECTED_REPEAT_AGGREGATION_IDENTITY,
+        "shared_candidate_handling_frozen": True,
+        "shared_candidate_handling_identity": EXPECTED_SHARED_CANDIDATE_HANDLING_IDENTITY,
+        "numeric_effort_schedule_frozen": False,
+        "prospective_outcome_opening_allowed_now": False,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT)
+    parser.add_argument("--field-log-template", type=Path, default=DEFAULT_FIELD_LOG_TEMPLATE)
+    args = parser.parse_args()
+    result = validate_field_evaluation_contract(args.contract, args.field_log_template)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

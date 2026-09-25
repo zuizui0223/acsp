@@ -1,0 +1,36 @@
+{
+  "schema_version": "japan-plant-broad-frame-confirmation-v4-posthoc-observability-diagnostic",
+  "status": "POSTHOC_DIAGNOSTIC_ONLY_NO_CONFIRMATORY_RESCORING",
+  "source_issue": 203,
+  "source_workflow_run_id": 34576580042,
+  "source_artifact_id": 10190225647,
+  "source_summary_sha256": "5472560ab646b79c80176a2a6cbb4e0510b681c0945135d9af002bb937eabead",
+  "terminal_decision_remains": "PREREGISTERED_BROAD_FRAME_GATE_FAILED",
+  "frozen_taxa": 24,
+  "temporally_evaluable_taxa": 6,
+  "non_evaluable_taxa": 18,
+  "non_evaluable_status_counts": {
+    "NOT_EVALUABLE_NO_STRICT_RECENT_POPULATION": 18
+  },
+  "non_evaluable_with_any_2021_2025_raw_record_countrywide": 16,
+  "non_evaluable_with_any_2021_2025_strict_record_countrywide": 11,
+  "non_evaluable_with_strict_recent_population_in_frozen_selected_region": 0,
+  "region_evaluability": {
+    "kanto": {"frozen_taxa": 2, "temporally_evaluable_taxa": 2},
+    "shikoku": {"frozen_taxa": 19, "temporally_evaluable_taxa": 4},
+    "tohoku": {"frozen_taxa": 2, "temporally_evaluable_taxa": 0},
+    "chubu-mountains": {"frozen_taxa": 1, "temporally_evaluable_taxa": 0}
+  },
+  "historical_population_count_mean": {
+    "temporally_evaluable": 14.166666666666666,
+    "non_evaluable": 15.277777777777779
+  },
+  "diagnostic_interpretation": "The dominant failure is not simply absence of later provider records. Most non-evaluable taxa retained later countrywide evidence, including strict <=1 km records for 11/18, but none had a strict recent population in the historically selected frozen region. Historical population count alone also does not separate evaluable from non-evaluable taxa. The leading diagnostic hypothesis is therefore temporal-spatial provider-evidence instability or historical-max-region selection mismatch, especially for the Shikoku-heavy selected cohort.",
+  "forbidden_inference": [
+    "Do not reinterpret the failed preregistered confirmation as a pass.",
+    "Do not retune #203 on the same 24 taxa.",
+    "Do not claim biological absence from provider non-evaluability.",
+    "Do not claim selector superiority from BROAD being a superset of LOCAL."
+  ],
+  "next_valid_step": "Diagnose temporal observability and selected-region stability as a separate measurement-layer problem using the already-consumed #203 cohort; any future confirmation must use a new disjoint cohort and a protocol frozen before its heldout outcomes are opened."
+}

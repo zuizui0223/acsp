@@ -1,0 +1,50 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-full-worldcover-execution-v1",
+  "status": "FROZEN_BEFORE_FULL_49_TILE_WORLDCOVER_EXECUTION",
+  "source_outer_frame_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2.json",
+  "source_worldcover_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_point_primitives_v1.json",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "expected_intersecting_tile_count": 49,
+  "expected_points_per_tile": 800,
+  "expected_candidate_count": 39200,
+  "execution": {
+    "worldcover_shard_count": 7,
+    "tile_assignment_rule": "sorted regional_tile_id ordinal modulo 7",
+    "expected_tiles_per_shard": 7,
+    "each_tile_executed_exactly_once": true,
+    "candidate_row_drop_allowed": false,
+    "candidate_reordering_in_final_assembly_allowed": false,
+    "provider_failure_replacement_tile_allowed": false,
+    "retry_may_change_scientific_method": false
+  },
+  "assembly_gate": {
+    "reconstruct_pinned_japan_outer_frame_for_identity_check": true,
+    "exact_candidate_id_set_required": true,
+    "exact_candidate_id_order_required": true,
+    "exact_39200_rows_required": true,
+    "exact_49_tile_coverage_required": true,
+    "status_vocabulary": [
+      "COMPLETE",
+      "INDETERMINATE_WORLDCOVER_MISSING",
+      "INDETERMINATE_PROVIDER_FAILURE"
+    ],
+    "provider_failure_is_biological_negative": false,
+    "worldcover_missing_is_biological_negative": false
+  },
+  "scientific_boundary": {
+    "point_class_only": true,
+    "neighborhood_fraction_used": false,
+    "candidate_selection_added": false,
+    "candidate_ranking_added": false,
+    "habitat_threshold_added": false,
+    "focal_occurrence_prototypes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "prospective_field_outcomes_opened": false,
+    "human_access_used": false,
+    "survey_days_input": false,
+    "monetary_budget_input": false,
+    "user_site_count_input": false
+  },
+  "next_gate": "Freeze the complete-vs-indeterminate 39,200-point WorldCover coverage audit and class-frequency ledger. Only after that may any tile-level ecological screening rule be prospectively defined; this execution itself does not authorize screening."
+}

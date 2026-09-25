@@ -1,0 +1,74 @@
+{
+  "contract_id": "acsp_global_availability_parity_candidate_freeze_v2",
+  "status": "FROZEN_AFTER_COUNTRY_PLANS_BEFORE_GEOMETRY_CANDIDATES_OR_HELDOUT",
+  "parent_protocol": "validation/acsp_global_availability_parity_confirmation_v2.json",
+  "parent_issue": 197,
+  "frozen_country_input": {
+    "plan_path": "validation/acsp_global_availability_parity_country_plans_v2.csv",
+    "plan_sha256": "8a18ead4f9373e3c78c63eb158aeaac2fca3a979cc8fb558b8f84d3e01c4e4d9",
+    "plan_git_blob_sha": "0f7b9f3dc9b3f540ab384d9ad132e8285d01a702",
+    "receipt_path": "validation/acsp_global_availability_parity_country_receipt_v2.json",
+    "receipt_git_blob_sha": "f9310571efbcd2fefc372e8324f54cd000a4fd89",
+    "taxon_count": 48,
+    "ready_country_count": 48,
+    "country_plan_canonical_sha256": "88eeaa983ff011426a3341fa1b98fb16d3bb2ca468be0d79dc5602cb3b2c420b",
+    "no_taxon_replacement": true,
+    "no_country_substitution": true
+  },
+  "scientific_method": {
+    "authoritative_v2_fingerprint": "7535e749d3cc04c8d49db13957da53685a5050eec7d1e9e2d6624348332a56f9",
+    "validated_japan_core_changed": false,
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000.0,
+    "primary_radius_km": 10.0,
+    "terrain_features": ["elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi"],
+    "lattice_step_degrees": 2.0,
+    "points_per_regional_tile": 800,
+    "max_prototypes": 32,
+    "candidate_generator": "validated_robust_candidate_patches",
+    "candidate_surface_generator": "regional_terrain_inputs"
+  },
+  "preheldout_availability_states": {
+    "SENTINEL_OR_ABSTAIN": "regional lattice has zero complete terrain points or fewer than five unique complete historical terrain prototypes",
+    "ROBUST_EMPTY": "the frozen robust construction executes on a valid surface and prototype set but yields zero candidate patches",
+    "ROBUST_READY_PREHELDOUT": "the frozen robust construction yields one or more candidate patches",
+    "technical_abort": "geometry, historical-occurrence, terrain-provider, file-integrity, or other non-declared scientific-evidence errors abort execution; they are not biological failures"
+  },
+  "surface_freeze": {
+    "save_exact_complete_candidate_surface_for_every_robust_constructible_pair": true,
+    "reason": "the post-heldout same-size random comparator must draw from the exact preheldout surface used for candidate generation",
+    "regeneration_after_heldout_allowed": false
+  },
+  "ru_execution": {
+    "ru_pair_ids": [48],
+    "reason_for_sharding": "the national RU surface is too large for the ordinary pair core and has an existing exact float32 world-shard implementation",
+    "pinned_surface_workflow_run_id": 32795662847,
+    "pinned_surface_artifact_id": 9544853686,
+    "pinned_surface_artifact_name": "ru-complete-surface",
+    "surface_parquet_sha256": "77729dfa45b9e123f035ca15a421f834a6b155140ae410b8806e9f4eca19c982",
+    "surface_manifest_sha256": "a4cd321cee240f050d4223ab19b3af8f956ac80d675229703d2dffdbb0908d7e",
+    "world_shard_count": 8,
+    "world_definition_changed": false,
+    "consensus_reduction_changed": false,
+    "patch_aggregation_changed": false
+  },
+  "freeze_boundary": {
+    "allowed": [
+      "frozen 48 taxon-country plans",
+      "pinned geoBoundaries country geometry",
+      "historical occurrence rows through 2020",
+      "terrain/environment provider inputs required by the unchanged v2 core",
+      "preheldout robust candidate patches and exact candidate surfaces"
+    ],
+    "forbidden": [
+      "2021-2025 occurrence rows or facets",
+      "heldout recovery",
+      "same-size random heldout recovery",
+      "taxon lift",
+      "aggregate validation decision"
+    ],
+    "all_48_preheldout_states_must_be_frozen_before_heldout": true,
+    "outcome_driven_retuning": false
+  }
+}

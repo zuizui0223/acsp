@@ -1,0 +1,7 @@
+cluster_policy,outer_radius_km,known_point_exclusion_km,declared_folds,anchor_conditioned_evaluable_folds,anchor_absent_folds,inside_exclusion_folds,recovered_folds,anchor_conditioned_recall,intention_to_evaluate_recall,median_unclipped_sum_annulus_area_km2,interpretation
+complete_link,1.0,0.5,18,17,1,0,8,0.47058823529411764,0.4444444444444444,21.205750411731103,"Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+complete_link,2.0,0.5,18,17,1,0,15,0.8823529411764706,0.8333333333333334,106.02875205865551,"Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+complete_link,5.0,0.5,18,17,1,0,17,1.0,0.9444444444444444,699.7897635871265,"Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+single_link,1.0,0.5,17,16,1,0,6,0.375,0.35294117647058826,21.205750411731103,"Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+single_link,2.0,0.5,17,16,1,0,14,0.875,0.8235294117647058,106.02875205865551,"Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+single_link,5.0,0.5,17,16,1,0,16,1.0,0.9411764705882353,699.7897635871265,"Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."

@@ -1,0 +1,95 @@
+{
+  "schema_version": "public-cirsium-detached-broad-coastal-result-v1",
+  "status": "DEVELOPMENT_ONLY_OPENED_RESULT_FROZEN_NO_RETUNE",
+  "source_contract": "validation/public_cirsium_detached_broad_coastal_development_v1.json",
+  "workflow_run_id": 33973151096,
+  "workflow_conclusion": "success",
+  "artifact_id": 9971619178,
+  "artifact_name": "public-cirsium-detached-broad-coastal-v1",
+  "artifact_zip_sha256": "2aed6c65dcc26ad10011e1c02c3a13e4b6b9137a2e9bdeae82365635c1e09c6a",
+  "head_sha": "2f6dad3e90f053fc2b3697c9bf51ba2e3bd7dee0",
+  "cohort_unit_id": "CIR08",
+  "species": "Cirsium brevicaule",
+  "feature_family": "COASTAL_ISLAND_STRUCTURE",
+  "validated_product_changed": false,
+  "new_confirmation_claim": false,
+  "retuning_used": false,
+  "opened_development_only": true,
+  "evidence": {
+    "historical_records_in_declared_frame": 3,
+    "historical_population_anchors": 3,
+    "recent_records_in_declared_frame": 32,
+    "novel_recent_population_clusters": 15
+  },
+  "candidate_frames": {
+    "broad_grid_spacing_m": 250,
+    "broad_raw_cells": 110004,
+    "broad_worldcover_land_cells": 20077,
+    "local_boundary_km": 5.0,
+    "local_cells_inside_broad_land_partition": 1027,
+    "detached_broad_cells": 19050,
+    "detached_same_component_cells": 18319,
+    "detached_other_component_cells": 731,
+    "worldcover_land_component_count_in_crop": 602,
+    "historical_anchor_component_count": 1,
+    "target_component_id": "WORLDCOVER_LAND_COMPONENT_14"
+  },
+  "frame_reachability": {
+    "0.25_km": {
+      "novel_population_count": 15,
+      "local_5km_100m_recovered": 1,
+      "broad_land_250m_recovered": 13,
+      "detached_broad_250m_recovered": 12,
+      "local_unreached_count": 14
+    },
+    "0.5_km": {
+      "novel_population_count": 15,
+      "local_5km_100m_recovered": 1,
+      "broad_land_250m_recovered": 14,
+      "detached_broad_250m_recovered": 13,
+      "local_unreached_count": 14
+    },
+    "1.0_km": {
+      "novel_population_count": 15,
+      "local_5km_100m_recovered": 1,
+      "broad_land_250m_recovered": 14,
+      "detached_broad_250m_recovered": 13,
+      "local_unreached_count": 14
+    }
+  },
+  "primary_frame_diagnosis": {
+    "decision": "BROAD_FRAME_REPRESENTATION_MATERIALLY_REDUCES_LOCAL_UNDERREACH",
+    "at_1km": {
+      "local_5km_recall": 0.06666666666666667,
+      "broad_land_recall": 0.9333333333333333,
+      "detached_broad_recall": 0.8666666666666667,
+      "broad_minus_local": 0.8666666666666667,
+      "detached_minus_local": 0.8
+    },
+    "interpretation": "The principal failure of the earlier 5-km LOCAL experiment was candidate-universe underreach. Ranking refinement inside that LOCAL frame could not recover the missing populations."
+  },
+  "secondary_selector_diagnosis": {
+    "declared_cells": 21,
+    "all_novel_populations": {
+      "structural_vs_nearest": {"wins": 16, "ties": 5, "losses": 0, "mean_recall_difference": 0.19365079365079363},
+      "structural_vs_spatial_balance": {"wins": 3, "ties": 9, "losses": 9, "mean_recall_difference": -0.11111111111111113},
+      "nearest_vs_spatial_balance": {"wins": 0, "ties": 7, "losses": 14, "mean_recall_difference": -0.3047619047619047}
+    },
+    "previously_local_unreached_populations": {
+      "structural_vs_nearest": {"wins": 16, "ties": 5, "losses": 0, "mean_recall_difference": 0.2074829931972789},
+      "structural_vs_spatial_balance": {"wins": 3, "ties": 9, "losses": 9, "mean_recall_difference": -0.1190476190476191},
+      "nearest_vs_spatial_balance": {"wins": 0, "ties": 7, "losses": 14, "mean_recall_difference": -0.326530612244898}
+    },
+    "decision": "DO_NOT_NOMINATE_CURRENT_COASTAL_STRUCTURAL_SELECTOR",
+    "interpretation": "Within the already opened DETACHED_BROAD frame, the current structural recipe clearly improves over direct nearest-known ordering but does not beat the deterministic spatial-coverage comparator across the full frozen curve."
+  },
+  "frozen_next_question": "Decompose the broad-frame reachability ceiling into remote parts of the historical ecological component versus other ecological components, then test the resulting architecture on a disjoint development/confirmation unit rather than retuning CIR08.",
+  "forbidden_follow_up": [
+    "do not retune the 5-km LOCAL boundary on CIR08",
+    "do not change the 250-m broad screening grid and call the rerun prospective",
+    "do not fit structural-versus-distance weights on CIR08",
+    "do not tune component size or component identity using the 2021-2025 CIR08 outcomes",
+    "do not promote the coastal structural recipe from this opened unit",
+    "do not modify the independently validated Japanese 2.5% / 10-km product"
+  ]
+}

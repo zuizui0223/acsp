@@ -1,0 +1,62 @@
+name: Preflight Cirsium aza3 anchor availability v1
+
+on:
+  pull_request:
+    paths:
+      - 'research/preflight_cirsium_aza3_gbif_anchor_availability_v1.py'
+      - 'research/audit_cirsium_aza3_gbif_occurrences_v1.py'
+      - 'tests/test_cirsium_aza3_anchor_preflight_provider_v1.py'
+      - '.github/workflows/cirsium-aza3-anchor-preflight-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile preflight
+        run: python -m py_compile research/preflight_cirsium_aza3_gbif_anchor_availability_v1.py
+      - name: Test provider-failure semantics
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_cirsium_aza3_anchor_preflight_provider_v1.py
+      - name: Run preflight
+        run: python research/preflight_cirsium_aza3_gbif_anchor_availability_v1.py --max-workers 2 --out-dir validation/cirsium_aza3_anchor_preflight_v1
+      - name: Guard provider-failure semantics
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          root = Path('validation/cirsium_aza3_anchor_preflight_v1')
+          summary = json.loads((root / 'summary.json').read_text())
+          assert summary['provider_failure_is_biological_negative'] is False
+          assert summary['provider_failure_may_be_recoded_as_zero_records_or_anchor_absence'] is False
+          assert summary['provider_failure_regime'] == 'INDETERMINATE_PROVIDER_FAILURE'
+          with (root / 'species_anchor_availability.csv').open(newline='', encoding='utf-8') as handle:
+              rows = list(csv.DictReader(handle))
+          for row in rows:
+              if row['provider_status'] == 'unavailable':
+                  assert row['preflight_regime'] == 'INDETERMINATE_PROVIDER_FAILURE'
+                  assert row['primary_anchor_available'] in {'true', 'indeterminate'}
+                  assert row['legacy_precise_anchor_available'] in {'true', 'indeterminate'}
+          PY
+      - name: Guard public output
+        run: |
+          if grep -R -E 'decimalLatitude|decimalLongitude|latitude,longitude|longitude,latitude' validation/cirsium_aza3_anchor_preflight_v1; then
+            echo 'coordinate-bearing field leaked into public preflight'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-aza3-anchor-preflight-v1
+          path: validation/cirsium_aza3_anchor_preflight_v1/
+          if-no-files-found: error
