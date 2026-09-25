@@ -26,7 +26,8 @@ from research.attach_cirsium_fresh_sentinel_v2_worldcover_points import (
     COMPLETE,
     POINT_MISSING,
     PROVIDER_FAILURE,
-    attach_worldcover_tile_with_provider,
+    REPAIR_IDENTITY,
+    attach_worldcover_point_bearing_cogs,
 )
 from research.build_cirsium_fresh_sentinel_public_broad_frame_v2 import (
     build_fresh_sentinel_v2_outer_frame,
@@ -34,6 +35,7 @@ from research.build_cirsium_fresh_sentinel_public_broad_frame_v2 import (
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_v2_full_worldcover_execution_v1.json"
+REPAIR_CONTRACT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_v2_worldcover_pointcog_repair_execution_v1.json"
 SHARD_COUNT = 7
 EXPECTED_TILES = 49
 EXPECTED_POINTS_PER_TILE = 800
@@ -54,6 +56,23 @@ def _contract() -> dict[str, Any]:
         raise ValueError("expected WorldCover candidate count drift")
     if int(value.get("execution", {}).get("worldcover_shard_count", -1)) != SHARD_COUNT:
         raise ValueError("WorldCover shard count drift")
+    return value
+
+
+def _repair_contract() -> dict[str, Any]:
+    value = json.loads(REPAIR_CONTRACT.read_text(encoding="utf-8"))
+    if value.get("status") != "FROZEN_BEFORE_POINT_BEARING_COG_REPAIR_EXECUTION":
+        raise ValueError("WorldCover point-bearing COG repair execution contract is not frozen")
+    if value.get("repair_identity") != REPAIR_IDENTITY:
+        raise ValueError("WorldCover repair execution identity drift")
+    if int(value.get("expected_intersecting_tile_count", -1)) != EXPECTED_TILES:
+        raise ValueError("repair expected tile count drift")
+    if int(value.get("expected_points_per_tile", -1)) != EXPECTED_POINTS_PER_TILE:
+        raise ValueError("repair expected points-per-tile drift")
+    if int(value.get("expected_candidate_count", -1)) != EXPECTED_CANDIDATES:
+        raise ValueError("repair expected candidate count drift")
+    if int(value.get("execution", {}).get("shard_count", -1)) != SHARD_COUNT:
+        raise ValueError("repair WorldCover shard count drift")
     return value
 
 
@@ -92,6 +111,7 @@ def _class_count_dict(frame: pd.DataFrame) -> dict[str, int]:
 
 def run_shard(shard_id: int, output_dir: Path) -> dict[str, Any]:
     _contract()
+    _repair_contract()
     shard_id = int(shard_id)
     if not 0 <= shard_id < SHARD_COUNT:
         raise ValueError(f"shard_id must be in [0,{SHARD_COUNT - 1}]")
@@ -110,19 +130,13 @@ def run_shard(shard_id: int, output_dir: Path) -> dict[str, Any]:
 
     rows: list[pd.DataFrame] = []
     tile_audits: list[dict[str, Any]] = []
-    crop_dir = output / "crops"
-    crop_dir.mkdir()
 
     for tile_id in selected_tiles:
         part = frame.loc[frame["regional_tile_id"].astype(str).eq(tile_id)].copy().reset_index(drop=True)
         if len(part) != EXPECTED_POINTS_PER_TILE:
             raise ValueError(f"{tile_id} does not contain exactly 800 frozen candidates")
 
-        crop_path = crop_dir / f"{tile_id}.tif"
-        attached, summary = attach_worldcover_tile_with_provider(
-            part,
-            crop_path=crop_path,
-        )
+        attached, summary = attach_worldcover_point_bearing_cogs(part)
         if len(attached) != EXPECTED_POINTS_PER_TILE:
             raise AssertionError(f"{tile_id} WorldCover attachment changed row count")
         if attached["candidate_cell_id"].astype(str).tolist() != part["candidate_cell_id"].astype(str).tolist():
@@ -141,17 +155,13 @@ def run_shard(shard_id: int, output_dir: Path) -> dict[str, Any]:
             "provider_id": str(summary.get("provider_id") or ""),
             "provider_release_id": str(summary.get("provider_release_id") or ""),
             "source_tile_ids": list(summary.get("source_tile_ids") or []),
-            "crop_sha256": str(summary.get("crop_sha256") or ""),
-            "provider_error_class": str(summary.get("provider_error_class") or ""),
+            "successful_source_tile_ids": list(summary.get("successful_source_tile_ids") or []),
+            "failed_source_tile_ids": list(summary.get("failed_source_tile_ids") or []),
+            "failed_source_tile_error_classes": dict(summary.get("failed_source_tile_error_classes") or {}),
+            "bounds_overfetch_used": bool(summary.get("bounds_overfetch_used")),
+            "point_bearing_cog_only": bool(summary.get("point_bearing_cog_only")),
             "candidate_rows_dropped": int(summary["candidate_rows_dropped"]),
         })
-        if crop_path.exists():
-            crop_path.unlink()
-
-    try:
-        crop_dir.rmdir()
-    except OSError:
-        pass
 
     combined = pd.concat(rows, ignore_index=True)
     expected_rows = len(selected_tiles) * EXPECTED_POINTS_PER_TILE
@@ -163,8 +173,9 @@ def run_shard(shard_id: int, output_dir: Path) -> dict[str, Any]:
     data_path = output / f"worldcover_shard_{shard_id:02d}.csv.gz"
     combined.to_csv(data_path, index=False, compression="gzip")
     manifest = {
-        "schema_version": "cirsium-fresh-sentinel-v2-worldcover-shard-v1",
-        "status": "WORLDCOVER_SHARD_COMPLETE_PRE_OUTCOME",
+        "schema_version": "cirsium-fresh-sentinel-v2-worldcover-pointcog-repair-shard-v1",
+        "status": "WORLDCOVER_POINTCOG_REPAIR_SHARD_COMPLETE_PRE_OUTCOME",
+        "repair_identity": REPAIR_IDENTITY,
         "shard_id": shard_id,
         "shard_count": SHARD_COUNT,
         "total_frozen_tile_count": EXPECTED_TILES,
@@ -203,6 +214,7 @@ def assemble_shards(
     reference_frame: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     _contract()
+    _repair_contract()
     manifests, data_files = _find_shard_files(Path(input_root))
     if len(manifests) != SHARD_COUNT or len(data_files) != SHARD_COUNT:
         raise ValueError(
@@ -212,6 +224,8 @@ def assemble_shards(
     meta = [json.loads(path.read_text(encoding="utf-8")) for path in manifests]
     if sorted(int(item["shard_id"]) for item in meta) != list(range(SHARD_COUNT)):
         raise ValueError("WorldCover shard IDs are incomplete or duplicated")
+    if any(item.get("repair_identity") != REPAIR_IDENTITY for item in meta):
+        raise ValueError("WorldCover repair shard identity drift")
     if any(int(item["candidate_rows_dropped"]) != 0 for item in meta):
         raise ValueError("a WorldCover shard reports candidate row loss")
 
@@ -268,8 +282,9 @@ def assemble_shards(
     ordered.to_csv(output_csv, index=False, compression="gzip")
 
     summary = {
-        "schema_version": "cirsium-fresh-sentinel-v2-full-worldcover-result-v1",
-        "status": "FULL_49_TILE_WORLDCOVER_EXECUTION_COMPLETE",
+        "schema_version": "cirsium-fresh-sentinel-v2-full-worldcover-pointcog-repair-result-v1",
+        "status": "FULL_49_TILE_WORLDCOVER_POINTCOG_REPAIR_COMPLETE",
+        "repair_identity": REPAIR_IDENTITY,
         "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
         "intersecting_tile_count": EXPECTED_TILES,
         "points_per_tile": EXPECTED_POINTS_PER_TILE,
@@ -288,6 +303,9 @@ def assemble_shards(
         "worldcover_class_counts": class_counts,
         "provider_failure_is_biological_negative": False,
         "worldcover_missing_is_biological_negative": False,
+        "source_gate_complete": int(len(provider_failure_tiles)) == 0,
+        "bounds_overfetch_used": False,
+        "point_bearing_cog_only": True,
         "candidate_selection_added": False,
         "candidate_ranking_added": False,
         "habitat_threshold_added": False,
@@ -299,8 +317,9 @@ def assemble_shards(
         "field_outcomes_used": False,
         "human_access_used": False,
         "next_gate": (
-            "Freeze the point-class coverage audit and class-frequency ledger; then prospectively define "
-            "any tile-level ecological screening rule before applying it."
+            "Freeze the repaired point-class source-coverage audit before defining any ecological screening rule."
+            if int(len(provider_failure_tiles)) == 0
+            else "Stop at the source gate and diagnose the remaining required point-bearing COG failures without changing ecological rules."
         ),
     }
     summary_json.write_text(

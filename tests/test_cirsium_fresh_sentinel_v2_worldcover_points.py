@@ -88,3 +88,71 @@ def test_provider_failure_preserves_all_candidates(monkeypatch, tmp_path: Path) 
     assert summary["candidate_rows_dropped"] == 0
     assert summary["provider_failure_is_biological_negative"] is False
     assert summary["field_outcomes_used"] is False
+
+
+def test_point_bearing_repair_requests_only_candidate_cogs(monkeypatch) -> None:
+    frame = pd.DataFrame({
+        "candidate_cell_id": ["a", "b", "c"],
+        "latitude": [35.5, 35.6, 36.5],
+        "longitude": [139.5, 139.6, 141.5],
+        "regional_tile_id": ["x160_y63"] * 3,
+        "tile_west": [140.0] * 3,
+        "tile_south": [36.0] * 3,
+        "tile_east": [142.0] * 3,
+        "tile_north": [38.0] * 3,
+        "outer_frame_identity": ["JP_PUBLIC_COUNTRY_BROAD_FRAME_V1"] * 3,
+        "field_outcomes_used": [False] * 3,
+        "private_exact_site_geometry_used": [False] * 3,
+        "occurrence_selected_tile": [False] * 3,
+    })
+    monkeypatch.setattr(mod, "_validate_repair_receipt", lambda: {})
+    seen = []
+
+    def sampler(subset, source_tile_id):
+        seen.append((source_tile_id, len(subset)))
+        return np.full(len(subset), 30.0)
+
+    attached, summary = mod.attach_worldcover_point_bearing_cogs(frame, sampler=sampler)
+    assert seen == [("N33E138", 2), ("N36E141", 1)]
+    assert summary["repair_identity"] == mod.REPAIR_IDENTITY
+    assert summary["bounds_overfetch_used"] is False
+    assert summary["point_bearing_cog_only"] is True
+    assert summary["source_tile_ids"] == ["N33E138", "N36E141"]
+    assert summary["failed_source_tile_ids"] == []
+    assert set(attached["worldcover_point_status"]) == {mod.COMPLETE}
+    assert attached["candidate_cell_id"].tolist() == frame["candidate_cell_id"].tolist()
+
+
+def test_point_bearing_repair_localizes_required_cog_failure(monkeypatch) -> None:
+    frame = pd.DataFrame({
+        "candidate_cell_id": ["a", "b", "c"],
+        "latitude": [35.5, 35.6, 36.5],
+        "longitude": [139.5, 139.6, 141.5],
+        "regional_tile_id": ["x160_y63"] * 3,
+        "tile_west": [140.0] * 3,
+        "tile_south": [36.0] * 3,
+        "tile_east": [142.0] * 3,
+        "tile_north": [38.0] * 3,
+        "outer_frame_identity": ["JP_PUBLIC_COUNTRY_BROAD_FRAME_V1"] * 3,
+        "field_outcomes_used": [False] * 3,
+        "private_exact_site_geometry_used": [False] * 3,
+        "occurrence_selected_tile": [False] * 3,
+    })
+    monkeypatch.setattr(mod, "_validate_repair_receipt", lambda: {})
+
+    def sampler(subset, source_tile_id):
+        if source_tile_id == "N36E141":
+            raise RuntimeError("required COG unavailable")
+        return np.full(len(subset), 30.0)
+
+    attached, summary = mod.attach_worldcover_point_bearing_cogs(frame, sampler=sampler)
+    assert attached["worldcover_point_status"].tolist() == [
+        mod.COMPLETE,
+        mod.COMPLETE,
+        mod.PROVIDER_FAILURE,
+    ]
+    assert summary["complete_candidate_count"] == 2
+    assert summary["failed_source_tile_ids"] == ["N36E141"]
+    assert summary["failed_source_tile_error_classes"] == {"N36E141": "RuntimeError"}
+    assert summary["provider_failure_is_biological_negative"] is False
+    assert attached["candidate_cell_id"].tolist() == frame["candidate_cell_id"].tolist()
