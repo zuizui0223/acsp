@@ -29,7 +29,7 @@ def _reference_frame() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _fake_attach(frame: pd.DataFrame, *, crop_path: Path):
+def _fake_attach(frame: pd.DataFrame):
     out = frame.copy()
     out["worldcover_class_code"] = 30.0
     out["worldcover_class_name"] = "Grassland"
@@ -42,8 +42,11 @@ def _fake_attach(frame: pd.DataFrame, *, crop_path: Path):
         "provider_id": "synthetic",
         "provider_release_id": "synthetic",
         "source_tile_ids": ["synthetic"],
-        "crop_sha256": "a" * 64,
-        "provider_error_class": "",
+        "successful_source_tile_ids": ["N30E129"],
+        "failed_source_tile_ids": [],
+        "failed_source_tile_error_classes": {},
+        "bounds_overfetch_used": False,
+        "point_bearing_cog_only": True,
         "candidate_rows_dropped": 0,
     }
 
@@ -61,7 +64,7 @@ def test_tile_partition_is_exact_seven_by_seven() -> None:
 def test_all_shards_assemble_to_exact_frozen_candidate_order(tmp_path: Path, monkeypatch) -> None:
     reference = _reference_frame()
     monkeypatch.setattr(mod, "frozen_outer_frame", lambda: reference.copy())
-    monkeypatch.setattr(mod, "attach_worldcover_tile_with_provider", _fake_attach)
+    monkeypatch.setattr(mod, "attach_worldcover_point_bearing_cogs", _fake_attach)
 
     root = tmp_path / "shards"
     for shard_id in range(mod.SHARD_COUNT):
@@ -89,5 +92,9 @@ def test_all_shards_assemble_to_exact_frozen_candidate_order(tmp_path: Path, mon
     assert summary["provider_failure_tile_count"] == 0
     assert summary["complete_candidate_count"] == 39200
     assert summary["worldcover_class_counts"] == {"30": 39200}
+    assert summary["repair_identity"] == mod.REPAIR_IDENTITY
+    assert summary["source_gate_complete"] is True
+    assert summary["bounds_overfetch_used"] is False
+    assert summary["point_bearing_cog_only"] is True
     assert summary["habitat_threshold_added"] is False
     assert summary["neighborhood_fraction_used"] is False
