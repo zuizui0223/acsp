@@ -15,6 +15,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+    CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
 )
 from research.freeze_cirsium_fresh_sentinel_movement_constraint_v1 import build_movement_constraint
@@ -22,14 +23,17 @@ from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import (
     VERIFIED_STATUS,
     verify_public_freeze_pin,
 )
+from research.verify_cirsium_fresh_sentinel_range_sector_provenance_pin_v1 import EXPECTED, EXPECTED_UNITS
 
 
 def _public_receipt(
     *,
     effort_pin_commit: str = "effort-pin",
     movement_pin_commit: str = "movement-pin",
+    range_pin_commit: str = "range-pin",
     effort_sha256: str = "e" * 64,
     movement_sha256: str = "a" * 64,
+    range_sha256: str = "b" * 64,
 ) -> dict:
     return {
         "schema_version": "cirsium-fresh-sentinel-public-pre-field-freeze-v1",
@@ -51,6 +55,8 @@ def _public_receipt(
         "pre_geometry_standardized_effort_sha256": effort_sha256,
         "pre_geometry_movement_constraint_pin_commit": movement_pin_commit,
         "pre_geometry_movement_constraint_sha256": movement_sha256,
+        "pre_geometry_range_sector_provenance_pin_commit": range_pin_commit,
+        "pre_geometry_range_sector_provenance_sha256": range_sha256,
         "pre_geometry_protocol_pins_verified_before_private_execution": True,
     }
 
@@ -91,6 +97,11 @@ def test_single_entry_runs_private_then_writes_commit_ready_receipt(tmp_path: Pa
         "verify_movement_constraint_pin",
         lambda *a, **k: {"pin_commit": "movement-pin", "protocol_sha256": "a" * 64},
     )
+    monkeypatch.setattr(
+        entry,
+        "verify_range_sector_provenance_pin",
+        lambda *a, **k: {"pin_commit": "range-pin", "provenance_sha256": "b" * 64},
+    )
     result = entry.run_full_pre_field_freeze(
         bundle,
         private,
@@ -106,6 +117,7 @@ def test_single_entry_runs_private_then_writes_commit_ready_receipt(tmp_path: Pa
     assert written["public_receipt_commit_required_before_outcome_opening"] is True
     assert written["pre_geometry_standardized_effort_pin_commit"] == "effort-pin"
     assert written["pre_geometry_movement_constraint_pin_commit"] == "movement-pin"
+    assert written["pre_geometry_range_sector_provenance_pin_commit"] == "range-pin"
     assert written["pre_geometry_protocol_pins_verified_before_private_execution"] is True
 
 
@@ -132,6 +144,48 @@ def test_single_entry_rejects_missing_pregeometry_pin_before_private_execution(
 
     monkeypatch.setattr(entry, "run_private_pre_field_pipeline", should_not_run)
     with pytest.raises(ValueError, match="effort pin missing"):
+        entry.run_full_pre_field_freeze(
+            bundle,
+            tmp_path / "private",
+            Path(CANONICAL_CANDIDATE_RECEIPT_REPO_PATH),
+            repo_root=repo,
+        )
+    assert touched is False
+
+
+def test_single_entry_rejects_missing_range_provenance_pin_before_private_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    bundle = tmp_path / "bundle.geojson"
+    bundle.write_text("{}", encoding="utf-8")
+    touched = False
+
+    monkeypatch.setattr(
+        entry,
+        "verify_standardized_effort_pin",
+        lambda *a, **k: {"pin_commit": "effort-pin", "protocol_sha256": "e" * 64},
+    )
+    monkeypatch.setattr(
+        entry,
+        "verify_movement_constraint_pin",
+        lambda *a, **k: {"pin_commit": "movement-pin", "protocol_sha256": "a" * 64},
+    )
+    monkeypatch.setattr(
+        entry,
+        "verify_range_sector_provenance_pin",
+        lambda *a, **k: (_ for _ in ()).throw(ValueError("range provenance missing")),
+    )
+
+    def should_not_run(*args, **kwargs):
+        nonlocal touched
+        touched = True
+        raise AssertionError("private execution must not start before range provenance pin")
+
+    monkeypatch.setattr(entry, "run_private_pre_field_pipeline", should_not_run)
+    with pytest.raises(ValueError, match="range provenance missing"):
         entry.run_full_pre_field_freeze(
             bundle,
             tmp_path / "private",
@@ -214,19 +268,62 @@ def _effort_protocol() -> dict:
     }
 
 
-def _commit_pregeometry_protocols(repo: Path) -> tuple[str, str, str]:
+def _range_provenance() -> dict:
+    units = {}
+    for unit in EXPECTED_UNITS:
+        expected = EXPECTED[unit]
+        p02 = bool(expected["p02_required"])
+        units[unit] = {
+            "species_binomial": expected["species_binomial"],
+            "aza3_slot_id": expected["aza3_slot_id"],
+            "range_sector_label": expected["range_sector_label"],
+            "freeze_status": "FROZEN_FOR_FIELD_COLLECTION",
+            "current_occurrence_supported": True,
+            "permission_gate_satisfied": True,
+            "target_locality_id": f"{unit}-LOCALITY",
+            "private_exact_site_record_exists": True,
+            "range_sector_geometry_may_now_be_materialized": True,
+            "p02_first_validated_wild_population_required": p02,
+            "p02_first_validated_wild_population_link_satisfied": p02,
+        }
+    return {
+        "schema_version": "cirsium-fresh-sentinel-range-sector-provenance-v1",
+        "status": "PRE_GEOMETRY_RANGE_SECTOR_PROVENANCE_FROZEN",
+        "cohort_unit_ids": list(EXPECTED_UNITS),
+        "aza3_exact_site_contract_version": "chapter3_exact_site_freeze_v8",
+        "upstream_snapshot_commit": "a" * 40,
+        "unit_provenance": units,
+        "exact_coordinates_included": False,
+        "sensitive_access_instructions_included": False,
+        "prospective_acsp_field_outcomes_opened": False,
+        "acsp_field_outcomes_used_to_define_sector": False,
+        "post_geometry_edits_allowed": False,
+        "post_outcome_edits_allowed": False,
+        "public_safe_to_commit": True,
+    }
+
+
+def _commit_pregeometry_protocols(repo: Path) -> tuple[str, str, str, str]:
     effort = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
     movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    provenance = repo / CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH
     effort.parent.mkdir(parents=True, exist_ok=True)
     effort.write_text(json.dumps(_effort_protocol(), sort_keys=True) + "\n", encoding="utf-8")
     movement.write_text(json.dumps(build_movement_constraint(), sort_keys=True) + "\n", encoding="utf-8")
-    _git(repo, "add", CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH, CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH)
+    provenance.write_text(json.dumps(_range_provenance(), ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    _git(
+        repo,
+        "add",
+        CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
+        CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+        CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
+    )
     _git(repo, "commit", "-m", "Pin pre-geometry protocols")
-    return _git(repo, "rev-parse", "HEAD"), _sha256(effort), _sha256(movement)
+    return _git(repo, "rev-parse", "HEAD"), _sha256(effort), _sha256(movement), _sha256(provenance)
 
 
 def _commit_initial_receipt(repo: Path) -> tuple[Path, str]:
-    protocol_pin, effort_sha, movement_sha = _commit_pregeometry_protocols(repo)
+    protocol_pin, effort_sha, movement_sha, range_sha = _commit_pregeometry_protocols(repo)
     receipt = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(
@@ -234,8 +331,10 @@ def _commit_initial_receipt(repo: Path) -> tuple[Path, str]:
             _public_receipt(
                 effort_pin_commit=protocol_pin,
                 movement_pin_commit=protocol_pin,
+                range_pin_commit=protocol_pin,
                 effort_sha256=effort_sha,
                 movement_sha256=movement_sha,
+                range_sha256=range_sha,
             ),
             sort_keys=True,
         ) + "\n",
@@ -249,7 +348,7 @@ def _commit_initial_receipt(repo: Path) -> tuple[Path, str]:
 def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _init_repo(repo)
-    protocol_pin, effort_sha, movement_sha = _commit_pregeometry_protocols(repo)
+    protocol_pin, effort_sha, movement_sha, range_sha = _commit_pregeometry_protocols(repo)
     receipt = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(
@@ -257,8 +356,10 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
             _public_receipt(
                 effort_pin_commit=protocol_pin,
                 movement_pin_commit=protocol_pin,
+                range_pin_commit=protocol_pin,
                 effort_sha256=effort_sha,
                 movement_sha256=movement_sha,
+                range_sha256=range_sha,
             ),
             sort_keys=True,
         ) + "\n",
@@ -292,7 +393,7 @@ def test_pin_verifier_requires_actual_commit_and_allows_descendant_head(tmp_path
 def test_pin_verifier_rejects_receipt_with_false_pregeometry_hash_provenance(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _init_repo(repo)
-    protocol_pin, effort_sha, movement_sha = _commit_pregeometry_protocols(repo)
+    protocol_pin, effort_sha, movement_sha, range_sha = _commit_pregeometry_protocols(repo)
     receipt = repo / CANONICAL_CANDIDATE_RECEIPT_REPO_PATH
     receipt.write_text(
         json.dumps(

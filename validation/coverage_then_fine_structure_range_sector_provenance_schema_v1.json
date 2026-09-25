@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "acsp://coverage-then-fine-structure/range-sector-provenance-v1",
+  "title": "Fresh-SENTINEL public-safe range-sector provenance",
+  "description": "Coordinate-free attestation that all four fresh-SENTINEL range-sector sources have passed the upstream exact-site freeze before private geometry is opened.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "cohort_unit_ids",
+    "aza3_exact_site_contract_version",
+    "upstream_snapshot_commit",
+    "unit_provenance",
+    "exact_coordinates_included",
+    "sensitive_access_instructions_included",
+    "prospective_acsp_field_outcomes_opened",
+    "acsp_field_outcomes_used_to_define_sector",
+    "post_geometry_edits_allowed",
+    "post_outcome_edits_allowed",
+    "public_safe_to_commit"
+  ],
+  "properties": {
+    "schema_version": {"const": "cirsium-fresh-sentinel-range-sector-provenance-v1"},
+    "status": {"const": "PRE_GEOMETRY_RANGE_SECTOR_PROVENANCE_FROZEN"},
+    "cohort_unit_ids": {"const": ["CIR02", "CIR06", "CIR12", "CIR13"]},
+    "aza3_exact_site_contract_version": {"const": "chapter3_exact_site_freeze_v8"},
+    "upstream_snapshot_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "unit_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "properties": {
+        "CIR02": {"$ref": "#/$defs/cir02"},
+        "CIR06": {"$ref": "#/$defs/cir06"},
+        "CIR12": {"$ref": "#/$defs/cir12"},
+        "CIR13": {"$ref": "#/$defs/cir13"}
+      }
+    },
+    "exact_coordinates_included": {"const": false},
+    "sensitive_access_instructions_included": {"const": false},
+    "prospective_acsp_field_outcomes_opened": {"const": false},
+    "acsp_field_outcomes_used_to_define_sector": {"const": false},
+    "post_geometry_edits_allowed": {"const": false},
+    "post_outcome_edits_allowed": {"const": false},
+    "public_safe_to_commit": {"const": true}
+  },
+  "$defs": {
+    "common": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "species_binomial",
+        "aza3_slot_id",
+        "range_sector_label",
+        "freeze_status",
+        "current_occurrence_supported",
+        "permission_gate_satisfied",
+        "target_locality_id",
+        "private_exact_site_record_exists",
+        "range_sector_geometry_may_now_be_materialized",
+        "p02_first_validated_wild_population_required",
+        "p02_first_validated_wild_population_link_satisfied"
+      ],
+      "properties": {
+        "species_binomial": {"type": "string", "minLength": 1},
+        "aza3_slot_id": {"type": "string", "minLength": 1},
+        "range_sector_label": {"type": "string", "minLength": 1},
+        "freeze_status": {"const": "FROZEN_FOR_FIELD_COLLECTION"},
+        "current_occurrence_supported": {"const": true},
+        "permission_gate_satisfied": {"const": true},
+        "target_locality_id": {"type": "string", "minLength": 1},
+        "private_exact_site_record_exists": {"const": true},
+        "range_sector_geometry_may_now_be_materialized": {"const": true},
+        "p02_first_validated_wild_population_required": {"type": "boolean"},
+        "p02_first_validated_wild_population_link_satisfied": {"type": "boolean"}
+      }
+    },
+    "cir02": {"allOf": [{"$ref": "#/$defs/common"}, {"properties": {
+      "species_binomial": {"const": "Cirsium inundatum"},
+      "aza3_slot_id": {"const": "P1_Cirsium_inundatum_A"},
+      "range_sector_label": {"const": "青森県側の確認済み野生集団"},
+      "p02_first_validated_wild_population_required": {"const": false},
+      "p02_first_validated_wild_population_link_satisfied": {"const": false}
+    }}]},
+    "cir06": {"allOf": [{"$ref": "#/$defs/common"}, {"properties": {
+      "species_binomial": {"const": "Cirsium yezoalpinum"},
+      "aza3_slot_id": {"const": "P1_Cirsium_yezoalpinum_A"},
+      "range_sector_label": {"const": "知床山系の確認済み野生集団"},
+      "p02_first_validated_wild_population_required": {"const": false},
+      "p02_first_validated_wild_population_link_satisfied": {"const": false}
+    }}]},
+    "cir12": {"allOf": [{"$ref": "#/$defs/common"}, {"properties": {
+      "species_binomial": {"const": "Cirsium dipsacolepis"},
+      "aza3_slot_id": {"const": "P6_Cirsium_dipsacolepis_OWN"},
+      "range_sector_label": {"const": "P02で最初に検証される野生集団セクター"},
+      "p02_first_validated_wild_population_required": {"const": true},
+      "p02_first_validated_wild_population_link_satisfied": {"const": true}
+    }}]},
+    "cir13": {"allOf": [{"$ref": "#/$defs/common"}, {"properties": {
+      "species_binomial": {"const": "Cirsium lineare"},
+      "aza3_slot_id": {"const": "P6_Cirsium_lineare_OWN"},
+      "range_sector_label": {"const": "P02で最初に検証される野生集団セクター"},
+      "p02_first_validated_wild_population_required": {"const": true},
+      "p02_first_validated_wild_population_link_satisfied": {"const": true}
+    }}]}
+  }
+}

@@ -29,6 +29,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
@@ -50,6 +51,9 @@ from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import 
 )
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import (
     verify_public_freeze_pin,
+)
+from research.verify_cirsium_fresh_sentinel_range_sector_provenance_pin_v1 import (
+    verify_range_sector_provenance_pin,
 )
 from research.verify_cirsium_fresh_sentinel_standardized_effort_pin_v1 import (
     verify_standardized_effort_pin,
@@ -87,6 +91,7 @@ def advance_pre_outcome_pipeline(
     capacity = repo / CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH
     effort = repo / CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH
     movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    range_provenance = repo / CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH
     evaluation = repo / CANONICAL_FIELD_EVALUATION_CONTRACT_REPO_PATH
     analysis_plan = repo / CANONICAL_ANALYSIS_PLAN_REPO_PATH
     field_log_template = repo / CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH
@@ -127,6 +132,39 @@ def advance_pre_outcome_pipeline(
 
     movement_km = float(movement_pin["max_network_transition_km"])
 
+    if not range_provenance.exists():
+        return {
+            "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
+            "status": "BLOCKED_UPSTREAM_RANGE_SECTOR_PROVENANCE",
+            "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
+            "prospective_field_outcomes_opened": False,
+            "outcome_opening_gate_satisfied": False,
+            "upstream_exact_site_contract": "chapter3_exact_site_freeze_v8",
+            "all_four_exact_sites_must_be_frozen_before_private_geometry": True,
+            "p02_first_validated_population_required_for": ["CIR12", "CIR13"],
+            "next_required_input": (
+                "coordinate-free canonical range-sector provenance receipt after aza3 exact-site freeze; "
+                "do not supply private GeoJSON before this gate"
+            ),
+        }
+    try:
+        range_provenance_pin = verify_range_sector_provenance_pin(
+            range_provenance,
+            repo_root=repo,
+        )
+    except ValueError as exc:
+        return {
+            "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",
+            "status": "RANGE_SECTOR_PROVENANCE_PIN_NOT_SATISFIED",
+            "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
+            "movement_constraint_pin_commit": movement_pin["pin_commit"],
+            "prospective_field_outcomes_opened": False,
+            "outcome_opening_gate_satisfied": False,
+            "pin_error": str(exc),
+            "next_gate": "Commit the exact canonical coordinate-free range-sector provenance receipt before private geometry.",
+        }
+
     if not candidate.exists():
         if private_root.exists():
             raise ValueError(
@@ -139,8 +177,9 @@ def advance_pre_outcome_pipeline(
                 "status": "BLOCKED_PRIVATE_RANGE_SECTOR_GEOMETRY",
                 "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
                 "movement_constraint_pin_commit": movement_pin["pin_commit"],
+                "range_sector_provenance_pin_commit": range_provenance_pin["pin_commit"],
                 "prospective_field_outcomes_opened": False,
-                "next_required_input": "one private four-feature range-sector GeoJSON bundle",
+                "next_required_input": "one private four-feature range-sector GeoJSON bundle bound to the pinned upstream provenance",
             }
         result = run_full_pre_field_freeze(
             Path(bundle_geojson),
@@ -154,6 +193,7 @@ def advance_pre_outcome_pipeline(
             "freeze_status": result["status"],
             "standardized_effort_protocol_pin_commit": effort_pin["pin_commit"],
             "movement_constraint_pin_commit": movement_pin["pin_commit"],
+            "range_sector_provenance_pin_commit": range_provenance_pin["pin_commit"],
             "public_paths_to_commit": [CANONICAL_CANDIDATE_RECEIPT_REPO_PATH],
             "prospective_field_outcomes_opened": False,
             "outcome_opening_gate_satisfied": False,
@@ -264,6 +304,7 @@ def advance_pre_outcome_pipeline(
         expected_schedule_pin_commit=schedule_pin["pin_commit"],
         expected_effort_pin_commit=effort_pin["pin_commit"],
         expected_movement_pin_commit=movement_pin["pin_commit"],
+        expected_range_provenance_pin_commit=range_provenance_pin["pin_commit"],
     )
     return {
         "schema_version": "cirsium-fresh-sentinel-pre-outcome-advance-v1",

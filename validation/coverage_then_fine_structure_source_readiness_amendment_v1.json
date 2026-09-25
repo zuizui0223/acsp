@@ -1,6 +1,6 @@
 {
   "schema_version": "coverage-then-fine-structure-source-readiness-v1",
-  "status": "PUBLIC_SOURCE_RECONSTRUCTION_READY_PRIVATE_RANGE_SECTOR_GEOMETRY_BLOCKED",
+  "status": "PUBLIC_SOURCE_RECONSTRUCTION_READY_UPSTREAM_EXACT_SITE_AND_PRIVATE_GEOMETRY_BLOCKED",
   "source_parent_issue": 183,
   "source_pr": 184,
   "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
@@ -18,7 +18,10 @@
     "aza3_exact_site_contract": "data/planning/chapter3_exact_site_freeze_contract_v8.json",
     "aza3_required_slots_frozen_at_pinned_commit": 0,
     "aza3_private_storage_required_for_exact_site_data": true,
-    "interpretation": "Textual range-sector labels cannot be converted into candidate-frame polygons without an additional frozen private geometry source."
+    "interpretation": "Textual range-sector labels cannot be converted into candidate-frame polygons without an additional frozen private geometry source.",
+    "aza3_exact_site_contract_version": "chapter3_exact_site_freeze_v8",
+    "cir02_cir06_exact_locality_status": "RANGE_SECTOR_PLAN_PRESENT_EXACT_LOCALITY_NOT_YET_FROZEN",
+    "cir12_cir13_exact_locality_status": "P02_FIRST_VALIDATED_WILD_POPULATION_REQUIRED_EXACT_LOCALITY_NOT_YET_FROZEN"
   },
   "public_sources_now_reconstructible_without_user_files": {
     "gbif_uncertainty_evidence": {
@@ -60,22 +63,38 @@
     "research/prepare_cirsium_private_candidate_frame_v1.py"
   ],
   "remaining_external_blocker": {
-    "single_input_class": "PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY",
+    "blocker_classes": [
+      "UPSTREAM_EXACT_SITE_FREEZE_PROVENANCE",
+      "PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY"
+    ],
     "required_units": [
       "CIR02",
       "CIR06",
       "CIR12",
       "CIR13"
     ],
-    "preferred_delivery": "one GeoJSON FeatureCollection with one Polygon/MultiPolygon feature per frozen cohort_unit_id",
+    "upstream_exact_site_freeze_required_for": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ],
+    "p02_first_validated_wild_population_dependency_units": [
+      "CIR12",
+      "CIR13"
+    ],
+    "canonical_public_provenance_path": "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json",
+    "canonical_public_provenance_schema": "validation/coverage_then_fine_structure_range_sector_provenance_schema_v1.json",
+    "provenance_must_be_immutably_pinned_before_private_geometry": true,
+    "preferred_private_geometry_delivery": "one RFC7946 GeoJSON FeatureCollection with one Polygon/MultiPolygon feature per frozen cohort_unit_id",
     "required_feature_key": "cohort_unit_id",
-    "forbidden_substitute": "do not infer polygons from textual prefecture/mountain/range-sector labels",
-    "why_not_reconstructible": "The pinned aza3 contract explicitly reports zero required exact sites frozen and keeps exact coordinate data outside the public repository. CIR12/CIR13 also depend on the first P02-validated wild-population sector, which is not a repository-defined polygon.",
+    "forbidden_substitute": "do not infer polygons from textual prefecture/mountain/range-sector labels and do not accept CIR12/CIR13 geometry before P02 first-validated-population provenance is frozen",
+    "why_not_reconstructible": "The pinned aza3 exact-site contract reports zero required exact sites frozen. P1 sector plans for CIR02/CIR06 explicitly state exact locality not yet frozen, while CIR12/CIR13 must be drawn from the first P02-validated wild population.",
     "scope": "SOURCE_RECONSTRUCTION_ONLY",
     "not_the_only_pre_outcome_gate": true
   },
   "once_geometry_exists": [
-    "only after the canonical movement constraint has been immutably pinned, open the frozen private range-sector bundle",
+    "only after the canonical range-sector provenance receipt and movement constraint have both been immutably pinned, open the frozen private range-sector bundle",
     "materialize/hash GSI DEM and required ESA WorldCover crops",
     "materialize private GBIF >1-km uncertainty evidence for CIR02/CIR12",
     "build 100-m raw grids with no known-point kernel",

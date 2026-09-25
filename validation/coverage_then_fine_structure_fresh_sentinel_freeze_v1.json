@@ -143,10 +143,23 @@
   },
   "execution_blocker": {
     "current": true,
-    "reason": "The four fresh sentinel units still lack executable private range-sector/candidate-frame inputs, and the single human movement constraint must be declared and immutably pinned before those private geometries are opened.",
-    "next_legal_step": "declare and commit the canonical max_network_transition_km movement constraint first; verify its immutable pin; only then supply the four-feature private range-sector GeoJSON, materialize/hash the declared sources, build the 100-m candidate frame, and freeze all method/comparator rankings before prospective field outcomes are opened",
+    "reason": "All four fresh-SENTINEL units lack an upstream exact-site freeze provenance pin. The pinned aza3 v8 contract reports zero required slots frozen; CIR02/CIR06 have range-sector plans but exact localities are not yet frozen, while CIR12/CIR13 require the first P02-validated wild population before their exact locality can be frozen.",
+    "next_legal_step": "Complete the upstream aza3 exact-site freeze for CIR02/CIR06/CIR12/CIR13, including the P02 first-validated-population link for CIR12/CIR13; create and immutably pin the coordinate-free canonical range-sector provenance receipt; only then supply/open the private four-feature RFC7946 GeoJSON and freeze candidate/comparator orders.",
     "pre_geometry_movement_constraint_required": true,
-    "movement_constraint_canonical_path": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
+    "movement_constraint_canonical_path": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json",
+    "pre_geometry_range_sector_provenance_required": true,
+    "range_sector_provenance_canonical_path": "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json",
+    "upstream_exact_site_contract_version": "chapter3_exact_site_freeze_v8",
+    "upstream_exact_site_freeze_required_for": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ],
+    "p02_first_validated_wild_population_dependency_units": [
+      "CIR12",
+      "CIR13"
+    ]
   },
   "forbidden": [
     "do not recycle CIR01/CIR04/CIR07/CIR08 as fresh promotion outcomes",

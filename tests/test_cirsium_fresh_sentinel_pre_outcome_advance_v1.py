@@ -11,6 +11,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
     CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
+    CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
 )
 
 
@@ -37,12 +38,23 @@ def _movement_pin(km: float = 5.0) -> dict:
     }
 
 
+def _range_provenance_pin() -> dict:
+    return {
+        "pin_commit": "range-provenance-pin",
+        "range_sector_provenance_pin_gate_satisfied": True,
+        "provenance_sha256": "a" * 64,
+    }
+
+
 def _stub_protocol_pins(repo: Path, monkeypatch: pytest.MonkeyPatch, *, movement_km: float = 5.0) -> None:
     movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
     movement.parent.mkdir(parents=True, exist_ok=True)
     movement.write_text("{}\n", encoding="utf-8")
+    provenance = repo / CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH
+    provenance.write_text("{}\n", encoding="utf-8")
     monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
     monkeypatch.setattr(advance, "verify_movement_constraint_pin", lambda *a, **k: _movement_pin(movement_km))
+    monkeypatch.setattr(advance, "verify_range_sector_provenance_pin", lambda *a, **k: _range_provenance_pin())
 
 
 def test_effort_pin_is_checked_before_private_geometry_is_processed(
@@ -161,6 +173,37 @@ def test_unpinned_movement_constraint_blocks_before_private_geometry(
     )
     assert result["status"] == "MOVEMENT_CONSTRAINT_PIN_NOT_SATISFIED"
     assert "movement not committed" in result["pin_error"]
+    assert touched is False
+
+
+def test_missing_range_provenance_blocks_before_private_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    movement = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
+    movement.parent.mkdir(parents=True, exist_ok=True)
+    movement.write_text("{}\n", encoding="utf-8")
+    touched = False
+
+    monkeypatch.setattr(advance, "verify_standardized_effort_pin", lambda *a, **k: _effort_pin())
+    monkeypatch.setattr(advance, "verify_movement_constraint_pin", lambda *a, **k: _movement_pin())
+
+    def should_not_run(*args, **kwargs):
+        nonlocal touched
+        touched = True
+        raise AssertionError("private geometry must wait for upstream provenance")
+
+    monkeypatch.setattr(advance, "run_full_pre_field_freeze", should_not_run)
+    result = advance.advance_pre_outcome_pipeline(
+        tmp_path / "private",
+        bundle_geojson=tmp_path / "bundle.geojson",
+        repo_root=repo,
+    )
+    assert result["status"] == "BLOCKED_UPSTREAM_RANGE_SECTOR_PROVENANCE"
+    assert result["all_four_exact_sites_must_be_frozen_before_private_geometry"] is True
+    assert result["p02_first_validated_population_required_for"] == ["CIR12", "CIR13"]
     assert touched is False
 
 

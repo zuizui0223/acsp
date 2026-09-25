@@ -27,6 +27,7 @@ on:
       - "research/verify_cirsium_fresh_sentinel_standardized_effort_pin_v1.py"
       - "research/freeze_cirsium_fresh_sentinel_movement_constraint_v1.py"
       - "research/verify_cirsium_fresh_sentinel_movement_constraint_pin_v1.py"
+      - "research/verify_cirsium_fresh_sentinel_range_sector_provenance_pin_v1.py"
       - "research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
@@ -44,6 +45,7 @@ on:
       - "tests/test_cirsium_fresh_sentinel_standardized_effort_protocol_v1.py"
       - "tests/test_cirsium_fresh_sentinel_standardized_effort_pin_v1.py"
       - "tests/test_cirsium_fresh_sentinel_movement_constraint_pin_v1.py"
+      - "tests/test_cirsium_fresh_sentinel_range_sector_provenance_pin_v1.py"
       - "tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py"
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_advance_v1.py"
@@ -61,6 +63,8 @@ on:
       - "validation/cirsium_fresh_sentinel_standardized_effort_protocol_v1.json"
       - "validation/coverage_then_fine_structure_standardized_effort_rationale_v1.json"
       - "validation/coverage_then_fine_structure_movement_constraint_schema_v1.json"
+      - "validation/coverage_then_fine_structure_range_sector_provenance_schema_v1.json"
+      - "validation/cirsium_fresh_sentinel_range_sector_provenance_v1.json"
       - "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
       - "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json"
       - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
@@ -108,6 +112,7 @@ jobs:
             tests/test_cirsium_fresh_sentinel_standardized_effort_protocol_v1.py \
             tests/test_cirsium_fresh_sentinel_standardized_effort_pin_v1.py \
             tests/test_cirsium_fresh_sentinel_movement_constraint_pin_v1.py \
+            tests/test_cirsium_fresh_sentinel_range_sector_provenance_pin_v1.py \
             tests/test_cirsium_fresh_sentinel_private_field_schedule_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_gate_v1.py \
             tests/test_cirsium_fresh_sentinel_pre_outcome_advance_v1.py \
@@ -138,6 +143,9 @@ jobs:
           assert f['method_identity'] == 'COVERAGE_THEN_FINE_STRUCTURE_V1'
           assert f['selection_rule']['selected_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert f['execution_blocker']['current'] is True
+          assert f['execution_blocker']['pre_geometry_range_sector_provenance_required'] is True
+          assert f['execution_blocker']['upstream_exact_site_freeze_required_for'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert f['execution_blocker']['p02_first_validated_wild_population_dependency_units'] == ['CIR12', 'CIR13']
           assert f['field_evaluation_contract'] == 'validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json'
           assert f['frozen_method_boundary']['fine_candidate_spacing_m'] == 100
           assert f['frozen_method_boundary']['coarse_coverage_cell_size_m'] == 5000
@@ -151,10 +159,17 @@ jobs:
           assert all(row['execution_status'] == 'BLOCKED_PRIVATE_SOURCE_FREEZE' for row in rows)
 
           s = json.loads(Path('validation/coverage_then_fine_structure_source_readiness_amendment_v1.json').read_text())
-          assert s['status'] == 'PUBLIC_SOURCE_RECONSTRUCTION_READY_PRIVATE_RANGE_SECTOR_GEOMETRY_BLOCKED'
+          assert s['status'] == 'PUBLIC_SOURCE_RECONSTRUCTION_READY_UPSTREAM_EXACT_SITE_AND_PRIVATE_GEOMETRY_BLOCKED'
           assert s['repo_and_upstream_audit']['aza3_required_slots_frozen_at_pinned_commit'] == 0
-          assert s['remaining_external_blocker']['single_input_class'] == 'PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY'
+          assert s['repo_and_upstream_audit']['aza3_exact_site_contract_version'] == 'chapter3_exact_site_freeze_v8'
+          assert s['remaining_external_blocker']['blocker_classes'] == [
+              'UPSTREAM_EXACT_SITE_FREEZE_PROVENANCE',
+              'PRIVATE_FROZEN_RANGE_SECTOR_GEOMETRY',
+          ]
           assert s['remaining_external_blocker']['required_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert s['remaining_external_blocker']['upstream_exact_site_freeze_required_for'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert s['remaining_external_blocker']['p02_first_validated_wild_population_dependency_units'] == ['CIR12', 'CIR13']
+          assert s['remaining_external_blocker']['provenance_must_be_immutably_pinned_before_private_geometry'] is True
           assert s['remaining_external_blocker']['scope'] == 'SOURCE_RECONSTRUCTION_ONLY'
           assert s['remaining_external_blocker']['not_the_only_pre_outcome_gate'] is True
           assert s['execution_precondition_before_private_source_use']['movement_constraint_required'] is True
@@ -170,6 +185,12 @@ jobs:
           assert schema['properties']['features']['minItems'] == 4
           assert schema['properties']['features']['maxItems'] == 4
           assert 'longitude, latitude order' in schema['properties']['features']['items']['properties']['geometry']['properties']['coordinates']['description']
+
+          provenance_schema = json.loads(Path('validation/coverage_then_fine_structure_range_sector_provenance_schema_v1.json').read_text())
+          assert provenance_schema['properties']['status']['const'] == 'PRE_GEOMETRY_RANGE_SECTOR_PROVENANCE_FROZEN'
+          assert provenance_schema['properties']['cohort_unit_ids']['const'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert provenance_schema['properties']['exact_coordinates_included']['const'] is False
+          assert provenance_schema['properties']['acsp_field_outcomes_used_to_define_sector']['const'] is False
 
           e = json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json').read_text())
           assert e['status'] == 'FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING'
@@ -290,6 +311,10 @@ jobs:
           assert o['fresh_units'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
           assert o['execution_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
           assert o['state_aware_pre_outcome_entrypoint'] == 'research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py'
+          assert o['input_boundary']['range_sector_provenance_must_precede_private_geometry'] is True
+          assert o['state_aware_entrypoint_semantics']['range_sector_provenance_required_before_private_geometry'] is True
+          assert o['state_aware_entrypoint_semantics']['upstream_exact_site_freeze_required_for'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert o['state_aware_entrypoint_semantics']['p02_first_validated_wild_population_dependency_units'] == ['CIR12', 'CIR13']
           assert o['input_boundary']['private_geometry_crs'] == 'RFC7946_WGS84'
           assert o['input_boundary']['private_geometry_coordinate_order'] == 'longitude_latitude'
           assert o['input_boundary']['projected_private_coordinates_allowed'] is False
@@ -330,6 +355,9 @@ jobs:
           assert gate['low_level_freeze_entrypoint'] == 'research/run_cirsium_fresh_sentinel_freeze_v1.py'
           assert gate['low_level_entrypoint_requires_standardized_effort_pin_before_private_bundle_read'] is True
           assert gate['low_level_entrypoint_requires_movement_constraint_pin_before_private_bundle_read'] is True
+          assert gate['low_level_entrypoint_requires_range_sector_provenance_pin_before_private_bundle_read'] is True
+          assert gate['candidate_receipt_records_pre_geometry_range_sector_provenance_pin_commit_and_sha256'] is True
+          assert gate['candidate_pin_verifier_revalidates_pre_geometry_range_sector_provenance_pin'] is True
           assert gate['candidate_receipt_records_pre_geometry_standardized_effort_pin_commit_and_sha256'] is True
           assert gate['candidate_receipt_records_pre_geometry_movement_pin_commit_and_sha256'] is True
           assert gate['candidate_receipt_attests_protocol_pins_verified_before_private_execution'] is True
@@ -444,6 +472,6 @@ jobs:
           assert movement_schema['properties']['candidate_identity_used_to_set_constraint']['const'] is False
           assert movement_schema['properties']['post_geometry_edits_allowed']['const'] is False
 
-          assert o['current_execution_state'] == 'BLOCKED_UNTIL_PRIVATE_RANGE_SECTOR_BUNDLE_EXISTS'
+          assert o['current_execution_state'] == 'BLOCKED_UNTIL_UPSTREAM_EXACT_SITE_PROVENANCE_PIN_AND_PRIVATE_RANGE_SECTOR_BUNDLE_EXIST'
           assert o['outcome_opening_allowed_now'] is False
           PY

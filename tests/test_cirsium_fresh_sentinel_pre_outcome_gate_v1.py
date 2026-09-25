@@ -14,6 +14,7 @@ from research.cirsium_fresh_sentinel_paths_v1 import (
     CANONICAL_FIELD_LOG_TEMPLATE_REPO_PATH,
     CANONICAL_FIELD_SCHEDULE_RECEIPT_REPO_PATH,
     CANONICAL_OPERATIONAL_CAPACITY_PROFILE_REPO_PATH,
+    CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH,
     CANONICAL_STANDARDIZED_EFFORT_PROTOCOL_REPO_PATH,
     CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH,
 )
@@ -23,6 +24,7 @@ from research.validate_cirsium_fresh_sentinel_field_evaluation_contract_v1 impor
 from research.verify_cirsium_fresh_sentinel_pre_outcome_gate_v1 import FINAL_STATUS, verify_pre_outcome_gate
 from research.verify_cirsium_fresh_sentinel_public_field_schedule_pin_v1 import verify_public_field_schedule_pin
 from research.verify_cirsium_fresh_sentinel_public_freeze_pin_v1 import verify_public_freeze_pin
+from research.verify_cirsium_fresh_sentinel_range_sector_provenance_pin_v1 import EXPECTED, EXPECTED_UNITS
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -50,6 +52,7 @@ def _candidate_receipt(
     pregeometry_pin_commit: str,
     effort_sha256: str,
     movement_sha256: str,
+    range_sha256: str,
 ) -> dict:
     return {
         "status": "PUBLIC_HASH_FREEZE_READY_FOR_COMMIT",
@@ -71,6 +74,8 @@ def _candidate_receipt(
         "pre_geometry_standardized_effort_sha256": effort_sha256,
         "pre_geometry_movement_constraint_pin_commit": pregeometry_pin_commit,
         "pre_geometry_movement_constraint_sha256": movement_sha256,
+        "pre_geometry_range_sector_provenance_pin_commit": pregeometry_pin_commit,
+        "pre_geometry_range_sector_provenance_sha256": range_sha256,
         "pre_geometry_protocol_pins_verified_before_private_execution": True,
     }
 
@@ -95,6 +100,41 @@ def _effort_protocol() -> dict:
         "arm_specific_effort_allowed": False,
         "movement_constraint_used_to_set_effort": False,
         "post_outcome_effort_edits_allowed": False,
+    }
+
+
+def _range_provenance() -> dict:
+    units = {}
+    for unit in EXPECTED_UNITS:
+        expected = EXPECTED[unit]
+        p02 = bool(expected["p02_required"])
+        units[unit] = {
+            "species_binomial": expected["species_binomial"],
+            "aza3_slot_id": expected["aza3_slot_id"],
+            "range_sector_label": expected["range_sector_label"],
+            "freeze_status": "FROZEN_FOR_FIELD_COLLECTION",
+            "current_occurrence_supported": True,
+            "permission_gate_satisfied": True,
+            "target_locality_id": f"{unit}-LOCALITY",
+            "private_exact_site_record_exists": True,
+            "range_sector_geometry_may_now_be_materialized": True,
+            "p02_first_validated_wild_population_required": p02,
+            "p02_first_validated_wild_population_link_satisfied": p02,
+        }
+    return {
+        "schema_version": "cirsium-fresh-sentinel-range-sector-provenance-v1",
+        "status": "PRE_GEOMETRY_RANGE_SECTOR_PROVENANCE_FROZEN",
+        "cohort_unit_ids": list(EXPECTED_UNITS),
+        "aza3_exact_site_contract_version": "chapter3_exact_site_freeze_v8",
+        "upstream_snapshot_commit": "a" * 40,
+        "unit_provenance": units,
+        "exact_coordinates_included": False,
+        "sensitive_access_instructions_included": False,
+        "prospective_acsp_field_outcomes_opened": False,
+        "acsp_field_outcomes_used_to_define_sector": False,
+        "post_geometry_edits_allowed": False,
+        "post_outcome_edits_allowed": False,
+        "public_safe_to_commit": True,
     }
 
 
@@ -218,6 +258,8 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
     _write(capacity_profile, _capacity_profile(effort_protocol))
     movement_constraint = repo / CANONICAL_MOVEMENT_CONSTRAINT_REPO_PATH
     _write(movement_constraint, build_movement_constraint())
+    range_provenance = repo / CANONICAL_RANGE_SECTOR_PROVENANCE_REPO_PATH
+    _write(range_provenance, _range_provenance())
     _git(repo, "add", "validation")
     _git(repo, "commit", "-m", "Freeze evaluation semantics")
     pregeometry_pin = _git(repo, "rev-parse", "HEAD")
@@ -229,6 +271,7 @@ def _prepare_repo(tmp_path: Path, *, candidate_hash_override: str = "") -> tuple
             pregeometry_pin_commit=pregeometry_pin,
             effort_sha256=_sha256(effort_protocol),
             movement_sha256=_sha256(movement_constraint),
+            range_sha256=_sha256(range_provenance),
         ),
     )
     _git(repo, "add", CANONICAL_CANDIDATE_RECEIPT_REPO_PATH)
@@ -272,6 +315,9 @@ def test_candidate_and_schedule_pins_link_to_authorize_outcome_opening(tmp_path:
     assert final["movement_constraint_pin_gate_satisfied"] is True
     assert final["movement_constraint_pin_commit"]
     assert final["movement_constraint_pinned_before_candidate_prescription"] is True
+    assert final["range_sector_provenance_pin_gate_satisfied"] is True
+    assert final["range_sector_provenance_pin_commit"]
+    assert final["range_sector_provenance_pinned_before_candidate_prescription"] is True
     assert final["primary_cross_taxon_estimand_identity"] == "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1"
     assert final["exact_hash_linkage_satisfied"] is True
     assert final["private_candidate_membership_verified"] is True
