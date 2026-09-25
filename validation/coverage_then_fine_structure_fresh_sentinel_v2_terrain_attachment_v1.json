@@ -1,0 +1,39 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-terrain-attachment-v1",
+  "status": "FROZEN_BEFORE_TERRAIN_ATTACHMENT_EXECUTION",
+  "parent_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2.json",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "terrain_source_identity": "GLOBAL_ADAPTER_EXISTING_EXTRACT_ENVIRONMENT_V1",
+  "terrain_source_api": "gbif_fieldmap_builder_app.extract_environment",
+  "terrain_resolution_argument": "2.5m",
+  "raw_terrain_features": ["elevation", "slope", "aspect", "roughness", "tpi"],
+  "execution_rule": {
+    "attach_to_every_outer_frame_candidate": true,
+    "drop_rows_for_missing_terrain": false,
+    "rank_candidates": false,
+    "select_tiles": false,
+    "select_candidates": false,
+    "fit_thresholds": false,
+    "private_exact_site_geometry_used": false,
+    "occurrence_selected_tiles": false,
+    "prospective_field_outcomes_used": false,
+    "human_access_used": false,
+    "budget_used": false
+  },
+  "interpretation": {
+    "role": "source availability and coarse representation audit only",
+    "not_yet_structural_support": true,
+    "not_yet_regular_100m_graph": true,
+    "not_occupancy": true,
+    "not_field_efficiency": true,
+    "next_gate": "If terrain attachment is sufficiently complete across the frozen outer frame, attach WorldCover coarse primitives without ranking or filtering."
+  },
+  "forbidden": [
+    "do not rename coarse terrain fields to the 100 m structural graph fields slope100/tpi300/rough300",
+    "do not feed irregular 2-degree-lattice points directly into the frozen regular-grid Moore-neighbour graph",
+    "do not choose a completeness threshold after seeing field outcomes",
+    "do not remove low-support tiles or points at this stage"
+  ],
+  "prospective_field_outcomes_opened": false
+}
