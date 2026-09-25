@@ -1,0 +1,78 @@
+name: Fresh-SENTINEL v2 public terrain attachment
+
+on:
+  pull_request:
+    paths:
+      - "research/build_cirsium_fresh_sentinel_public_broad_frame_v2.py"
+      - "research/attach_cirsium_fresh_sentinel_public_terrain_v2.py"
+      - "tests/test_cirsium_fresh_sentinel_public_terrain_v2.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_terrain_attachment_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-public-terrain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  terrain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run terrain attachment tests
+        run: pytest -q tests/test_cirsium_fresh_sentinel_public_terrain_v2.py
+      - name: Build live Japan outer frame
+        run: |
+          mkdir -p /tmp/acsp-fresh-sentinel-v2
+          python research/build_cirsium_fresh_sentinel_public_broad_frame_v2.py \
+            --private-out-csv /tmp/acsp-fresh-sentinel-v2/japan_outer_frame.csv \
+            --summary-out-json /tmp/acsp-fresh-sentinel-v2/outer_frame_summary.json
+      - name: Attach live public terrain to all candidates
+        run: |
+          python research/attach_cirsium_fresh_sentinel_public_terrain_v2.py \
+            --outer-frame-csv /tmp/acsp-fresh-sentinel-v2/japan_outer_frame.csv \
+            --private-out-csv /tmp/acsp-fresh-sentinel-v2/japan_outer_frame_terrain.csv \
+            --public-safe-summary-json /tmp/acsp-fresh-sentinel-v2/terrain_summary.json
+      - name: Guard attachment-only boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          outer = json.loads(Path('/tmp/acsp-fresh-sentinel-v2/outer_frame_summary.json').read_text())
+          terrain = json.loads(Path('/tmp/acsp-fresh-sentinel-v2/terrain_summary.json').read_text())
+          assert outer['candidate_count'] == 39200
+          assert outer['intersecting_tile_count'] == 49
+          assert terrain['status'] == 'COARSE_PUBLIC_TERRAIN_ATTACHED_PRE_OUTCOME'
+          assert terrain['candidate_count_before'] == outer['candidate_count']
+          assert terrain['candidate_count_after'] == outer['candidate_count']
+          assert terrain['rows_dropped'] == 0
+          assert terrain['tile_count'] == outer['intersecting_tile_count']
+          assert terrain['rank_candidates'] is False
+          assert terrain['select_tiles'] is False
+          assert terrain['select_candidates'] is False
+          assert terrain['structural_graph_applied'] is False
+          assert terrain['private_exact_site_geometry_used'] is False
+          assert terrain['occurrence_selected_tiles'] is False
+          assert terrain['prospective_field_outcomes_opened'] is False
+          assert terrain['field_outcomes_used'] is False
+          assert terrain['coarse_fields_are_100m_structural_fields'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-terrain-summary
+          path: |
+            /tmp/acsp-fresh-sentinel-v2/outer_frame_summary.json
+            /tmp/acsp-fresh-sentinel-v2/terrain_summary.json
+          if-no-files-found: error
