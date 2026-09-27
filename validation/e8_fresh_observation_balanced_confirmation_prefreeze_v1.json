@@ -1,0 +1,85 @@
+{
+  "schema": "acsp.e8_fresh_observation_balanced_confirmation_prefreeze.v1",
+  "frozen_date": "2026-09-27",
+  "status": "blocked_until_fresh_cohort_balance_passes_and_artifact_is_pinned",
+  "scientific_question": "After animal and plant taxa are prospectively matched on observation architecture within region, is the held-out recovery lift of the frozen ACSP robust-support method larger for animals than plants?",
+  "cohort_prerequisite": {
+    "contract": "validation/e8_fresh_observation_balanced_cohort_v1.json",
+    "required_status": "cohort_frozen_balance_passed",
+    "required_taxa": 48,
+    "required_matched_pairs": 24,
+    "required_regions": 12,
+    "identities_must_be_frozen_before_occurrence_rows_for_confirmation": true,
+    "cohort_artifact_id": null,
+    "cohort_artifact_digest": null,
+    "activation_allowed": false
+  },
+  "acsp_method": {
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000,
+    "surface_points": 800,
+    "max_prototypes": 32,
+    "terrain_features": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "spatial_block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "repeats": 5,
+    "primary_recovery_radius_km": 10,
+    "random_draws_per_fold": 200,
+    "comparator": "same candidate universe and same selected-cell count",
+    "failed_or_empty_fold_rule": "recall=0, random_mean_recall=0, lift=0; retain in denominator"
+  },
+  "biological_replication": {
+    "unit": "prospectively matched animal-plant taxon pair within the same Japanese region",
+    "n": 24,
+    "within_taxon_folds_are_independent_biological_replicates": false,
+    "pair_value": "mean over five declared spatial folds of robust lift over same-size random"
+  },
+  "primary_estimand": {
+    "name": "animal_minus_plant_matched_pair_lift",
+    "per_pair": "animal pair-mean lift minus matched plant pair-mean lift",
+    "overall": "unweighted mean over all 24 matched pairs"
+  },
+  "primary_inference": {
+    "exact_sign_flip": "enumerate all 2^24 sign assignments to the 24 paired differences",
+    "one_sided_alternative": "mean animal-minus-plant lift > 0",
+    "significance_threshold": 0.05,
+    "bootstrap": "50,000 matched-pair resamples with replacement",
+    "bootstrap_seed": 2026092702,
+    "confidence_interval": [
+      0.025,
+      0.975
+    ],
+    "support_rule": "exact one-sided sign-flip p < 0.05 AND matched-pair bootstrap 95% CI lower bound > 0"
+  },
+  "secondary_descriptive": [
+    "animal mean lift",
+    "plant mean lift",
+    "matched-pair difference by region",
+    "candidate-generation failure counts by group",
+    "mean selected cells and patch count by group"
+  ],
+  "observation_architecture_guard": {
+    "precondition_only": true,
+    "no_post_outcome_propensity_reweighting": true,
+    "no_taxon_deletion_after_outcome": true,
+    "no_rematching_after_outcome": true
+  },
+  "claim_if_supported": "Within this fresh observation-balanced Japanese cohort, animals show greater robust-support held-out recovery enrichment than matched plants under the frozen ACSP method.",
+  "claim_if_not_supported": "The historical animal-greater-than-plant lift contrast does not reproduce after observation architecture is balanced prospectively; do not interpret the original subgroup difference as a taxonomic ecological effect.",
+  "prohibited": [
+    "claim universal animal versus plant difference",
+    "interpret difference as dispersal mechanism without trait analysis",
+    "replace taxa or matched pairs after recovery outcomes",
+    "change support fraction, patch distance, recovery radius, random comparator or pair weighting after outcome",
+    "treat 240 folds as independent biological replicates",
+    "use post-outcome IPW to rescue a failed matched design"
+  ]
+}
