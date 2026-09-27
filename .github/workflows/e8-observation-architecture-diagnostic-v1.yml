@@ -1,0 +1,68 @@
+name: E8 observation-architecture diagnostic v1
+
+on:
+  push:
+    branches:
+      - research/e8-observation-architecture-diagnostic-v1
+    paths:
+      - 'validation/e8_observation_architecture_diagnostic_v1.json'
+      - 'research/fetch_e8_observation_metadata.py'
+      - 'research/e8_observation_balance_gate.py'
+      - 'research/e8_observation_adjusted_lift.py'
+      - '.github/workflows/e8-observation-architecture-diagnostic-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install pandas numpy requests scikit-learn
+      - name: Download frozen cohort identities only
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: frozen-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+      - name: Fetch count-only observation metadata
+        run: |
+          python research/fetch_e8_observation_metadata.py             --cohort frozen-cohort/predeclared_taxon_region_pairs.csv             --output build/e8/observation_metadata.csv
+      - name: Apply pre-outcome overlap gate
+        run: |
+          python research/e8_observation_balance_gate.py             --metadata build/e8/observation_metadata.csv             --contract validation/e8_observation_architecture_diagnostic_v1.json             --gate-output build/e8/gate.json             --weights-output build/e8/weights.csv
+      - name: Open pair-level outcome only if authorized
+        run: |
+          STATUS=$(python -c "import json; print(json.load(open('build/e8/gate.json'))['status'])")
+          if [ "$STATUS" = "observation_architecture_balance_gate_passed" ]; then
+            echo "E8_OUTCOME_AUTHORIZED=true" >> "$GITHUB_ENV"
+          else
+            echo "E8_OUTCOME_AUTHORIZED=false" >> "$GITHUB_ENV"
+          fi
+      - name: Download frozen confirmation outcomes
+        if: env.E8_OUTCOME_AUTHORIZED == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-v2-results
+          path: frozen-results
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32337884576
+      - name: Compute authorized adjusted contrast
+        if: env.E8_OUTCOME_AUTHORIZED == 'true'
+        run: |
+          python research/e8_observation_adjusted_lift.py             --gate build/e8/gate.json             --weights build/e8/weights.csv             --pair-results frozen-results/confirmation-results/confirmation_pair_results.csv             --output build/e8/adjusted_result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e8-observation-architecture-diagnostic-v1
+          path: build/e8
+          if-no-files-found: error
