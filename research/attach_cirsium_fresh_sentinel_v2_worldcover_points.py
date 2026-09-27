@@ -21,10 +21,14 @@ from pyproj import Transformer
 from acsp.discovery.providers.worldcover import (
     WORLD_COVER_2021_CLASS_NAMES,
     build_worldcover_2021_map_crop,
+    worldcover_2021_map_url,
+    worldcover_tile_id,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_v2_worldcover_point_primitives_v1.json"
+REPAIR_RECEIPT = ROOT / "validation" / "coverage_then_fine_structure_fresh_sentinel_v2_full_worldcover_result_v1.json"
+REPAIR_IDENTITY = "POINT_BEARING_WORLDCOVER_COG_ONLY_V1"
 COMPLETE = "COMPLETE"
 POINT_MISSING = "INDETERMINATE_WORLDCOVER_MISSING"
 PROVIDER_FAILURE = "INDETERMINATE_PROVIDER_FAILURE"
@@ -215,6 +219,147 @@ def attach_worldcover_tile_with_provider(
             "field_outcomes_used": False,
             "human_access_used": False,
         }
+
+
+def _validate_repair_receipt() -> dict[str, Any]:
+    value = json.loads(REPAIR_RECEIPT.read_text(encoding="utf-8"))
+    if value.get("status") != "FULL_49_TILE_WORLDCOVER_COVERAGE_AUDIT_FROZEN":
+        raise ValueError("WorldCover repair receipt is not frozen")
+    if value.get("source_gate_complete") is not False:
+        raise ValueError("WorldCover repair receipt no longer represents the failed source gate")
+    repair = value.get("repair_boundary_frozen_before_retry") or {}
+    if repair.get("repair_identity") != REPAIR_IDENTITY:
+        raise ValueError("WorldCover repair identity drifted")
+    if repair.get("candidate_membership_change_allowed") is not False:
+        raise ValueError("WorldCover repair cannot change candidate membership")
+    if repair.get("candidate_order_change_allowed") is not False:
+        raise ValueError("WorldCover repair cannot change candidate order")
+    if repair.get("worldcover_release_change_allowed") is not False:
+        raise ValueError("WorldCover repair cannot change the WorldCover release")
+    if repair.get("alternate_provider_allowed") is not False:
+        raise ValueError("WorldCover repair cannot substitute another provider")
+    return value
+
+
+def _sample_official_point_cog(frame: pd.DataFrame, source_tile_id: str) -> np.ndarray:
+    url = worldcover_2021_map_url(source_tile_id)
+    with rasterio.open(url) as src:
+        lon = frame["longitude"].to_numpy(float)
+        lat = frame["latitude"].to_numpy(float)
+        if src.crs is None:
+            raise ValueError("WorldCover source COG must declare a CRS")
+        if src.crs.to_epsg() == 4326:
+            xs, ys = lon, lat
+        else:
+            transformer = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
+            xs, ys = transformer.transform(lon, lat)
+        values = np.asarray(
+            [sample[0] for sample in src.sample(list(zip(xs, ys)))],
+            dtype=float,
+        )
+        if src.nodata is not None:
+            values[values == float(src.nodata)] = np.nan
+        return values
+
+
+def attach_worldcover_point_bearing_cogs(
+    frame: pd.DataFrame,
+    *,
+    sampler=None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Attach point classes using only official COGs that contain frozen points.
+
+    This is the frozen source-mechanics repair after the first full execution
+    diagnosed rectangular-bounds overfetch. Candidate identity, order, coordinates,
+    release and class semantics are unchanged.
+    """
+    _validate_repair_receipt()
+    work = _validate_tile_frame(frame)
+    original_ids = work["candidate_cell_id"].astype(str).tolist()
+    source_ids = [
+        worldcover_tile_id(float(lat), float(lon))
+        for lat, lon in zip(work["latitude"], work["longitude"])
+    ]
+    work["worldcover_source_tile_id"] = source_ids
+    sample_fn = _sample_official_point_cog if sampler is None else sampler
+
+    codes = np.full(len(work), np.nan, dtype=float)
+    statuses = np.full(len(work), PROVIDER_FAILURE, dtype=object)
+    errors = np.full(len(work), "", dtype=object)
+    successful: list[str] = []
+    failed: dict[str, str] = {}
+
+    source_array = np.asarray(source_ids, dtype=object)
+    for source_tile_id in sorted(set(source_ids)):
+        indices = np.flatnonzero(source_array == source_tile_id)
+        subset = work.iloc[indices].copy().reset_index(drop=True)
+        try:
+            values = np.asarray(sample_fn(subset, source_tile_id), dtype=float)
+            if len(values) != len(indices):
+                raise ValueError("point-bearing WorldCover sampler changed row count")
+            finite = np.isfinite(values)
+            integer_like = finite & np.isclose(values, np.rint(values), rtol=0.0, atol=1e-9)
+            rounded = np.where(integer_like, np.rint(values), np.nan)
+            known = np.asarray([
+                bool(np.isfinite(value) and int(value) in VALID_CODES)
+                for value in rounded
+            ])
+            codes[indices] = rounded
+            statuses[indices] = np.where(known, COMPLETE, POINT_MISSING)
+            successful.append(source_tile_id)
+        except Exception as exc:
+            statuses[indices] = PROVIDER_FAILURE
+            errors[indices] = type(exc).__name__
+            failed[source_tile_id] = type(exc).__name__
+
+    work["worldcover_class_code"] = codes
+    work["worldcover_class_name"] = [
+        WORLD_COVER_2021_CLASS_NAMES.get(int(value), "")
+        if np.isfinite(value) and int(value) in VALID_CODES
+        else ""
+        for value in codes
+    ]
+    work["worldcover_point_status"] = statuses
+    work["worldcover_provider_error_class"] = errors
+
+    if work["candidate_cell_id"].astype(str).tolist() != original_ids:
+        raise AssertionError("point-bearing WorldCover repair changed candidate identity/order")
+
+    counts = work["worldcover_point_status"].astype(str).value_counts().to_dict()
+    complete_n = int((work["worldcover_point_status"].astype(str) == COMPLETE).sum())
+    return work, {
+        "schema_version": "cirsium-fresh-sentinel-v2-worldcover-point-bearing-cog-attachment-v1",
+        "status": "POINT_BEARING_WORLDCOVER_COGS_ATTACHED_PRE_OUTCOME",
+        "repair_identity": REPAIR_IDENTITY,
+        "regional_tile_id": str(work["regional_tile_id"].iloc[0]),
+        "input_candidate_count": int(len(work)),
+        "output_candidate_count": int(len(work)),
+        "candidate_rows_dropped": 0,
+        "candidate_identity_order_preserved": True,
+        "complete_candidate_count": complete_n,
+        "incomplete_candidate_count": int(len(work) - complete_n),
+        "status_counts": {str(k): int(v) for k, v in sorted(counts.items())},
+        "source_tile_ids": sorted(set(source_ids)),
+        "successful_source_tile_ids": sorted(successful),
+        "failed_source_tile_ids": sorted(failed),
+        "failed_source_tile_error_classes": dict(sorted(failed.items())),
+        "bounds_overfetch_used": False,
+        "point_bearing_cog_only": True,
+        "provider_id": "ESA_WORLDCOVER",
+        "provider_release_id": "2021_v200",
+        "provider_failure_is_biological_negative": False,
+        "missing_worldcover_is_biological_negative": False,
+        "candidate_selection_added": False,
+        "candidate_ranking_added": False,
+        "habitat_threshold_added": False,
+        "neighborhood_fraction_used": False,
+        "focal_occurrence_prototypes_used": False,
+        "private_exact_site_geometry_used": False,
+        "p02_result_used": False,
+        "prospective_field_outcomes_opened": False,
+        "field_outcomes_used": False,
+        "human_access_used": False,
+    }
 
 
 def run(input_csv: Path, output_csv: Path, summary_json: Path, crop_path: Path) -> dict[str, Any]:
