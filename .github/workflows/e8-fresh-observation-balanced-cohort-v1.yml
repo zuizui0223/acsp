@@ -1,0 +1,55 @@
+name: E8 fresh observation-balanced cohort v1
+
+on:
+  push:
+    branches:
+      - research/e8-fresh-observation-balanced-cohort-v1
+    paths:
+      - 'validation/e8_fresh_observation_balanced_cohort_v1.json'
+      - 'research/predeclare_e8_fresh_observation_balanced_cohort.py'
+      - '.github/workflows/e8-fresh-observation-balanced-cohort-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -e . pandas numpy requests scikit-learn
+      - name: Download prior 96-taxon cohort for exclusion only
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: prior-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+      - name: Build response-blind fresh matched cohort
+        run: |
+          python research/predeclare_e8_fresh_observation_balanced_cohort.py             --contract validation/e8_fresh_observation_balanced_cohort_v1.json             --prior-cohort prior-cohort/predeclared_taxon_region_pairs.csv             --output build/e8-fresh-cohort
+      - name: Audit no ACSP outcomes
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('build/e8-fresh-cohort/cohort_result.json'))
+          assert p['outcomes_opened'] is False
+          assert p['acsp_candidate_generation_run'] is False
+          assert p['status'] in {'cohort_frozen_balance_passed','stop_observation_balance_not_achieved'}
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e8-fresh-observation-balanced-cohort-v1
+          path: build/e8-fresh-cohort
+          if-no-files-found: error
