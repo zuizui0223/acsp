@@ -1,0 +1,60 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-source-availability-result-v1",
+  "status": "SOURCE_AVAILABILITY_LEDGER_AUDIT_FROZEN",
+  "source_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_source_indeterminate_retention_v1.json",
+  "source_pr": 230,
+  "workflow_run_id": 36287140303,
+  "workflow_head_sha": "ba4879409753fdaf91ecc6fbef6a027f856b7fba",
+  "artifact_id": 10920976520,
+  "artifact_digest": "sha256:81e5ab3c858d8da59f119516387d5330b6f74813d86d76e4cc5f769bb5a58fe4",
+  "summary_sha256": "44441494f31d1ccd6da5380ac87e945854fe12f7f006183e10d0d28cf46cbb5b",
+  "source_availability_csv_gz_sha256": "48e370fe135e65f4e0dc05f624999177b522c61a5b90b22d042774ef15a92a5f",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "candidate_count": 39200,
+  "candidate_rows_dropped": 0,
+  "candidate_identity_order_preserved": true,
+  "source_overlap": {
+    "terrain_complete_candidates": 33578,
+    "worldcover_complete_candidates": 35974,
+    "both_terrain_and_worldcover_complete_candidates": 32754,
+    "terrain_incomplete_worldcover_complete": 3220,
+    "terrain_complete_worldcover_incomplete": 824,
+    "both_incomplete": 2402
+  },
+  "unit_source_state_counts": {
+    "CIR02": {
+      "SOURCE_READY_FOR_FAMILY_COARSE_STAGE": 32754,
+      "SOURCE_INDETERMINATE_RETAIN": 6446
+    },
+    "CIR06": {
+      "SOURCE_READY_FOR_FAMILY_COARSE_STAGE": 33578,
+      "SOURCE_INDETERMINATE_RETAIN": 5622
+    },
+    "CIR12": {
+      "SOURCE_READY_FOR_FAMILY_COARSE_STAGE": 32754,
+      "SOURCE_INDETERMINATE_RETAIN": 6446
+    },
+    "CIR13": {
+      "SOURCE_READY_FOR_FAMILY_COARSE_STAGE": 32754,
+      "SOURCE_INDETERMINATE_RETAIN": 6446
+    }
+  },
+  "scientific_boundary": {
+    "source_indeterminate_candidates_retained": true,
+    "source_indeterminate_is_biological_negative": false,
+    "source_indeterminate_may_be_recoded_as_unsuitable": false,
+    "source_indeterminate_may_be_dropped": false,
+    "source_indeterminate_may_receive_worst_ecological_score": false,
+    "ecological_score_computed": false,
+    "habitat_threshold_applied": false,
+    "candidate_rank_added": false,
+    "candidate_selection_added": false,
+    "coarse_to_fine_expansion_applied": false,
+    "prospective_field_outcomes_opened": false,
+    "field_outcomes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "human_access_used": false
+  },
+  "next_gate": "Use the frozen source-ready denominators for the prospectively declared coarse evidence formulas; SOURCE_INDETERMINATE_RETAIN remains a separate retained lane."
+}
