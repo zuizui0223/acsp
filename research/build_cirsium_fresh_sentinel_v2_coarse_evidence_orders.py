@@ -266,7 +266,7 @@ def run(
     hashes = {}
     for unit, frame in orders.items():
         path = out_dir / f"{unit}_coarse_evidence_order.csv.gz"
-        frame.to_csv(path, index=False, compression="gzip")
+        frame.to_csv(path, index=False, compression={"method": "gzip", "mtime": 0})
         hashes[unit] = _sha256(path)
     summary["private_order_sha256_by_unit"] = hashes
     summary_path = out_dir / "summary.json"
