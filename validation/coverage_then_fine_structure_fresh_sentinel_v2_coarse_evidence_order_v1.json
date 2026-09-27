@@ -1,0 +1,82 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-coarse-evidence-order-v1",
+  "status": "FROZEN_BEFORE_COARSE_EVIDENCE_ORDER_EXECUTION",
+  "source_retention_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_source_indeterminate_retention_v1.json",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "candidate_count": 39200,
+  "scientific_role": "full response-independent coarse evidence order within source-ready candidates only; not habitat suitability, not final structural support, not candidate selection",
+  "general_rules": {
+    "source_indeterminate_lane": "SOURCE_INDETERMINATE_RETAIN",
+    "source_indeterminate_candidates_receive_ecological_rank": false,
+    "source_indeterminate_candidates_ranked_below_source_ready": false,
+    "candidate_drop_allowed": false,
+    "top_k_or_threshold_allowed": false,
+    "fitted_weight_allowed": false,
+    "field_outcomes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "human_access_used": false,
+    "budget_used": false,
+    "coarse_order_is_final_100m_structural_order": false
+  },
+  "orders": {
+    "CIR02": {
+      "species_binomial": "Cirsium inundatum",
+      "feature_family": "WETLAND_MOISTURE_STRUCTURE",
+      "source_ready_requires": ["terrain", "worldcover"],
+      "direct_landcover_signal": "worldcover_class_code == 90 (Herbaceous wetland)",
+      "coarse_topographic_context": "min(inverse percentile rank of coarse slope, inverse percentile rank of coarse tpi) among CIR02 source-ready candidates",
+      "order": [
+        "direct_wetland_signal DESC",
+        "coarse_topographic_moisture_context DESC",
+        "stable_candidate_sha256 ASC"
+      ],
+      "water_class_used_as_direct_habitat_signal": false,
+      "reason": "The frozen family explicitly uses wetland evidence plus low-slope/low-TPI moisture context. Point-class open water is not itself assumed to be terrestrial plant habitat."
+    },
+    "CIR06": {
+      "species_binomial": "Cirsium yezoalpinum",
+      "feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "source_ready_requires": ["terrain"],
+      "coarse_signal": "percentile rank of coarse elevation among CIR06 source-ready candidates; high values first",
+      "order": [
+        "coarse_relative_elevation_rank DESC",
+        "stable_candidate_sha256 ASC"
+      ],
+      "worldcover_used_for_order": false,
+      "reason": "The frozen alpine family has a source-justified high relative-relief direction, while fine landform continuity remains deferred to the later regular-grid stage."
+    },
+    "CIR12": {
+      "species_binomial": "Cirsium dipsacolepis",
+      "feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "source_ready_requires": ["terrain", "worldcover"],
+      "direct_landcover_signal": "worldcover_class_code == 30 (Grassland)",
+      "order": [
+        "direct_grass_signal DESC",
+        "stable_candidate_sha256 ASC"
+      ],
+      "terrain_used_for_order": false,
+      "reason": "The frozen open-grassland family has direct grass-cover evidence, but its terrain-context component is local similarity/continuity and cannot be reconstructed on the irregular broad frame."
+    },
+    "CIR13": {
+      "species_binomial": "Cirsium lineare",
+      "feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "source_ready_requires": ["terrain", "worldcover"],
+      "direct_landcover_signal": "worldcover_class_code == 30 (Grassland)",
+      "order": [
+        "direct_grass_signal DESC",
+        "stable_candidate_sha256 ASC"
+      ],
+      "terrain_used_for_order": false,
+      "reason": "Same frozen open-grassland coarse boundary as CIR12; no P02-derived geometry or outcome enters the order."
+    }
+  },
+  "interpretation_boundary": {
+    "direct_signal_zero_means_unsuitable": false,
+    "source_ready_but_low_coarse_evidence_means_absence": false,
+    "coarse_order_can_promote_selector": false,
+    "coarse_order_can_authorize_field_outcomes": false,
+    "fine_regular_grid_continuity_still_required_for_final_structural_order": true
+  },
+  "next_gate": "Execute and freeze the four full coarse evidence orders without selecting a prefix. Then define the outcome-blind coarse-to-fine expansion mechanics that preserve a separate source-indeterminate lane."
+}
