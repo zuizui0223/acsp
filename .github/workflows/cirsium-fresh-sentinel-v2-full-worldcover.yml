@@ -108,7 +108,10 @@ jobs:
           from pathlib import Path
 
           value = json.loads(Path("/tmp/acsp-fs-v2-worldcover/summary.json").read_text())
-          assert value["status"] == "FULL_49_TILE_WORLDCOVER_EXECUTION_COMPLETE"
+          assert value["status"] == "FULL_49_TILE_WORLDCOVER_POINTCOG_REPAIR_COMPLETE"
+          assert value["repair_identity"] == "POINT_BEARING_WORLDCOVER_COG_ONLY_V1"
+          assert value["bounds_overfetch_used"] is False
+          assert value["point_bearing_cog_only"] is True
           assert value["intersecting_tile_count"] == 49
           assert value["points_per_tile"] == 800
           assert value["input_candidate_count"] == 39200
