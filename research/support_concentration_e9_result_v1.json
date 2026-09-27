@@ -1,0 +1,75 @@
+{
+  "schema": "acsp.support_concentration_e9.result.v1",
+  "status": "exploratory_closeout_not_confirmatory",
+  "source": {
+    "confirmation_run_id": 32337884576,
+    "confirmation_head_sha": "39c9e6853f8d8aeffe42acd1258fe4f8f936f009",
+    "confirmation_artifact_id": 9396133154,
+    "confirmation_artifact_digest": "sha256:f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f",
+    "cohort_run_id": 32335791948,
+    "cohort_artifact_id": 9394691112,
+    "cohort_artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3"
+  },
+  "metric": {
+    "name": "normalized_patch_concentration",
+    "formula": "(selected_cells - patch_count) / (selected_cells - 1)",
+    "fold_eligibility": "selected_cells >= 2 and patch_count >= 1",
+    "interpretation": "0 means all selected support cells remain separate at the frozen 1-km patch merge distance; larger values mean more support cells coalesce into shared patches.",
+    "support_fraction_fixed": 0.025,
+    "patch_merge_distance_m": 1000
+  },
+  "exploratory_unmatched_folds": {
+    "animal": {
+      "evaluable_folds": 172,
+      "mean_selected_cells": 20.273255813953487,
+      "mean_patch_count": 18.656976744186046,
+      "mean_concentration": 0.077006
+    },
+    "plant": {
+      "evaluable_folds": 203,
+      "mean_selected_cells": 20.438423645320196,
+      "mean_patch_count": 19.266009852216747,
+      "mean_concentration": 0.055332
+    }
+  },
+  "pair_level": {
+    "minimum_evaluable_folds": 3,
+    "eligible_pairs": 74,
+    "animal_pairs": 33,
+    "plant_pairs": 41
+  },
+  "matched_primary_exploratory_contrast": {
+    "matching": "exact region_name × record_count_stratum; one animal and one plant pair required; pair must have >=3 evaluable geometry folds",
+    "matched_cells": 29,
+    "estimand": "animal minus plant pair-mean normalized concentration",
+    "mean_difference": 0.008035956579805053,
+    "median_difference": 0,
+    "sd_difference": 0.06276583167706024,
+    "positive_cells": 14,
+    "negative_cells": 11,
+    "ties": 4,
+    "bootstrap_draws": 30000,
+    "bootstrap_seed": 20260927,
+    "bootstrap_95_ci": [
+      -0.01439682,
+      0.0305545
+    ],
+    "sign_flip_draws": 300000,
+    "sign_flip_seed": 20260928,
+    "one_sided_sign_flip_p": 0.24811583961386796,
+    "supported": false
+  },
+  "concentration_vs_validated_lift": {
+    "eligible_pairs": 74,
+    "spearman_rho_overall": -0.093956,
+    "spearman_rho_animal": -0.0871125,
+    "spearman_rho_plant": -0.1690841,
+    "interpretation": "No positive association between support concentration and validated held-out recovery lift was evident."
+  },
+  "region_descriptive_pattern": {
+    "caution": "descriptive only; unequal eligible-pair counts and no independent region-level replication",
+    "note": "Region-level concentration heterogeneity was substantially larger than the matched animal–plant contrast, motivating no taxonomic concentration paper from this cohort."
+  },
+  "conclusion": "The apparent animal-greater-than-plant support concentration seen in pooled evaluable folds did not survive the factorial cohort's exact region × record-count matching. E9 is closed as an exploratory null; do not promote a taxonomic concentration macroecology claim from this dataset.",
+  "next_action": "Prioritize E8 observation-process decomposition of the validated animal-versus-plant recovery-lift difference."
+}
