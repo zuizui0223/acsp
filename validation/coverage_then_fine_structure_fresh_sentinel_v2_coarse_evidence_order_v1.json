@@ -23,7 +23,10 @@
     "CIR02": {
       "species_binomial": "Cirsium inundatum",
       "feature_family": "WETLAND_MOISTURE_STRUCTURE",
-      "source_ready_requires": ["terrain", "worldcover"],
+      "source_ready_requires": [
+        "terrain",
+        "worldcover"
+      ],
       "direct_landcover_signal": "worldcover_class_code == 90 (Herbaceous wetland)",
       "coarse_topographic_context": "min(inverse percentile rank of coarse slope, inverse percentile rank of coarse tpi) among CIR02 source-ready candidates",
       "order": [
@@ -37,7 +40,9 @@
     "CIR06": {
       "species_binomial": "Cirsium yezoalpinum",
       "feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
-      "source_ready_requires": ["terrain"],
+      "source_ready_requires": [
+        "terrain"
+      ],
       "coarse_signal": "percentile rank of coarse elevation among CIR06 source-ready candidates; high values first",
       "order": [
         "coarse_relative_elevation_rank DESC",
@@ -49,7 +54,10 @@
     "CIR12": {
       "species_binomial": "Cirsium dipsacolepis",
       "feature_family": "OPEN_GRASSLAND_STRUCTURE",
-      "source_ready_requires": ["terrain", "worldcover"],
+      "source_ready_requires": [
+        "terrain",
+        "worldcover"
+      ],
       "direct_landcover_signal": "worldcover_class_code == 30 (Grassland)",
       "order": [
         "direct_grass_signal DESC",
@@ -61,7 +69,10 @@
     "CIR13": {
       "species_binomial": "Cirsium lineare",
       "feature_family": "OPEN_GRASSLAND_STRUCTURE",
-      "source_ready_requires": ["terrain", "worldcover"],
+      "source_ready_requires": [
+        "terrain",
+        "worldcover"
+      ],
       "direct_landcover_signal": "worldcover_class_code == 30 (Grassland)",
       "order": [
         "direct_grass_signal DESC",
@@ -78,5 +89,10 @@
     "coarse_order_can_authorize_field_outcomes": false,
     "fine_regular_grid_continuity_still_required_for_final_structural_order": true
   },
-  "next_gate": "Execute and freeze the four full coarse evidence orders without selecting a prefix. Then define the outcome-blind coarse-to-fine expansion mechanics that preserve a separate source-indeterminate lane."
+  "next_gate": "Execute and freeze the four full coarse evidence orders without selecting a prefix. Then define the outcome-blind coarse-to-fine expansion mechanics that preserve a separate source-indeterminate lane.",
+  "expected_direct_signal_counts_on_frozen_source_ready_denominator": {
+    "CIR02_wetland_class_90": 59,
+    "CIR12_grass_class_30": 2138,
+    "CIR13_grass_class_30": 2138
+  }
 }
