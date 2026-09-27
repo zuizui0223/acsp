@@ -230,10 +230,13 @@ def build_coarse_evidence_orders(
             "Source-indeterminate candidates remain a separate retained lane."
         ),
     }
-    if summary["CIR02_direct_wetland_signal_count"] != 59:
+    expected_signals = contract["expected_direct_signal_counts_on_frozen_source_ready_denominator"]
+    if summary["CIR02_direct_wetland_signal_count"] != int(expected_signals["CIR02_wetland_class_90"]):
         raise ValueError("CIR02 direct wetland signal count drifted")
-    if summary["CIR12_direct_grass_signal_count"] != 2138 or summary["CIR13_direct_grass_signal_count"] != 2138:
-        raise ValueError("open-grassland direct signal count drifted")
+    if summary["CIR12_direct_grass_signal_count"] != int(expected_signals["CIR12_grass_class_30"]):
+        raise ValueError("CIR12 direct grass signal count drifted")
+    if summary["CIR13_direct_grass_signal_count"] != int(expected_signals["CIR13_grass_class_30"]):
+        raise ValueError("CIR13 direct grass signal count drifted")
     return orders, summary
 
 
