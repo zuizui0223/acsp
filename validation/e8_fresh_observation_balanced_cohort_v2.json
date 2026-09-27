@@ -1,0 +1,88 @@
+{
+  "schema": "acsp.e8_fresh_observation_balanced_cohort.contract.v2",
+  "frozen_date": "2026-09-27",
+  "purpose": "Construct a fresh animal-plant cohort matched on observation architecture before any ACSP candidate generation or held-out recovery is opened.",
+  "fresh_design": {
+    "regions": 12,
+    "matched_pairs_per_region": 2,
+    "target_matched_pairs": 24,
+    "target_taxa": 48,
+    "candidate_taxa_per_region_group": 8,
+    "minimum_coordinate_records": 20,
+    "facet_limit": 400,
+    "deterministic_candidate_rule": "After exclusions, sort eligible species by coordinate_records then scientific_name; choose 8 approximately equally spaced rank positions across the available frame.",
+    "no_taxon_replacement_after_freeze": true,
+    "require_unique_scientific_names_across_all_regions": true
+  },
+  "exclusions": {
+    "prior_96_cohort_artifact": {
+      "run_id": 32335791948,
+      "artifact_id": 9394691112
+    },
+    "repository_exclusion_files": [
+      "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+      "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+      "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+      "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+      "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+      "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+      "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv"
+    ],
+    "excluded_name_prefixes": [
+      "Campanula microdonta",
+      "Campanula punctata"
+    ]
+  },
+  "observation_metrics": [
+    "log1p_current_coordinate_record_count",
+    "human_observation_fraction",
+    "machine_observation_fraction",
+    "preserved_specimen_fraction",
+    "recent_2021_2025_fraction",
+    "top_dataset_share"
+  ],
+  "metadata_access": {
+    "gbif_endpoint": "https://api.gbif.org/v1/occurrence/search",
+    "count_only": true,
+    "row_level_occurrence_limit": 0,
+    "occurrence_coordinates_returned": false,
+    "acsp_candidate_generation_run": false,
+    "heldout_recovery_opened": false
+  },
+  "matching": {
+    "within_region_only": true,
+    "feature_scaling": "region-pooled robust scale: (x - median) / max(IQR, 0.10)",
+    "distance": "Euclidean across six scaled observation metrics",
+    "selection": "exact brute-force choice of two disjoint animal-plant pairs minimizing summed distance; deterministic lexicographic tie break",
+    "maximum_pair_distance": 3
+  },
+  "freeze_gate": {
+    "exact_regions_with_two_pairs": 12,
+    "exact_matched_pairs": 24,
+    "exact_taxa": 48,
+    "maximum_global_absolute_smd": 0.15,
+    "minimum_group_propensity_overlap_fraction_0_10_0_90": 0.8,
+    "minimum_propensity_ess_each_group": 16,
+    "if_fail": "stop_without_acsp_outcome_opening; no threshold relaxation or candidate replacement",
+    "if_pass": "freeze cohort identities and authorize a separate post-merge ACSP confirmation contract",
+    "exact_unique_scientific_names": 48
+  },
+  "prohibited": [
+    "use any ACSP recovery or lift outcome during cohort construction",
+    "inspect held-out occurrence recovery before cohort freeze",
+    "change the six observation metrics after viewing matching results",
+    "relax pair-distance or global-balance gates after matching",
+    "replace a failed region after the cohort result is known",
+    "use taxon ecology or expected ACSP performance as a matching criterion",
+    "count repeated scientific names in different regions as independent taxa"
+  ],
+  "technical_successor": {
+    "predecessor_run_id": 36324203574,
+    "predecessor_head_sha": "b2923460c191aad3a083a7acd0aab5e2dba69907",
+    "predecessor_status_when_successor_frozen": "in_progress",
+    "predecessor_result_opened": false,
+    "predecessor_artifact_opened": false,
+    "reason": "pre-outcome code audit found that the v1 matcher did not enforce global scientific-name uniqueness across regions"
+  }
+}
