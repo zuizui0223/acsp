@@ -1,0 +1,60 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-uncertainty-evidence-freeze-v1",
+  "status": "FROZEN_BEFORE_UNCERTAINTY_EVIDENCE_FETCH",
+  "parent_v2_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2.json",
+  "eligible_units": {
+    "CIR02": {
+      "species_binomial": "Cirsium inundatum",
+      "sentinel_subregime": "UNCERTAINTY_FOOTPRINT"
+    },
+    "CIR12": {
+      "species_binomial": "Cirsium dipsacolepis",
+      "sentinel_subregime": "UNCERTAINTY_FOOTPRINT"
+    }
+  },
+  "provider": {
+    "identity": "GBIF",
+    "country": "JP",
+    "taxon_match_required": "AUTO_EXACT_ACCEPTED",
+    "alternate_provider_allowed": false
+  },
+  "eligibility_rule": {
+    "event_year_min": 2000,
+    "event_year_max": 2025,
+    "coordinates_required": true,
+    "serious_geospatial_issue_allowed": false,
+    "generalized_or_obscured_coordinate_allowed": false,
+    "declared_coordinate_uncertainty_required": true,
+    "declared_coordinate_uncertainty_m_strictly_greater_than": 1000,
+    "unknown_uncertainty_as_kernel_allowed": false,
+    "legacy_record_as_current_kernel_allowed": false,
+    "duplicate_footprint_weighting": "exact duplicate latitude/longitude/uncertainty footprints collapse to one footprint during support calculation"
+  },
+  "support_rule_after_freeze": {
+    "identity": "NORMALIZED_EQUAL_UNCERTAINTY_FOOTPRINT_OVERLAP_V1",
+    "candidate_preference_within_single_declared_footprint_by_distance": false,
+    "support": "number of unique declared uncertainty footprints covering candidate divided by maximum overlap count on that frozen candidate frame",
+    "outside_all_footprints_means_unsuitable": false,
+    "footprint_support_is_exact_location_probability": false
+  },
+  "freeze_output": {
+    "coordinate_bearing_evidence_private": true,
+    "public_result_contains_coordinates": false,
+    "private_evidence_hash_required": true,
+    "unit_row_counts_required": true,
+    "unique_footprint_counts_required": true,
+    "provider_failure_semantics": "INDETERMINATE_PROVIDER_FAILURE; not biological absence and no fallback"
+  },
+  "execution_boundary": {
+    "candidate_membership_changed": false,
+    "candidate_ranking_added": false,
+    "habitat_threshold_added": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "prospective_field_outcomes_opened": false,
+    "field_outcomes_used": false,
+    "human_access_used": false,
+    "budget_used": false
+  },
+  "next_gate": "Freeze the private evidence hashes and public-safe counts before incorporating uncertainty-footprint support into any coarse evidence order."
+}
