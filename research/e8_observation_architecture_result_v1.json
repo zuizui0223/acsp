@@ -1,0 +1,53 @@
+{
+  "schema": "acsp.e8_observation_architecture_diagnostic.result.v1",
+  "status": "observation_architecture_not_balanceable_in_current_cohort",
+  "authoritative_execution": {
+    "workflow_run_id": 36287169007,
+    "workflow_job_id": 108530001645,
+    "head_sha": "dee62fbfdccddffa02c83e44566ae3755074b285",
+    "artifact_id": 10920832880,
+    "artifact_digest": "sha256:073fcb4b603d927c6da186c5bed40b585490a735215e720aeb6f0961a2c66257"
+  },
+  "metadata": {
+    "complete_taxa": 96,
+    "minimum_required": 90,
+    "row_level_occurrences_opened": false,
+    "pair_level_recovery_outcome_opened": false
+  },
+  "overlap_gate": {
+    "propensity_min": 0.037840652249185626,
+    "propensity_max": 0.986901887124433,
+    "fraction_inside_0_10_0_90": 0.5833333333333334,
+    "required_fraction": 0.75,
+    "effective_sample_size": {
+      "animal": 29.789923708394245,
+      "plant": 30.269776032970654
+    },
+    "required_ess_each_group": 24,
+    "postweight_absolute_smd": {
+      "log1p_current_coordinate_record_count": 0.09892990534625512,
+      "human_observation_fraction": 0.18126016598581557,
+      "machine_observation_fraction": 0.16576146745646966,
+      "preserved_specimen_fraction": 0.3542331828359038,
+      "recent_2021_2025_fraction": 0.4499290303253775,
+      "top_dataset_share": 0.6084723902998898
+    },
+    "maximum_absolute_smd": 0.6084723902998898,
+    "allowed_maximum_absolute_smd": 0.25,
+    "checks": {
+      "metadata_complete": true,
+      "overlap_fraction": false,
+      "animal_ess": true,
+      "plant_ess": true,
+      "all_smd": false
+    }
+  },
+  "scientific_decision": "The validated animal-versus-plant recovery-lift contrast cannot be separated from observation architecture using this retrospective 96-pair cohort under the frozen balance gate.",
+  "prohibited": [
+    "compute or report an IPW-adjusted animal-versus-plant lift from this diagnostic",
+    "relax overlap or SMD thresholds post outcome",
+    "drop inconvenient taxa to create overlap",
+    "interpret raw animal-versus-plant lift difference as an ecological taxon effect"
+  ],
+  "next_authorized_direction": "Construct a new observation-balanced paired cohort before any held-out ACSP recovery outcomes are opened."
+}
