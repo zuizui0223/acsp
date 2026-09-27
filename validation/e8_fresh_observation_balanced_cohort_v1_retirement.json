@@ -1,0 +1,12 @@
+{
+  "schema": "acsp.e8_fresh_observation_balanced_cohort.predecessor_retirement.v1",
+  "retired_run_id": 36324203574,
+  "retired_head_sha": "b2923460c191aad3a083a7acd0aab5e2dba69907",
+  "retired_before_result_opening": true,
+  "retired_before_artifact_opening": true,
+  "biological_outcomes_opened": false,
+  "acsp_candidate_generation_run": false,
+  "reason": "pre-outcome implementation audit found absent global scientific-name uniqueness across regions",
+  "scientific_use": "none",
+  "successor_contract": "validation/e8_fresh_observation_balanced_cohort_v2.json"
+}
