@@ -1,0 +1,91 @@
+{
+  "schema": "acsp.e8_observation_architecture_diagnostic.contract.v1",
+  "frozen_date": "2026-09-27",
+  "purpose": "Test whether the descriptive animal-versus-plant robust-patch recovery-lift contrast can be identified after balancing pre-outcome observation architecture in the already frozen 96-pair Japanese confirmation cohort.",
+  "status": "retrospective_mechanism_diagnostic_not_new_confirmation",
+  "source_cohort": {
+    "run_id": 32335791948,
+    "artifact_id": 9394691112,
+    "artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "declared_pairs": 96,
+    "design": "12 region cells × 2 taxon groups × 4 historical record-count strata"
+  },
+  "outcome_source": {
+    "run_id": 32337884576,
+    "artifact_id": 9396133154,
+    "artifact_digest": "sha256:f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f",
+    "outcome_file": "confirmation-results/confirmation_pair_results.csv",
+    "may_be_downloaded_only_if_observation_overlap_gate_passes": true
+  },
+  "gbif_metadata_queries": {
+    "endpoint": "https://api.gbif.org/v1/occurrence/search",
+    "common_filters": {
+      "hasCoordinate": "true",
+      "hasGeospatialIssue": "false",
+      "occurrenceStatus": "PRESENT",
+      "limit": 0
+    },
+    "metrics": [
+      "log1p_current_coordinate_record_count",
+      "human_observation_fraction",
+      "machine_observation_fraction",
+      "preserved_specimen_fraction",
+      "recent_2021_2025_fraction",
+      "top_dataset_share"
+    ],
+    "row_level_occurrences_opened": false,
+    "occurrence_coordinates_returned": false,
+    "target_outcome_used_for_metadata": false
+  },
+  "observation_balance_model": {
+    "target": "taxon_group == animal",
+    "nuisance_metrics": [
+      "log1p_current_coordinate_record_count",
+      "human_observation_fraction",
+      "machine_observation_fraction",
+      "preserved_specimen_fraction",
+      "recent_2021_2025_fraction",
+      "top_dataset_share"
+    ],
+    "model": "L2 logistic regression, C=1, standardized nuisance metrics",
+    "propensity_clip": [
+      0.05,
+      0.95
+    ],
+    "stabilized_ate_weights": true,
+    "weight_truncation_quantile": 0.99,
+    "group_normalization": "weights normalized to mean 1 separately within animal and plant"
+  },
+  "pre_outcome_overlap_gate": {
+    "minimum_complete_metadata_taxa": 90,
+    "propensity_overlap_interval": [
+      0.1,
+      0.9
+    ],
+    "minimum_fraction_inside_overlap": 0.75,
+    "minimum_effective_sample_size_each_group": 24,
+    "maximum_absolute_postweight_smd_each_nuisance_metric": 0.25,
+    "if_fail": "observation_architecture_not_balanceable_in_current_cohort; do not open pair-level recovery outcomes in this diagnostic run",
+    "if_pass": "authorize one fixed weighted outcome decomposition"
+  },
+  "outcome_decomposition_if_authorized": {
+    "primary_estimand": "stabilized-IPW animal minus plant mean pair-level 10-km recovery lift",
+    "raw_context": "also report the original unweighted animal-minus-plant mean difference",
+    "uncertainty": "5000 bootstrap resamples of the 48 region_name × record_count_stratum matched cells; refit propensity and recompute gate-compatible weighted contrast in each resample",
+    "bootstrap_seed": 2026092701,
+    "no_claim_if_bootstrap_gate_fails": true
+  },
+  "interpretation": {
+    "supports_taxon_residual_if": "overlap gate passes AND weighted 95% bootstrap interval lower bound > 0",
+    "observation_architecture_explains_or_obscures_if": "overlap gate passes but weighted interval includes 0",
+    "unidentifiable_if": "overlap gate fails"
+  },
+  "prohibited": [
+    "reinterpret the original ACSP confirmation as a preregistered animal-versus-plant test",
+    "retune nuisance metrics or overlap thresholds after metadata are opened",
+    "drop taxa to improve overlap except incomplete metadata under the frozen minimum rule",
+    "fetch row-level coordinates for observation matching",
+    "change the validated 2.5% ACSP support method",
+    "claim causal biological differences between animals and plants from this retrospective diagnostic"
+  ]
+}
