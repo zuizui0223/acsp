@@ -1,0 +1,75 @@
+name: E8 fresh observation-balanced cohort v3
+
+on:
+  push:
+    branches:
+      - research/e8-fresh-observation-balanced-cohort-v3
+    paths:
+      - 'validation/e8_fresh_observation_balanced_cohort_v3.json'
+      - 'research/predeclare_e8_fresh_observation_balanced_cohort_v3.py'
+      - '.github/workflows/e8-fresh-observation-balanced-cohort-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -e . pandas numpy requests scikit-learn
+      - name: Download validated 96-taxon cohort for exclusion
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: prior96
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+      - name: Download consumed E8 v1 metadata candidates for exclusion
+        uses: actions/download-artifact@v4
+        with:
+          name: e8-fresh-observation-balanced-cohort-v1
+          path: e8v1
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 36324203574
+      - name: Download consumed E8 v2 metadata candidates for exclusion
+        uses: actions/download-artifact@v4
+        with:
+          name: e8-fresh-observation-balanced-cohort-v2
+          path: e8v2
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 36325689581
+      - name: Build fresh response-blind v3 cohort
+        run: |
+          python research/predeclare_e8_fresh_observation_balanced_cohort_v3.py             --contract validation/e8_fresh_observation_balanced_cohort_v3.json             --prior-cohort prior96/predeclared_taxon_region_pairs.csv             --v1-candidates e8v1/candidate_metadata.csv             --v2-candidates e8v2/candidate_metadata.csv             --output build/e8-fresh-v3
+      - name: Audit information barrier and disjointness
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('build/e8-fresh-v3/cohort_result_v3.json'))
+          assert p['outcomes_opened'] is False
+          assert p['acsp_candidate_generation_run'] is False
+          assert p['overlap_with_validated96_names'] == 0
+          assert p['overlap_with_validated96_keys'] == 0
+          assert p['overlap_with_e8_v1_v2_candidate_names'] == 0
+          assert p['overlap_with_e8_v1_v2_candidate_keys'] == 0
+          assert p['status'] in {'cohort_frozen_balance_passed','stop_observation_balance_not_achieved'}
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e8-fresh-observation-balanced-cohort-v3
+          path: build/e8-fresh-v3
+          if-no-files-found: error

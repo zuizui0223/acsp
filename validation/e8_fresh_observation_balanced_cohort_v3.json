@@ -1,0 +1,131 @@
+{
+  "schema": "acsp.e8_fresh_observation_balanced_cohort.contract.v3",
+  "frozen_date": "2026-09-29",
+  "purpose": "Fresh response-blind validation of an observation-architecture matching rule developed only from consumed metadata, using taxa disjoint from all prior E8 candidate metadata and the validated 96-pair cohort.",
+  "prior_metadata_only_attempts": [
+    {
+      "version": "v1",
+      "workflow_run_id": 36324203574,
+      "artifact_id": 10933718929,
+      "artifact_digest": "sha256:5276f7c24eb8b912ed51208ef3b93519d4283578093bbd3a3f314ed66f460a8b",
+      "candidate_metadata_rows": 192,
+      "outcome_opened": false,
+      "terminal_status": "stop_observation_balance_not_achieved",
+      "max_absolute_smd": 0.5526504621951993
+    },
+    {
+      "version": "v2",
+      "workflow_run_id": 36325689581,
+      "artifact_id": 10934363236,
+      "artifact_digest": "sha256:dcbe87c333ce1ac6a228bfc7def6d1d0675cb81cacc86348d3da62d06dc23e78",
+      "candidate_metadata_rows": 192,
+      "outcome_opened": false,
+      "terminal_status": "stop_observation_balance_not_achieved",
+      "max_absolute_smd": 0.5500575806080908,
+      "role": "technical uniqueness successor; not a new matching-method test"
+    }
+  ],
+  "matching_rule_frozen_from_consumed_v1_metadata_only": {
+    "observation_metrics": [
+      "log1p_current_coordinate_record_count",
+      "human_observation_fraction",
+      "machine_observation_fraction",
+      "preserved_specimen_fraction",
+      "recent_2021_2025_fraction",
+      "top_dataset_share"
+    ],
+    "robust_scaling": "within-region pooled median and max(IQR, 0.10)",
+    "feature_weights": {
+      "log1p_current_coordinate_record_count": 1.1,
+      "human_observation_fraction": 1,
+      "machine_observation_fraction": 1,
+      "preserved_specimen_fraction": 1,
+      "recent_2021_2025_fraction": 1,
+      "top_dataset_share": 6
+    },
+    "distance": "weighted Euclidean distance",
+    "within_region_selection": "exact brute-force selection of two disjoint animal-plant pairs minimizing summed pair distance, then maximum pair distance, then lexicographic names",
+    "maximum_pair_distance": 3,
+    "development_only_check_on_consumed_v1_metadata": {
+      "max_absolute_smd": 0.13771562078888483,
+      "absolute_smd": {
+        "log1p_current_coordinate_record_count": 0.13771562078888483,
+        "human_observation_fraction": 0.04614859499659029,
+        "machine_observation_fraction": 0,
+        "preserved_specimen_fraction": 0.07406685340720984,
+        "recent_2021_2025_fraction": 0.1319047957428707,
+        "top_dataset_share": 0.13417640488157087
+      },
+      "propensity_overlap_fraction": 1,
+      "maximum_pair_distance_observed": 2.968750516966916
+    }
+  },
+  "fresh_design": {
+    "regions": 12,
+    "matched_pairs_per_region": 2,
+    "target_matched_pairs": 24,
+    "target_taxa": 48,
+    "candidate_taxa_per_region_group": 8,
+    "minimum_coordinate_records": 20,
+    "facet_limit": 400,
+    "deterministic_candidate_rule": "After all exclusions, sort by coordinate_records then scientific_name and select eight approximately equally spaced ranks.",
+    "require_unique_scientific_names_across_final_cohort": true
+  },
+  "exclusions": {
+    "validated_96_cohort": {
+      "run_id": 32335791948,
+      "artifact_id": 9394691112
+    },
+    "e8_v1_candidate_metadata": {
+      "run_id": 36324203574,
+      "artifact_id": 10933718929
+    },
+    "e8_v2_candidate_metadata": {
+      "run_id": 36325689581,
+      "artifact_id": 10934363236
+    },
+    "exclude_by_scientific_name_and_species_key": true,
+    "repository_exclusion_files": [
+      "legacy/benchmark_results/izu_random_taxa_20260701_full/predeclared_taxon_sample.csv",
+      "legacy/benchmark_results/random_species_models_20260701/predeclared_taxon_sample.csv",
+      "legacy/benchmark_results/general_random_taxa_regions_20260702_v2/predeclared_taxon_region_pairs.csv",
+      "legacy/benchmark_results/general_random_taxa_regions_20260703_unseen_confirmatory/predeclared_taxon_region_pairs.csv",
+      "benchmark_results/general_random_taxa_regions_20260705_hierarchical_confirmatory/predeclared_taxon_region_pairs.csv",
+      "benchmark_results/general_random_taxa_regions_20260706_plant_confirmatory/predeclared_taxon_region_pairs.csv",
+      "validation/sdm_topk_untouched_cohort_20260808/predeclared_taxon_region_pairs.csv",
+      "validation/practical_core_untouched_cohort_20260811/predeclared_taxon_region_pairs.csv"
+    ],
+    "excluded_name_prefixes": [
+      "Campanula microdonta",
+      "Campanula punctata"
+    ]
+  },
+  "metadata_access": {
+    "gbif_endpoint": "https://api.gbif.org/v1/occurrence/search",
+    "count_only": true,
+    "row_level_occurrence_limit": 0,
+    "occurrence_coordinates_returned": false,
+    "acsp_candidate_generation_run": false,
+    "heldout_recovery_opened": false
+  },
+  "freeze_gate": {
+    "exact_regions_with_two_pairs": 12,
+    "exact_matched_pairs": 24,
+    "exact_taxa": 48,
+    "exact_unique_scientific_names": 48,
+    "maximum_global_absolute_smd": 0.15,
+    "minimum_group_propensity_overlap_fraction_0_10_0_90": 0.8,
+    "minimum_propensity_ess_each_group": 16,
+    "maximum_pair_distance": 3,
+    "if_fail": "terminal_stop_without_acsp_outcome_opening; no further E8 matching-rule tuning on v3 metadata",
+    "if_pass": "freeze cohort identities; only a separately frozen post-merge ACSP recovery contract may open ecological outcomes"
+  },
+  "prohibited": [
+    "use ACSP recovery or lift outcomes during cohort construction",
+    "reuse any taxon appearing in v1 or v2 candidate metadata",
+    "retune matching weights or gates after v3 metadata are opened",
+    "replace failed regions after seeing v3 output",
+    "use taxon ecology, life history, or expected ACSP performance as matching criteria",
+    "open held-out occurrence recovery before cohort identity freeze"
+  ]
+}

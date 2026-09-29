@@ -1,0 +1,38 @@
+{
+  "schema": "acsp.e8_observation_balanced_confirmation.execution_template.v1",
+  "status": "blocked_pending_v3_cohort_pass_and_artifact_pin",
+  "scientific_contract": "validation/e8_observation_balanced_taxon_contrast_confirmation_v1.json",
+  "cohort": {
+    "required_program": "acsp.e8_fresh_observation_balanced_cohort.result.v3",
+    "required_status": "cohort_frozen_balance_passed",
+    "workflow_run_id": null,
+    "artifact_id": null,
+    "artifact_digest": null,
+    "cohort_file": "frozen_matched_cohort_v3.csv"
+  },
+  "execution": {
+    "records_per_taxon": 150,
+    "block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "repeats": 5,
+    "fold_seed_base": 20260823,
+    "support_fraction": 0.025,
+    "surface_points": 800,
+    "surface_seed_base": 20260823,
+    "max_prototypes": 32,
+    "patch_merge_distance_m": 1000,
+    "recovery_radii_km": [
+      1,
+      2,
+      5,
+      10
+    ],
+    "primary_radius_km": 10,
+    "random_draws_per_fold": 200,
+    "random_seed_base": 20260823,
+    "declared_taxa": 48,
+    "declared_folds": 240
+  },
+  "activation_rule": "A separate immutable execution receipt must replace null cohort artifact identity after v3 PASS; this template is never itself executable.",
+  "post_outcome_changes_allowed": false
+}
