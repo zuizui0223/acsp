@@ -1,0 +1,83 @@
+{
+  "schema": "acsp.e8_observation_balanced_taxon_contrast.confirmation_contract.v1",
+  "frozen_date": "2026-09-29",
+  "status": "scientific_rule_frozen_before_v3_observation_balance_result",
+  "activation_prerequisite": {
+    "cohort_program": "acsp.e8_fresh_observation_balanced_cohort.result.v3",
+    "required_status": "cohort_frozen_balance_passed",
+    "exact_taxa": 48,
+    "exact_matched_pairs": 24,
+    "exact_regions": 12,
+    "outcomes_opened_in_cohort_stage": false,
+    "execution_receipt_must_pin_future_cohort_artifact": true
+  },
+  "ecological_method": {
+    "source": "validated Japanese ACSP robust candidate-patch core",
+    "support_fraction": 0.025,
+    "support_world_dtype": "float32",
+    "patch_merge_distance_m": 1000,
+    "surface_points": 800,
+    "max_prototypes": 32,
+    "terrain_features": [
+      "elevation",
+      "slope",
+      "aspect_sin",
+      "aspect_cos",
+      "roughness",
+      "tpi"
+    ],
+    "spatial_folds": 5,
+    "block_degrees": 0.1,
+    "holdout_fraction": 0.2,
+    "primary_recovery_radius_km": 10,
+    "random_comparator": "same surface and same selected-cell count",
+    "random_draws_per_fold": 200,
+    "fold_failure_rule": "retain failed/empty declared fold with lift=0",
+    "post_outcome_method_change": false
+  },
+  "primary_estimand": {
+    "unit": "observation-matched animal-plant pair",
+    "taxon_value": "mean robust-minus-random 10-km recovery lift across five declared folds",
+    "pair_value": "animal taxon value minus matched plant taxon value",
+    "pair_count": 24,
+    "weighting": "equal matched-pair weight",
+    "hypothesis_direction": "animal > plant"
+  },
+  "primary_inference": {
+    "minimum_practical_mean_difference": 0.02,
+    "paired_bootstrap_replicates": 30000,
+    "paired_bootstrap_seed": 2026092901,
+    "required_bootstrap_95_lower_bound": 0,
+    "sign_flip_draws": 30000,
+    "sign_flip_seed": 2026092902,
+    "required_one_sided_sign_flip_p_below": 0.05,
+    "success_gate": "mean pair difference >=0.02 AND paired bootstrap 95% lower bound >0 AND one-sided sign-flip p<0.05"
+  },
+  "secondary_report_only": [
+    "animal mean lift",
+    "plant mean lift",
+    "median paired difference",
+    "positive/negative/tied pair counts",
+    "region-level pair differences",
+    "record-count and observation-metadata balance diagnostics copied from frozen cohort receipt"
+  ],
+  "interpretation": {
+    "if_pass": "supports a larger ACSP environmental-support recovery lift in animals than plants within an observation-architecture-balanced fresh Japanese cohort",
+    "if_fail": "does not support a taxonomic difference in ACSP recovery lift under the frozen balanced design",
+    "does_not_establish": [
+      "causal effect of being an animal versus plant",
+      "universal global taxonomic difference",
+      "specific life-history mechanism",
+      "occupancy probability or habitat suitability superiority",
+      "that observation bias is absent"
+    ]
+  },
+  "prohibited": [
+    "change support fraction, patch merge distance, recovery radius, random comparator, or failure rule after cohort activation",
+    "drop matched pairs after outcome opening",
+    "replace taxa after outcome opening",
+    "change primary inference thresholds after v3 balance result",
+    "use unmatched subgroup means as the primary test",
+    "reinterpret failure as evidence that ACSP lacks validated utility"
+  ]
+}
