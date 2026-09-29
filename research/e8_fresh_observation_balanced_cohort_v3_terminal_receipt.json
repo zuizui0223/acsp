@@ -1,0 +1,74 @@
+{
+  "schema": "acsp.e8_fresh_observation_balanced_cohort.terminal_receipt.v3",
+  "status": "stop_observation_balance_not_achieved",
+  "authoritative_execution": {
+    "workflow_run_id": 36509230701,
+    "workflow_job_id": 109217462160,
+    "head_sha": "3291b89fb00f5033259ba3699789fc634a903a1e",
+    "artifact_id": 11009062706,
+    "artifact_digest": "sha256:7ab61bec92cc8d87733aa3b6bd151640c3125370a4ce84aa4b88008dc7b1ccc5"
+  },
+  "denominator": {
+    "candidate_metadata_rows": 192,
+    "complete_candidate_metadata": 192,
+    "successful_regions": 10,
+    "matched_pairs": 20,
+    "matched_taxa": 40,
+    "expected_regions": 12,
+    "expected_pairs": 24,
+    "expected_taxa": 48
+  },
+  "disjointness": {
+    "overlap_with_validated96_names": 0,
+    "overlap_with_validated96_keys": 0,
+    "overlap_with_e8_v1_v2_candidate_names": 0,
+    "overlap_with_e8_v1_v2_candidate_keys": 0
+  },
+  "information_barrier": {
+    "acsp_candidate_generation_run": false,
+    "recovery_outcomes_opened": false,
+    "confirmatory_endpoint_activated": false
+  },
+  "gate": {
+    "passed": false,
+    "maximum_pair_distance_observed": 2.5657170680263843,
+    "propensity_overlap_fraction": 1,
+    "ess": {
+      "animal": 18.844431724679104,
+      "plant": 18.017046451396425
+    },
+    "max_absolute_smd": 0.5457891131863782,
+    "absolute_smd": {
+      "log1p_current_coordinate_record_count": 0.12169019861783854,
+      "human_observation_fraction": 0.16984173238928746,
+      "machine_observation_fraction": 0,
+      "preserved_specimen_fraction": 0.22936842066940846,
+      "recent_2021_2025_fraction": 0.5457891131863782,
+      "top_dataset_share": 0.04133124507626083
+    },
+    "checks": {
+      "exact_regions": false,
+      "exact_pairs": false,
+      "exact_taxa": false,
+      "exact_unique_taxa": false,
+      "max_smd": false,
+      "overlap": true,
+      "ess_animal": true,
+      "ess_plant": true,
+      "pair_distance": true
+    }
+  },
+  "scientific_decision": "The E8 animal-versus-plant ecological lift contrast remains unidentifiable under the finite prospective observation-balanced programme. The fresh v3 cohort did not satisfy its frozen denominator or balance gates before any ACSP ecological outcome was opened.",
+  "hard_stop": {
+    "retune_v3_matching_weights": false,
+    "replace_failed_regions": false,
+    "add_more_v3_candidates": false,
+    "activate_confirmatory_recovery": false,
+    "reinterpret_raw_validated_subgroup_difference_as_taxon_effect": false
+  },
+  "retained_descriptive_context": {
+    "validated_animal_mean_lift": 0.11415032280591153,
+    "validated_plant_mean_lift": 0.057023839246432256,
+    "interpretation": "descriptive subgroup means only"
+  }
+}
