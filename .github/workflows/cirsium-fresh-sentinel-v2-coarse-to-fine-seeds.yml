@@ -6,6 +6,7 @@ on:
       - "research/build_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py"
       - "tests/test_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_to_fine_seed_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_frame_geometry_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-coarse-to-fine-seeds.yml"
   workflow_dispatch:
 
