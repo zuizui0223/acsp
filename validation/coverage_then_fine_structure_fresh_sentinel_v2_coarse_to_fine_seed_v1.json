@@ -1,0 +1,58 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-coarse-to-fine-seed-v1",
+  "status": "FROZEN_BEFORE_COARSE_TO_FINE_SEED_EXECUTION",
+  "parent_coarse_order_pr": 231,
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "seed_footprint": {
+    "identity": "MATCH_FROZEN_COARSE_COVERAGE_SCALE_V1",
+    "radius_km": 5.0,
+    "source": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json",
+    "source_field": "max_network_transition_km",
+    "user_declared_value": false,
+    "field_outcome_fitted": false
+  },
+  "source_ready_lane": {
+    "input": "the full immutable family-specific coarse evidence order from PR 231",
+    "algorithm": "scan the full coarse order from first to last; accept a candidate as a fine-expansion seed iff its 5-km geodesic footprint covers at least one source-ready candidate not already covered by previously accepted seeds; continue until the entire source-ready lane is covered or the order is exhausted",
+    "top_k_used": false,
+    "score_threshold_used": false,
+    "user_site_count_used": false,
+    "budget_used": false,
+    "all_source_ready_candidates_must_be_covered": true,
+    "coarse_order_role": "priority only; it does not determine an arbitrary stopping count"
+  },
+  "source_indeterminate_lane": {
+    "input": "SOURCE_INDETERMINATE_RETAIN candidates for that unit",
+    "ecological_rank_used": false,
+    "algorithm": "stable geometry-only greedy 5-km set cover over the retained-indeterminate candidates; at each step choose the candidate covering the most currently uncovered indeterminate candidates, break ties by stable candidate SHA-256; continue until every retained-indeterminate candidate is covered",
+    "all_source_indeterminate_candidates_must_be_covered": true,
+    "ranked_below_source_ready": false,
+    "dropped": false
+  },
+  "distance_semantics": {
+    "metric": "great_circle_haversine",
+    "radius_inclusive": true,
+    "cross_lane_coverage_allowed": false,
+    "cross_unit_coverage_allowed": false,
+    "cross_candidate_area_barrier": "none at seed stage; this is only a deterministic fine-expansion seed compression over the already frozen Japan outer-frame points"
+  },
+  "fine_expansion_boundary": {
+    "seed_is_exact_field_site": false,
+    "seed_is_occupancy_claim": false,
+    "seed_authorizes_access": false,
+    "seed_center_role": "center of a later 5-km fine ecological expansion frame only",
+    "regular_100m_graph_not_built_yet": true,
+    "fine_structural_order_not_built_yet": true
+  },
+  "forbidden": [
+    "do not stop after an arbitrary Top-k",
+    "do not use a score threshold to decide seed count",
+    "do not use survey days, monetary budget, user site count or field outcomes",
+    "do not rank source-indeterminate candidates below source-ready candidates because their public source is missing",
+    "do not let a source-ready seed cover or eliminate the source-indeterminate lane",
+    "do not interpret 5-km seed coverage as species presence, habitat suitability or field recovery"
+  ],
+  "prospective_field_outcomes_opened": false,
+  "next_gate": "Execute and hash the four source-ready seed orders and four retained-indeterminate geometry-only seed sets; then freeze exact 5-km fine-frame construction around those seeds before materializing 100-m structural grids."
+}
