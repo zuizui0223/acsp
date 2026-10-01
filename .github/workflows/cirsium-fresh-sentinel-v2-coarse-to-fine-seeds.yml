@@ -5,6 +5,8 @@ on:
     paths:
       - "research/build_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py"
       - "tests/test_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py"
+      - "research/materialize_cirsium_fresh_sentinel_v2_fine_frames.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_frames.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_to_fine_seed_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_frame_geometry_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-coarse-to-fine-seeds.yml"
@@ -30,8 +32,8 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Test automatic seed mechanics
-        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py
+      - name: Test automatic seed and fine-frame mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py tests/test_cirsium_fresh_sentinel_v2_fine_frames.py
       - name: Download exact frozen source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
