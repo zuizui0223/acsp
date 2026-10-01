@@ -3,7 +3,7 @@ name: E8 fresh observation-balanced cohort v2
 on:
   push:
     branches:
-      - research/e8-fresh-observation-balanced-cohort-v1
+      - research/e8-fresh-observation-balanced-cohort-v2
     paths:
       - 'validation/e8_fresh_observation_balanced_cohort_v2.json'
       - 'research/predeclare_e8_fresh_observation_balanced_cohort_v2.py'
