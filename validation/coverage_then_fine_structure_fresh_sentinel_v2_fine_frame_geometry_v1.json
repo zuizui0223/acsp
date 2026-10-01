@@ -1,0 +1,53 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fine-frame-geometry-v1",
+  "status": "FROZEN_BEFORE_FINE_FRAME_MATERIALIZATION",
+  "parent_seed_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_to_fine_seed_v1.json",
+  "projection": {
+    "identity": "JAPAN_CENTERED_AEQD_V1",
+    "proj_string": "+proj=aeqd +lat_0=36 +lon_0=138 +datum=WGS84 +units=m +no_defs",
+    "source_crs": "EPSG:4326",
+    "axis_order": "always_xy",
+    "reason": "one shared metric coordinate system is required so overlapping seed footprints share the same integer 100-m grid_row/grid_col and the frozen Moore-neighbour graph remains coherent across seed overlaps"
+  },
+  "grid": {
+    "spacing_m": 100.0,
+    "global_origin_x_m": 0.0,
+    "global_origin_y_m": 0.0,
+    "grid_col_definition": "floor(projected_x_m / 100)",
+    "grid_row_definition": "floor(projected_y_m / 100)",
+    "cell_center_x_m": "(grid_col + 0.5) * 100",
+    "cell_center_y_m": "(grid_row + 0.5) * 100",
+    "candidate_cell_identity": "unit + lane + grid_row + grid_col",
+    "duplicate_cells_within_same_unit_lane": "union to one cell"
+  },
+  "seed_footprint": {
+    "radius_km": 5.0,
+    "inclusion": "100-m cell center is within <=5000 m Euclidean distance of at least one seed center after projection",
+    "seed_center_is_field_site": false,
+    "seed_center_is_occupancy_claim": false
+  },
+  "separation": {
+    "units_union_together": false,
+    "source_ready_and_indeterminate_lanes_union_together": false,
+    "reason": "the source-indeterminate lane must remain independently retained and cannot be eliminated by source-ready evidence"
+  },
+  "materialization_boundary": {
+    "ecological_sources_attached_at_this_stage": false,
+    "structural_graph_computed_at_this_stage": false,
+    "candidate_ranking_at_this_stage": false,
+    "access_or_roads_used": false,
+    "budget_used": false,
+    "field_outcomes_used": false,
+    "private_exact_sites_used": false,
+    "p02_results_used": false
+  },
+  "forbidden": [
+    "do not create a separate local grid origin per seed",
+    "do not use latitude-degree approximations for 100-m adjacency",
+    "do not merge source-ready and source-indeterminate lanes",
+    "do not interpret fine-frame cells as presence, suitability or exact survey sites",
+    "do not change 100-m spacing after seeing candidate counts or field outcomes"
+  ],
+  "prospective_field_outcomes_opened": false,
+  "next_gate": "After seed hashes are frozen, materialize the exact unioned 100-m fine frames under this projection and freeze cell counts/hashes before attaching fine public ecological sources."
+}
