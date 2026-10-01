@@ -1,0 +1,80 @@
+name: Fresh-SENTINEL v2 coarse-to-fine seeds
+
+on:
+  pull_request:
+    paths:
+      - "research/build_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_to_fine_seed_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-coarse-to-fine-seeds.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  seeds:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test automatic seed mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py
+      - name: Download exact frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-fs-v2-seed/terrain /tmp/acsp-fs-v2-seed/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-fs-v2-seed/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-fs-v2-seed/worldcover
+      - name: Rebuild frozen coarse evidence orders privately
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-fs-v2-seed/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-fs-v2-seed/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-fs-v2-seed/orders
+      - name: Build automatic 5-km fine-expansion seeds
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_to_fine_seeds.py             --order CIR02=/tmp/acsp-fs-v2-seed/orders/CIR02_coarse_evidence_order.csv.gz             --order CIR06=/tmp/acsp-fs-v2-seed/orders/CIR06_coarse_evidence_order.csv.gz             --order CIR12=/tmp/acsp-fs-v2-seed/orders/CIR12_coarse_evidence_order.csv.gz             --order CIR13=/tmp/acsp-fs-v2-seed/orders/CIR13_coarse_evidence_order.csv.gz             --out-dir /tmp/acsp-fs-v2-seed/seeds
+      - name: Guard automatic no-budget seed boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          value = json.loads(Path('/tmp/acsp-fs-v2-seed/seeds/summary.json').read_text())
+          assert value['status'] == 'AUTOMATIC_COARSE_TO_FINE_SEEDS_BUILT_PRE_OUTCOME'
+          assert value['candidate_count'] == 39200
+          assert value['seed_footprint_radius_km'] == 5.0
+          assert value['top_k_used'] is False
+          assert value['score_threshold_used'] is False
+          assert value['budget_used'] is False
+          assert value['user_site_count_used'] is False
+          assert value['prospective_field_outcomes_opened'] is False
+          assert value['field_outcomes_used'] is False
+          assert value['seed_is_exact_field_site'] is False
+          assert value['seed_is_occupancy_claim'] is False
+          assert value['regular_100m_graph_built'] is False
+          for unit, result in value['unit_results'].items():
+              assert result['source_ready_coverage_complete'] is True
+              assert result['source_indeterminate_coverage_complete'] is True
+              assert result['candidate_rows_dropped'] == 0
+              assert result['top_k_used'] is False
+              assert result['budget_used'] is False
+              assert result['source_ready_seed_count'] > 0
+              assert result['source_indeterminate_seed_count'] > 0
+          assert set(value['private_seed_sha256_by_unit']) == {'CIR02','CIR06','CIR12','CIR13'}
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-coarse-to-fine-seed-summary
+          path: /tmp/acsp-fs-v2-seed/seeds/summary.json
+          if-no-files-found: error
