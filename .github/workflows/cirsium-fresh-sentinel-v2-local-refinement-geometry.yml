@@ -1,0 +1,106 @@
+name: Fresh-SENTINEL v2 local refinement geometry feasibility
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_local_refinement_geometry.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_local_refinement_geometry.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_local_refinement_geometry_feasibility_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-local-refinement-geometry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  geometry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test frozen geometry mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_local_refinement_geometry.py
+      - name: Download exact frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-local-refinement/terrain /tmp/acsp-local-refinement/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-local-refinement/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-local-refinement/worldcover
+      - name: Rebuild frozen coarse evidence orders privately
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-local-refinement/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-local-refinement/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-local-refinement/orders
+      - name: Audit exact 2.5pct-center 5km/100m geometry
+        run: |
+          python research/audit_cirsium_fresh_sentinel_v2_local_refinement_geometry.py             --terrain-csv-gz /tmp/acsp-local-refinement/terrain/full_terrain.csv.gz             --order CIR02=/tmp/acsp-local-refinement/orders/CIR02_coarse_evidence_order.csv.gz             --order CIR06=/tmp/acsp-local-refinement/orders/CIR06_coarse_evidence_order.csv.gz             --order CIR12=/tmp/acsp-local-refinement/orders/CIR12_coarse_evidence_order.csv.gz             --order CIR13=/tmp/acsp-local-refinement/orders/CIR13_coarse_evidence_order.csv.gz             --out-json /tmp/acsp-local-refinement/summary.json
+      - name: Guard geometry-only boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          x = json.loads(Path('/tmp/acsp-local-refinement/summary.json').read_text())
+          assert x['status'] == 'LOCAL_REFINEMENT_GEOMETRY_FEASIBILITY_COMPLETE'
+          assert x['projection_identity'] == 'JAPAN_CENTERED_AEQD_V1'
+          assert x['grid_spacing_m'] == 100.0
+          assert x['window_radius_km'] == 5.0
+          assert x['center_fraction'] == 0.025
+          assert x['source_indeterminate_fine_expanded'] is False
+          assert x['field_outcomes_opened'] is False
+          assert x['recovery_used'] is False
+          assert x['ecological_sources_attached'] is False
+          assert x['structural_graph_computed'] is False
+
+          expected = {
+              'CIR02': {
+                  'centers': 819,
+                  'raw': 6432583,
+                  'unique': 2200785,
+                  'hash': '5e93d207cf3b1946f4e8ab53392136904314fe5e44ef2bfd631de4a6e18b2c9d',
+              },
+              'CIR06': {
+                  'centers': 840,
+                  'raw': 6597353,
+                  'unique': 2807888,
+                  'hash': '9f627ecf9aae64171dd0a4d0f77cf56e7efde34ebed96541280ddd216ec4b657',
+              },
+              'CIR12': {
+                  'centers': 819,
+                  'raw': 6432549,
+                  'unique': 3251693,
+                  'hash': 'f28416b2270ed18e8d89e629d6bb53fb818f29dbb9bf0c2844daaa5156a64bf8',
+              },
+              'CIR13': {
+                  'centers': 819,
+                  'raw': 6432549,
+                  'unique': 3251693,
+                  'hash': 'f28416b2270ed18e8d89e629d6bb53fb818f29dbb9bf0c2844daaa5156a64bf8',
+              },
+          }
+          for unit, e in expected.items():
+              row = x['unit_results'][unit]
+              assert row['selected_coarse_center_count'] == e['centers']
+              assert row['raw_seed_to_cell_membership_count'] == e['raw']
+              assert row['unique_unioned_fine_cell_count'] == e['unique']
+              assert row['sorted_packed_global_grid_id_sha256'] == e['hash']
+              assert row['raw_seed_to_cell_membership_count'] >= row['unique_unioned_fine_cell_count']
+              assert row['grid_rows_written'] is False
+              assert row['ecological_sources_attached'] is False
+              assert row['field_outcomes_used'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-local-refinement-geometry-summary
+          path: /tmp/acsp-local-refinement/summary.json
+          if-no-files-found: error

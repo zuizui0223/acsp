@@ -1,0 +1,65 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-local-refinement-geometry-feasibility-v1",
+  "status": "FROZEN_BEFORE_LOCAL_REFINEMENT_GEOMETRY_EXECUTION",
+  "scientific_role": "pre-outcome representation feasibility only; not ecological selector validation",
+  "source_endpoint": "validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "refinement_centers": {
+    "lane": "SOURCE_READY_FOR_FAMILY_COARSE_STAGE only",
+    "selection_rule": "retain exactly ceil(0.025 * source_ready_candidate_count) highest-ranked candidates from the already-frozen full coarse evidence order",
+    "fraction": 0.025,
+    "fraction_source": "acsp.validated_robust.VALIDATED_ROBUST_SUPPORT_FRACTION",
+    "top_k_used": false,
+    "target_center_count_used": false,
+    "field_outcome_used": false
+  },
+  "fine_geometry": {
+    "projection_identity": "JAPAN_CENTERED_AEQD_V1",
+    "projection_source": "PR 234 pre-result geometry freeze; frozen before complete-coverage seed counts were opened",
+    "proj_string": "+proj=aeqd +lat_0=36 +lon_0=138 +datum=WGS84 +units=m +no_defs",
+    "source_crs": "EPSG:4326",
+    "axis_order": "always_xy",
+    "grid_spacing_m": 100.0,
+    "grid_spacing_source": "validation/cirsium_candidate_frame_contract_v1.json target_spacing_m",
+    "global_origin_x_m": 0.0,
+    "global_origin_y_m": 0.0,
+    "window_radius_km": 5.0,
+    "window_radius_source": "the already-frozen 5-km Cirsium local-frame sensitivity scale and PR 234 pre-result fine-frame geometry",
+    "cell_inclusion_rule": "global 100-m cell center lies within <=5000 m Euclidean distance of at least one selected coarse center after projection",
+    "overlapping_windows": "union identical global grid_row/grid_col cells"
+  },
+  "source_indeterminate_lane": {
+    "fine_expanded_in_this_test": false,
+    "retained_outside_test": true,
+    "reason": "source-indeterminate candidates have no ecological order and must not be converted into negative or ranked evidence"
+  },
+  "feasibility_endpoints": {
+    "primary": "unique unioned 100-m fine-cell count per unit",
+    "secondary": [
+      "selected coarse center count",
+      "raw seed-to-cell membership count before union",
+      "overlap memberships removed by union",
+      "union area km2 from unique cell count * 0.01",
+      "SHA-256 of sorted packed global grid cell IDs"
+    ],
+    "field_outcome_used": false,
+    "ecological_sources_attached": false,
+    "structural_graph_computed": false,
+    "recovery_used": false,
+    "promotion_gate": false
+  },
+  "interpretation": {
+    "if_geometry_is_large": "do not tune fraction, radius or spacing after seeing the count; close or redesign the representation prospectively",
+    "if_geometry_is_tractable": "geometry feasibility only; fine ecological source attachment and structural ranking still require separate frozen execution before any field outcome"
+  },
+  "forbidden": [
+    "do not tune 0.025 after seeing cell counts",
+    "do not tune 5 km after seeing cell counts",
+    "do not tune 100 m after seeing cell counts",
+    "do not add max_cells or a local-window center cap",
+    "do not use field outcomes, private exact sites, P02 results, roads, access or budget",
+    "do not fine-expand SOURCE_INDETERMINATE_RETAIN candidates in this test",
+    "do not call fine cells occupied sites or field recommendations"
+  ],
+  "prospective_field_outcomes_opened": false
+}
