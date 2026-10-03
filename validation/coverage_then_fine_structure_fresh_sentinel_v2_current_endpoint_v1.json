@@ -4,7 +4,12 @@
   "as_of_date": "2026-10-03",
   "active_parent_pr": 184,
   "active_parent_head_before_this_state_artifact": "3b3a6f43aa0948a2d48d0bb44910ad1b20b9dd0b",
-  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
   "active_promoted_chain": [
     {
       "stage": "public_broad_frame",
@@ -54,6 +59,49 @@
       "prospective_field_outcomes_used": false,
       "do_not_promote_to_field_selector": true,
       "do_not_execute_full_national_100m_fine_expansion_from_this_rule": true
+    },
+    {
+      "identity": "VALIDATED_2P5PCT_1KM_CONSTANT_TRANSFER_V1",
+      "source_pr": 236,
+      "disposition": "CLOSED_WITHOUT_MERGE_AFTER_GREEN_REPRODUCTION",
+      "reason": "mechanically transferring the independently validated 2.5% support fraction and 1-km complete-link aggregation to the fresh coarse order leaves hundreds of mostly singleton patches and does not yield a compact field-action patch set",
+      "transferred_constants": {
+        "support_fraction": 0.025,
+        "patch_merge_distance_m": 1000
+      },
+      "unit_results": {
+        "CIR02": {
+          "retained_points": 819,
+          "patches": 510,
+          "singleton_fraction": 0.7196078431372549,
+          "median_patch_members": 1
+        },
+        "CIR06": {
+          "retained_points": 840,
+          "patches": 792,
+          "singleton_fraction": 0.9406565656565656,
+          "median_patch_members": 1
+        },
+        "CIR12": {
+          "retained_points": 819,
+          "patches": 703,
+          "singleton_fraction": 0.8762446657183499,
+          "median_patch_members": 1
+        },
+        "CIR13": {
+          "retained_points": 819,
+          "patches": 703,
+          "singleton_fraction": 0.8762446657183499,
+          "median_patch_members": 1
+        }
+      },
+      "biological_negative": false,
+      "validated_robust_product_invalidated": false,
+      "fresh_coarse_order_invalidated": false,
+      "do_not_tune_support_fraction": true,
+      "do_not_tune_merge_distance": true,
+      "do_not_add_top_k_or_target_patch_count": true,
+      "do_not_promote_to_field_selector": true
     }
   ],
   "current_scientific_output": {
@@ -66,7 +114,7 @@
   },
   "blocked_next_claim": {
     "target": "compact auditable fresh-SENTINEL field patch set",
-    "reason": "no independently validated automatic stopping/compression rule exists for turning the coarse evidence endpoint into a small field-action set",
+    "reason": "no independently validated automatic stopping/compression rule exists for turning the coarse evidence endpoint into a small field-action set; both complete 5-km coverage compression and direct transfer of the validated 2.5%/1-km constants have been tested and rejected as compact representations",
     "requires": "a separately frozen development/validation cycle for compact patch compression or operational field allocation; do not tune on CIR02/CIR06/CIR12/CIR13 prospective outcomes after opening them"
   },
   "forbidden_rescues": [
@@ -76,7 +124,8 @@
     "post-result survey-day budget",
     "post-result monetary budget",
     "reclassifying provider-indeterminate candidates as biological absence",
-    "using private exact sites or P02 results to retroactively tune the coarse selector"
+    "using private exact sites or P02 results to retroactively tune the coarse selector",
+    "retuning validated 2.5% or 1-km constants on the fresh four-unit coarse endpoint"
   ],
   "prospective_field_outcomes_opened": false
 }
