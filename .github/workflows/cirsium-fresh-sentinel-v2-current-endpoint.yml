@@ -45,6 +45,23 @@ jobs:
           assert "post-result Top-k" in forbidden
           assert "post-result knee" in forbidden
           assert "reclassifying provider-indeterminate candidates as biological absence" in forbidden
+          assert "retuning validated 2.5% or 1-km constants on the fresh four-unit coarse endpoint" in forbidden
+
+          transfer = [d for d in x["non_promoted_diagnostics"] if d["identity"] == "VALIDATED_2P5PCT_1KM_CONSTANT_TRANSFER_V1"]
+          assert len(transfer) == 1
+          transfer = transfer[0]
+          assert transfer["source_pr"] == 236
+          assert transfer["disposition"] == "CLOSED_WITHOUT_MERGE_AFTER_GREEN_REPRODUCTION"
+          assert transfer["transferred_constants"] == {"support_fraction": 0.025, "patch_merge_distance_m": 1000.0}
+          assert transfer["unit_results"]["CIR02"]["patches"] == 510
+          assert transfer["unit_results"]["CIR06"]["patches"] == 792
+          assert transfer["unit_results"]["CIR12"]["patches"] == 703
+          assert transfer["unit_results"]["CIR13"]["patches"] == 703
+          assert transfer["unit_results"]["CIR06"]["median_patch_members"] == 1.0
+          assert transfer["do_not_tune_support_fraction"] is True
+          assert transfer["do_not_tune_merge_distance"] is True
+          assert transfer["do_not_add_top_k_or_target_patch_count"] is True
+          assert transfer["do_not_promote_to_field_selector"] is True
 
           m = json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_output_manifest_v1.json").read_text())
           assert m["status"] == "PUBLIC_SAFE_COARSE_OUTPUT_MANIFEST_FROZEN"
