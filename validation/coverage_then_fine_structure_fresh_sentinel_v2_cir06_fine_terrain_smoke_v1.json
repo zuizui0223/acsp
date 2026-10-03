@@ -1,0 +1,57 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-cir06-fine-terrain-smoke-v1",
+  "status": "FROZEN_BEFORE_CIR06_FINE_TERRAIN_SMOKE",
+  "scientific_role": "source-mechanics smoke only; no selector or recovery claim",
+  "parent_geometry_pr": 238,
+  "cohort_unit_id": "CIR06",
+  "species_binomial": "Cirsium yezoalpinum",
+  "structural_feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+  "center_rule": {
+    "source": "full frozen CIR06 coarse evidence order",
+    "rank": 1,
+    "expected_candidate_cell_id": "JP_x158_y63_p0142",
+    "field_outcome_used": false
+  },
+  "fine_geometry": {
+    "projection_identity": "JAPAN_CENTERED_AEQD_V1",
+    "grid_spacing_m": 100.0,
+    "window_radius_km": 5.0,
+    "expected_core_cell_count": 7860,
+    "geometry_source": "PR 238 local-refinement geometry contract"
+  },
+  "terrain_source": {
+    "provider": "GSI DEM via gbif_fieldmap_builder_app.build_gsi_dem_for_bounds",
+    "production_default_max_tiles": 400,
+    "max_tiles_user_tunable": false,
+    "terrain_surface_target_resolution_m": 25.0,
+    "derived_neighbourhood_margin_m": 175.0,
+    "margin_derivation": "terrain_surface size300 uses 13 cells at 25 m => 150 m half-width; add one 25 m gradient cell",
+    "required_columns": ["elev", "slope100", "tpi300", "rough300"],
+    "sampling_implementation": "research.build_cirsium_private_alpine_local_grid_v1._sample_terrain"
+  },
+  "provider_failure_semantics": {
+    "status": "INDETERMINATE_GSI_PROVIDER_FAILURE",
+    "biological_negative": false,
+    "candidate_unsuitable": false,
+    "alternate_provider_allowed": false,
+    "relax_source_rule_allowed": false
+  },
+  "endpoints": {
+    "primary": "terrain-complete fine-cell count / 7860",
+    "secondary": [
+      "GSI source attribution",
+      "DEM SHA-256",
+      "terrain-complete count",
+      "terrain-incomplete count"
+    ],
+    "promotion_gate": false
+  },
+  "forbidden": [
+    "do not change rank-1 center after provider result",
+    "do not tune 5 km or 100 m",
+    "do not change GSI source after failure",
+    "do not run structural graph or ecological ranking",
+    "do not open field outcomes, private exact sites, P02 results, access or budget"
+  ],
+  "prospective_field_outcomes_opened": false
+}
