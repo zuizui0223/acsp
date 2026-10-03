@@ -13,7 +13,7 @@
       "coarse_family": "WETLAND_MOISTURE_STRUCTURE",
       "source_ready_candidate_count": 32754,
       "source_indeterminate_candidate_count": 6446,
-      "coarse_order_sha256": "c60a6713404c6878820c5b0b3c74e8f16d2a7f0f5f2f608313dbd9afc6b0e0a8",
+      "coarse_order_sha256": "b2c0b4e4480703f2273c4eec0498f843b536c0d8546b679b7172556091a0dd76",
       "source_ready_order_complete": true,
       "source_indeterminate_ranked": false
     },
@@ -22,7 +22,7 @@
       "coarse_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
       "source_ready_candidate_count": 33578,
       "source_indeterminate_candidate_count": 5622,
-      "coarse_order_sha256": "c46ca1d5db9d8a3adbcf754249ec0cc4e18c42a3cde68c2e3a276f6c2e5fd5b0",
+      "coarse_order_sha256": "1cdb23641607253f11d0da4df1c6c5b50d25e2da7f23eb9d03cba3a265c35251",
       "source_ready_order_complete": true,
       "source_indeterminate_ranked": false
     },
@@ -31,7 +31,7 @@
       "coarse_family": "OPEN_GRASSLAND_STRUCTURE",
       "source_ready_candidate_count": 32754,
       "source_indeterminate_candidate_count": 6446,
-      "coarse_order_sha256": "6af74d388fe920245c30fd15db8b76c197c678ba119d40b6d4e370f901127f4c",
+      "coarse_order_sha256": "a014eeaa75319065b03ab5cff6723fd508378d09961210d32cd7634110147537",
       "source_ready_order_complete": true,
       "source_indeterminate_ranked": false
     },
@@ -40,7 +40,7 @@
       "coarse_family": "OPEN_GRASSLAND_STRUCTURE",
       "source_ready_candidate_count": 32754,
       "source_indeterminate_candidate_count": 6446,
-      "coarse_order_sha256": "b3f7812a5c6b1c4ed0f285df995696668725749de4ffab9188f9f97fda87358e",
+      "coarse_order_sha256": "37f1276415e9d0cb58f3d2d86cc771fc7375458aed32142c038ac7f53398b423",
       "source_ready_order_complete": true,
       "source_indeterminate_ranked": false
     }
@@ -55,5 +55,13 @@
     "occupancy_probability_claim": false,
     "compact_field_patch_count_claim": false
   },
-  "use": "This manifest identifies the current reproducible coarse ecological outputs without exposing coordinate-bearing candidate orders. It is not a field itinerary or exact-site recommendation."
+  "use": "This manifest identifies the current reproducible coarse ecological outputs without exposing coordinate-bearing candidate orders. It is not a field itinerary or exact-site recommendation.",
+  "coarse_order_summary_facts": {
+    "CIR02_direct_wetland_signal_count": 59,
+    "CIR12_direct_grass_signal_count": 2138,
+    "CIR13_direct_grass_signal_count": 2138,
+    "candidate_selection_added": false,
+    "top_k_or_threshold_applied": false,
+    "fitted_weight_used": false
+  }
 }
