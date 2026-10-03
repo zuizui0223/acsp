@@ -17,6 +17,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from scipy.spatial import cKDTree
 
 from acsp.robust_patches import _complete_link_support_patches
 from acsp.validated_robust import (
@@ -44,6 +45,60 @@ def _validate_contract() -> None:
         raise ValueError("support fraction differs from validated ACSP constant")
     if float(constants["patch_merge_distance_m"]) != VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M:
         raise ValueError("merge distance differs from validated ACSP constant")
+
+
+def _complete_link_with_safe_spatial_partition(selected: pd.DataFrame) -> pd.DataFrame:
+    """Run the unchanged validated complete-link rule inside exact-safe 1-km components.
+
+    If two points have no chain of <=1-km pairwise-neighbour edges, they cannot
+    belong to the same complete-link patch at a 1-km maximum diameter. Splitting
+    by these connected components therefore changes only runtime, not membership.
+    """
+    pieces: list[pd.DataFrame] = []
+    component_serial = 0
+    angular_radius = float(VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M) / 6_371_008.8
+    chord_radius = 2.0 * np.sin(angular_radius / 2.0)
+
+    for area, group in selected.groupby("regional_tile_id", sort=True, dropna=False):
+        work = group.copy().reset_index(drop=True)
+        lat = np.radians(pd.to_numeric(work["latitude"], errors="raise").to_numpy(float))
+        lon = np.radians(pd.to_numeric(work["longitude"], errors="raise").to_numpy(float))
+        xyz = np.column_stack((np.cos(lat) * np.cos(lon), np.cos(lat) * np.sin(lon), np.sin(lat)))
+        neighbours = cKDTree(xyz).query_ball_point(xyz, r=chord_radius)
+
+        seen = np.zeros(len(work), dtype=bool)
+        for start in range(len(work)):
+            if seen[start]:
+                continue
+            stack = [start]
+            seen[start] = True
+            component: list[int] = []
+            while stack:
+                current = stack.pop()
+                component.append(current)
+                for nxt in neighbours[current]:
+                    if not seen[nxt]:
+                        seen[nxt] = True
+                        stack.append(int(nxt))
+            component_serial += 1
+            subset = work.iloc[component].copy()
+            subset["_safe_component_area"] = f"{area}__C{component_serial:05d}"
+            patches = _complete_link_support_patches(
+                subset,
+                merge_distance_m=VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M,
+                latitude_col="latitude",
+                longitude_col="longitude",
+                area_col="_safe_component_area",
+            )
+            if not patches.empty:
+                patches["regional_tile_id"] = str(area)
+                pieces.append(patches)
+
+    if not pieces:
+        return pd.DataFrame()
+    combined = pd.concat(pieces, ignore_index=True)
+    combined["zone_id"] = [f"TRANSFER-Z{i:05d}" for i in range(1, len(combined) + 1)]
+    return combined
 
 
 def transfer_unit(
@@ -90,13 +145,7 @@ def transfer_unit(
         "longitude": pd.to_numeric(retained["longitude"], errors="raise"),
         "regional_tile_id": retained["regional_tile_id"].astype(str),
     })
-    patches = _complete_link_support_patches(
-        selected,
-        merge_distance_m=VALIDATED_ROBUST_PATCH_MERGE_DISTANCE_M,
-        latitude_col="latitude",
-        longitude_col="longitude",
-        area_col="regional_tile_id",
-    )
+    patches = _complete_link_with_safe_spatial_partition(selected)
     if patches.empty and retain_n:
         raise AssertionError(f"{unit} retained points unexpectedly produced no patches")
     members = pd.to_numeric(patches["zone_member_count"], errors="raise").astype(int).to_numpy()
