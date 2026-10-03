@@ -80,8 +80,6 @@ def _validate_order_with_outer(order: pd.DataFrame, outer: pd.DataFrame, unit: s
     missing = sorted(required.difference(order.columns))
     if missing:
         raise ValueError(f"{unit} coarse order missing columns: {missing}")
-    if len(order) != EXPECTED_CANDIDATES:
-        raise ValueError(f"{unit} coarse order must contain exactly 39,200 rows")
     ids = order["candidate_cell_id"].astype(str)
     if ids.duplicated().any():
         raise ValueError(f"{unit} coarse order candidate IDs are not unique")
@@ -226,6 +224,9 @@ def build_all_seed_plans(
     contract = _contract()
     if set(orders) != set(UNITS):
         raise ValueError("coarse order unit set drifted")
+    for unit in UNITS:
+        if len(orders[unit]) != EXPECTED_CANDIDATES:
+            raise ValueError(f"{unit} production coarse order must contain exactly 39,200 rows")
     if outer is None:
         geometry = fetch_geoboundaries_country_geometry("JP")
         outer, outer_summary = build_fresh_sentinel_v2_outer_frame(geometry)
