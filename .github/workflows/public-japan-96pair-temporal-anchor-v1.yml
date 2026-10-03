@@ -1,0 +1,69 @@
+name: Public Japan 96-pair temporal anchor benchmark v1
+
+on:
+  pull_request:
+    paths:
+      - "research/benchmark_public_japan_96pair_temporal_anchor_v1.py"
+      - "tests/test_public_japan_96pair_temporal_anchor_benchmark.py"
+      - "validation/public_japan_96pair_temporal_anchor_benchmark_v1.json"
+      - ".github/workflows/public-japan-96pair-temporal-anchor-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run deterministic tests
+        run: python tests/test_public_japan_96pair_temporal_anchor_benchmark.py -v
+      - name: Download frozen 96-pair cohort artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: acsp-robust-patch-untouched-confirmation-cohort-v2
+          path: frozen-cohort
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 32335791948
+      - name: Verify frozen cohort identity before temporal fetch
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          import pandas as pd
+          root = Path('frozen-cohort')
+          manifest = json.loads((root/'cohort_manifest.json').read_text())
+          sample = pd.read_csv(root/'predeclared_taxon_region_pairs.csv')
+          assert manifest['declared_pairs'] == 96
+          assert manifest['unique_declared_taxa'] == 96
+          assert manifest['taxon_group_counts'] == {'animal': 48, 'plant': 48}
+          assert len(sample[sample['status'].eq('predeclared')]) == 96
+          assert sample.loc[sample['status'].eq('predeclared'), 'scientific_name'].nunique() == 96
+          PY
+      - name: Run frozen public temporal benchmark
+        run: |
+          rm -rf /tmp/public-japan-96pair-temporal-anchor-v1
+          python research/benchmark_public_japan_96pair_temporal_anchor_v1.py \
+            --sample-file frozen-cohort/predeclared_taxon_region_pairs.csv \
+            --out-dir /tmp/public-japan-96pair-temporal-anchor-v1
+      - name: Guard aggregate public output
+        run: |
+          if head -n 1 /tmp/public-japan-96pair-temporal-anchor-v1/*.csv | grep -E '(^|,)(latitude|longitude|decimalLatitude|decimalLongitude|private_exact_site_record_id)(,|$)'; then
+            echo 'coordinate/private column leaked into public 96-pair benchmark'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-japan-96pair-temporal-anchor-v1
+          path: /tmp/public-japan-96pair-temporal-anchor-v1/
+          if-no-files-found: error
+          retention-days: 90

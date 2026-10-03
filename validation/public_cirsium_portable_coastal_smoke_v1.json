@@ -1,0 +1,74 @@
+{
+  "schema_version": "public-cirsium-portable-coastal-smoke-v1",
+  "status": "DEVELOPMENT_ONLY_FROZEN_BEFORE_PORTABLE_COASTAL_EXECUTION",
+  "scientific_role": "provider-portability and structural-process development smoke; not prospective confirmation",
+  "validated_product_changed": false,
+  "cohort_unit_id": "CIR08",
+  "species": "Cirsium brevicaule",
+  "feature_family": "COASTAL_ISLAND_STRUCTURE",
+  "unit_selection": "already-opened three-family development smoke unit; cannot support confirmation",
+  "declared_frame": {
+    "source": "pre-existing ACSP island frame used before this structural smoke",
+    "frame_id": "okinawa_main",
+    "west": 127.6,
+    "south": 26.05,
+    "east": 128.35,
+    "north": 26.88
+  },
+  "historical_evidence": {
+    "period": [2000, 2020],
+    "declared_coordinate_uncertainty_m_max": 1000,
+    "population_cluster_rule": "deterministic complete-link maximum diameter 0.5 km",
+    "anchor_representation": "observed-member medoid",
+    "anchor_rule": "use every strict historical population medoid inside the declared Okinawa-main frame; no fixed anchor count and no later-record replacement",
+    "blocked_if_no_anchor": true
+  },
+  "candidate_frames": {
+    "grid_spacing_m": 100,
+    "known_exclusion_km": 0.5,
+    "primary_outer_radius_km": 2.0,
+    "sensitivity_outer_radius_km": 5.0,
+    "clip": "declared Okinawa-main frame",
+    "water_cells_removed_before_ranking": true
+  },
+  "worldcover": {
+    "provider": "ESA WorldCover",
+    "release": "2021 v200 Map",
+    "source": "official 3-degree HTTPS Cloud Optimized GeoTIFF",
+    "crop_margin_m": 3000,
+    "neighbourhood_half_width_m": 250,
+    "land_definition": "valid WorldCover class other than permanent water class 80",
+    "component_rule": "8-neighbour connected components on the WorldCover land raster crop",
+    "target_component_rule": "all strict historical medoids must resolve to the same positive land component; otherwise abstain",
+    "coast_distance_rule": "Euclidean raster distance from land pixel to nearest class-80 water pixel using raster pixel size; no field-fitted distance threshold",
+    "grass_fraction_rule": "fraction of valid WorldCover pixels equal to class 30 in a square neighbourhood with 250 m half-width",
+    "bare_fraction_rule": "fraction of valid WorldCover pixels equal to class 60 in a square neighbourhood with 250 m half-width"
+  },
+  "ranking": {
+    "structural": "existing frozen COASTAL_ISLAND_STRUCTURE / ROW_MIN_CONJUNCTIVE_SUPPORT",
+    "nearest": "ANNULAR_NEAREST_KNOWN",
+    "spatial": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+    "fitted_blend": false,
+    "prefix_fractions": [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0]
+  },
+  "outcome": {
+    "period": [2021, 2025],
+    "novel_population_rule": "deterministic complete-link 0.5 km; recent cluster is novel when >0.5 km from every strict historical population",
+    "frame": "same declared Okinawa-main rectangle",
+    "recovery_radii_km": [0.25, 0.5, 1.0]
+  },
+  "blocked_states": [
+    "NO_STRICT_HISTORICAL_ANCHOR",
+    "ANCHOR_ON_NO_VALID_WORLDCOVER_LAND",
+    "MULTIPLE_HISTORICAL_LAND_COMPONENTS",
+    "WORLDCOVER_PROVIDER_FAILURE"
+  ],
+  "forbidden": [
+    "do not replace WorldCover with a convenient coastline provider after outcomes",
+    "do not relax coordinate uncertainty after outcomes",
+    "do not enlarge the Okinawa-main frame after outcomes",
+    "do not choose only a favorable prefix/radius",
+    "do not fit distance-environment or distance-structure weights",
+    "do not call this confirmation"
+  ]
+}

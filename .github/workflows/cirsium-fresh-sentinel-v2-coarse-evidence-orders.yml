@@ -1,0 +1,86 @@
+name: Fresh-SENTINEL v2 coarse evidence orders
+
+on:
+  pull_request:
+    paths:
+      - "research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_evidence_order_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-coarse-evidence-orders.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  order:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test coarse evidence semantics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py
+      - name: Download exact frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-fs-v2-order/terrain /tmp/acsp-fs-v2-order/worldcover
+          gh run download 36071510382 \
+            --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-full-coarse-terrain \
+            --dir /tmp/acsp-fs-v2-order/terrain
+          gh run download 36121342866 \
+            --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair \
+            --dir /tmp/acsp-fs-v2-order/worldcover
+      - name: Build full four-unit coarse evidence orders
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py \
+            --terrain-csv-gz /tmp/acsp-fs-v2-order/terrain/full_terrain.csv.gz \
+            --worldcover-csv-gz /tmp/acsp-fs-v2-order/worldcover/full_worldcover_repair.csv.gz \
+            --out-dir /tmp/acsp-fs-v2-order/orders
+      - name: Guard no-selection coarse-order boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          value = json.loads(Path('/tmp/acsp-fs-v2-order/orders/summary.json').read_text())
+          assert value['status'] == 'FULL_COARSE_EVIDENCE_ORDERS_BUILT_PRE_OUTCOME'
+          assert value['candidate_count'] == 39200
+          assert value['orders']['CIR06']['source_ready_candidate_count'] == 33578
+          assert value['orders']['CIR06']['source_indeterminate_retain_candidate_count'] == 5622
+          assert value['orders']['CIR06']['max_coarse_evidence_rank'] == 33578
+          for unit in ['CIR02', 'CIR12', 'CIR13']:
+              assert value['orders'][unit]['source_ready_candidate_count'] == 32754
+              assert value['orders'][unit]['source_indeterminate_retain_candidate_count'] == 6446
+              assert value['orders'][unit]['max_coarse_evidence_rank'] == 32754
+          assert value['CIR02_direct_wetland_signal_count'] == 59
+          assert value['CIR12_direct_grass_signal_count'] == 2138
+          assert value['CIR13_direct_grass_signal_count'] == 2138
+          assert value['source_indeterminate_candidates_receive_ecological_rank'] is False
+          assert value['source_indeterminate_candidates_ranked_below_source_ready'] is False
+          assert value['candidate_selection_added'] is False
+          assert value['top_k_or_threshold_applied'] is False
+          assert value['fitted_weight_used'] is False
+          assert value['coarse_order_is_final_100m_structural_order'] is False
+          assert value['prospective_field_outcomes_opened'] is False
+          assert set(value['private_order_sha256_by_unit']) == {'CIR02','CIR06','CIR12','CIR13'}
+          assert all(len(v) == 64 for v in value['private_order_sha256_by_unit'].values())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-coarse-evidence-order-summary
+          path: /tmp/acsp-fs-v2-order/orders/summary.json
+          if-no-files-found: error

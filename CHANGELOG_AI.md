@@ -1,36 +1,156 @@
 # AI Change Log
 
-## 2026-09-15 - Codex (OpenAI) - Standalone global product release candidate
+## 2026-09-15 - Codex (OpenAI) - Isolate global entry imports from experimental discovery
 
 Changed files:
-- acsp/global_cli.py, acsp/global_country.py, acsp/global_country_frames.py, acsp/global_gbif.py
-- acsp/global_geometry.py, acsp/global_inputs.py, acsp/global_lattice.py, acsp/global_patches.py
-- acsp/data/acsp_geoboundaries_v6_adm0_coverage_v1.json, acsp/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
-- tests/test_global_country.py, tests/test_global_country_frames.py, tests/test_global_product.py, tests/test_global_release.py
-- validation/acsp_global_release_port_manifest_v1.json
-- validation/acsp_global_availability_parity_confirmation_result_v2.json, validation/acsp_global_availability_parity_heldout_results_v2.csv
-- research/predeclare_country_frame_observability_confirmation_historical_discovery.py
-- research/test_country_frame_observability_confirmation_historical_discovery.py, research/test_geographic_framing_confirmation_v1.py
-- pyproject.toml, .github/workflows/package-checks.yml
-- README.md, VALIDATED_PRODUCT_CONTRACT.md, RESEARCH_POSITIONING.md, docs/GLOBAL_RELEASE_PROVENANCE.md, CHANGELOG_AI.md
+- acsp/discovery/__init__.py
+- acsp/discovery/providers/__init__.py
+- tests/test_global_import_boundary.py
+- .github/workflows/package-checks.yml
+- VALIDATED_PRODUCT_CONTRACT.md
+- CHANGELOG_AI.md
 
 Summary:
-- Extract only the global species-name command from tested integration 0357b7e onto main, without experimental discovery or its research execution workflows.
-- Verify 41 extracted function/class definitions; changes are module/resource paths and retaining only the two needed GBIF functions. Preserve complete lattice, country planning and robust mechanics.
-- Record source/release hashes, copy canonical result provenance and link the full frozen research tree and prior failures.
-- Reuse only the verified PR210 Windows path serialization fix after reproducing four existing Windows research failures.
+- Resolve existing discovery/provider exports lazily, retaining their names and original function/class identities.
+- Global command import now needs only historical country framing and GBIF within discovery. Experimental structural, ranking and WorldCover modules are loaded only when explicitly used.
+- Add blocked-import, export-identity, wildcard-import and isolated-wheel checks.
 
 Features preserved:
-- All main functionality and Japanese patch membership; scientific constants, no-ranking/no-planner rules, explicit country no-substitution and distinct empty/abstention/technical-failure states.
+- All 66 discovery and 15 provider public exports, version/status constants, CLI behavior, scientific function bodies, candidate membership and every frozen artifact.
 
 Known risks / TODO:
-- Large-country performance remains unverified. Copied results are provenance, not a full scientific replay bundle. Immutable links retain complete research dependencies and earlier failures.
-- Main release CI must pass before merge. Draft PR184 remains separate.
+- Import errors for optional features now occur when those features are first used. This does not yet split the distribution or authorize merging draft research PR184 into main.
+- Main release selection still needs a separate source/provenance audit; post-change CI must pass before integration.
 
 Validation:
-- 40 tests/ cases passed, including offline country/patch checks and source-hash/import isolation gates. Root unittest discovery and wheel build passed.
-- All 221 main research regression cases passed after the exact PR210 repair. App/new modules compile. CI runs pytest to include function-style tests as well as unittest cases.
-- Standalone installed wheel live automatic Ficus microcarpa run selected TW and produced 85 patches; output CSV was byte-identical to the development wheel run. This is operational parity, not new scientific confirmation.
+- 295 tests/ cases and 250 research unittest cases passed, including exact global patch parity and all lazy export checks.
+- Global entry loads 5 discovery modules versus 23 before this change; all 66 + 15 public export names are preserved.
+- App/module compilation, wheel build and whitespace checks passed. Isolated installed-wheel dependency assertions added to CI.
+
+## 2026-09-15 - Codex (OpenAI) - Species-name global candidate-patch command
+
+Changed files:
+- acsp/global_cli.py
+- acsp/global_geometry.py
+- acsp/global_inputs.py
+- acsp/global_lattice.py
+- acsp/global_patches.py
+- tests/test_global_product.py
+- pyproject.toml
+- .github/workflows/package-checks.yml
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- RESEARCH_POSITIONING.md
+- CHANGELOG_AI.md
+
+Summary:
+- Connect the historical country planner to the existing pinned country geometry, complete regional lattice, terrain inputs and fixed robust patch core through acsp-global-patches.
+- Preserve the research function bodies and verify exact lattice/terrain/patch parity. Reject malformed occurrence transport before the unchanged scientific input body; do not classify malformed responses as empty evidence.
+- Record country planning, progress, output hash and scientific scope. Distinguish normal empty output, insufficient usable evidence and technical failures. Refuse existing output directories.
+- Keep global and explicit-country validation labels separate from the Japanese confirmation label.
+
+Features preserved:
+- Japan entry points and patch membership, legacy app functions, every frozen research artifact, provider pinning, historical-only inputs, complete geometry-selected lattice, fixed 2.5% rule and all prior failures/claim ceilings.
+
+Known risks / TODO:
+- One eligible country is selected, not all countries worldwide. Arbitrary explicit-country applications are not independently confirmed.
+- Large-country time/memory performance is not yet verified for this command. No tile omission or density reduction is allowed. Live provider changes can alter operational outputs.
+- Local installed-wheel checks reuse installed dependencies; truly isolated wheel tests run in Linux CI. CI integration remains pending at submission.
+
+Validation:
+- Focused parity and failure-state tests cover nonempty patches, normal empty output, explicit-country labels, malformed transport, abstention and no-overwrite behavior.
+- Research regression: 250 cases passed. Product tests/: 292 cases passed, including 11 global adapter tests.
+- Live explicit SG / Ficus microcarpa execution completed: 6 historical rows, 2 tiles / 1600 geometry points, 1575 complete terrain points, 6 prototypes, ROBUST_EMPTY / 0 patches. CSV row count and SHA-256 match summary. This was an operational smoke, not a new scientific confirmation.
+- Wheel build and outside-checkout import/help checks passed; compile and whitespace checks passed.
+
+## 2026-09-15 - Codex (OpenAI) - Species-name historical country planning entry
+
+Changed files:
+- .github/workflows/package-checks.yml
+- acsp/discovery/country_entry.py
+- acsp/discovery/cli.py
+- acsp/discovery/data/acsp_geoboundaries_v6_adm0_coverage_v1.json
+- acsp/discovery/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
+- pyproject.toml
+- tests/test_country_entry.py
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- CHANGELOG_AI.md
+
+Summary:
+- Add plan-country to resolve a scientific species name and return a historical-only country plan, without fetching geometry, individual occurrences, terrain, patches or heldout outcomes.
+- Package exact copies of the frozen coverage and ISO snapshots; check their semantic fingerprints before use, without relying on research files in an installed wheel.
+- Reuse the country planner with the confirmed minimum count 5 and tie-break seed 2026090701. Explicit targets cannot be substituted.
+- Preserve provider errors as errors; only verified empty evidence becomes NO_HISTORICAL_COUNTRY. Do not overwrite existing output files.
+
+Features preserved:
+- All existing commands, Japan candidate membership, frozen scientific artifacts, no-substitution policy, experimental discovery status and scientific claim ceilings.
+
+Known risks / TODO:
+- This is the country-planning first stage, not a species-only global candidate-patch generator. Geometry, terrain and exact patch generation still require integration of the existing staged procedure.
+- Arbitrary explicit-country applications are not separately confirmed. Live provider changes can alter country counts; the complete counts and query parameters are recorded in each plan.
+
+Validation:
+- 281 tests/ cases and 250 research unittest cases pass; compilation and whitespace checks pass.
+- Built and installed a wheel outside the source checkout; verified both pinned resource files are usable without research files. Added the same offline resource check to isolated-wheel CI.
+- Live GBIF smoke for Castanopsis sieboldii returned JP in automatic mode; installed-wheel explicit CN mode retained CN and returned INSUFFICIENT_HISTORICAL_EVIDENCE (2 records), without substitution. No candidate or heldout data were opened.
+
+## 2026-09-15 - Codex (OpenAI) - Portable frozen identity-path comparisons
+
+Changed files:
+- research/predeclare_country_frame_observability_confirmation_historical_discovery.py
+- research/test_country_frame_observability_confirmation_historical_discovery.py
+- research/test_geographic_framing_confirmation_v1.py
+- CHANGELOG_AI.md
+
+Summary:
+- Compare repository-relative identity paths using POSIX serialization, matching the unchanged frozen protocol on Windows and Linux.
+- Correct the geographic-framing test's path serialization without changing its identity hashes or exclusion assertions.
+- Add host-independent Windows-path coverage and rejection tests for different identity paths and altered identity bytes.
+
+Features preserved:
+- Exact frozen artifact bytes, SHA256 and protocol fingerprints; consumed-identity exclusions; heldout isolation; Japanese robust core; global adapter and experimental discovery semantics.
+
+Known risks / TODO:
+- Exact-byte artifact checks still require a checkout preserving committed LF bytes. This fix deliberately does not normalize frozen content or accept changed hashes.
+- No live research rerun or new scientific claim is part of this repair.
+
+Validation:
+- Reproduced the previous three exposure-binding errors and one geographic-framing failure on Windows before the fix.
+- All 250 research unittest cases and all 271 tests/ cases pass on Windows in an LF-preserving checkout; focused 12 cases pass, including the three new regressions.
+- App compilation and diff whitespace checks pass. No validation/, paper/, or acsp/ files changed.
+
+## 2026-09-15 - Codex (OpenAI) - Align product entry points with confirmed adapter evidence
+
+Changed files:
+- .github/workflows/package-checks.yml
+- .github/workflows/discovery-package-checks.yml
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- RESEARCH_POSITIONING.md
+- docs/DISCOVERY_QUICKSTART.md
+- acsp/discovery/country_frames.py
+- tests/test_discovery_country_frames.py
+- tests/test_global_adapter_result_integrity.py
+- CHANGELOG_AI.md
+
+Summary:
+- Documented the existing Japanese command, custom extent, staged global adapter, and experimental discovery entry points.
+- Recorded the separate automatic-adapter confirmation scope and its conditional 35/44 evaluability denominator; retained earlier failures and manuscript closure as historical evidence.
+- Fixed explicit-country planning with a streamed provider inventory: missing historical records in a supported country now retain the insufficient-evidence state rather than becoming a false provider-unsupported state.
+- Added offline result integrity checks for the frozen artifact hash, 48 identities, prior-cohort disjointness, conditional denominators, valid empty output, effect/bootstrap recomputation, and information-boundary flags.
+- Fixed package CI's missing pytest dependency through the declared dev extra and ran tests/ with pytest so function-style tests execute as well as unittest cases. Updated the discovery import check to its existing 0.8.0-development API version.
+
+Features preserved:
+- Japanese species-only behavior, all frozen scientific methods/results, explicit-country no-substitution, existing CLI commands, and experimental discovery ranking semantics.
+
+Validation:
+- Four frozen-result audit tests and seven country-planning tests passed; app compilation passed.
+- All 271 tests/ checks passed in a Git-LF checkout, including the previously unexecuted pytest functions. The Japanese product/import regression passed 14 tests; the discovery import/CLI checks passed.
+
+Known risks / TODO:
+- The confirmed global end-to-end procedure still uses staged research execution; a species-only global command is not yet available.
+- PR #184 includes other experimental work and scientific workflow triggers; this focused change alone does not establish that the whole PR is ready to merge.
 
 ## 2026-08-31 - Codex (OpenAI) - Make submission alignment guard executable in ordinary CI
 

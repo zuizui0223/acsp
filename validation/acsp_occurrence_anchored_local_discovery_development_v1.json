@@ -1,0 +1,123 @@
+{
+  "schema_version": "acsp-occurrence-anchored-local-discovery-development-v1",
+  "status": "development_predefinition_after_campanula_outcome_inspection",
+  "scientific_boundary": {
+    "changes_validated_robust_candidate_patch_product": false,
+    "campanula_role": "development_only_not_independent_confirmation",
+    "target": "new local detection cluster conditional on retained known occurrence clusters",
+    "not_interpretable_as": [
+      "occupancy probability",
+      "global name-only validation",
+      "exact occupied-site probability",
+      "evidence that all unknown populations are near known occurrences"
+    ]
+  },
+  "input_layers": {
+    "historical_occurrences": "clustered pre-outcome occurrence records",
+    "candidate_graph": "movement-feasible roads, trails, coastlines, and terrain-supported land nodes",
+    "microhabitat": [
+      "terrain state",
+      "NDVI state",
+      "vegetation and edge transitions",
+      "substrate or moisture proxies when available",
+      "disturbance proxies when available"
+    ],
+    "user_supplied": [
+      "movement mode and movement restrictions"
+    ],
+    "algorithm_inferred": [
+      "search extent",
+      "candidate patch count",
+      "field days",
+      "operational budget",
+      "stopping point"
+    ]
+  },
+  "modes": {
+    "anchor_conditioned_local_continuation": {
+      "requires_same_component_anchor": true,
+      "known_point_rediscovery_value": 0,
+      "distance_role": "annular graph-distance kernel rather than monotone proximity reward",
+      "barriers": "penalize ecological and movement discontinuities"
+    },
+    "detached_fragment": {
+      "requires_same_component_anchor": true,
+      "target": "similar microhabitat component separated by a short gap or barrier",
+      "reported_separately_from_local_continuation": true
+    },
+    "anchor_absent_sentinel": {
+      "requires_same_component_anchor": false,
+      "uses_broader_robust_support": true,
+      "reported_separately": true,
+      "cannot_rescue_anchor_conditioned_endpoint": true
+    }
+  },
+  "campanula_diagnostic": {
+    "occurrence_cache": "field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv",
+    "field_clusters": "field_validation/campanula_microdonta/development_data/detection_clusters.csv",
+    "island_bounds": "field_validation/campanula_microdonta/development_data/manifest.json",
+    "script": "research/diagnose_campanula_occurrence_anchor.py",
+    "primary_radius_km": 1.0,
+    "sensitivity_radii_km": [
+      0.25,
+      0.5
+    ],
+    "distance_bands_km": [
+      0.5,
+      1.0,
+      2.0,
+      5.0
+    ],
+    "outcomes_already_inspected": true,
+    "validation_claim_allowed": false
+  },
+  "internal_development_evaluation": {
+    "unit": "spatial occurrence cluster",
+    "fold": "leave one complete occurrence cluster out",
+    "hidden_cluster_removed_from": [
+      "feature construction",
+      "anchor distance",
+      "candidate scoring",
+      "stopping rule"
+    ],
+    "anchor_absent_folds": "retain and report as separate sentinel estimand",
+    "failures_retained": true,
+    "comparators": [
+      "annular nearest-known",
+      "full-island robust-support patches",
+      "local habitat-only",
+      "proportional GRTS",
+      "same-effort random"
+    ],
+    "minimum_promotion_requirement": "beat annular nearest-known at matched field effort before untouched confirmation"
+  },
+  "field_outcome_requirement": {
+    "positive_only_data_sufficient_for_adaptive_yield": false,
+    "required": [
+      "visited patch and route identifier",
+      "date and phenological suitability",
+      "search duration or traversed length",
+      "observer count",
+      "accessible area actually searched",
+      "detection or non-detection",
+      "reason for incomplete search",
+      "new detection coordinates"
+    ],
+    "access_failure_is_biological_nondetection": false
+  },
+  "automatic_stopping": {
+    "objective": "marginal expected new-cluster yield per unit field cost",
+    "user_selects_site_count": false,
+    "user_selects_days": false,
+    "user_selects_budget": false,
+    "abstain_when": "remaining candidates are unsupported or marginal gain is below the frozen threshold"
+  },
+  "promotion": {
+    "freeze_before_untouched_outcomes": true,
+    "no_retuning_after_opening": true,
+    "separate_anchor_and_sentinel_endpoints": true,
+    "known_point_exclusion_frozen": true,
+    "stopping_rule_frozen": true,
+    "strong_comparators_required": true
+  }
+}

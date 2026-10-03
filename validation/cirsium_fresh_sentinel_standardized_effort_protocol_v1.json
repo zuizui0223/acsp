@@ -1,0 +1,39 @@
+{
+  "schema_version": "cirsium-fresh-sentinel-standardized-effort-protocol-v1",
+  "status": "PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN",
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "protocol_source_identity": "ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1",
+  "unit_effort": {
+    "CIR02": {
+      "visits_per_candidate": 3,
+      "search_minutes_per_visit": 30,
+      "observer_count": 1
+    },
+    "CIR06": {
+      "visits_per_candidate": 3,
+      "search_minutes_per_visit": 30,
+      "observer_count": 1
+    },
+    "CIR12": {
+      "visits_per_candidate": 3,
+      "search_minutes_per_visit": 30,
+      "observer_count": 1
+    },
+    "CIR13": {
+      "visits_per_candidate": 3,
+      "search_minutes_per_visit": 30,
+      "observer_count": 1
+    }
+  },
+  "prospective_field_outcomes_opened": false,
+  "field_outcomes_used_to_set_effort": false,
+  "candidate_identity_used_to_set_effort": false,
+  "arm_specific_effort_allowed": false,
+  "movement_constraint_used_to_set_effort": false,
+  "post_outcome_effort_edits_allowed": false
+}

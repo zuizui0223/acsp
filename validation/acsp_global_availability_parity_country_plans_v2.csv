@@ -1,0 +1,49 @@
+availability_pair_id,taxon_group,speciesKey,scientific_name,country_plan_state,selected_country_code,historical_selected_country_count
+1,animal,2260114,"Plesiastrea versipora (Lamarck, 1816)",READY,AU,702
+2,animal,4286327,"Gasterosteus aculeatus Linnaeus, 1758",READY,BE,53342
+3,animal,7891606,"Bradycellus subditus (Lewis, 1879)",READY,JP,86
+4,animal,2333690,"Erosa erosa (Cuvier, 1829)",READY,AU,447
+5,animal,5118841,"Disparia diluta (Hampson, 1910)",READY,TW,211
+6,animal,2114923,"Pseudocalanus acuspes (Giesbrecht, 1881)",READY,EE,2697
+7,animal,1439541,"Ceratopsyche newae (Kolenati, 1858)",READY,NO,2426
+8,animal,2300732,"Sabia conica (Schumacher, 1817)",READY,AU,252
+9,animal,1986575,"Xanthorhoe designata (Hufnagel, 1767)",READY,GB,128833
+10,animal,5728457,"Nerita polita Linnaeus, 1758",READY,AU,392
+11,animal,1793875,"Panolis japonica Draudt, 1935",READY,JP,124
+12,animal,2258467,"Cupressopathes abies (Linnaeus, 1758)",READY,JP,37
+13,animal,7612179,"Euprepiophis conspicillata (Boie, 1826)",READY,JP,54
+14,animal,9275814,"Siobla ferox (Smith, 1874) Smith, 1874",READY,JP,103
+15,animal,1877421,"Lista ficki Christoph, 1881",READY,KR,508
+16,animal,5859781,"Tegula pfeifferi (R.A.Philippi, 1846)",READY,KR,347
+17,animal,6201570,Togepteryx velutina,READY,JP,166
+18,animal,1335594,"Megachile nipponica Cockerell, 1914",READY,JP,149
+19,animal,5875133,"Anomala rufocuprea Motschulsky, 1860",READY,JP,408
+20,animal,2481749,"Calidris minuta (Leisler, 1812)",READY,SE,74613
+21,animal,1357000,"Andrena tateyamana Tamasawa & Hirashima, 1984",READY,JP,100
+22,animal,6519944,"Dendrodoris arborescens (Collingwood, 1881)",READY,JP,166
+23,animal,4291666,"Sipalinus gigas (J.C.Fabricius, 1775)",READY,KR,450
+24,animal,5185431,"Aurelia coerulea von Lendenfeld, 1884",READY,JP,34
+25,plant,7484581,Desmanthus illinoensis (Michx.) MacMill. ex B.L.Rob. & Fernald,READY,US,3566
+26,plant,5421133,Sapindus mukorossi Gaertn.,READY,CN,550
+27,plant,10925413,"Aquilonium plicatulum (Lindb.) Hedenäs, Schlesak & D.Quandt",READY,US,462
+28,plant,12248002,Bryoxiphium japonicum (Berggr.) E.Britton,READY,JP,288
+29,plant,3752155,Micropolypodium okuboi (Yatabe) Hayata,READY,JP,232
+30,plant,4047850,Antrophyum obovatum Baker,READY,CN,140
+31,plant,4934461,Weigela middendorfiana (hort. ex Carrière) K.Koch,READY,JP,96
+32,plant,7318597,Ligusticum scothicum L.,READY,NO,3655
+33,plant,8032314,Asplenium laserpitiifolium Lam.,READY,AU,112
+34,plant,2863956,Phyllospadix iwatensis Makino,READY,JP,175
+35,plant,2676105,Philonotis thwaitesii Mitt.,READY,JP,120
+36,plant,4007936,Androsace umbellata (Lour.) Merr.,READY,CN,633
+37,plant,3090129,Kalimeris incisa (Fisch.) DC.,READY,KR,269
+38,plant,4152802,Spodiopogon depauperatus Hack.,READY,JP,434
+39,plant,5690711,Sedum makinoi Maxim.,READY,JP,443
+40,plant,5384981,Eclipta thermalis Bunge,READY,JP,590
+41,plant,3090740,Nabalus acerifolius Maxim.,READY,JP,604
+42,plant,2876509,Alnus serrulatoides Callier,READY,JP,300
+43,plant,7267585,Silene miqueliana (Rohrb.) H.Ohashi & H.Nakai,READY,JP,770
+44,plant,3094253,Symphyotrichum subulatum (Michx.) G.L.Nesom,READY,AU,8192
+45,plant,3039272,Elaeagnus multiflora Thunb.,READY,JP,662
+46,plant,8262127,Isodon effusus (Maxim.) H.Hara,READY,JP,651
+47,plant,2995930,Rubus yoshinoi Koidz.,READY,JP,248
+48,plant,5285355,Pinus pumila (Pall.) Regel,READY,RU,1384

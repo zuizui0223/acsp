@@ -1,0 +1,8 @@
+issue=206
+source_confirmation_issue=203
+mode=development_only
+candidate_gate=selected_region_has_at_least_one_strict_0.5km_population_in_2016_2020
+threshold_search=false
+candidate_frame_rescoring=false
+future_cohort_selected=false
+terminal_203_decision_changed=false

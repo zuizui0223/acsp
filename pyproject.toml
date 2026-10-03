@@ -19,6 +19,7 @@ dependencies = [
     "geopy>=2.4",
     "numpy>=1.23",
     "pandas>=1.5",
+    "pyproj>=3.5",
     "rasterio>=1.3",
     "requests>=2.31",
     "scikit-learn>=1.2",
@@ -34,6 +35,7 @@ acsp-patches = "acsp.robust_cli:main"
 acsp-global-patches = "acsp.global_cli:main"
 acsp-operate = "acsp.operational_cli:main"
 acsp-field-plan = "acsp.field_plan_cli:main"
+acsp-discovery = "acsp.discovery.cli:main"
 
 [project.license]
 text = "MIT"
@@ -54,3 +56,4 @@ include = ["acsp*"]
 
 [tool.setuptools.package-data]
 acsp = ["data/*.json"]
+"acsp.discovery" = ["data/*.json"]

@@ -1,0 +1,147 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-analysis-plan-v1",
+  "status": "FROZEN_PRE_OUTCOME_ANALYSIS_PLAN",
+  "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "source_contracts": {
+    "field_evaluation_contract": "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json",
+    "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
+    "note": "This plan changes neither the frozen biological endpoint nor field allocation. It fixes cross-taxon aggregation, evaluability, and reporting before prospective outcomes are opened."
+  },
+  "inherited_semantics": {
+    "primary_analysis_unit_identity": "COHORT_ARM_CANDIDATE_V1",
+    "repeated_visit_aggregation_identity": "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1",
+    "shared_candidate_handling_identity": "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1",
+    "numeric_effort_metric_identity": "PERSON_MINUTES_V1",
+    "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
+    "success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
+    "resolved_non_detection_state": "SEARCH_COMPLETED_NOT_DETECTED"
+  },
+  "unit_level_estimator": {
+    "identity": "RESOLVED_BINARY_SUCCESS_PROPORTION_V1",
+    "numerator": "number of resolved COHORT_ARM_CANDIDATE_V1 units classified SEARCH_COMPLETED_DETECTED_VERIFIED",
+    "denominator": "number of resolved COHORT_ARM_CANDIDATE_V1 units classified either SEARCH_COMPLETED_DETECTED_VERIFIED or SEARCH_COMPLETED_NOT_DETECTED",
+    "proportion": "numerator / denominator",
+    "unresolved_identity_in_denominator": false,
+    "non_biological_or_non_evaluable_states_in_denominator": false,
+    "absence_imputation_allowed": false
+  },
+  "primary_estimand": {
+    "identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+    "contrast": "COVERAGE_THEN_FINE_STRUCTURE_V1 minus COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
+    "per_taxon_contrast": "resolved binary success proportion in primary arm minus resolved binary success proportion in coverage-only arm",
+    "aggregation": "unweighted arithmetic mean of the four predeclared per-taxon contrasts",
+    "taxon_weights": {
+      "CIR02": 0.25,
+      "CIR06": 0.25,
+      "CIR12": 0.25,
+      "CIR13": 0.25
+    },
+    "positive_direction": "higher verified-current-occurrence recovery for structural-within-coverage ordering",
+    "dichotomous_pass_fail_threshold": null,
+    "favorable_post_outcome_threshold_selection_allowed": false
+  },
+  "primary_evaluability": {
+    "per_taxon_requirement": "For every one of CIR02, CIR06, CIR12 and CIR13, both the primary and coverage-only arms must each contain at least one resolved binary analysis unit.",
+    "all_four_taxa_required": true,
+    "drop_non_evaluable_taxon_and_recompute_allowed": false,
+    "reweight_remaining_taxa_allowed": false,
+    "substitute_taxon_allowed": false,
+    "impute_missing_or_non_evaluable_taxon_contrast_allowed": false,
+    "if_requirement_fails": "PRIMARY_FOUR_TAXON_MACRO_NOT_EVALUABLE",
+    "partial_taxon_results_reporting": "Report all available unit-level counts, proportions and contrasts descriptively, but do not replace the preregistered primary estimand with a favorable subset."
+  },
+  "secondary_estimands": [
+    {
+      "identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_FINE_SPATIAL_V1",
+      "contrast": "COVERAGE_THEN_FINE_STRUCTURE_V1 minus MORTON_DYADIC_COVERAGE_ORDER_V1",
+      "aggregation": "unweighted arithmetic mean of all four predeclared per-taxon contrasts",
+      "all_four_taxa_required": true
+    },
+    {
+      "identity": "EQUAL_TAXON_MACRO_COVERAGE_ONLY_MINUS_FINE_SPATIAL_V1",
+      "contrast": "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1 minus MORTON_DYADIC_COVERAGE_ORDER_V1",
+      "aggregation": "unweighted arithmetic mean of all four predeclared per-taxon contrasts",
+      "all_four_taxa_required": true
+    },
+    {
+      "identity": "POOLED_MICRO_ARM_PROPORTIONS_DESCRIPTIVE_ONLY_V1",
+      "contrast": "pooled resolved analysis-unit success proportions by arm and their pairwise differences",
+      "role": "secondary descriptive only; never substitutes for the equal-taxon primary estimand",
+      "reason": "Candidate counts and resolved denominators may differ among taxa, so pooled micro weighting would let larger/easier taxa dominate the primary conclusion."
+    }
+  ],
+  "mandatory_reporting": {
+    "by_taxon_by_arm": [
+      "scheduled unique candidate count",
+      "scheduled visit count",
+      "planned PERSON_MINUTES_V1",
+      "resolved verified-detection count",
+      "resolved non-detection count",
+      "identity-unresolved count",
+      "non-biological/non-evaluable count",
+      "resolved binary denominator",
+      "resolved binary success proportion"
+    ],
+    "by_taxon_contrasts": [
+      "primary minus coverage-only",
+      "primary minus fine-spatial",
+      "coverage-only minus fine-spatial"
+    ],
+    "cross_arm_shared_candidate_overlap": true,
+    "all_four_taxon_level_results_required_even_when_primary_macro_not_evaluable": true
+  },
+  "sensitivity_reporting": {
+    "leave_one_taxon_out_macro_values": "report all four leave-one-taxon-out macro contrasts for the primary comparison when all four taxon contrasts are evaluable",
+    "role": "predeclared influence diagnostic only; cannot replace the four-taxon primary estimand",
+    "pooled_micro_role": "secondary descriptive only",
+    "post_outcome_choice_of_alternative_primary_aggregation_allowed": false
+  },
+  "uncertainty_and_decision": {
+    "inferential_p_value_threshold_preregistered": false,
+    "universal_promotion_threshold_preregistered": false,
+    "reason": "With only four prospectively fresh taxa, the primary goal is an outcome-blind estimand and transparent taxon-level replication, not a post-hoc dichotomous significance gate.",
+    "report_effect_direction_and_magnitude": true,
+    "report_all_taxon_level_evidence": true
+  },
+  "failure_and_missingness_semantics": {
+    "identity_unresolved_is_absence": false,
+    "access_failure_is_absence": false,
+    "permission_blocked_is_absence": false,
+    "phenology_not_evaluable_is_absence": false,
+    "incomplete_search_is_absence": false,
+    "cohort_replacement_after_outcome_allowed": false,
+    "method_retuning_after_outcome_allowed": false
+  },
+  "claim_ceiling": {
+    "if_primary_macro_positive": "May be described as prospective evidence, within this predeclared four-taxon fresh-SENTINEL cohort and matched arm-symmetric PERSON_MINUTES_V1 schedules, that structural ordering inside coarse coverage added verified-current-occurrence recovery relative to coverage-only ordering.",
+    "if_primary_macro_zero_or_negative": "Retain as a prospective null/negative result; do not retune the frozen structural families, coverage scale, candidate frame, effort allocation or aggregation on these outcomes and relabel the same cohort as confirmation.",
+    "if_primary_not_evaluable": "Report PRIMARY_FOUR_TAXON_MACRO_NOT_EVALUABLE and the complete available per-taxon state counts; do not drop or replace taxa to manufacture an evaluable primary.",
+    "not_authorized": [
+      "global or universal structural-selector promotion",
+      "occupancy inference from structural support",
+      "validated discoveries per hour",
+      "optimal field days or monetary budget",
+      "automatic stopping thresholds"
+    ]
+  },
+  "prospective_outcomes_opened": false,
+  "outcome_data_used_to_choose_analysis": false,
+  "post_outcome_primary_estimand_change_allowed": false,
+  "analysis_unit_reporting_state": {
+    "identity": "VERIFIED_THEN_ALL_NONDETECTION_THEN_UNRESOLVED_THEN_NON_EVALUABLE_V1",
+    "precedence": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED if any scheduled visit is verified",
+      "SEARCH_COMPLETED_NOT_DETECTED only if every scheduled visit is SEARCH_COMPLETED_NOT_DETECTED",
+      "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED if no verified detection and at least one identity-unresolved visit",
+      "NON_BIOLOGICAL_OR_NON_EVALUABLE otherwise"
+    ],
+    "role": "Reporting classification for the already-frozen repeated-visit rule; only the first two states enter the resolved binary denominator."
+  }
+}

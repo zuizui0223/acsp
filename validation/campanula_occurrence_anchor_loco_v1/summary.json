@@ -1,0 +1,126 @@
+{
+  "schema_version": "campanula-occurrence-anchor-loco-v1",
+  "scientific_role": "development_internal_baseline_only",
+  "independent_validation": false,
+  "reads_2026_field_outcomes": false,
+  "historical_rows_inside_five_islands": 56,
+  "cluster_radius_m": 500.0,
+  "known_point_exclusion_km": 0.5,
+  "outer_radii_km": [
+    1.0,
+    2.0,
+    5.0
+  ],
+  "primary_cluster_policy": "single_link",
+  "sensitivity_cluster_policy": "complete_link",
+  "policy_summaries": {
+    "complete_link": {
+      "clusters": 18,
+      "islands_with_clusters": 4,
+      "single_link_chain_warning_clusters": 0,
+      "anchor_absent_folds": 1,
+      "inside_exclusion_folds": 0,
+      "median_nearest_retained_anchor_km": 1.008940442142269,
+      "maximum_nearest_retained_anchor_km": 2.2988335152373063,
+      "annular_curve": [
+        {
+          "cluster_policy": "complete_link",
+          "outer_radius_km": 1.0,
+          "known_point_exclusion_km": 0.5,
+          "declared_folds": 18,
+          "anchor_conditioned_evaluable_folds": 17,
+          "anchor_absent_folds": 1,
+          "inside_exclusion_folds": 0,
+          "recovered_folds": 8,
+          "anchor_conditioned_recall": 0.47058823529411764,
+          "intention_to_evaluate_recall": 0.4444444444444444,
+          "median_unclipped_sum_annulus_area_km2": 21.205750411731103,
+          "interpretation": "Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+        },
+        {
+          "cluster_policy": "complete_link",
+          "outer_radius_km": 2.0,
+          "known_point_exclusion_km": 0.5,
+          "declared_folds": 18,
+          "anchor_conditioned_evaluable_folds": 17,
+          "anchor_absent_folds": 1,
+          "inside_exclusion_folds": 0,
+          "recovered_folds": 15,
+          "anchor_conditioned_recall": 0.8823529411764706,
+          "intention_to_evaluate_recall": 0.8333333333333334,
+          "median_unclipped_sum_annulus_area_km2": 106.02875205865551,
+          "interpretation": "Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+        },
+        {
+          "cluster_policy": "complete_link",
+          "outer_radius_km": 5.0,
+          "known_point_exclusion_km": 0.5,
+          "declared_folds": 18,
+          "anchor_conditioned_evaluable_folds": 17,
+          "anchor_absent_folds": 1,
+          "inside_exclusion_folds": 0,
+          "recovered_folds": 17,
+          "anchor_conditioned_recall": 1.0,
+          "intention_to_evaluate_recall": 0.9444444444444444,
+          "median_unclipped_sum_annulus_area_km2": 699.7897635871265,
+          "interpretation": "Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+        }
+      ]
+    },
+    "single_link": {
+      "clusters": 17,
+      "islands_with_clusters": 4,
+      "single_link_chain_warning_clusters": 1,
+      "anchor_absent_folds": 1,
+      "inside_exclusion_folds": 0,
+      "median_nearest_retained_anchor_km": 1.2198938533838128,
+      "maximum_nearest_retained_anchor_km": 2.2988335152373063,
+      "annular_curve": [
+        {
+          "cluster_policy": "single_link",
+          "outer_radius_km": 1.0,
+          "known_point_exclusion_km": 0.5,
+          "declared_folds": 17,
+          "anchor_conditioned_evaluable_folds": 16,
+          "anchor_absent_folds": 1,
+          "inside_exclusion_folds": 0,
+          "recovered_folds": 6,
+          "anchor_conditioned_recall": 0.375,
+          "intention_to_evaluate_recall": 0.35294117647058826,
+          "median_unclipped_sum_annulus_area_km2": 21.205750411731103,
+          "interpretation": "Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+        },
+        {
+          "cluster_policy": "single_link",
+          "outer_radius_km": 2.0,
+          "known_point_exclusion_km": 0.5,
+          "declared_folds": 17,
+          "anchor_conditioned_evaluable_folds": 16,
+          "anchor_absent_folds": 1,
+          "inside_exclusion_folds": 0,
+          "recovered_folds": 14,
+          "anchor_conditioned_recall": 0.875,
+          "intention_to_evaluate_recall": 0.8235294117647058,
+          "median_unclipped_sum_annulus_area_km2": 106.02875205865551,
+          "interpretation": "Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+        },
+        {
+          "cluster_policy": "single_link",
+          "outer_radius_km": 5.0,
+          "known_point_exclusion_km": 0.5,
+          "declared_folds": 17,
+          "anchor_conditioned_evaluable_folds": 16,
+          "anchor_absent_folds": 1,
+          "inside_exclusion_folds": 0,
+          "recovered_folds": 16,
+          "anchor_conditioned_recall": 1.0,
+          "intention_to_evaluate_recall": 0.9411764705882353,
+          "median_unclipped_sum_annulus_area_km2": 699.7897635871265,
+          "interpretation": "Occurrence-only annular baseline; area is an unclipped sum around retained anchors, not reachable field effort."
+        }
+      ]
+    }
+  },
+  "decision_rule": "Do not add habitat or learned scores until their whole-cluster, matched-effort result can beat the annular nearest-known baseline.",
+  "interpretation_boundary": "Historical occurrence-cluster reconstruction is development evidence; it does not estimate discovery probability, detection probability, reachable search area, field days, or external generalization."
+}

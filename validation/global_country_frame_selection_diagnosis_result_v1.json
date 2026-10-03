@@ -1,0 +1,44 @@
+{
+  "schema_version": "global-country-frame-selection-diagnosis-result-v1",
+  "status": "POST_OPENED_HISTORICAL_ONLY_DIAGNOSIS_COMPLETE",
+  "workflow_run_id": 34013863328,
+  "artifact_id": 9983323601,
+  "artifact_digest": "sha256:5455b7fa93f5a0f94e5ac4ff404a6cd5688b630dee5629fbed548ce9795111e9",
+  "source_consumed_fresh_run_id": 32932865041,
+  "source_consumed_fresh_artifact_id": 9605032549,
+  "source_consumed_fresh_artifact_digest": "sha256:164e707058c76d46b4ec07fa4c3d6442939ef85cfbc69621a482ed8579dcd848",
+  "consumed_pair_count": 48,
+  "old_selected_provider_unsupported_count": 2,
+  "evidence_first_provider_ready_count": 48,
+  "old_vs_evidence_first_selection_changed_count": 35,
+  "candidate_generation_failure_count": 8,
+  "candidate_failures_with_higher_supported_historical_alternative": 8,
+  "candidate_failure_pair_ids_with_higher_supported_historical_alternative": [13, 14, 19, 21, 40, 41, 44, 48],
+  "examples": [
+    {"pair_id": 13, "taxon": "Broussonetia papyrifera", "old_country": "LV", "old_historical_count": 6, "evidence_first_country": "CN", "evidence_first_historical_count": 7207},
+    {"pair_id": 14, "taxon": "Oenothera laciniata", "old_country": "ES", "old_historical_count": 9, "evidence_first_country": "US", "evidence_first_historical_count": 3576},
+    {"pair_id": 19, "taxon": "Treron sieboldii", "old_country": "HK", "old_historical_count": 8, "evidence_first_country": "TW", "evidence_first_historical_count": 17881},
+    {"pair_id": 21, "taxon": "Diplazium x takamiyae", "old_country": "CN", "old_historical_count": 7, "evidence_first_country": "JP", "evidence_first_historical_count": 987},
+    {"pair_id": 40, "taxon": "Passer montanus", "old_country": "LU", "old_historical_count": 5071, "evidence_first_country": "SE", "evidence_first_historical_count": 449981},
+    {"pair_id": 41, "taxon": "Asplenium prolongatum", "old_country": "HK", "old_historical_count": 7, "evidence_first_country": "CN", "evidence_first_historical_count": 924},
+    {"pair_id": 44, "taxon": "Eviota storthynx", "old_country": "VN", "old_historical_count": 9, "evidence_first_country": "AU", "evidence_first_historical_count": 84},
+    {"pair_id": 48, "taxon": "Fusigobius duospilus", "old_country": "VN", "old_historical_count": 6, "evidence_first_country": "AU", "evidence_first_historical_count": 284}
+  ],
+  "selection_inputs": {
+    "historical_country_counts_only": true,
+    "frozen_geoBoundaries_v6_provider_coverage_only": true,
+    "heldout_2021_2025_used_to_choose_country": false,
+    "robust_recall_used_to_choose_country": false,
+    "random_recall_used_to_choose_country": false,
+    "field_outcomes_used": false
+  },
+  "claims": {
+    "single_country_hash_selection_is_a_supported_upstream_availability_problem": true,
+    "new_country_choice_counterfactually_proven_to_generate_candidates": false,
+    "new_country_choice_counterfactually_proven_to_improve_lift": false,
+    "validated_japan_core_changed": false,
+    "global_adapter_promoted": false
+  },
+  "development_decision": "For automatic global discovery, replace arbitrary hash-min country choice with provider-supported historical-evidence-first country planning in a new disjoint prospective confirmation. For an explicitly user-requested target country, never substitute another country; route insufficient evidence/provider coverage to SENTINEL or ABSTAIN.",
+  "no_same_cohort_rescue": true
+}

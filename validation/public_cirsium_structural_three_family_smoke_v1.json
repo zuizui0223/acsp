@@ -1,0 +1,64 @@
+{
+  "schema_version": "public-cirsium-structural-three-family-smoke-v1",
+  "status": "DEVELOPMENT_ONLY_FROZEN_BEFORE_STRUCTURAL_LAYER_EXECUTION",
+  "scientific_role": "small public-data execution smoke for already-frozen structural families; not confirmation",
+  "validated_product_changed": false,
+  "field_outcomes_used": false,
+  "public_temporal_outcomes_already_opened_for_unit_choice": true,
+  "units": [
+    {"cohort_unit_id": "CIR01", "species": "Cirsium sieboldii", "family": "WETLAND_MOISTURE_STRUCTURE"},
+    {"cohort_unit_id": "CIR04", "species": "Cirsium otayae", "family": "ALPINE_TOPOGRAPHIC_STRUCTURE"},
+    {"cohort_unit_id": "CIR08", "species": "Cirsium brevicaule", "family": "COASTAL_ISLAND_STRUCTURE"}
+  ],
+  "selection_reason": "These are exactly the three frozen Cirsium units that were temporally evaluable under the prior strict public GBIF diagnostic. The choice is therefore post-outcome and development-only; no confirmation claim is allowed.",
+  "historical_evidence": {
+    "period": [2000, 2020],
+    "declared_coordinate_uncertainty_m_max": 1000,
+    "cluster_radius_km": 0.5,
+    "known_point_exclusion_km": 0.5
+  },
+  "candidate_frames": {
+    "grid_spacing_m": 100,
+    "primary_outer_radius_km": 2.0,
+    "sensitivity_outer_radius_km": 5.0,
+    "rule": "union of 0.5-to-outer-radius annuli around strict historical anchors, public diagnostic only; no outcome-driven radius modification"
+  },
+  "structural_methods": {
+    "family_identity": "reuse frozen acsp.structural_graph + acsp.structural_raw_adapters + acsp.structural_support without fitted weights",
+    "graph_radius_cells": 1,
+    "support_composition": "ROW_MIN_CONJUNCTIVE_SUPPORT",
+    "comparators": ["ANNULAR_NEAREST_KNOWN", "DETERMINISTIC_SPATIAL_BALANCE"],
+    "ranking": "full deterministic ranking per method before outcome scoring"
+  },
+  "prefix_curve": {
+    "fractions": [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0],
+    "rule": "for each frame and method use ceil(fraction * candidate_count), minimum one when frame nonempty; report all prefixes and never choose a favorable prefix as the method"
+  },
+  "outcome": {
+    "period": [2021, 2025],
+    "declared_coordinate_uncertainty_m_max": 1000,
+    "novel_cluster_rule": "complete-link max 0.5 km; exclude recent clusters within 0.5 km of historical clusters",
+    "recovery_radii_km": [0.25, 0.5, 1.0],
+    "reason": "fine-scale structural smoke only; all radii are reported jointly"
+  },
+  "public_sources": {
+    "terrain": "GSI DEM-derived public terrain primitives under the existing frozen structural semantics",
+    "landcover": "ESA WorldCover 2021 for families that require it",
+    "coastline": "GSI Fundamental Geospatial Data Basic Items coastline for CIR08",
+    "human_access": false
+  },
+  "decision_boundary": {
+    "purpose": "technical and biological smoke: determine whether frozen structural rankings can produce recovery distinct from nearest-known/spatial balance in all three source-backed families",
+    "promotion_allowed": false,
+    "if_promising": "freeze a generic structural candidate rule and test on a new disjoint public cohort before any promotion",
+    "if_unpromising": "do not retune family formulas or prefixes on these three units; diagnose missing structural information"
+  },
+  "forbidden": [
+    "do not select only the best of the three families",
+    "do not choose the 2 km or 5 km frame after results",
+    "do not choose a favorable prefix after results",
+    "do not fit component weights from these opened temporal outcomes",
+    "do not use roads/access to create ecological support",
+    "do not call this prospective confirmation"
+  ]
+}

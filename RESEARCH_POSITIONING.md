@@ -16,7 +16,7 @@ The current validated core is:
 - bounded candidate patches with no priority ranking;
 - 96 taxon-region pairs / 480 folds as the independently confirmed frame.
 
-The separate automatic global adapter and its bounded conditional confirmation are defined in `VALIDATED_PRODUCT_CONTRACT.md`. The species-name command does not change the Japanese result or promote experimental structural discovery; full provenance and earlier failures are linked in `docs/GLOBAL_RELEASE_PROVENANCE.md`.
+The later automatic provider/evidence-aware global adapter passed a separate fresh 48-taxon confirmation: 44/48 constructible, 35/44 conditionally evaluable, and conditional mean lift +0.0986218 (95% CI [+0.0385639, +0.1625447]). Its scope and species-name command are defined in the [product contract](VALIDATED_PRODUCT_CONTRACT.md#confirmed-automatic-global-adapter-boundary). The command port and operational smoke tests do not extend that scientific claim. Earlier transfer failures remain authoritative for their own methods. LOCAL/DETACHED structural discovery still requires separate confirmation.
 
 `Campanula microdonta` remains development and freeze-regression evidence, not an untouched cross-taxon confirmation cohort.
 

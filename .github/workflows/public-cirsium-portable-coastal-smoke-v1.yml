@@ -1,0 +1,75 @@
+name: Public Cirsium portable coastal smoke v1
+
+on:
+  pull_request:
+    paths:
+      - "acsp/discovery/**"
+      - "acsp/structural_graph.py"
+      - "acsp/structural_raw_adapters.py"
+      - "acsp/structural_support.py"
+      - "research/run_public_cirsium_portable_coastal_smoke_v1.py"
+      - "research/benchmark_public_japan_cirsium_temporal_anchor_v1.py"
+      - "validation/public_cirsium_portable_coastal_smoke_v1.json"
+      - ".github/workflows/public-cirsium-portable-coastal-smoke-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run frozen portable coastal smoke
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/public-cirsium-portable-coastal-smoke-v1
+          python research/run_public_cirsium_portable_coastal_smoke_v1.py \
+            --out-dir /tmp/public-cirsium-portable-coastal-smoke-v1
+      - name: Guard public aggregate output
+        run: |
+          test ! -e /tmp/public-cirsium-portable-coastal-smoke-v1/private_worldcover_crop.tif
+          if head -n 1 /tmp/public-cirsium-portable-coastal-smoke-v1/portable_coastal_prefix_curve.csv | grep -E '(^|,)(latitude|longitude|decimalLatitude|decimalLongitude|occurrence_id|gbif_key)(,|$)'; then
+            echo 'coordinate or occurrence identifier leaked into public portable coastal artifact'
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('/tmp/public-cirsium-portable-coastal-smoke-v1')
+          summary = json.loads((root / 'summary.json').read_text())
+          table = pd.read_csv(root / 'portable_coastal_prefix_curve.csv')
+          assert summary['cohort_unit_id'] == 'CIR08'
+          assert summary['validated_product_changed'] is False
+          assert summary['new_confirmation_claim'] is False
+          assert summary['replacement_or_precision_relaxation_used'] is False
+          if summary['status'] == 'DEVELOPMENT_ONLY_PORTABLE_COASTAL_SMOKE_COMPLETE':
+              assert summary['structural_layer_run'] is True
+              assert summary['recent_outcome_scoring_run'] is True
+              assert set(table['outer_frame_km']) == {2.0, 5.0}
+              assert set(table['recovery_radius_km']) == {0.25, 0.5, 1.0}
+              assert len(table) == 2 * 7 * 3
+          else:
+              assert table.empty
+              assert summary['structural_layer_run'] is False
+              assert summary['recent_outcome_scoring_run'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-cirsium-portable-coastal-smoke-v1
+          path: |
+            /tmp/public-cirsium-portable-coastal-smoke-v1/portable_coastal_prefix_curve.csv
+            /tmp/public-cirsium-portable-coastal-smoke-v1/summary.json
+          if-no-files-found: error
+          retention-days: 90
