@@ -1,0 +1,47 @@
+name: Fresh-SENTINEL v2 current endpoint
+
+on:
+  pull_request:
+    paths:
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-current-endpoint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  endpoint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Guard current evidence boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json")
+          x = json.loads(p.read_text())
+          assert x["status"] == "COARSE_EVIDENCE_ENDPOINT_ACTIVE_FINE_STOPPING_UNVALIDATED"
+          assert x["cohort_unit_ids"] == ["CIR02","CIR06","CIR12","CIR13"]
+          stages = {row["stage"]: row for row in x["active_promoted_chain"]}
+          assert stages["family_specific_coarse_evidence_order"]["status"] == "ACTIVE_ENDPOINT"
+          assert stages["source_state_composition"]["result"].startswith("SOURCE_READY_FOR_FAMILY_COARSE_STAGE")
+          diag = x["non_promoted_diagnostics"][0]
+          assert diag["identity"] == "COMPLETE_5KM_COARSE_TO_FINE_SEED_COVER_V1"
+          assert diag["source_pr"] == 234
+          assert diag["disposition"] == "CLOSED_WITHOUT_MERGE_AFTER_GREEN_REPRODUCTION"
+          assert diag["do_not_promote_to_field_selector"] is True
+          assert diag["do_not_execute_full_national_100m_fine_expansion_from_this_rule"] is True
+          assert diag["frozen_counts"] == {"CIR02":8327,"CIR06":8889,"CIR12":6934,"CIR13":6934}
+          assert x["current_scientific_output"]["automatic_compact_patch_count_claim"] is False
+          assert x["prospective_field_outcomes_opened"] is False
+          forbidden = set(x["forbidden_rescues"])
+          assert "post-result Top-k" in forbidden
+          assert "post-result knee" in forbidden
+          assert "reclassifying provider-indeterminate candidates as biological absence" in forbidden
+          PY
