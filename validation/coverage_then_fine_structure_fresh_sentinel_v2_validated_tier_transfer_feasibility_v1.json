@@ -1,0 +1,53 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-validated-tier-transfer-feasibility-v1",
+  "status": "FROZEN_BEFORE_VALIDATED_TIER_TRANSFER_FEASIBILITY",
+  "scientific_role": "pre-outcome representation feasibility only; not selector confirmation",
+  "source_endpoint": "validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "transferred_constants": {
+    "source_module": "acsp.validated_robust",
+    "support_fraction": 0.025,
+    "patch_merge_distance_m": 1000.0,
+    "source_validation_scope": "validated 96-pair Japanese robust-support product",
+    "fresh_coarse_score_semantics_are_same_as_validated_robust_support": false,
+    "transfer_is_already_validated": false
+  },
+  "source_ready_lane": {
+    "input": "full family-specific coarse evidence order from the active v2 endpoint",
+    "retained_rule": "retain exactly ceil(0.025 * source_ready_candidate_count) highest-ranked source-ready candidates",
+    "tie_rule": "coarse order is already total and deterministic; no new score tie is resolved here",
+    "aggregation": "within each regional_tile_id, deterministic complete-link aggregation at maximum within-patch distance 1000 m",
+    "output_ranked": false
+  },
+  "source_indeterminate_lane": {
+    "included_in_transfer_test": false,
+    "reason": "no ecological rank exists and recoding missing-source candidates into the 2.5% source-ready tier would be invalid",
+    "retained_unchanged_outside_test": true
+  },
+  "feasibility_endpoints": {
+    "primary": "number of non-ranked bounded patches after 1-km aggregation",
+    "secondary": [
+      "retained source-ready point count",
+      "singleton patch fraction",
+      "median patch member count",
+      "maximum patch member count",
+      "compression_ratio = patch_count / retained_point_count"
+    ],
+    "field_outcome_used": false,
+    "recovery_used": false,
+    "promotion_gate": false
+  },
+  "interpretation": {
+    "if_compression_is_weak": "the validated robust constants do not solve fresh coarse-to-compact representation because the coarse lattice is too sparse; do not change the constants post hoc",
+    "if_compression_is_strong": "representation feasibility only; a separate untouched recovery/field validation is still required before calling the transferred tier a fresh-SENTINEL selector"
+  },
+  "forbidden": [
+    "do not tune the 2.5% fraction",
+    "do not tune the 1-km merge distance",
+    "do not use CIR02/CIR06/CIR12/CIR13 field outcomes",
+    "do not add a Top-k or target patch count",
+    "do not rank source-indeterminate candidates",
+    "do not call this validated robust support because the score semantics differ"
+  ],
+  "prospective_field_outcomes_opened": false
+}
