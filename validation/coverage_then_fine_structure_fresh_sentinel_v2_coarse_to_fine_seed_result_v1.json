@@ -1,0 +1,72 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-coarse-to-fine-seed-result-v1",
+  "status": "AUTOMATIC_COARSE_TO_FINE_SEED_RESULT_FROZEN",
+  "source_pr": 234,
+  "workflow_run_id": 37103860228,
+  "workflow_head_sha": "de800415d86286115df7ddf0db3b9c44ef89ee38",
+  "artifact_id": 11267075612,
+  "artifact_digest": "sha256:4404c8849e487cda6b27c27f0f0aa6f63c64ddcb1b44ab8e1673d7f866de8340",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "candidate_count_per_unit": 39200,
+  "seed_footprint_radius_km": 5.0,
+  "unit_results": {
+    "CIR02": {
+      "source_ready_candidate_count": 32754,
+      "source_ready_seed_count": 8204,
+      "source_ready_coverage_complete": true,
+      "source_indeterminate_candidate_count": 6446,
+      "source_indeterminate_seed_count": 123,
+      "source_indeterminate_coverage_complete": true,
+      "total_seed_count": 8327,
+      "private_seed_sha256": "d8e774d2f8ba159192e3ede3350d57b39c44d3a8407b879f66c7516efff63b8a"
+    },
+    "CIR06": {
+      "source_ready_candidate_count": 33578,
+      "source_ready_seed_count": 8768,
+      "source_ready_coverage_complete": true,
+      "source_indeterminate_candidate_count": 5622,
+      "source_indeterminate_seed_count": 121,
+      "source_indeterminate_coverage_complete": true,
+      "total_seed_count": 8889,
+      "private_seed_sha256": "f215db1f6c60a47b95a07dfff84a4fa02cb8a503458cd68bd3530bcc9374356d"
+    },
+    "CIR12": {
+      "source_ready_candidate_count": 32754,
+      "source_ready_seed_count": 6811,
+      "source_ready_coverage_complete": true,
+      "source_indeterminate_candidate_count": 6446,
+      "source_indeterminate_seed_count": 123,
+      "source_indeterminate_coverage_complete": true,
+      "total_seed_count": 6934,
+      "private_seed_sha256": "d9baccc378a5412f7166805092263af060c59a4fb4bc6570e946256d0acafbd8"
+    },
+    "CIR13": {
+      "source_ready_candidate_count": 32754,
+      "source_ready_seed_count": 6811,
+      "source_ready_coverage_complete": true,
+      "source_indeterminate_candidate_count": 6446,
+      "source_indeterminate_seed_count": 123,
+      "source_indeterminate_coverage_complete": true,
+      "total_seed_count": 6934,
+      "private_seed_sha256": "9239b470b0c7d48a19d9a3c92ed8f5b334cdfcd8129e87061fbf3ca7d026b259"
+    }
+  },
+  "scientific_boundary": {
+    "top_k_used": false,
+    "score_threshold_used": false,
+    "budget_used": false,
+    "user_site_count_used": false,
+    "cross_lane_coverage_used": false,
+    "source_indeterminate_ecological_rank_used": false,
+    "candidate_rows_dropped": 0,
+    "seed_is_exact_field_site": false,
+    "seed_is_occupancy_claim": false,
+    "regular_100m_graph_built": false,
+    "prospective_field_outcomes_opened": false,
+    "field_outcomes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "human_access_used": false
+  },
+  "next_gate": "Estimate/freeze the exact unioned 100-m fine-frame execution size under the already frozen shared-projection 5-km geometry before attempting national fine-source materialization."
+}
