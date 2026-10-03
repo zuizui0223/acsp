@@ -1,0 +1,81 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-validated-tier-transfer-feasibility-result-v1",
+  "status": "TRANSFER_REPRESENTATION_FEASIBILITY_WEAK_DO_NOT_PROMOTE",
+  "source_pr": 236,
+  "workflow_run_id": 37128572227,
+  "workflow_head_sha": "ca93039c2859e84a3ca58538abaab909185b88ae",
+  "artifact_id": 11276270843,
+  "artifact_digest": "sha256:2e0ce07cf757e10f90db642d5d4ec58b918f9ba455aeacaef5b61cbee54cb2f6",
+  "transferred_constants": {
+    "support_fraction": 0.025,
+    "patch_merge_distance_m": 1000.0
+  },
+  "unit_results": {
+    "CIR02": {
+      "source_ready_candidate_count": 32754,
+      "retained_point_count": 819,
+      "patch_count": 510,
+      "compression_ratio_patch_per_retained_point": 0.6227106227106227,
+      "singleton_patch_count": 367,
+      "singleton_patch_fraction": 0.7196078431372549,
+      "median_patch_member_count": 1.0,
+      "maximum_patch_member_count": 12,
+      "private_patch_sha256": "8c3702d279719fe76dd5db6d9775fef0f6adc6f30318319b91429e7363863b44"
+    },
+    "CIR06": {
+      "source_ready_candidate_count": 33578,
+      "retained_point_count": 840,
+      "patch_count": 792,
+      "compression_ratio_patch_per_retained_point": 0.9428571428571428,
+      "singleton_patch_count": 745,
+      "singleton_patch_fraction": 0.9406565656565656,
+      "median_patch_member_count": 1.0,
+      "maximum_patch_member_count": 3,
+      "private_patch_sha256": "64db7dcce9b2fc447ae7212574162b40a9e5b41886c10e21148999256c4fb15c"
+    },
+    "CIR12": {
+      "source_ready_candidate_count": 32754,
+      "retained_point_count": 819,
+      "patch_count": 703,
+      "compression_ratio_patch_per_retained_point": 0.8583638583638583,
+      "singleton_patch_count": 616,
+      "singleton_patch_fraction": 0.8762446657183499,
+      "median_patch_member_count": 1.0,
+      "maximum_patch_member_count": 6,
+      "private_patch_sha256": "3295cf765cb738de3c7d746728cfd8f890f89aca01880e237da2f2f9e5dcf9ac"
+    },
+    "CIR13": {
+      "source_ready_candidate_count": 32754,
+      "retained_point_count": 819,
+      "patch_count": 703,
+      "compression_ratio_patch_per_retained_point": 0.8583638583638583,
+      "singleton_patch_count": 616,
+      "singleton_patch_fraction": 0.8762446657183499,
+      "median_patch_member_count": 1.0,
+      "maximum_patch_member_count": 6,
+      "private_patch_sha256": "6a7bd55823ce4729d15c25bb2798d0440385a493009b8c99224577432f1731a4"
+    }
+  },
+  "interpretation": {
+    "representation_compression_is_weak": true,
+    "reason": "All four units retain hundreds of patches after 2.5% selection; median patch membership is one for every unit and singleton fractions range from 0.720 to 0.941. The sparse coarse lattice therefore does not become a compact bounded patch object under the validated 1-km aggregation constant.",
+    "biological_negative": false,
+    "fresh_coarse_score_invalidated": false,
+    "validated_robust_constants_invalidated": false,
+    "transfer_route_promoted": false
+  },
+  "disposition": {
+    "decision": "CLOSE_TRANSFER_ROUTE_WITHOUT_RESCUE",
+    "do_not_tune_support_fraction": true,
+    "do_not_tune_merge_distance": true,
+    "do_not_add_top_k": true,
+    "do_not_add_target_patch_count": true,
+    "requires_new_representation_for_future_compact_patch_development": true
+  },
+  "scientific_boundary": {
+    "field_outcomes_opened": false,
+    "recovery_used": false,
+    "source_indeterminate_ranked": false,
+    "transfer_is_validated_selector": false
+  }
+}
