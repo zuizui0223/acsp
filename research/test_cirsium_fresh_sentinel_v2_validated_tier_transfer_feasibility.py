@@ -71,11 +71,17 @@ def transfer_unit(
     retained = ready.iloc[:retain_n].copy()
     coords = outer.set_index(outer["candidate_cell_id"].astype(str))[
         ["latitude", "longitude", "regional_tile_id"]
-    ]
+    ].rename(columns={"regional_tile_id": "_outer_regional_tile_id"})
     retained.index = retained["candidate_cell_id"].astype(str)
     retained = retained.join(coords, how="left").reset_index(drop=True)
-    if retained[["latitude", "longitude", "regional_tile_id"]].isna().any().any():
+    if retained[["latitude", "longitude", "_outer_regional_tile_id"]].isna().any().any():
         raise ValueError(f"{unit} failed to restore frozen outer-frame geometry")
+    if "regional_tile_id" in retained.columns:
+        if not retained["regional_tile_id"].astype(str).equals(retained["_outer_regional_tile_id"].astype(str)):
+            raise ValueError(f"{unit} coarse-order tile identity differs from frozen outer frame")
+    else:
+        retained["regional_tile_id"] = retained["_outer_regional_tile_id"].astype(str)
+    retained = retained.drop(columns=["_outer_regional_tile_id"])
 
     selected = pd.DataFrame({
         "site_id": retained["candidate_cell_id"].astype(str),
