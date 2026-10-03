@@ -1,0 +1,82 @@
+name: Fresh-SENTINEL v2 CIR06 fine terrain smoke
+
+on:
+  pull_request:
+    paths:
+      - "research/smoke_cirsium_fresh_sentinel_v2_cir06_fine_terrain.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_cir06_fine_terrain_smoke.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_cir06_fine_terrain_smoke_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-cir06-fine-terrain-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test frozen smoke mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_cir06_fine_terrain_smoke.py
+      - name: Download exact frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-cir06-smoke/terrain /tmp/acsp-cir06-smoke/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-cir06-smoke/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-cir06-smoke/worldcover
+      - name: Rebuild frozen coarse evidence orders privately
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-cir06-smoke/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-cir06-smoke/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-cir06-smoke/orders
+      - name: Run live CIR06 GSI terrain smoke
+        run: |
+          python research/smoke_cirsium_fresh_sentinel_v2_cir06_fine_terrain.py             --order-csv-gz /tmp/acsp-cir06-smoke/orders/CIR06_coarse_evidence_order.csv.gz             --terrain-csv-gz /tmp/acsp-cir06-smoke/terrain/full_terrain.csv.gz             --cache-root /tmp/acsp-cir06-smoke/gsi-cache             --out-json /tmp/acsp-cir06-smoke/summary.json
+      - name: Guard source-mechanics boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          x = json.loads(Path('/tmp/acsp-cir06-smoke/summary.json').read_text())
+          assert x['cohort_unit_id'] == 'CIR06'
+          assert x['center_candidate_cell_id'] == 'JP_x158_y63_p0142'
+          assert x['core_cell_count'] == 7860
+          assert x['retrieval_margin_m'] == 175.0
+          assert x['structural_graph_computed'] is False
+          assert x['field_outcomes_opened'] is False
+
+          if x['status'] == 'CIR06_FINE_TERRAIN_SMOKE_COMPLETE':
+              assert x['terrain_complete_cell_count'] > 0
+              assert x['terrain_complete_cell_count'] <= 7860
+              assert x['terrain_incomplete_cell_count'] == 7860 - x['terrain_complete_cell_count']
+              assert 0.0 < x['terrain_complete_fraction'] <= 1.0
+              assert x['required_terrain_columns'] == ['elev','slope100','tpi300','rough300']
+              assert len(x['dem_sha256']) == 64
+              assert x['alternate_provider_used'] is False
+          else:
+              assert x['status'] in {
+                  'INDETERMINATE_GSI_PROVIDER_FAILURE',
+                  'INDETERMINATE_TERRAIN_SAMPLING_FAILURE',
+              }
+              assert x.get('provider_failure_is_biological_negative',
+                           x.get('sampling_failure_is_biological_negative')) is False
+              assert x['alternate_provider_used'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-cir06-fine-terrain-smoke
+          path: /tmp/acsp-cir06-smoke/summary.json
+          if-no-files-found: error
