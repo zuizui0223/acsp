@@ -1,0 +1,82 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-current-endpoint-v1",
+  "status": "COARSE_EVIDENCE_ENDPOINT_ACTIVE_FINE_STOPPING_UNVALIDATED",
+  "as_of_date": "2026-10-03",
+  "active_parent_pr": 184,
+  "active_parent_head_before_this_state_artifact": "3b3a6f43aa0948a2d48d0bb44910ad1b20b9dd0b",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "active_promoted_chain": [
+    {
+      "stage": "public_broad_frame",
+      "status": "ACTIVE",
+      "evidence": "PR 219 merged",
+      "result": "49 intersecting 2-degree tiles and 39,200 geometry-only candidates per unit"
+    },
+    {
+      "stage": "public_terrain_attachment",
+      "status": "ACTIVE",
+      "evidence": "full 49-tile terrain execution and frozen coverage audit"
+    },
+    {
+      "stage": "public_worldcover_attachment",
+      "status": "ACTIVE_WITH_SOURCE_INDETERMINATE_LANE",
+      "evidence": "point-bearing COG repair plus HTTP diagnosis",
+      "result": "35,974/39,200 WorldCover-complete candidates; four required official v200 COGs return HTTP 404; source gaps are not biological negatives"
+    },
+    {
+      "stage": "source_state_composition",
+      "status": "ACTIVE",
+      "evidence": "PR 230 merged",
+      "result": "SOURCE_READY_FOR_FAMILY_COARSE_STAGE and SOURCE_INDETERMINATE_RETAIN remain separate; denominator is preserved"
+    },
+    {
+      "stage": "family_specific_coarse_evidence_order",
+      "status": "ACTIVE_ENDPOINT",
+      "evidence": "PR 231 merged at 3b3a6f43aa0948a2d48d0bb44910ad1b20b9dd0b",
+      "result": "complete response-independent order among source-ready candidates; source-indeterminate candidates remain retained and unranked"
+    }
+  ],
+  "non_promoted_diagnostics": [
+    {
+      "identity": "COMPLETE_5KM_COARSE_TO_FINE_SEED_COVER_V1",
+      "source_pr": 234,
+      "disposition": "CLOSED_WITHOUT_MERGE_AFTER_GREEN_REPRODUCTION",
+      "reason": "technically valid complete-coverage compression but not a tractable or independently validated field-action stopping rule",
+      "frozen_counts": {
+        "CIR02": 8327,
+        "CIR06": 8889,
+        "CIR12": 6934,
+        "CIR13": 6934
+      },
+      "all_lanes_covered": true,
+      "top_k_used": false,
+      "budget_used": false,
+      "prospective_field_outcomes_used": false,
+      "do_not_promote_to_field_selector": true,
+      "do_not_execute_full_national_100m_fine_expansion_from_this_rule": true
+    }
+  ],
+  "current_scientific_output": {
+    "source_ready": "full family-specific coarse evidence order",
+    "source_indeterminate": "retained unranked candidate lane",
+    "exact_site_claim": false,
+    "occupancy_probability_claim": false,
+    "field_efficiency_claim": false,
+    "automatic_compact_patch_count_claim": false
+  },
+  "blocked_next_claim": {
+    "target": "compact auditable fresh-SENTINEL field patch set",
+    "reason": "no independently validated automatic stopping/compression rule exists for turning the coarse evidence endpoint into a small field-action set",
+    "requires": "a separately frozen development/validation cycle for compact patch compression or operational field allocation; do not tune on CIR02/CIR06/CIR12/CIR13 prospective outcomes after opening them"
+  },
+  "forbidden_rescues": [
+    "post-result Top-k",
+    "post-result knee",
+    "post-result target coverage",
+    "post-result survey-day budget",
+    "post-result monetary budget",
+    "reclassifying provider-indeterminate candidates as biological absence",
+    "using private exact sites or P02 results to retroactively tune the coarse selector"
+  ],
+  "prospective_field_outcomes_opened": false
+}
