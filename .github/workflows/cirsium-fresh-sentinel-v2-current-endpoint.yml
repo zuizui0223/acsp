@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_output_manifest_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-current-endpoint.yml"
   workflow_dispatch:
 
@@ -44,4 +45,16 @@ jobs:
           assert "post-result Top-k" in forbidden
           assert "post-result knee" in forbidden
           assert "reclassifying provider-indeterminate candidates as biological absence" in forbidden
+
+          m = json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_output_manifest_v1.json").read_text())
+          assert m["status"] == "PUBLIC_SAFE_COARSE_OUTPUT_MANIFEST_FROZEN"
+          assert m["candidate_count_per_unit"] == 39200
+          assert m["units"]["CIR02"]["coarse_order_sha256"] == "b2c0b4e4480703f2273c4eec0498f843b536c0d8546b679b7172556091a0dd76"
+          assert m["units"]["CIR06"]["coarse_order_sha256"] == "1cdb23641607253f11d0da4df1c6c5b50d25e2da7f23eb9d03cba3a265c35251"
+          assert m["units"]["CIR12"]["coarse_order_sha256"] == "a014eeaa75319065b03ab5cff6723fd508378d09961210d32cd7634110147537"
+          assert m["units"]["CIR13"]["coarse_order_sha256"] == "37f1276415e9d0cb58f3d2d86cc771fc7375458aed32142c038ac7f53398b423"
+          assert m["public_boundary"]["coordinates_included"] is False
+          assert m["public_boundary"]["source_indeterminate_recoded_as_absence"] is False
+          assert m["coarse_order_summary_facts"]["candidate_selection_added"] is False
+          assert m["coarse_order_summary_facts"]["top_k_or_threshold_applied"] is False
           PY
