@@ -62,13 +62,39 @@ jobs:
           assert x['ecological_sources_attached'] is False
           assert x['structural_graph_computed'] is False
 
-          expected_centers = {'CIR02': 819, 'CIR06': 840, 'CIR12': 819, 'CIR13': 819}
-          for unit, n in expected_centers.items():
+          expected = {
+              'CIR02': {
+                  'centers': 819,
+                  'raw': 6432583,
+                  'unique': 2200785,
+                  'hash': '5e93d207cf3b1946f4e8ab53392136904314fe5e44ef2bfd631de4a6e18b2c9d',
+              },
+              'CIR06': {
+                  'centers': 840,
+                  'raw': 6597353,
+                  'unique': 2807888,
+                  'hash': '9f627ecf9aae64171dd0a4d0f77cf56e7efde34ebed96541280ddd216ec4b657',
+              },
+              'CIR12': {
+                  'centers': 819,
+                  'raw': 6432549,
+                  'unique': 3251693,
+                  'hash': 'f28416b2270ed18e8d89e629d6bb53fb818f29dbb9bf0c2844daaa5156a64bf8',
+              },
+              'CIR13': {
+                  'centers': 819,
+                  'raw': 6432549,
+                  'unique': 3251693,
+                  'hash': 'f28416b2270ed18e8d89e629d6bb53fb818f29dbb9bf0c2844daaa5156a64bf8',
+              },
+          }
+          for unit, e in expected.items():
               row = x['unit_results'][unit]
-              assert row['selected_coarse_center_count'] == n
-              assert row['unique_unioned_fine_cell_count'] > 0
+              assert row['selected_coarse_center_count'] == e['centers']
+              assert row['raw_seed_to_cell_membership_count'] == e['raw']
+              assert row['unique_unioned_fine_cell_count'] == e['unique']
+              assert row['sorted_packed_global_grid_id_sha256'] == e['hash']
               assert row['raw_seed_to_cell_membership_count'] >= row['unique_unioned_fine_cell_count']
-              assert len(row['sorted_packed_global_grid_id_sha256']) == 64
               assert row['grid_rows_written'] is False
               assert row['ecological_sources_attached'] is False
               assert row['field_outcomes_used'] is False
