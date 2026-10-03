@@ -1,0 +1,71 @@
+name: Fresh-SENTINEL v2 validated-tier transfer feasibility
+
+on:
+  pull_request:
+    paths:
+      - "research/test_cirsium_fresh_sentinel_v2_validated_tier_transfer_feasibility.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_validated_tier_transfer_feasibility.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_validated_tier_transfer_feasibility_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-validated-tier-transfer-feasibility.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  transfer-feasibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test transfer mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_validated_tier_transfer_feasibility.py
+      - name: Download exact frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-tier-transfer/terrain /tmp/acsp-tier-transfer/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-tier-transfer/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-tier-transfer/worldcover
+      - name: Rebuild frozen coarse evidence orders privately
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-tier-transfer/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-tier-transfer/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-tier-transfer/orders
+      - name: Execute validated-tier representation transfer
+        run: |
+          python research/test_cirsium_fresh_sentinel_v2_validated_tier_transfer_feasibility.py             --order CIR02=/tmp/acsp-tier-transfer/orders/CIR02_coarse_evidence_order.csv.gz             --order CIR06=/tmp/acsp-tier-transfer/orders/CIR06_coarse_evidence_order.csv.gz             --order CIR12=/tmp/acsp-tier-transfer/orders/CIR12_coarse_evidence_order.csv.gz             --order CIR13=/tmp/acsp-tier-transfer/orders/CIR13_coarse_evidence_order.csv.gz             --out-dir /tmp/acsp-tier-transfer/result
+      - name: Guard transfer-only interpretation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x = json.loads(Path('/tmp/acsp-tier-transfer/result/summary.json').read_text())
+          assert x['status'] == 'VALIDATED_TIER_TRANSFER_REPRESENTATION_FEASIBILITY_COMPLETE'
+          assert x['support_fraction'] == 0.025
+          assert x['patch_merge_distance_m'] == 1000.0
+          assert x['field_outcomes_opened'] is False
+          assert x['recovery_used'] is False
+          assert x['source_indeterminate_ranked'] is False
+          assert x['transfer_is_validated_selector'] is False
+          for unit, r in x['unit_results'].items():
+              assert r['retained_point_count'] > 0
+              assert r['patch_count'] > 0
+              assert r['field_outcome_used'] is False
+              assert r['recovery_used'] is False
+              assert r['source_indeterminate_included'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-validated-tier-transfer-summary
+          path: /tmp/acsp-tier-transfer/result/summary.json
+          if-no-files-found: error
