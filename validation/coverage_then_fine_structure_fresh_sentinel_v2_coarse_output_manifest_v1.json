@@ -1,0 +1,59 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-coarse-output-manifest-v1",
+  "status": "PUBLIC_SAFE_COARSE_OUTPUT_MANIFEST_FROZEN",
+  "source_pr": 231,
+  "source_workflow_run_id": 36287721793,
+  "source_workflow_head_sha": "164efe79f199338125d19cdbe37132e910dc0b79",
+  "source_artifact_id": 10921335671,
+  "source_artifact_digest": "sha256:06ed61e58d768e03530a4ffd9e34b0a603de833114cc74716ec3e3ec22d57ae6",
+  "candidate_count_per_unit": 39200,
+  "units": {
+    "CIR02": {
+      "species_binomial": "Cirsium inundatum",
+      "coarse_family": "WETLAND_MOISTURE_STRUCTURE",
+      "source_ready_candidate_count": 32754,
+      "source_indeterminate_candidate_count": 6446,
+      "coarse_order_sha256": "c60a6713404c6878820c5b0b3c74e8f16d2a7f0f5f2f608313dbd9afc6b0e0a8",
+      "source_ready_order_complete": true,
+      "source_indeterminate_ranked": false
+    },
+    "CIR06": {
+      "species_binomial": "Cirsium yezoalpinum",
+      "coarse_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "source_ready_candidate_count": 33578,
+      "source_indeterminate_candidate_count": 5622,
+      "coarse_order_sha256": "c46ca1d5db9d8a3adbcf754249ec0cc4e18c42a3cde68c2e3a276f6c2e5fd5b0",
+      "source_ready_order_complete": true,
+      "source_indeterminate_ranked": false
+    },
+    "CIR12": {
+      "species_binomial": "Cirsium dipsacolepis",
+      "coarse_family": "OPEN_GRASSLAND_STRUCTURE",
+      "source_ready_candidate_count": 32754,
+      "source_indeterminate_candidate_count": 6446,
+      "coarse_order_sha256": "6af74d388fe920245c30fd15db8b76c197c678ba119d40b6d4e370f901127f4c",
+      "source_ready_order_complete": true,
+      "source_indeterminate_ranked": false
+    },
+    "CIR13": {
+      "species_binomial": "Cirsium lineare",
+      "coarse_family": "OPEN_GRASSLAND_STRUCTURE",
+      "source_ready_candidate_count": 32754,
+      "source_indeterminate_candidate_count": 6446,
+      "coarse_order_sha256": "b3f7812a5c6b1c4ed0f285df995696668725749de4ffab9188f9f97fda87358e",
+      "source_ready_order_complete": true,
+      "source_indeterminate_ranked": false
+    }
+  },
+  "public_boundary": {
+    "coordinates_included": false,
+    "candidate_order_rows_included": false,
+    "private_exact_sites_included": false,
+    "field_outcomes_included": false,
+    "source_indeterminate_recoded_as_absence": false,
+    "exact_site_claim": false,
+    "occupancy_probability_claim": false,
+    "compact_field_patch_count_claim": false
+  },
+  "use": "This manifest identifies the current reproducible coarse ecological outputs without exposing coordinate-bearing candidate orders. It is not a field itinerary or exact-site recommendation."
+}
