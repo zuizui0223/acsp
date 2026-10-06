@@ -17,6 +17,7 @@ import pandas as pd
 import rasterio
 from pyproj import Transformer
 from rasterio.windows import Window
+from rasterio.errors import RasterioIOError
 
 from .worldcover import (
     WORLD_COVER_2021_CLASS_NAMES,
@@ -379,3 +380,118 @@ def attach_worldcover_neighbourhood_fractions_blocked(
         feature_digest_sha256=_feature_digest(retained),
     )
     return retained, audit
+
+
+@dataclass(frozen=True)
+class WorldCoverNeighbourhoodAvailabilityAudit:
+    provider_id: str
+    release_id: str
+    neighbourhood_radius_m: float
+    candidate_rows_input: int
+    source_complete_rows: int
+    neighbourhood_unavailable_rows: int
+    provider_failure_rows: int
+    provider_failure_tile_ids: tuple[str, ...]
+    source_tile_ids: tuple[str, ...]
+    field_outcomes_used: bool = False
+    human_access_used: bool = False
+    biological_absence_inferred_from_source_failure: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def audit_worldcover_neighbourhood_availability_blocked(
+    candidate_frame: pd.DataFrame,
+    *,
+    radius_m: float = 250.0,
+    block_pixels: int = 2048,
+    dataset_opener: Callable[[str], Any] | None = None,
+) -> tuple[pd.DataFrame, WorldCoverNeighbourhoodAvailabilityAudit]:
+    """Retain every candidate while auditing frozen WorldCover source availability.
+
+    Successful candidates receive the same feature values as the exact blocked
+    sampler. Candidates whose 250-m window is unavailable inside an otherwise
+    readable official tile are retained as an indeterminate neighbourhood state.
+    If the official COG itself cannot be opened, every candidate assigned to that
+    COG is retained as an indeterminate provider-failure state. Neither state is
+    biological absence.
+    """
+    if candidate_frame is None or candidate_frame.empty:
+        raise ValueError("candidate_frame cannot be empty")
+    required = {"candidate_cell_id", "latitude", "longitude"}
+    missing = sorted(required.difference(candidate_frame.columns))
+    if missing:
+        raise ValueError(f"candidate frame missing required columns: {missing}")
+
+    work = candidate_frame.copy().reset_index(drop=True)
+    if work["candidate_cell_id"].astype(str).duplicated().any():
+        raise ValueError("candidate_cell_id must be unique")
+    lat = pd.to_numeric(work["latitude"], errors="coerce").to_numpy(float)
+    lon = pd.to_numeric(work["longitude"], errors="coerce").to_numpy(float)
+    if not np.isfinite(lat).all() or not np.isfinite(lon).all():
+        raise ValueError("candidate coordinates must be complete and finite")
+
+    tile_ids = np.asarray([worldcover_tile_id(a, b) for a, b in zip(lat, lon)], dtype=object)
+    work["worldcover_neighbourhood_tile_id"] = tile_ids
+    work["worldcover_source_state"] = "INDETERMINATE_NEIGHBOURHOOD_UNAVAILABLE"
+    for column in FEATURE_COLUMNS:
+        work[column] = np.nan
+
+    source_tile_ids = tuple(sorted(set(str(value) for value in tile_ids)))
+    opener = dataset_opener or rasterio.open
+    provider_failure_tiles: list[str] = []
+
+    for tile_id in source_tile_ids:
+        positions = np.flatnonzero(tile_ids == tile_id)
+        subset = work.iloc[positions][list(candidate_frame.columns)].copy().reset_index(drop=True)
+
+        def tile_opener(_url: str):
+            return opener(worldcover_2021_map_url(tile_id))
+
+        try:
+            retained, _ = attach_worldcover_neighbourhood_fractions_blocked(
+                subset,
+                radius_m=float(radius_m),
+                block_pixels=int(block_pixels),
+                dataset_opener=tile_opener,
+            )
+        except RasterioIOError:
+            provider_failure_tiles.append(str(tile_id))
+            work.loc[positions, "worldcover_source_state"] = "INDETERMINATE_PROVIDER_FAILURE"
+            continue
+
+        retained_ids = set(retained["candidate_cell_id"].astype(str))
+        complete_mask = (
+            work.iloc[positions]["candidate_cell_id"].astype(str).isin(retained_ids).to_numpy()
+        )
+        complete_positions = positions[complete_mask]
+        if len(complete_positions):
+            feature_by_id = retained.set_index(retained["candidate_cell_id"].astype(str))
+            ids = work.loc[complete_positions, "candidate_cell_id"].astype(str)
+            for column in FEATURE_COLUMNS:
+                work.loc[complete_positions, column] = feature_by_id.loc[ids, column].to_numpy(float)
+            work.loc[complete_positions, "worldcover_source_state"] = "SOURCE_COMPLETE"
+
+    source_complete = int(work["worldcover_source_state"].eq("SOURCE_COMPLETE").sum())
+    provider_failure = int(
+        work["worldcover_source_state"].eq("INDETERMINATE_PROVIDER_FAILURE").sum()
+    )
+    neighbourhood_unavailable = int(
+        work["worldcover_source_state"].eq("INDETERMINATE_NEIGHBOURHOOD_UNAVAILABLE").sum()
+    )
+    if source_complete + provider_failure + neighbourhood_unavailable != len(work):
+        raise AssertionError("WorldCover availability states do not preserve the candidate denominator")
+
+    audit = WorldCoverNeighbourhoodAvailabilityAudit(
+        provider_id="ESA_WORLDCOVER",
+        release_id="2021_v200",
+        neighbourhood_radius_m=float(radius_m),
+        candidate_rows_input=int(len(work)),
+        source_complete_rows=source_complete,
+        neighbourhood_unavailable_rows=neighbourhood_unavailable,
+        provider_failure_rows=provider_failure,
+        provider_failure_tile_ids=tuple(sorted(provider_failure_tiles)),
+        source_tile_ids=source_tile_ids,
+    )
+    return work, audit
