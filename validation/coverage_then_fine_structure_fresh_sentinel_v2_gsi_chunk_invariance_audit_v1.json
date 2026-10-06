@@ -1,0 +1,51 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-gsi-chunk-invariance-audit-v1",
+  "status": "FROZEN_BEFORE_GSI_CHUNK_INVARIANCE_AUDIT",
+  "scientific_role": "source-transport invariance audit only; not ecological ranking",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "source_provider": {
+    "identity": "GSI DEM via production build_gsi_dem_for_bounds",
+    "terrain_sampling_semantics": "research.build_cirsium_private_alpine_local_grid_v1._sample_terrain",
+    "required_columns": ["elev", "slope100", "tpi300", "rough300"],
+    "existing_holdout_chunk_grid_cells": 8,
+    "existing_holdout_grid_spacing_m": 5000,
+    "existing_holdout_physical_chunk_width_m": 40000,
+    "existing_chunk_margin_degrees": 0.02,
+    "existing_max_gsi_tiles_per_chunk": 900
+  },
+  "fine_grid_candidate_transport": {
+    "grid_spacing_m": 100,
+    "physical_chunk_width_m": 40000,
+    "equivalent_chunk_grid_cells": 400,
+    "chunk_phase_offsets_cells": [[0,0],[200,200]],
+    "reason_for_phase_test": "If chunking is pure transport, shifting the 40-km chunk lattice by half a chunk must not change source identity or sampled terrain vectors at the same fixed points."
+  },
+  "audit_sample": {
+    "coarse_center_source": "frozen top 2.5% source-ready coarse centers",
+    "max_centers_per_unit": 32,
+    "center_selection": "deterministic evenly spaced indices over coarse-evidence-rank order, including endpoints when more than one center",
+    "fine_points_per_selected_center": 5,
+    "fine_point_offsets_grid_cells": [[0,0],[-1,0],[1,0],[0,-1],[0,1]],
+    "deduplicate_shared_fine_points": true,
+    "field_outcomes_used": false,
+    "terrain_values_used_to_choose_sample": false
+  },
+  "comparison": {
+    "same_candidate_ids_required": true,
+    "source_attribution_string_exact_match_required": true,
+    "terrain_columns_exact_match_required": true,
+    "numeric_tolerance_absolute": 1e-9,
+    "missingness_pattern_exact_match_required": true,
+    "if_any_difference": "Do not treat 40-km chunking as pure transport; freeze a source-selection rule before full fine-terrain attachment.",
+    "if_no_difference": "This audit supports, but does not mathematically prove, using the 40-km physical chunk width as a transport implementation for the frozen fine-grid terrain semantics."
+  },
+  "forbidden": [
+    "do not use field outcomes",
+    "do not choose chunk width after terrain results",
+    "do not change DEM source priority",
+    "do not change terrain formulas",
+    "do not use terrain values to select audit points",
+    "do not interpret this audit as selector validation"
+  ],
+  "prospective_field_outcomes_opened": false
+}
