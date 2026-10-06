@@ -1,0 +1,67 @@
+name: Fresh-SENTINEL v2 GSI chunk invariance audit
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_gsi_chunk_invariance.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_chunk_invariance_audit_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-gsi-chunk-invariance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Compile diagnostic
+        run: python -m py_compile research/audit_cirsium_fresh_sentinel_v2_gsi_chunk_invariance.py
+      - name: Download exact frozen coarse-source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-gsi-audit/terrain /tmp/acsp-gsi-audit/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-gsi-audit/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-gsi-audit/worldcover
+      - name: Rebuild frozen coarse evidence orders
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-gsi-audit/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-gsi-audit/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-gsi-audit/orders
+      - name: Run GSI chunk-phase invariance audit
+        run: |
+          python research/audit_cirsium_fresh_sentinel_v2_gsi_chunk_invariance.py             --order CIR02=/tmp/acsp-gsi-audit/orders/CIR02_coarse_evidence_order.csv.gz             --order CIR06=/tmp/acsp-gsi-audit/orders/CIR06_coarse_evidence_order.csv.gz             --order CIR12=/tmp/acsp-gsi-audit/orders/CIR12_coarse_evidence_order.csv.gz             --order CIR13=/tmp/acsp-gsi-audit/orders/CIR13_coarse_evidence_order.csv.gz             --work-dir /tmp/acsp-gsi-audit/work             --out-json /tmp/acsp-gsi-audit/summary.json
+      - name: Guard diagnostic boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/acsp-gsi-audit/summary.json').read_text())
+          assert x['status']=='GSI_CHUNK_INVARIANCE_AUDIT_COMPLETE_PRE_OUTCOME'
+          assert x['chunk_width_m']==40000
+          assert x['fine_grid_spacing_m']==100
+          assert x['phase_offsets_cells']==[[0,0],[200,200]]
+          assert set(x['units'])=={'CIR02','CIR06','CIR12','CIR13'}
+          assert x['field_outcomes_opened'] is False
+          assert x['candidate_ranking_computed'] is False
+          assert x['promotion_gate'] is False
+          for unit,row in x['units'].items():
+              assert row['audit_candidate_rows'] > 0
+              assert row['phase_comparison']['candidate_rows'] == row['audit_candidate_rows']
+              assert row['field_outcomes_opened'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-gsi-chunk-invariance-audit
+          path: /tmp/acsp-gsi-audit/summary.json
+          if-no-files-found: error
