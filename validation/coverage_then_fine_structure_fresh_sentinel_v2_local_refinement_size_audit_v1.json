@@ -1,0 +1,59 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-local-refinement-size-audit-v1",
+  "status": "FROZEN_BEFORE_LOCAL_REFINEMENT_SIZE_AUDIT",
+  "scientific_role": "pre-outcome geometry/representation size audit only",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "coarse_center_rule": {
+    "source": "independently validated ACSP robust support fraction",
+    "support_fraction": 0.025,
+    "apply_to": "source-ready family-specific coarse evidence order only",
+    "retained_count_rule": "ceil(0.025 * source_ready_candidate_count)",
+    "source_indeterminate_included": false,
+    "reason": "source-indeterminate candidates have no ecological order and remain retained outside this representation audit"
+  },
+  "fine_frame_constants": {
+    "source": "validation/cirsium_candidate_frame_contract_v1.json",
+    "grid_spacing_m": 100,
+    "primary_radius_km": 2.0,
+    "sensitivity_radius_km": 5.0,
+    "primary_radius_role": "Cirsium local-continuation primary outer radius frozen before field outcomes",
+    "sensitivity_radius_role": "Cirsium local-continuation sensitivity radius, never substituted for primary after outcome"
+  },
+  "projection": {
+    "identity": "JAPAN_CENTERED_AEQD_V1",
+    "proj_string": "+proj=aeqd +lat_0=36 +lon_0=138 +datum=WGS84 +units=m +no_defs",
+    "reason": "shared metric lattice so overlapping center windows can be unioned exactly and grid adjacency is coherent"
+  },
+  "audit": {
+    "for_each_unit_and_radius": [
+      "retained_coarse_center_count",
+      "raw_center_cell_memberships",
+      "unioned_100m_cell_count",
+      "overlap_memberships_removed",
+      "union_area_km2",
+      "cells_per_retained_center_after_union"
+    ],
+    "field_outcome_used": false,
+    "ecological_fine_score_computed": false,
+    "patch_count_computed": false,
+    "recovery_computed": false,
+    "access_or_budget_used": false
+  },
+  "interpretation": {
+    "primary_question": "Does local 100-m refinement around the already-frozen 2.5% coarse centers yield a computationally and representationally bounded fine universe compared with complete national 5-km coverage expansion?",
+    "promotion_gate": false,
+    "if_large": "close this representation route without changing 2.5%, 2 km, 5 km or 100 m",
+    "if_bounded": "only geometry feasibility is established; fine ecological scoring and untouched recovery validation remain separate future gates"
+  },
+  "forbidden": [
+    "do not tune 2.5%",
+    "do not tune 2 km",
+    "do not tune 5 km",
+    "do not tune 100 m",
+    "do not use field outcomes or recovery",
+    "do not add Top-k or target fine-cell count",
+    "do not rank source-indeterminate candidates",
+    "do not interpret fine cells as exact survey sites or occupancy"
+  ],
+  "prospective_field_outcomes_opened": false
+}
