@@ -5,6 +5,7 @@ on:
     paths:
       - "research/audit_cirsium_fresh_sentinel_v2_local_refinement_size.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_local_refinement_size_audit_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_local_refinement_size_audit_result_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-local-refinement-size-audit.yml"
   workflow_dispatch:
 
