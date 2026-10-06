@@ -1,0 +1,54 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-local-refinement-size-audit-result-v1",
+  "status": "PRIMARY_2KM_LOCAL_REFINEMENT_GEOMETRY_FEASIBLE",
+  "source_pr": 240,
+  "workflow_run_id": 37307333530,
+  "workflow_head_sha": "1e3852360d7f747e8178d5e374b1cbe0f9ea4ed1",
+  "artifact_id": 11344924411,
+  "artifact_digest": "sha256:148a2044871480450ec4ee6496325d500196b64e499ac322a071ae24ca28d2ed",
+  "support_fraction": 0.025,
+  "grid_spacing_m": 100.0,
+  "primary_radius_km": 2.0,
+  "sensitivity_radius_km": 5.0,
+  "unit_results": {
+    "CIR02": {
+      "retained_coarse_centers": 819,
+      "primary_2km": {"unioned_100m_cells": 464633, "union_area_km2": 4646.33, "overlap_fraction": 0.5485361990730394},
+      "sensitivity_5km": {"unioned_100m_cells": 2200785, "union_area_km2": 22007.85, "overlap_fraction": 0.6578691639112935}
+    },
+    "CIR06": {
+      "retained_coarse_centers": 840,
+      "primary_2km": {"unioned_100m_cells": 847239, "union_area_km2": 8472.39, "overlap_fraction": 0.19735058305930636},
+      "sensitivity_5km": {"unioned_100m_cells": 2807888, "union_area_km2": 28078.88, "overlap_fraction": 0.5743917295315257}
+    },
+    "CIR12": {
+      "retained_coarse_centers": 819,
+      "primary_2km": {"unioned_100m_cells": 715103, "union_area_km2": 7151.03, "overlap_fraction": 0.30519300707046465},
+      "sensitivity_5km": {"unioned_100m_cells": 3251693, "union_area_km2": 32516.93, "overlap_fraction": 0.494493862386435}
+    },
+    "CIR13": {
+      "retained_coarse_centers": 819,
+      "primary_2km": {"unioned_100m_cells": 715103, "union_area_km2": 7151.03, "overlap_fraction": 0.30519300707046465},
+      "sensitivity_5km": {"unioned_100m_cells": 3251693, "union_area_km2": 32516.93, "overlap_fraction": 0.494493862386435}
+    }
+  },
+  "interpretation": {
+    "primary_2km_representation_is_computationally_bounded": true,
+    "reason": "The predeclared 2-km primary local radius reduces the prospective fine universe to roughly 0.46-0.85 million 100-m cells per unit, avoiding the tens-of-millions-per-unit scale produced by complete national 5-km expansion.",
+    "sensitivity_5km_is_substantially_larger": true,
+    "selector_validated": false,
+    "ecological_fine_score_validated": false,
+    "recovery_validated": false,
+    "exact_field_sites_identified": false
+  },
+  "scientific_boundary": {
+    "source_indeterminate_included": false,
+    "fine_ecological_score_computed": false,
+    "patch_count_computed": false,
+    "recovery_computed": false,
+    "field_outcomes_opened": false,
+    "access_or_budget_used": false,
+    "promotion_gate": false
+  },
+  "next_gate": "Materialize the primary 2-km / 100-m local fine universe around the frozen 2.5% source-ready coarse centers and attach the already-frozen family-specific public ecological primitives; keep the 5-km frame as sensitivity only and keep source-indeterminate candidates in their separate retained lane."
+}
