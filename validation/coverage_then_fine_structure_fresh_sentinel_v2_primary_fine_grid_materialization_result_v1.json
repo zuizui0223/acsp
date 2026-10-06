@@ -1,0 +1,71 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-primary-fine-grid-materialization-result-v1",
+  "status": "PRIMARY_FINE_GRID_MATERIALIZATION_REPRODUCED_PRE_OUTCOME",
+  "source_pr": 241,
+  "workflow_head_sha": "3bc17ccac76b7908ba5b22e2e9923bff07a542f3",
+  "independent_executions": [
+    {
+      "workflow_name": "Fresh-SENTINEL v2 primary fine grids",
+      "workflow_run_id": 37479352272,
+      "artifact_id": 11422461222,
+      "artifact_digest": "sha256:54fcd1a2b60e409905fcc809ca786e104704f970f93694bc9b01d84fb31accfb"
+    },
+    {
+      "workflow_name": "Scale-separated coverage then fine structure checks",
+      "workflow_run_id": 37479352421,
+      "artifact_id": 11421517821,
+      "artifact_digest": "sha256:38ea860bb0b520f01b604ce3d56cc9d674351bdd381f9c495e4354bf9c69d48e"
+    }
+  ],
+  "receipt_content_sha256": "d6402e33844596d0f20f881ad568be431183c2f7fa24f566527c6a8c7a0666e9",
+  "independent_receipt_bytes_identical": true,
+  "support_fraction": 0.025,
+  "primary_radius_km": 2.0,
+  "grid_spacing_m": 100.0,
+  "units": {
+    "CIR02": {
+      "source_ready_candidate_count": 32754,
+      "retained_coarse_center_count": 819,
+      "fine_grid_cell_count": 464633,
+      "raw_center_cell_memberships": 1029170,
+      "overlap_memberships_removed": 564537,
+      "private_grid_sha256": "c87fe4b3158a5c63253a5bb73039e18e72c288cecb7d071989cff448dbac14a5"
+    },
+    "CIR06": {
+      "source_ready_candidate_count": 33578,
+      "retained_coarse_center_count": 840,
+      "fine_grid_cell_count": 847239,
+      "raw_center_cell_memberships": 1055553,
+      "overlap_memberships_removed": 208314,
+      "private_grid_sha256": "db022f278dc3e8f93f4af06a536360e8a33d7515a6ade71dabb7f0f2b4aba98c"
+    },
+    "CIR12": {
+      "source_ready_candidate_count": 32754,
+      "retained_coarse_center_count": 819,
+      "fine_grid_cell_count": 715103,
+      "raw_center_cell_memberships": 1029211,
+      "overlap_memberships_removed": 314108,
+      "private_grid_sha256": "f88825f7b5c8f7d038f0d8ae691a751b2a4f858977703e1310626c1264dd0709"
+    },
+    "CIR13": {
+      "source_ready_candidate_count": 32754,
+      "retained_coarse_center_count": 819,
+      "fine_grid_cell_count": 715103,
+      "raw_center_cell_memberships": 1029211,
+      "overlap_memberships_removed": 314108,
+      "private_grid_sha256": "ecb790c9fce12adb56871cf021a38d0f7269bb899a8a956b45ac7e3a93ba2cd7"
+    }
+  },
+  "privacy_and_claim_boundary": {
+    "coordinate_bearing_grids_uploaded": false,
+    "source_indeterminate_included": false,
+    "ecological_sources_attached": false,
+    "structural_graph_computed": false,
+    "candidate_ranking_computed": false,
+    "field_outcomes_opened": false,
+    "access_or_budget_used": false,
+    "exact_site_claim": false,
+    "occupancy_claim": false
+  },
+  "next_gate": "Freeze and execute public fine-source availability. WorldCover is required only for CIR02/CIR12/CIR13; CIR06 remains terrain-only. GSI terrain source-selection/chunk semantics must be frozen separately before full fine-terrain attachment."
+}
