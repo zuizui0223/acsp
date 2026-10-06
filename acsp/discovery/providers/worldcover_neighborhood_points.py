@@ -393,6 +393,7 @@ class WorldCoverNeighbourhoodAvailabilityAudit:
     provider_failure_rows: int
     provider_failure_tile_ids: tuple[str, ...]
     source_tile_ids: tuple[str, ...]
+    source_complete_feature_digest_sha256: str
     field_outcomes_used: bool = False
     human_access_used: bool = False
     biological_absence_inferred_from_source_failure: bool = False
@@ -483,6 +484,10 @@ def audit_worldcover_neighbourhood_availability_blocked(
     if source_complete + provider_failure + neighbourhood_unavailable != len(work):
         raise AssertionError("WorldCover availability states do not preserve the candidate denominator")
 
+    complete_frame = work.loc[
+        work["worldcover_source_state"].eq("SOURCE_COMPLETE")
+    ].copy().reset_index(drop=True)
+    complete_digest = _feature_digest(complete_frame) if not complete_frame.empty else hashlib.sha256(b"").hexdigest()
     audit = WorldCoverNeighbourhoodAvailabilityAudit(
         provider_id="ESA_WORLDCOVER",
         release_id="2021_v200",
@@ -493,5 +498,6 @@ def audit_worldcover_neighbourhood_availability_blocked(
         provider_failure_rows=provider_failure,
         provider_failure_tile_ids=tuple(sorted(provider_failure_tiles)),
         source_tile_ids=source_tile_ids,
+        source_complete_feature_digest_sha256=complete_digest,
     )
     return work, audit
