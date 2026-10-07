@@ -29,6 +29,8 @@ on:
       - "research/verify_cirsium_fresh_sentinel_movement_constraint_pin_v1.py"
       - "research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py"
       - "research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py"
+      - "acsp/discovery/providers/worldcover_neighborhood_points.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
       - "tests/test_cirsium_fresh_sentinel_source_readiness_v1.py"
@@ -50,6 +52,8 @@ on:
       - "tests/test_cirsium_fresh_sentinel_pre_outcome_advance_v1.py"
       - "tests/test_cirsium_fresh_sentinel_end_to_end_rehearsal_v1.py"
       - "tests/test_cirsium_fresh_sentinel_v2_primary_fine_grid.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py"
+      - "tests/test_worldcover_neighborhood_points.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json"
@@ -67,6 +71,7 @@ on:
       - "validation/coverage_then_fine_structure_private_field_schedule_schema_v1.json"
       - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_worldcover_availability_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -464,8 +469,12 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Test primary fine-grid mechanics
-        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_primary_fine_grid.py
+      - name: Test primary fine-grid and blocked WorldCover mechanics
+        run: |
+          pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_primary_fine_grid.py \
+            tests/test_worldcover_neighborhood_points.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -494,7 +503,16 @@ jobs:
               --order-csv-gz "/tmp/acsp-primary-fine/orders/${unit}_coarse_evidence_order.csv.gz" \
               --private-out-csv-gz "/tmp/acsp-primary-fine/grids/${unit}_primary_2km_100m.csv.gz" \
               --public-safe-summary-json "/tmp/acsp-primary-fine/summaries/${unit}.json"
-            rm "/tmp/acsp-primary-fine/grids/${unit}_primary_2km_100m.csv.gz"
+          done
+      - name: Audit fine WorldCover availability for declared units
+        run: |
+          mkdir -p /tmp/acsp-primary-fine/worldcover-audited /tmp/acsp-primary-fine/worldcover-summaries
+          for unit in CIR02 CIR12 CIR13; do
+            python research/audit_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py \
+              --unit-id "$unit" \
+              --fine-grid-csv-gz "/tmp/acsp-primary-fine/grids/${unit}_primary_2km_100m.csv.gz" \
+              --private-out-csv-gz "/tmp/acsp-primary-fine/worldcover-audited/${unit}_worldcover_audited.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-primary-fine/worldcover-summaries/${unit}.json"
           done
       - name: Guard and assemble coordinate-free receipt
         run: |
@@ -541,9 +559,52 @@ jobs:
           Path('/tmp/acsp-primary-fine/materialization_receipt.json').write_text(
               json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
           )
+
+          wc_units = {}
+          for unit in ('CIR02','CIR12','CIR13'):
+              w = json.loads((Path('/tmp/acsp-primary-fine/worldcover-summaries') / f'{unit}.json').read_text())
+              assert w['status'] == 'FINE_WORLDCOVER_AVAILABILITY_AUDITED_PRE_OUTCOME'
+              assert w['candidate_rows'] == expected[unit]
+              assert w['candidate_denominator_preserved'] is True
+              assert w['source_indeterminate_recoded_as_absence'] is False
+              assert w['source_indeterminate_recoded_as_zero_support'] is False
+              assert w['field_outcomes_opened'] is False
+              assert w['structural_graph_computed'] is False
+              assert w['exact_coordinates_public'] is False
+              assert w['source_complete_rows'] + w['neighbourhood_unavailable_rows'] + w['provider_failure_rows'] == expected[unit]
+              wc_units[unit] = {
+                  'candidate_rows': w['candidate_rows'],
+                  'source_complete_rows': w['source_complete_rows'],
+                  'source_complete_fraction': w['source_complete_fraction'],
+                  'neighbourhood_unavailable_rows': w['neighbourhood_unavailable_rows'],
+                  'provider_failure_rows': w['provider_failure_rows'],
+                  'provider_failure_tile_ids': w['provider_failure_tile_ids'],
+                  'source_complete_feature_digest_sha256': w['source_complete_feature_digest_sha256'],
+                  'private_audited_frame_sha256': w['private_audited_frame_sha256'],
+              }
+          wc_receipt = {
+              'schema_version':'cirsium-fresh-sentinel-v2-fine-worldcover-availability-receipt-v1',
+              'status':'FINE_WORLDCOVER_AVAILABILITY_AUDIT_COMPLETE_PRE_OUTCOME',
+              'required_units':['CIR02','CIR12','CIR13'],
+              'excluded_unit':{'CIR06':'no frozen WorldCover dependency'},
+              'units':wc_units,
+              'candidate_denominator_preserved':True,
+              'source_indeterminate_recoded_as_absence':False,
+              'structural_graph_computed':False,
+              'field_outcomes_opened':False,
+          }
+          Path('/tmp/acsp-primary-fine/worldcover_availability_receipt.json').write_text(
+              json.dumps(wc_receipt, ensure_ascii=False, indent=2) + '\n'
+          )
           PY
+      - name: Delete coordinate-bearing private source artifacts
+        run: |
+          rm -f /tmp/acsp-primary-fine/grids/*.csv.gz
+          rm -f /tmp/acsp-primary-fine/worldcover-audited/*.csv.gz
       - uses: actions/upload-artifact@v4
         with:
           name: cirsium-fresh-sentinel-v2-primary-fine-grid-receipt
-          path: /tmp/acsp-primary-fine/materialization_receipt.json
+          path: |
+            /tmp/acsp-primary-fine/materialization_receipt.json
+            /tmp/acsp-primary-fine/worldcover_availability_receipt.json
           if-no-files-found: error

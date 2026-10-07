@@ -17,6 +17,7 @@ import pandas as pd
 import rasterio
 from pyproj import Transformer
 from rasterio.windows import Window
+from rasterio.errors import RasterioIOError
 
 from .worldcover import (
     WORLD_COVER_2021_CLASS_NAMES,
@@ -191,3 +192,312 @@ def attach_worldcover_neighbourhood_fractions(
         feature_digest_sha256=_feature_digest(retained),
     )
     return retained, audit
+
+
+def _integral_window_counts(
+    binary: np.ndarray,
+    r0: np.ndarray,
+    c0: np.ndarray,
+    r1: np.ndarray,
+    c1: np.ndarray,
+) -> np.ndarray:
+    """Return rectangular sums using a uint32 summed-area table."""
+    values = np.asarray(binary, dtype=np.uint32)
+    prefix = np.zeros((values.shape[0] + 1, values.shape[1] + 1), dtype=np.uint32)
+    prefix[1:, 1:] = values.cumsum(axis=0, dtype=np.uint32).cumsum(axis=1, dtype=np.uint32)
+    return (
+        prefix[r1, c1].astype(np.int64)
+        - prefix[r0, c1].astype(np.int64)
+        - prefix[r1, c0].astype(np.int64)
+        + prefix[r0, c0].astype(np.int64)
+    )
+
+
+def attach_worldcover_neighbourhood_fractions_blocked(
+    candidate_frame: pd.DataFrame,
+    *,
+    radius_m: float = 250.0,
+    block_pixels: int = 2048,
+    dataset_opener: Callable[[str], Any] | None = None,
+) -> tuple[pd.DataFrame, WorldCoverNeighbourhoodPointAudit]:
+    """Attach the frozen neighbourhood fractions with block-reused raster reads.
+
+    This is an exact computational acceleration of
+    :func:`attach_worldcover_neighbourhood_fractions`. Candidate windows retain
+    the same per-point pixel radius, valid-class denominator, official 3-degree
+    source-tile boundary rule, feature formulas and output digest. The only
+    difference is that nearby candidate windows share one raster read and use
+    summed-area tables for class counts.
+    """
+    if candidate_frame is None or candidate_frame.empty:
+        raise ValueError("candidate_frame cannot be empty")
+    if float(radius_m) <= 0:
+        raise ValueError("radius_m must be positive")
+    if int(block_pixels) < 1:
+        raise ValueError("block_pixels must be positive")
+    required = {"candidate_cell_id", "latitude", "longitude"}
+    missing = sorted(required.difference(candidate_frame.columns))
+    if missing:
+        raise ValueError(f"candidate frame missing required columns: {missing}")
+
+    work = candidate_frame.copy().reset_index(drop=True)
+    if work["candidate_cell_id"].astype(str).duplicated().any():
+        raise ValueError("candidate_cell_id must be unique")
+    lat = pd.to_numeric(work["latitude"], errors="coerce").to_numpy(float)
+    lon = pd.to_numeric(work["longitude"], errors="coerce").to_numpy(float)
+    if not np.isfinite(lat).all() or not np.isfinite(lon).all():
+        raise ValueError("candidate coordinates must be complete and finite")
+
+    tile_ids = np.asarray([worldcover_tile_id(a, b) for a, b in zip(lat, lon)], dtype=object)
+    work["worldcover_neighbourhood_tile_id"] = tile_ids
+    source_tile_ids = tuple(sorted(set(str(value) for value in tile_ids)))
+    source_urls = tuple(worldcover_2021_map_url(tile_id) for tile_id in source_tile_ids)
+    url_by_tile = dict(zip(source_tile_ids, source_urls))
+    opener = dataset_opener or rasterio.open
+
+    features = np.full((len(work), len(FEATURE_COLUMNS)), np.nan, dtype=float)
+    tile_boundary_removed = 0
+    invalid_removed = 0
+    valid_codes = np.asarray(sorted(int(code) for code in WORLD_COVER_2021_CLASS_NAMES), dtype=np.int16)
+    output_code_to_col = {10: 0, 30: 1, 60: 2, 80: 3, 90: 4}
+
+    for tile_id in source_tile_ids:
+        positions = np.flatnonzero(tile_ids == tile_id)
+        with opener(url_by_tile[tile_id]) as src:
+            if src.crs is None:
+                raise ValueError(f"WorldCover source has no CRS: {tile_id}")
+            transformer = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
+            xs, ys = transformer.transform(lon[positions], lat[positions])
+            rows, cols = rasterio.transform.rowcol(src.transform, xs, ys)
+            rows = np.asarray(rows, dtype=np.int64)
+            cols = np.asarray(cols, dtype=np.int64)
+
+            half = np.asarray(
+                [
+                    max(
+                        1,
+                        int(
+                            math.ceil(
+                                float(radius_m)
+                                / max(1e-6, max(_pixel_size_m(src, float(lat[target]))))
+                            )
+                        ),
+                    )
+                    for target in positions
+                ],
+                dtype=np.int64,
+            )
+            r0 = rows - half
+            r1 = rows + half + 1
+            c0 = cols - half
+            c1 = cols + half + 1
+            boundary = (r0 < 0) | (c0 < 0) | (r1 > int(src.height)) | (c1 > int(src.width))
+            tile_boundary_removed += int(boundary.sum())
+            valid_local = np.flatnonzero(~boundary)
+            if valid_local.size == 0:
+                continue
+
+            block_keys = np.column_stack(
+                (
+                    rows[valid_local] // int(block_pixels),
+                    cols[valid_local] // int(block_pixels),
+                )
+            )
+            unique_keys = sorted(set(map(tuple, block_keys.tolist())))
+            for key in unique_keys:
+                choose = valid_local[
+                    (block_keys[:, 0] == key[0]) & (block_keys[:, 1] == key[1])
+                ]
+                crop_r0 = int(r0[choose].min())
+                crop_r1 = int(r1[choose].max())
+                crop_c0 = int(c0[choose].min())
+                crop_c1 = int(c1[choose].max())
+                array = np.ma.asarray(
+                    src.read(
+                        1,
+                        window=Window(
+                            crop_c0,
+                            crop_r0,
+                            crop_c1 - crop_c0,
+                            crop_r1 - crop_r0,
+                        ),
+                        masked=True,
+                    )
+                )
+                data = np.asarray(array.data, dtype=np.int16)
+                mask = np.ma.getmaskarray(array)
+                valid_pixels = (~mask) & np.isin(data, valid_codes)
+
+                local_r0 = (r0[choose] - crop_r0).astype(np.int64)
+                local_r1 = (r1[choose] - crop_r0).astype(np.int64)
+                local_c0 = (c0[choose] - crop_c0).astype(np.int64)
+                local_c1 = (c1[choose] - crop_c0).astype(np.int64)
+                denominator = _integral_window_counts(
+                    valid_pixels, local_r0, local_c0, local_r1, local_c1
+                )
+                usable = denominator > 0
+                invalid_removed += int((~usable).sum())
+                if not np.any(usable):
+                    continue
+
+                block_features = np.zeros((len(choose), len(FEATURE_COLUMNS)), dtype=float)
+                sum_sq = np.zeros(len(choose), dtype=float)
+                for code in valid_codes.tolist():
+                    counts = _integral_window_counts(
+                        valid_pixels & (data == int(code)),
+                        local_r0,
+                        local_c0,
+                        local_r1,
+                        local_c1,
+                    )
+                    frac = np.zeros(len(choose), dtype=float)
+                    frac[usable] = counts[usable].astype(float) / denominator[usable].astype(float)
+                    sum_sq[usable] += np.square(frac[usable])
+                    if int(code) in output_code_to_col:
+                        block_features[:, output_code_to_col[int(code)]] = frac
+                block_features[:, 5] = np.clip(1.0 - sum_sq, 0.0, 1.0)
+                targets = positions[choose[usable]]
+                features[targets, :] = block_features[usable, :]
+
+    complete = np.isfinite(features).all(axis=1)
+    retained = work.loc[complete].copy().reset_index(drop=True)
+    retained_features = features[complete]
+    for index, column in enumerate(FEATURE_COLUMNS):
+        retained[column] = retained_features[:, index]
+    if retained.empty:
+        raise ValueError("WORLDCOVER_NEIGHBOURHOOD_PROVIDER_FAILURE:no complete candidate neighbourhoods")
+
+    audit = WorldCoverNeighbourhoodPointAudit(
+        provider_id="ESA_WORLDCOVER",
+        release_id="2021_v200",
+        neighbourhood_radius_m=float(radius_m),
+        candidate_rows_input=int(len(work)),
+        complete_neighbourhood_rows=int(len(retained)),
+        tile_boundary_rows_removed=int(tile_boundary_removed),
+        invalid_or_nodata_rows_removed=int(invalid_removed),
+        source_tile_ids=source_tile_ids,
+        source_urls=source_urls,
+        feature_digest_sha256=_feature_digest(retained),
+    )
+    return retained, audit
+
+
+@dataclass(frozen=True)
+class WorldCoverNeighbourhoodAvailabilityAudit:
+    provider_id: str
+    release_id: str
+    neighbourhood_radius_m: float
+    candidate_rows_input: int
+    source_complete_rows: int
+    neighbourhood_unavailable_rows: int
+    provider_failure_rows: int
+    provider_failure_tile_ids: tuple[str, ...]
+    source_tile_ids: tuple[str, ...]
+    source_complete_feature_digest_sha256: str
+    field_outcomes_used: bool = False
+    human_access_used: bool = False
+    biological_absence_inferred_from_source_failure: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def audit_worldcover_neighbourhood_availability_blocked(
+    candidate_frame: pd.DataFrame,
+    *,
+    radius_m: float = 250.0,
+    block_pixels: int = 2048,
+    dataset_opener: Callable[[str], Any] | None = None,
+) -> tuple[pd.DataFrame, WorldCoverNeighbourhoodAvailabilityAudit]:
+    """Retain every candidate while auditing frozen WorldCover source availability.
+
+    Successful candidates receive the same feature values as the exact blocked
+    sampler. Candidates whose 250-m window is unavailable inside an otherwise
+    readable official tile are retained as an indeterminate neighbourhood state.
+    If the official COG itself cannot be opened, every candidate assigned to that
+    COG is retained as an indeterminate provider-failure state. Neither state is
+    biological absence.
+    """
+    if candidate_frame is None or candidate_frame.empty:
+        raise ValueError("candidate_frame cannot be empty")
+    required = {"candidate_cell_id", "latitude", "longitude"}
+    missing = sorted(required.difference(candidate_frame.columns))
+    if missing:
+        raise ValueError(f"candidate frame missing required columns: {missing}")
+
+    work = candidate_frame.copy().reset_index(drop=True)
+    if work["candidate_cell_id"].astype(str).duplicated().any():
+        raise ValueError("candidate_cell_id must be unique")
+    lat = pd.to_numeric(work["latitude"], errors="coerce").to_numpy(float)
+    lon = pd.to_numeric(work["longitude"], errors="coerce").to_numpy(float)
+    if not np.isfinite(lat).all() or not np.isfinite(lon).all():
+        raise ValueError("candidate coordinates must be complete and finite")
+
+    tile_ids = np.asarray([worldcover_tile_id(a, b) for a, b in zip(lat, lon)], dtype=object)
+    work["worldcover_neighbourhood_tile_id"] = tile_ids
+    work["worldcover_source_state"] = "INDETERMINATE_NEIGHBOURHOOD_UNAVAILABLE"
+    for column in FEATURE_COLUMNS:
+        work[column] = np.nan
+
+    source_tile_ids = tuple(sorted(set(str(value) for value in tile_ids)))
+    opener = dataset_opener or rasterio.open
+    provider_failure_tiles: list[str] = []
+
+    for tile_id in source_tile_ids:
+        positions = np.flatnonzero(tile_ids == tile_id)
+        subset = work.iloc[positions][list(candidate_frame.columns)].copy().reset_index(drop=True)
+
+        def tile_opener(_url: str):
+            return opener(worldcover_2021_map_url(tile_id))
+
+        try:
+            retained, _ = attach_worldcover_neighbourhood_fractions_blocked(
+                subset,
+                radius_m=float(radius_m),
+                block_pixels=int(block_pixels),
+                dataset_opener=tile_opener,
+            )
+        except RasterioIOError:
+            provider_failure_tiles.append(str(tile_id))
+            work.loc[positions, "worldcover_source_state"] = "INDETERMINATE_PROVIDER_FAILURE"
+            continue
+
+        retained_ids = set(retained["candidate_cell_id"].astype(str))
+        complete_mask = (
+            work.iloc[positions]["candidate_cell_id"].astype(str).isin(retained_ids).to_numpy()
+        )
+        complete_positions = positions[complete_mask]
+        if len(complete_positions):
+            feature_by_id = retained.set_index(retained["candidate_cell_id"].astype(str))
+            ids = work.loc[complete_positions, "candidate_cell_id"].astype(str)
+            for column in FEATURE_COLUMNS:
+                work.loc[complete_positions, column] = feature_by_id.loc[ids, column].to_numpy(float)
+            work.loc[complete_positions, "worldcover_source_state"] = "SOURCE_COMPLETE"
+
+    source_complete = int(work["worldcover_source_state"].eq("SOURCE_COMPLETE").sum())
+    provider_failure = int(
+        work["worldcover_source_state"].eq("INDETERMINATE_PROVIDER_FAILURE").sum()
+    )
+    neighbourhood_unavailable = int(
+        work["worldcover_source_state"].eq("INDETERMINATE_NEIGHBOURHOOD_UNAVAILABLE").sum()
+    )
+    if source_complete + provider_failure + neighbourhood_unavailable != len(work):
+        raise AssertionError("WorldCover availability states do not preserve the candidate denominator")
+
+    complete_frame = work.loc[
+        work["worldcover_source_state"].eq("SOURCE_COMPLETE")
+    ].copy().reset_index(drop=True)
+    complete_digest = _feature_digest(complete_frame) if not complete_frame.empty else hashlib.sha256(b"").hexdigest()
+    audit = WorldCoverNeighbourhoodAvailabilityAudit(
+        provider_id="ESA_WORLDCOVER",
+        release_id="2021_v200",
+        neighbourhood_radius_m=float(radius_m),
+        candidate_rows_input=int(len(work)),
+        source_complete_rows=source_complete,
+        neighbourhood_unavailable_rows=neighbourhood_unavailable,
+        provider_failure_rows=provider_failure,
+        provider_failure_tile_ids=tuple(sorted(provider_failure_tiles)),
+        source_tile_ids=source_tile_ids,
+        source_complete_feature_digest_sha256=complete_digest,
+    )
+    return work, audit
