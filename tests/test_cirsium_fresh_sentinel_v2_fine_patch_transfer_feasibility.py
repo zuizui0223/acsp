@@ -73,9 +73,9 @@ def test_fine_transfer_uses_exact_transferred_constants_and_no_new_stopping() ->
     assert len(patches) == summary["patch_count"]
 
 
-def test_retained_count_is_ceiling_of_two_point_five_percent() -> None:
+def test_retained_count_uses_validated_rank_fraction_threshold() -> None:
     _, summary = mod.build_fine_patch_transfer(_order(201), unit_id="CIR06")
-    assert summary["retained_support_cell_count"] == 6
+    assert summary["retained_support_cell_count"] == 5
 
 
 def test_accelerated_complete_link_matches_reference_at_one_km_boundary() -> None:
