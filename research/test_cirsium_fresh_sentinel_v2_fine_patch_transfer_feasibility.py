@@ -249,15 +249,19 @@ def build_fine_patch_transfer(
     rank = pd.to_numeric(structural_order["structural_rank"], errors="raise").astype(int)
     if sorted(rank.tolist()) != list(range(1, len(structural_order) + 1)):
         raise ValueError("fine structural rank must be a complete 1..N order")
-    retain_n = int(
-        math.ceil(VALIDATED_ROBUST_SUPPORT_FRACTION * len(structural_order))
-    )
+    normalized_rank = rank.astype(float) / float(len(structural_order))
+    keep = normalized_rank <= float(VALIDATED_ROBUST_SUPPORT_FRACTION)
     retained = (
-        structural_order.loc[rank <= retain_n]
+        structural_order.loc[keep]
         .copy()
         .sort_values("structural_rank", kind="mergesort")
         .reset_index(drop=True)
     )
+    retain_n = int(len(retained))
+    if retain_n < 1:
+        raise ValueError(
+            "validated 0.025 rank-fraction tier is empty for this structural order"
+        )
     selected = pd.DataFrame(
         {
             "site_id": retained["candidate_cell_id"].astype(str),
