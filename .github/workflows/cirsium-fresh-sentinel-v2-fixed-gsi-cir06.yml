@@ -1,4 +1,4 @@
-name: Fresh-SENTINEL v2 fixed GSI terrain CIR06
+name: Fresh-SENTINEL v2 fixed GSI terrain all units
 
 on:
   pull_request:
@@ -6,6 +6,12 @@ on:
       - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
       - "tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_structural_order_v1.json"
+      - "research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_feasibility_v1.json"
+      - "research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
 
@@ -17,9 +23,22 @@ env:
   PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
 
 jobs:
-  cir06:
+  terrain:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - unit: CIR02
+            expected_cells: 464633
+          - unit: CIR06
+            expected_cells: 847239
+          - unit: CIR12
+            expected_cells: 715103
+          - unit: CIR13
+            expected_cells: 715103
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,8 +48,12 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Test fixed GSI policy
-        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py
+      - name: Test fixed source and structural-order policies
+        run: |
+          pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -41,26 +64,70 @@ jobs:
       - name: Rebuild frozen coarse orders
         run: |
           python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-fixed-gsi/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-fixed-gsi/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-fixed-gsi/orders
-      - name: Materialize CIR06 primary fine grid
+      - name: Materialize primary fine grid
         run: |
           mkdir -p /tmp/acsp-fixed-gsi/private /tmp/acsp-fixed-gsi/public
-          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py             --unit-id CIR06             --order-csv-gz /tmp/acsp-fixed-gsi/orders/CIR06_coarse_evidence_order.csv.gz             --private-out-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_primary_2km_100m.csv.gz             --public-safe-summary-json /tmp/acsp-fixed-gsi/public/CIR06_grid.json
-      - name: Attach fixed-policy GSI terrain to full CIR06 grid
+          unit="${{ matrix.unit }}"
+          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py             --unit-id "$unit"             --order-csv-gz "/tmp/acsp-fixed-gsi/orders/${unit}_coarse_evidence_order.csv.gz"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_grid.json"
+      - name: Attach fixed-policy GSI terrain
         run: |
-          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id CIR06             --fine-grid-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_primary_2km_100m.csv.gz             --cache-dir /tmp/acsp-fixed-gsi/gsi-cache             --private-out-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_gsi_terrain.csv.gz             --public-safe-summary-json /tmp/acsp-fixed-gsi/public/CIR06_gsi.json
+          unit="${{ matrix.unit }}"
+          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json"
+      - name: Audit WorldCover on declared units
+        run: |
+          unit="${{ matrix.unit }}"
+          if [ "$unit" != "CIR06" ]; then
+            python research/audit_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py \
+              --unit-id "$unit" \
+              --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz" \
+              --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_worldcover.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_worldcover.json"
+          fi
+      - name: Build full frozen fine structural order
+        run: |
+          unit="${{ matrix.unit }}"
+          mkdir -p /tmp/acsp-fixed-gsi/orders-fine
+          if [ "$unit" = "CIR06" ]; then
+            python research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+              --unit-id "$unit" \
+              --gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+              --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
+          else
+            python research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+              --unit-id "$unit" \
+              --gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+              --worldcover-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_worldcover.csv.gz" \
+              --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
+          fi
+      - name: Test transferred fine patch representation
+        run: |
+          unit="${{ matrix.unit }}"
+          mkdir -p /tmp/acsp-fixed-gsi/patches
+          python research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
+            --unit-id "$unit" \
+            --structural-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+            --private-patches-csv-gz "/tmp/acsp-fixed-gsi/patches/${unit}_fine_patch_transfer.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_patch_transfer.json"
       - name: Guard denominator and public-safe source receipt
+        env:
+          UNIT: ${{ matrix.unit }}
+          EXPECTED: ${{ matrix.expected_cells }}
         run: |
           python - <<'PY'
-          import json
+          import json, os
           from pathlib import Path
-          grid=json.loads(Path('/tmp/acsp-fixed-gsi/public/CIR06_grid.json').read_text())
-          gsi=json.loads(Path('/tmp/acsp-fixed-gsi/public/CIR06_gsi.json').read_text())
-          assert grid['fine_grid_cell_count'] == 847239
+          unit=os.environ['UNIT']
+          expected=int(os.environ['EXPECTED'])
+          grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
+          gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
+          assert grid['fine_grid_cell_count'] == expected
           assert gsi['status'] == 'FIXED_GSI_TERRAIN_ATTACHED_PRE_OUTCOME'
-          assert gsi['cohort_unit_id'] == 'CIR06'
-          assert gsi['candidate_rows'] == 847239
+          assert gsi['cohort_unit_id'] == unit
+          assert gsi['candidate_rows'] == expected
           assert gsi['candidate_denominator_preserved'] is True
-          assert gsi['source_complete_rows'] + gsi['provider_unavailable_rows'] + gsi['terrain_vector_unavailable_rows'] == 847239
+          assert gsi['source_complete_rows'] + gsi['provider_unavailable_rows'] + gsi['terrain_vector_unavailable_rows'] == expected
           assert gsi['physical_chunk_width_m'] == 40000
           assert gsi['chunk_grid_cells'] == 400
           assert gsi['chunk_phase_offset_cells'] == [0,0]
@@ -71,9 +138,41 @@ jobs:
           assert gsi['structural_graph_computed'] is False
           assert gsi['field_outcomes_opened'] is False
           assert gsi['exact_coordinates_public'] is False
+          structural=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_structural.json').read_text())
+          patch=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_patch_transfer.json').read_text())
+          assert structural['status']=='FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME'
+          assert structural['cohort_unit_id']==unit
+          assert structural['candidate_rows']==expected
+          assert structural['structural_order_rows']==structural['source_complete_rows']
+          assert structural['source_complete_rows']+structural['source_indeterminate_rows']==expected
+          assert structural['source_indeterminate_ranked'] is False
+          assert structural['source_indeterminate_recoded_as_absence'] is False
+          assert structural['top_k_applied'] is False
+          assert structural['support_threshold_applied'] is False
+          assert structural['patch_count_applied'] is False
+          assert structural['survey_budget_applied'] is False
+          assert structural['support_audit']['composition_rule']=='ROW_MIN_CONJUNCTIVE_SUPPORT'
+          assert structural['graph_audit']['graph_type']=='REGULAR_GRID_MOORE_8_NEIGHBOUR'
+          assert structural['graph_audit']['neighbourhood_radius_cells']==1
+          assert patch['status']=='FINE_PATCH_TRANSFER_REPRESENTATION_FEASIBILITY_COMPLETE'
+          assert patch['cohort_unit_id']==unit
+          assert patch['source_complete_structural_order_rows']==structural['structural_order_rows']
+          assert patch['support_fraction']==0.025
+          assert patch['patch_merge_distance_m']==1000.0
+          assert patch['retained_support_cell_count']>0
+          assert patch['patch_count']>0
+          assert patch['source_indeterminate_included'] is False
+          assert patch['source_indeterminate_ranked'] is False
+          assert patch['field_outcomes_opened'] is False
+          assert patch['recovery_used'] is False
+          assert patch['transfer_is_validated_selector'] is False
+          assert patch['top_k_added_beyond_transferred_fraction'] is False
+          assert patch['support_threshold_refit'] is False
+          assert patch['target_patch_count_used'] is False
           receipt={
-            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-cir06-receipt-v1',
-            'status':'CIR06_FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
+            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v2',
+            'status':'FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
+            'cohort_unit_id':unit,
             'grid':{
               'candidate_rows':grid['fine_grid_cell_count'],
               'private_grid_sha256':grid['private_grid_sha256'],
@@ -88,19 +187,42 @@ jobs:
               'terrain_feature_digest_sha256':gsi['terrain_feature_digest_sha256'],
               'private_gsi_frame_sha256':gsi['private_gsi_frame_sha256'],
             },
+            'structural':{
+              'feature_family':structural['feature_family'],
+              'source_complete_rows':structural['source_complete_rows'],
+              'source_indeterminate_rows':structural['source_indeterminate_rows'],
+              'structural_order_rows':structural['structural_order_rows'],
+              'source_state_digest_sha256':structural['source_state_digest_sha256'],
+              'private_structural_order_sha256':structural['private_structural_order_sha256']
+            },
+            'fine_patch_transfer':{
+              'retained_support_cell_count':patch['retained_support_cell_count'],
+              'patch_count':patch['patch_count'],
+              'compression_ratio_patch_per_retained_cell':patch['compression_ratio_patch_per_retained_cell'],
+              'singleton_patch_count':patch['singleton_patch_count'],
+              'singleton_patch_fraction':patch['singleton_patch_fraction'],
+              'median_patch_member_count':patch['median_patch_member_count'],
+              'maximum_patch_member_count':patch['maximum_patch_member_count'],
+              'private_patch_sha256':patch['private_patch_sha256'],
+              'transfer_is_validated_selector':False
+            },
             'coordinate_bearing_artifacts_uploaded':False,
-            'structural_graph_computed':False,
+            'structural_graph_computed':True,
+            'fine_structural_full_order_computed':True,
+            'top_k_applied':False,
             'field_outcomes_opened':False,
           }
-          Path('/tmp/acsp-fixed-gsi/CIR06_receipt.json').write_text(
+          Path(f'/tmp/acsp-fixed-gsi/{unit}_receipt.json').write_text(
             json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
           )
           PY
       - name: Delete coordinate-bearing private artifacts
         run: |
           rm -f /tmp/acsp-fixed-gsi/private/*.csv.gz
+          rm -f /tmp/acsp-fixed-gsi/orders-fine/*.csv.gz
+          rm -f /tmp/acsp-fixed-gsi/patches/*.csv.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: cirsium-fresh-sentinel-v2-fixed-gsi-cir06-receipt
-          path: /tmp/acsp-fixed-gsi/CIR06_receipt.json
+          name: cirsium-fresh-sentinel-v2-fixed-gsi-${{ matrix.unit }}-receipt
+          path: /tmp/acsp-fixed-gsi/${{ matrix.unit }}_receipt.json
           if-no-files-found: error
