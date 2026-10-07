@@ -6,6 +6,9 @@ on:
       - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
       - "tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_structural_order_v1.json"
+      - "research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
 
@@ -42,8 +45,11 @@ jobs:
         run: |
           python -m pip install -e .
           python -m pip install pytest
-      - name: Test fixed GSI policy
-        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py
+      - name: Test fixed source and structural-order policies
+        run: |
+          pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -63,6 +69,34 @@ jobs:
         run: |
           unit="${{ matrix.unit }}"
           python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json"
+      - name: Audit WorldCover on declared units
+        run: |
+          unit="${{ matrix.unit }}"
+          if [ "$unit" != "CIR06" ]; then
+            python research/audit_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py \
+              --unit-id "$unit" \
+              --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz" \
+              --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_worldcover.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_worldcover.json"
+          fi
+      - name: Build full frozen fine structural order
+        run: |
+          unit="${{ matrix.unit }}"
+          mkdir -p /tmp/acsp-fixed-gsi/orders-fine
+          if [ "$unit" = "CIR06" ]; then
+            python research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+              --unit-id "$unit" \
+              --gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+              --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
+          else
+            python research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+              --unit-id "$unit" \
+              --gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+              --worldcover-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_worldcover.csv.gz" \
+              --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
+          fi
       - name: Guard denominator and public-safe source receipt
         env:
           UNIT: ${{ matrix.unit }}
@@ -91,8 +125,23 @@ jobs:
           assert gsi['structural_graph_computed'] is False
           assert gsi['field_outcomes_opened'] is False
           assert gsi['exact_coordinates_public'] is False
+          structural=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_structural.json').read_text())
+          assert structural['status']=='FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME'
+          assert structural['cohort_unit_id']==unit
+          assert structural['candidate_rows']==expected
+          assert structural['structural_order_rows']==structural['source_complete_rows']
+          assert structural['source_complete_rows']+structural['source_indeterminate_rows']==expected
+          assert structural['source_indeterminate_ranked'] is False
+          assert structural['source_indeterminate_recoded_as_absence'] is False
+          assert structural['top_k_applied'] is False
+          assert structural['support_threshold_applied'] is False
+          assert structural['patch_count_applied'] is False
+          assert structural['survey_budget_applied'] is False
+          assert structural['support_audit']['composition_rule']=='ROW_MIN_CONJUNCTIVE_SUPPORT'
+          assert structural['graph_audit']['graph_type']=='REGULAR_GRID_MOORE_8_NEIGHBOUR'
+          assert structural['graph_audit']['neighbourhood_radius_cells']==1
           receipt={
-            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v1',
+            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v2',
             'status':'FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
             'cohort_unit_id':unit,
             'grid':{
@@ -108,6 +157,14 @@ jobs:
               'attributions':gsi['attributions'],
               'terrain_feature_digest_sha256':gsi['terrain_feature_digest_sha256'],
               'private_gsi_frame_sha256':gsi['private_gsi_frame_sha256'],
+            },
+            'structural':{
+              'feature_family':structural['feature_family'],
+              'source_complete_rows':structural['source_complete_rows'],
+              'source_indeterminate_rows':structural['source_indeterminate_rows'],
+              'structural_order_rows':structural['structural_order_rows'],
+              'source_state_digest_sha256':structural['source_state_digest_sha256'],
+              'private_structural_order_sha256':structural['private_structural_order_sha256']
             },
             'coordinate_bearing_artifacts_uploaded':False,
             'structural_graph_computed':False,
