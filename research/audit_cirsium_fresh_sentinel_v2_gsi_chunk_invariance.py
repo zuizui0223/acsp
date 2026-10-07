@@ -171,7 +171,26 @@ def attach_gsi_for_phase(
             unavailable["gsi_attribution"] = ""
             pieces.append(unavailable)
             continue
-        sampled = _sample_terrain(component, Path(dem_path))
+        try:
+            sampled = _sample_terrain(component, Path(dem_path))
+        except ValueError as exc:
+            if "no annular candidate cell has complete terrain support" not in str(exc):
+                raise
+            audits.append(
+                {
+                    "chunk_index": int(index),
+                    "candidate_rows_input": int(len(component)),
+                    "status": "INDETERMINATE_TERRAIN_VECTOR_UNAVAILABLE",
+                    "gsi_attribution": str(attribution),
+                }
+            )
+            unavailable = component.copy()
+            for column in TERRAIN_COLUMNS:
+                unavailable[column] = np.nan
+            unavailable["gsi_source_state"] = "INDETERMINATE_TERRAIN_VECTOR_UNAVAILABLE"
+            unavailable["gsi_attribution"] = str(attribution)
+            pieces.append(unavailable)
+            continue
         complete_ids = set(sampled["candidate_cell_id"].astype(str))
         out = component.copy()
         out["gsi_source_state"] = np.where(
