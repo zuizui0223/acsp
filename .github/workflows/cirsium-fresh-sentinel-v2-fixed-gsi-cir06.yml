@@ -139,6 +139,7 @@ jobs:
           assert gsi['field_outcomes_opened'] is False
           assert gsi['exact_coordinates_public'] is False
           structural=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_structural.json').read_text())
+          patch=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_patch_transfer.json').read_text())
           assert structural['status']=='FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME'
           assert structural['cohort_unit_id']==unit
           assert structural['candidate_rows']==expected
@@ -153,6 +154,21 @@ jobs:
           assert structural['support_audit']['composition_rule']=='ROW_MIN_CONJUNCTIVE_SUPPORT'
           assert structural['graph_audit']['graph_type']=='REGULAR_GRID_MOORE_8_NEIGHBOUR'
           assert structural['graph_audit']['neighbourhood_radius_cells']==1
+          assert patch['status']=='FINE_PATCH_TRANSFER_REPRESENTATION_FEASIBILITY_COMPLETE'
+          assert patch['cohort_unit_id']==unit
+          assert patch['source_complete_structural_order_rows']==structural['structural_order_rows']
+          assert patch['support_fraction']==0.025
+          assert patch['patch_merge_distance_m']==1000.0
+          assert patch['retained_support_cell_count']>0
+          assert patch['patch_count']>0
+          assert patch['source_indeterminate_included'] is False
+          assert patch['source_indeterminate_ranked'] is False
+          assert patch['field_outcomes_opened'] is False
+          assert patch['recovery_used'] is False
+          assert patch['transfer_is_validated_selector'] is False
+          assert patch['top_k_added_beyond_transferred_fraction'] is False
+          assert patch['support_threshold_refit'] is False
+          assert patch['target_patch_count_used'] is False
           receipt={
             'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v2',
             'status':'FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
@@ -179,6 +195,17 @@ jobs:
               'source_state_digest_sha256':structural['source_state_digest_sha256'],
               'private_structural_order_sha256':structural['private_structural_order_sha256']
             },
+            'fine_patch_transfer':{
+              'retained_support_cell_count':patch['retained_support_cell_count'],
+              'patch_count':patch['patch_count'],
+              'compression_ratio_patch_per_retained_cell':patch['compression_ratio_patch_per_retained_cell'],
+              'singleton_patch_count':patch['singleton_patch_count'],
+              'singleton_patch_fraction':patch['singleton_patch_fraction'],
+              'median_patch_member_count':patch['median_patch_member_count'],
+              'maximum_patch_member_count':patch['maximum_patch_member_count'],
+              'private_patch_sha256':patch['private_patch_sha256'],
+              'transfer_is_validated_selector':False
+            },
             'coordinate_bearing_artifacts_uploaded':False,
             'structural_graph_computed':True,
             'fine_structural_full_order_computed':True,
@@ -192,6 +219,8 @@ jobs:
       - name: Delete coordinate-bearing private artifacts
         run: |
           rm -f /tmp/acsp-fixed-gsi/private/*.csv.gz
+          rm -f /tmp/acsp-fixed-gsi/orders-fine/*.csv.gz
+          rm -f /tmp/acsp-fixed-gsi/patches/*.csv.gz
       - uses: actions/upload-artifact@v4
         with:
           name: cirsium-fresh-sentinel-v2-fixed-gsi-${{ matrix.unit }}-receipt
