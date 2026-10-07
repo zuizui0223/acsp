@@ -76,3 +76,17 @@ def test_fine_transfer_uses_exact_transferred_constants_and_no_new_stopping() ->
 def test_retained_count_is_ceiling_of_two_point_five_percent() -> None:
     _, summary = mod.build_fine_patch_transfer(_order(201), unit_id="CIR06")
     assert summary["retained_support_cell_count"] == 6
+
+
+def test_accelerated_complete_link_matches_reference_at_one_km_boundary() -> None:
+    delta_deg = np.degrees(1000.0 / mod.EARTH_RADIUS_M)
+    selected = pd.DataFrame(
+        {
+            "site_id": ["a", "b", "c"],
+            "cohort_unit_id": ["CIR02"] * 3,
+            "ecological_support_rank": [0.01, 0.02, 0.03],
+            "latitude": [35.0, 35.0 + delta_deg, 35.0 + 2.0 * delta_deg],
+            "longitude": [139.0, 139.0, 139.0],
+        }
+    )
+    mod.assert_reference_parity(selected)
