@@ -30,6 +30,7 @@ on:
       - "research/advance_cirsium_fresh_sentinel_pre_outcome_v1.py"
       - "research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py"
       - "research/audit_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py"
+      - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
       - "acsp/discovery/providers/worldcover_neighborhood_points.py"
       - "tests/test_coverage_then_fine_structure_v1.py"
       - "tests/test_coverage_then_fine_structure_fresh_sentinel_v1.py"
@@ -53,6 +54,7 @@ on:
       - "tests/test_cirsium_fresh_sentinel_end_to_end_rehearsal_v1.py"
       - "tests/test_cirsium_fresh_sentinel_v2_primary_fine_grid.py"
       - "tests/test_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
       - "tests/test_worldcover_neighborhood_points.py"
       - "validation/coverage_then_fine_structure_architecture_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv"
@@ -72,6 +74,9 @@ on:
       - "validation/cirsium_aza3_acsp_field_log_template_v1.csv"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_worldcover_availability_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_chunk_invariance_audit_result_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_cir06_result_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -607,4 +612,138 @@ jobs:
           path: |
             /tmp/acsp-primary-fine/materialization_receipt.json
             /tmp/acsp-primary-fine/worldcover_availability_receipt.json
+          if-no-files-found: error
+
+  fixed-gsi-cir06:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test fixed GSI policy
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py
+      - name: Guard fixed phase after non-invariance diagnostic
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          policy=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json').read_text())
+          diag=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_chunk_invariance_audit_result_v1.json').read_text())
+          assert diag['status'] == 'GSI_CHUNK_PHASE_NONINVARIANT_FIXED_POLICY_REQUIRED'
+          assert diag['all_units_invariant'] is False
+          assert diag['relationship_to_fixed_policy']['fixed_phase_offset_cells'] == [0,0]
+          assert diag['relationship_to_fixed_policy']['retune_phase_after_result_allowed'] is False
+          assert policy['chunk_policy']['shared_grid_phase_offset_cells'] == [0,0]
+          assert policy['chunk_policy']['chunk_phase_tunable'] is False
+          assert policy['relationship_to_chunk_invariance_audit']['if_audit_later_shows_noninvariance'].startswith('the fixed phase remains')
+          result=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_cir06_result_v1.json').read_text())
+          assert result['status'] == 'CIR06_FIXED_GSI_TERRAIN_RESULT_FROZEN_PRE_OUTCOME'
+          assert result['cohort_unit_id'] == 'CIR06'
+          assert result['grid']['candidate_rows'] == 847239
+          assert result['gsi']['source_complete_rows'] == 816364
+          assert result['gsi']['provider_unavailable_rows'] == 0
+          assert result['gsi']['terrain_vector_unavailable_rows'] == 30875
+          assert result['gsi']['chunk_count'] == 81
+          assert result['gsi']['chunk_phase_offset_cells'] == [0,0]
+          assert result['gsi']['physical_chunk_width_m'] == 40000
+          assert result['interpretation']['terrain_vector_unavailable_is_biological_absence'] is False
+          assert result['interpretation']['source_indeterminate_rows_remain_retained_unranked'] is True
+          assert result['boundary']['structural_graph_computed'] is False
+          assert result['boundary']['field_outcomes_opened'] is False
+          PY
+      - name: Download exact frozen coarse-source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-fixed-gsi/terrain /tmp/acsp-fixed-gsi/worldcover
+          gh run download 36071510382 \
+            --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-full-coarse-terrain \
+            --dir /tmp/acsp-fixed-gsi/terrain
+          gh run download 36121342866 \
+            --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair \
+            --dir /tmp/acsp-fixed-gsi/worldcover
+      - name: Rebuild frozen coarse orders
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py \
+            --terrain-csv-gz /tmp/acsp-fixed-gsi/terrain/full_terrain.csv.gz \
+            --worldcover-csv-gz /tmp/acsp-fixed-gsi/worldcover/full_worldcover_repair.csv.gz \
+            --out-dir /tmp/acsp-fixed-gsi/orders
+      - name: Materialize CIR06 primary fine grid
+        run: |
+          mkdir -p /tmp/acsp-fixed-gsi/private /tmp/acsp-fixed-gsi/public
+          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py \
+            --unit-id CIR06 \
+            --order-csv-gz /tmp/acsp-fixed-gsi/orders/CIR06_coarse_evidence_order.csv.gz \
+            --private-out-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_primary_2km_100m.csv.gz \
+            --public-safe-summary-json /tmp/acsp-fixed-gsi/public/CIR06_grid.json
+      - name: Attach fixed-policy GSI terrain to full CIR06 grid
+        run: |
+          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            --unit-id CIR06 \
+            --fine-grid-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_primary_2km_100m.csv.gz \
+            --cache-dir /tmp/acsp-fixed-gsi/gsi-cache \
+            --private-out-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_gsi_terrain.csv.gz \
+            --public-safe-summary-json /tmp/acsp-fixed-gsi/public/CIR06_gsi.json
+      - name: Guard denominator and public-safe source receipt
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          grid=json.loads(Path('/tmp/acsp-fixed-gsi/public/CIR06_grid.json').read_text())
+          gsi=json.loads(Path('/tmp/acsp-fixed-gsi/public/CIR06_gsi.json').read_text())
+          assert grid['fine_grid_cell_count'] == 847239
+          assert gsi['status'] == 'FIXED_GSI_TERRAIN_ATTACHED_PRE_OUTCOME'
+          assert gsi['cohort_unit_id'] == 'CIR06'
+          assert gsi['candidate_rows'] == 847239
+          assert gsi['candidate_denominator_preserved'] is True
+          assert gsi['source_complete_rows'] + gsi['provider_unavailable_rows'] + gsi['terrain_vector_unavailable_rows'] == 847239
+          assert gsi['physical_chunk_width_m'] == 40000
+          assert gsi['chunk_grid_cells'] == 400
+          assert gsi['chunk_phase_offset_cells'] == [0,0]
+          assert gsi['chunk_margin_degrees'] == 0.02
+          assert gsi['max_gsi_tiles_per_chunk'] == 900
+          assert gsi['source_indeterminate_recoded_as_absence'] is False
+          assert gsi['source_indeterminate_recoded_as_zero_support'] is False
+          assert gsi['structural_graph_computed'] is False
+          assert gsi['field_outcomes_opened'] is False
+          assert gsi['exact_coordinates_public'] is False
+          receipt={
+            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-cir06-receipt-v1',
+            'status':'CIR06_FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
+            'grid':{
+              'candidate_rows':grid['fine_grid_cell_count'],
+              'private_grid_sha256':grid['private_grid_sha256'],
+            },
+            'gsi':{
+              'source_complete_rows':gsi['source_complete_rows'],
+              'source_complete_fraction':gsi['source_complete_fraction'],
+              'provider_unavailable_rows':gsi['provider_unavailable_rows'],
+              'terrain_vector_unavailable_rows':gsi['terrain_vector_unavailable_rows'],
+              'chunk_count':gsi['chunk_count'],
+              'attributions':gsi['attributions'],
+              'terrain_feature_digest_sha256':gsi['terrain_feature_digest_sha256'],
+              'private_gsi_frame_sha256':gsi['private_gsi_frame_sha256'],
+            },
+            'coordinate_bearing_artifacts_uploaded':False,
+            'structural_graph_computed':False,
+            'field_outcomes_opened':False,
+          }
+          Path('/tmp/acsp-fixed-gsi/CIR06_receipt.json').write_text(
+            json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
+          )
+          PY
+      - name: Delete coordinate-bearing private artifacts
+        run: rm -f /tmp/acsp-fixed-gsi/private/*.csv.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-fixed-gsi-cir06-receipt
+          path: /tmp/acsp-fixed-gsi/CIR06_receipt.json
           if-no-files-found: error
