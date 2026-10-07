@@ -1,4 +1,4 @@
-name: Fresh-SENTINEL v2 fixed GSI terrain CIR06
+name: Fresh-SENTINEL v2 fixed GSI terrain all units
 
 on:
   pull_request:
@@ -17,9 +17,22 @@ env:
   PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
 
 jobs:
-  cir06:
+  terrain:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - unit: CIR02
+            expected_cells: 464633
+          - unit: CIR06
+            expected_cells: 847239
+          - unit: CIR12
+            expected_cells: 715103
+          - unit: CIR13
+            expected_cells: 715103
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,26 +54,33 @@ jobs:
       - name: Rebuild frozen coarse orders
         run: |
           python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-fixed-gsi/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-fixed-gsi/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-fixed-gsi/orders
-      - name: Materialize CIR06 primary fine grid
+      - name: Materialize primary fine grid
         run: |
           mkdir -p /tmp/acsp-fixed-gsi/private /tmp/acsp-fixed-gsi/public
-          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py             --unit-id CIR06             --order-csv-gz /tmp/acsp-fixed-gsi/orders/CIR06_coarse_evidence_order.csv.gz             --private-out-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_primary_2km_100m.csv.gz             --public-safe-summary-json /tmp/acsp-fixed-gsi/public/CIR06_grid.json
-      - name: Attach fixed-policy GSI terrain to full CIR06 grid
+          unit="${{ matrix.unit }}"
+          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py             --unit-id "$unit"             --order-csv-gz "/tmp/acsp-fixed-gsi/orders/${unit}_coarse_evidence_order.csv.gz"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_grid.json"
+      - name: Attach fixed-policy GSI terrain
         run: |
-          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id CIR06             --fine-grid-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_primary_2km_100m.csv.gz             --cache-dir /tmp/acsp-fixed-gsi/gsi-cache             --private-out-csv-gz /tmp/acsp-fixed-gsi/private/CIR06_gsi_terrain.csv.gz             --public-safe-summary-json /tmp/acsp-fixed-gsi/public/CIR06_gsi.json
+          unit="${{ matrix.unit }}"
+          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json"
       - name: Guard denominator and public-safe source receipt
+        env:
+          UNIT: ${{ matrix.unit }}
+          EXPECTED: ${{ matrix.expected_cells }}
         run: |
           python - <<'PY'
-          import json
+          import json, os
           from pathlib import Path
-          grid=json.loads(Path('/tmp/acsp-fixed-gsi/public/CIR06_grid.json').read_text())
-          gsi=json.loads(Path('/tmp/acsp-fixed-gsi/public/CIR06_gsi.json').read_text())
-          assert grid['fine_grid_cell_count'] == 847239
+          unit=os.environ['UNIT']
+          expected=int(os.environ['EXPECTED'])
+          grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
+          gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
+          assert grid['fine_grid_cell_count'] == expected
           assert gsi['status'] == 'FIXED_GSI_TERRAIN_ATTACHED_PRE_OUTCOME'
-          assert gsi['cohort_unit_id'] == 'CIR06'
-          assert gsi['candidate_rows'] == 847239
+          assert gsi['cohort_unit_id'] == unit
+          assert gsi['candidate_rows'] == expected
           assert gsi['candidate_denominator_preserved'] is True
-          assert gsi['source_complete_rows'] + gsi['provider_unavailable_rows'] + gsi['terrain_vector_unavailable_rows'] == 847239
+          assert gsi['source_complete_rows'] + gsi['provider_unavailable_rows'] + gsi['terrain_vector_unavailable_rows'] == expected
           assert gsi['physical_chunk_width_m'] == 40000
           assert gsi['chunk_grid_cells'] == 400
           assert gsi['chunk_phase_offset_cells'] == [0,0]
@@ -72,8 +92,9 @@ jobs:
           assert gsi['field_outcomes_opened'] is False
           assert gsi['exact_coordinates_public'] is False
           receipt={
-            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-cir06-receipt-v1',
-            'status':'CIR06_FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
+            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v1',
+            'status':'FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
+            'cohort_unit_id':unit,
             'grid':{
               'candidate_rows':grid['fine_grid_cell_count'],
               'private_grid_sha256':grid['private_grid_sha256'],
@@ -92,7 +113,7 @@ jobs:
             'structural_graph_computed':False,
             'field_outcomes_opened':False,
           }
-          Path('/tmp/acsp-fixed-gsi/CIR06_receipt.json').write_text(
+          Path(f'/tmp/acsp-fixed-gsi/{unit}_receipt.json').write_text(
             json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
           )
           PY
@@ -101,6 +122,6 @@ jobs:
           rm -f /tmp/acsp-fixed-gsi/private/*.csv.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: cirsium-fresh-sentinel-v2-fixed-gsi-cir06-receipt
-          path: /tmp/acsp-fixed-gsi/CIR06_receipt.json
+          name: cirsium-fresh-sentinel-v2-fixed-gsi-${{ matrix.unit }}-receipt
+          path: /tmp/acsp-fixed-gsi/${{ matrix.unit }}_receipt.json
           if-no-files-found: error
