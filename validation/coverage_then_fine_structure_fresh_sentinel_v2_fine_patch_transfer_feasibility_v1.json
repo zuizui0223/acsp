@@ -1,0 +1,58 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fine-patch-transfer-feasibility-v1",
+  "status": "FROZEN_BEFORE_FINE_PATCH_TRANSFER_FEASIBILITY",
+  "scientific_role": "representation feasibility only; not selector validation or field allocation",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "input": {
+    "source": "private full fine structural order from the frozen source-complete chain",
+    "required_status": "FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME",
+    "source_indeterminate_cells_included": false,
+    "source_indeterminate_cells_retained_outside_test": true
+  },
+  "transferred_constants": {
+    "source": "independently validated ACSP robust candidate-patch core",
+    "support_fraction": 0.025,
+    "patch_merge_distance_m": 1000.0,
+    "fine_structural_support_semantics_equal_validated_robust_support": false,
+    "transfer_is_already_validated": false
+  },
+  "selection": {
+    "retain_count_rule": "ceil(0.025 * source_complete_structural_order_rows)",
+    "retain_rule": "structural_rank <= retain_count",
+    "top_k_is_new_free_parameter": false,
+    "support_threshold_refit": false,
+    "field_outcomes_used": false
+  },
+  "patch_aggregation": {
+    "rule": "same deterministic greedy complete-link maximum pairwise distance <=1000 m",
+    "area_boundary": "within cohort_unit_id only",
+    "input_order": "candidate_cell_id stable order, matching validated complete-link site-id ordering semantics",
+    "implementation_acceleration": "KD-tree local candidate-patch lookup is allowed only with exact membership parity to the reference complete-link implementation",
+    "parity_test_required": true
+  },
+  "feasibility_endpoints": [
+    "source_complete_structural_order_rows",
+    "retained_support_cell_count",
+    "patch_count",
+    "compression_ratio_patch_per_retained_cell",
+    "singleton_patch_count",
+    "singleton_patch_fraction",
+    "median_patch_member_count",
+    "maximum_patch_member_count"
+  ],
+  "interpretation": {
+    "promotion_gate": false,
+    "if_compression_is_weak": "close this transfer route without retuning 2.5% or 1 km",
+    "if_compression_is_strong": "representation feasibility only; untouched recovery/field validation is still required before field-selector claims"
+  },
+  "forbidden": [
+    "do not tune support fraction",
+    "do not tune 1-km merge distance",
+    "do not add a target patch count",
+    "do not add survey budget or Top-k beyond the transferred 2.5% constant",
+    "do not rank source-indeterminate cells",
+    "do not use field outcomes, P02 results, private exact sites, access or routes",
+    "do not call the transferred patch set validated robust support"
+  ],
+  "prospective_field_outcomes_opened": false
+}
