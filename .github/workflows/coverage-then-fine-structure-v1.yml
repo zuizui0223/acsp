@@ -75,6 +75,7 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_worldcover_availability_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_chunk_invariance_audit_result_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -626,6 +627,21 @@ jobs:
           python -m pip install pytest
       - name: Test fixed GSI policy
         run: pytest -q tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py
+      - name: Guard fixed phase after non-invariance diagnostic
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          policy=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json').read_text())
+          diag=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_chunk_invariance_audit_result_v1.json').read_text())
+          assert diag['status'] == 'GSI_CHUNK_PHASE_NONINVARIANT_FIXED_POLICY_REQUIRED'
+          assert diag['all_units_invariant'] is False
+          assert diag['relationship_to_fixed_policy']['fixed_phase_offset_cells'] == [0,0]
+          assert diag['relationship_to_fixed_policy']['retune_phase_after_result_allowed'] is False
+          assert policy['chunk_policy']['shared_grid_phase_offset_cells'] == [0,0]
+          assert policy['chunk_policy']['chunk_phase_tunable'] is False
+          assert policy['relationship_to_chunk_invariance_audit']['if_audit_later_shows_noninvariance'].startswith('the fixed phase remains')
+          PY
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
