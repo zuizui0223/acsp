@@ -104,7 +104,7 @@ def _fast_complete_link_support_patches(
         tree = cKDTree(_unit_vectors(lat, lon))
         neighbours = tree.query_ball_point(
             _unit_vectors(lat, lon),
-            r=_chord_radius(threshold),
+            r=float(np.nextafter(_chord_radius(threshold), np.inf)),
         )
 
         area_patches: list[list[int]] = []
