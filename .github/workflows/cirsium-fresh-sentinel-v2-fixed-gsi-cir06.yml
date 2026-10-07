@@ -167,7 +167,9 @@ jobs:
               'private_structural_order_sha256':structural['private_structural_order_sha256']
             },
             'coordinate_bearing_artifacts_uploaded':False,
-            'structural_graph_computed':False,
+            'structural_graph_computed':True,
+            'fine_structural_full_order_computed':True,
+            'top_k_applied':False,
             'field_outcomes_opened':False,
           }
           Path(f'/tmp/acsp-fixed-gsi/{unit}_receipt.json').write_text(
