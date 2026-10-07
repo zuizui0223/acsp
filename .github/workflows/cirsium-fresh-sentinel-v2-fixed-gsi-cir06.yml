@@ -9,6 +9,9 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_structural_order_v1.json"
       - "research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py"
       - "tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_feasibility_v1.json"
+      - "research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
 
@@ -49,7 +52,8 @@ jobs:
         run: |
           pytest -q \
             tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
-            tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py
+            tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
