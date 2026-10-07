@@ -101,6 +101,15 @@ jobs:
               --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
               --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
           fi
+      - name: Test transferred fine patch representation
+        run: |
+          unit="${{ matrix.unit }}"
+          mkdir -p /tmp/acsp-fixed-gsi/patches
+          python research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
+            --unit-id "$unit" \
+            --structural-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+            --private-patches-csv-gz "/tmp/acsp-fixed-gsi/patches/${unit}_fine_patch_transfer.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_patch_transfer.json"
       - name: Guard denominator and public-safe source receipt
         env:
           UNIT: ${{ matrix.unit }}
