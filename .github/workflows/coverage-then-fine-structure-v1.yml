@@ -76,6 +76,7 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_worldcover_availability_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_chunk_invariance_audit_result_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_cir06_result_v1.json"
       - ".github/workflows/coverage-then-fine-structure-v1.yml"
   workflow_dispatch:
 
@@ -641,6 +642,20 @@ jobs:
           assert policy['chunk_policy']['shared_grid_phase_offset_cells'] == [0,0]
           assert policy['chunk_policy']['chunk_phase_tunable'] is False
           assert policy['relationship_to_chunk_invariance_audit']['if_audit_later_shows_noninvariance'].startswith('the fixed phase remains')
+          result=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_cir06_result_v1.json').read_text())
+          assert result['status'] == 'CIR06_FIXED_GSI_TERRAIN_RESULT_FROZEN_PRE_OUTCOME'
+          assert result['cohort_unit_id'] == 'CIR06'
+          assert result['grid']['candidate_rows'] == 847239
+          assert result['gsi']['source_complete_rows'] == 816364
+          assert result['gsi']['provider_unavailable_rows'] == 0
+          assert result['gsi']['terrain_vector_unavailable_rows'] == 30875
+          assert result['gsi']['chunk_count'] == 81
+          assert result['gsi']['chunk_phase_offset_cells'] == [0,0]
+          assert result['gsi']['physical_chunk_width_m'] == 40000
+          assert result['interpretation']['terrain_vector_unavailable_is_biological_absence'] is False
+          assert result['interpretation']['source_indeterminate_rows_remain_retained_unranked'] is True
+          assert result['boundary']['structural_graph_computed'] is False
+          assert result['boundary']['field_outcomes_opened'] is False
           PY
       - name: Download exact frozen coarse-source artifacts
         env:
