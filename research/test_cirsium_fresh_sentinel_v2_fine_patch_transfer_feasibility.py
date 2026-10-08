@@ -243,12 +243,43 @@ def build_fine_patch_transfer(
         raise ValueError("fine structural order cannot be empty")
     if set(structural_order["cohort_unit_id"].astype(str)) != {unit_id}:
         raise ValueError("fine structural order unit identity drifted")
-    if structural_order["candidate_cell_id"].astype(str).duplicated().any():
+    candidate_ids = structural_order["candidate_cell_id"]
+    if candidate_ids.isna().any() or candidate_ids.astype(str).str.strip().eq("").any():
+        raise ValueError("fine structural candidate IDs must be nonempty")
+    if candidate_ids.astype(str).str.contains(";", regex=False).any():
+        raise ValueError("fine structural candidate IDs contain a reserved separator")
+    if candidate_ids.astype(str).duplicated().any():
         raise ValueError("fine structural order candidate IDs must be unique")
 
-    rank = pd.to_numeric(structural_order["structural_rank"], errors="raise").astype(int)
-    if sorted(rank.tolist()) != list(range(1, len(structural_order) + 1)):
+    # Never coerce fractional ranks to integers: that can silently alter the
+    # frozen 2.5% membership even if the truncated sequence looks complete.
+    rank_values = pd.to_numeric(
+        structural_order["structural_rank"], errors="raise"
+    ).to_numpy(dtype=np.float64)
+    if not np.isfinite(rank_values).all() or not np.array_equal(
+        rank_values, np.floor(rank_values)
+    ):
+        raise ValueError("fine structural ranks must be finite integers")
+    rank = pd.Series(rank_values.astype(np.int64), index=structural_order.index)
+    if not np.array_equal(
+        np.sort(rank.to_numpy()),
+        np.arange(1, len(structural_order) + 1, dtype=np.int64),
+    ):
         raise ValueError("fine structural rank must be a complete 1..N order")
+
+    if not np.isfinite(
+        pd.to_numeric(structural_order["structural_support"], errors="coerce").to_numpy(float)
+    ).all():
+        raise ValueError("source-complete structural support must be finite")
+    # The reference patcher drops missing coordinates; source-complete fine
+    # cells cannot be silently dropped after being counted in the 2.5% tier.
+    for column, low, high in (
+        ("latitude", -90.0, 90.0),
+        ("longitude", -180.0, 180.0),
+    ):
+        values = pd.to_numeric(structural_order[column], errors="coerce").to_numpy(float)
+        if not np.isfinite(values).all() or np.any((values < low) | (values > high)):
+            raise ValueError(f"source-complete {column} must be finite and in range")
     normalized_rank = rank.astype(float) / float(len(structural_order))
     keep = normalized_rank <= float(VALIDATED_ROBUST_SUPPORT_FRACTION)
     retained = (
@@ -283,6 +314,21 @@ def build_fine_patch_transfer(
     )
     if patches.empty:
         raise AssertionError("retained fine support cells produced no patches")
+
+    # Every retained fine cell must belong to exactly one exported patch.
+    patch_member_ids = [
+        cell_id
+        for member_ids in patches["zone_member_site_ids"].astype(str)
+        for cell_id in member_ids.split(";")
+    ]
+    retained_ids = selected["site_id"].astype(str).tolist()
+    if (
+        len(patch_member_ids) != retain_n
+        or len(set(patch_member_ids)) != retain_n
+        or set(patch_member_ids) != set(retained_ids)
+        or int(pd.to_numeric(patches["zone_member_count"], errors="raise").sum()) != retain_n
+    ):
+        raise AssertionError("fine patch aggregation lost or duplicated retained cells")
 
     members = pd.to_numeric(
         patches["zone_member_count"], errors="raise"
