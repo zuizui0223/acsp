@@ -1,0 +1,32 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-selected-mosaic-sequence-v1",
+  "status": "FROZEN_BEFORE_SELECTED_GSI_MOSAIC_INPUT_AUDIT",
+  "as_of_date": "2026-10-08",
+  "issue": 253,
+  "units": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "scientific_role": "Distinguish same full cache inventory from same GSI DEM contents actually selected in each frozen chunk",
+  "per_chunk_input": "exact DEM TIFF returned by unmodified GSI builder before production terrain sampling",
+  "digest_rule": "stream SHA256 of each actually selected DEM TIFF, combine in ascending integer chunk index with explicit unavailable sentinel; never export per-chunk or per-file digests",
+  "safety": {
+    "no_coordinates_or_candidate_ids_exported": true,
+    "no_gsi_tile_path_or_file_basename_exported": true,
+    "no_per_chunk_mosaic_sha_exported": true,
+    "no_source_selection_changed": true,
+    "no_source_complete_denominator_changed": true,
+    "no_fine_structural_order_changed": true,
+    "no_2p5pct_or_1km_rule_changed": true,
+    "no_prospective_field_outcomes_opened": true,
+    "no_biological_habitat_claim": true
+  },
+  "interpretation": {
+    "matching_full_cache_inventory_does_not_prove_same_selected_mosaic_sequence": true,
+    "matching_selected_mosaic_sequence_does_not_prove_full_terrain_reproduction": true,
+    "differing_selected_mosaic_sequence_can_explain_numeric_differences_but_is_not_causal_proof": true
+  },
+  "next_gate": "Compare sequence digest across two independent complete 4-unit fixed GSI workflow runs, alongside source-state and feature-level precision hashes; do not infer source selection parity from cache inventory alone."
+}
