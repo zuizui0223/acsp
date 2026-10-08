@@ -20,6 +20,9 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_v1.json"
       - "research/audit_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
       - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_feature_precision_fingerprints_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_only_topology_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
@@ -65,7 +68,8 @@ jobs:
             tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
             tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py \
             tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py \
-            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py
+            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py \
+            tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -86,6 +90,13 @@ jobs:
           unit="${{ matrix.unit }}"
           python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json" \
             --same-mosaic-numerical-diagnostic-json "/tmp/acsp-fixed-gsi/public/${unit}_same_mosaic.json"
+      - name: Fingerprint source-complete numerical GSI features at frozen precisions
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/audit_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py \
+            --unit-id "$unit" \
+            --private-gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_feature_fingerprints.json"
       - name: Fingerprint original GSI tile and mosaic cache bytes without exporting paths
         run: |
           unit="${{ matrix.unit }}"
@@ -149,6 +160,21 @@ jobs:
           expected=int(os.environ['EXPECTED'])
           grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
           gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
+          feature_fingerprints=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_feature_fingerprints.json').read_text())
+          assert feature_fingerprints['status']=='SOURCE_COMPLETE_GSI_PRECISION_FINGERPRINTED_PRE_OUTCOME'
+          assert feature_fingerprints['cohort_unit_id']==unit
+          assert feature_fingerprints['candidate_count']==gsi['candidate_rows']
+          assert feature_fingerprints['source_complete_count']==gsi['source_complete_rows']
+          assert feature_fingerprints['private_gsi_frame_sha256']==gsi['private_gsi_frame_sha256']
+          assert set(feature_fingerprints['feature_precision_sha256'])=={'elev','slope100','tpi300','rough300'}
+          for precisions in feature_fingerprints['feature_precision_sha256'].values():
+            assert set(precisions)=={'0','2','4','6','8'}
+            assert all(len(h)==64 for h in precisions.values())
+          assert feature_fingerprints['per_candidate_data_exported'] is False
+          assert feature_fingerprints['private_coordinates_or_IDs_exported'] is False
+          assert feature_fingerprints['ranking_or_patch_selection_changed'] is False
+          assert feature_fingerprints['field_outcomes_opened'] is False
+          assert feature_fingerprints['full_cross_run_reproducibility_proven'] is False
           numerical=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_same_mosaic.json').read_text())
           assert numerical['status'] in (
             'SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE',
@@ -295,6 +321,15 @@ jobs:
               'full_structural_order_reproduction_tested':False,
               'ecological_connectivity_claim_authorized':False,
               'field_selector_validation':False,
+            },
+            'gsi_feature_precision_fingerprints':{
+              'status':feature_fingerprints['status'],
+              'source_complete_count':feature_fingerprints['source_complete_count'],
+              'private_gsi_frame_sha256':feature_fingerprints['private_gsi_frame_sha256'],
+              'feature_precision_sha256':feature_fingerprints['feature_precision_sha256'],
+              'field_outcomes_opened':False,
+              'full_cross_run_reproducibility_proven':False,
+              'private_coordinates_or_IDs_exported':False,
             },
             'same_mosaic_numerical_replay':{
               'status':numerical['status'],
