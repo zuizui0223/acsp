@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import research.test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility as mod
 
@@ -90,3 +91,54 @@ def test_accelerated_complete_link_matches_reference_at_one_km_boundary() -> Non
         }
     )
     mod.assert_reference_parity(selected)
+
+def test_fine_transfer_conserves_all_retained_support_cells() -> None:
+    patches, summary = mod.build_fine_patch_transfer(_order(), unit_id="CIR06")
+    members = [
+        cell_id
+        for member_ids in patches["zone_member_site_ids"].tolist()
+        for cell_id in member_ids.split(";")
+    ]
+    expected_ids = _order().iloc[:5]["candidate_cell_id"].tolist()
+    assert len(members) == summary["retained_support_cell_count"]
+    assert len(set(members)) == len(members)
+    assert set(members) == set(expected_ids)
+    assert patches["zone_member_count"].sum() == summary["retained_support_cell_count"]
+
+
+def test_fine_transfer_rejects_fractional_rank_instead_of_truncating() -> None:
+    order = _order()
+    order["structural_rank"] = order["structural_rank"].astype(float)
+    order.loc[0, "structural_rank"] = 1.9
+    with pytest.raises(ValueError, match="finite integers"):
+        mod.build_fine_patch_transfer(order, unit_id="CIR06")
+
+
+@pytest.mark.parametrize(
+    ("column", "row", "value"),
+    [
+        ("latitude", 0, np.nan),
+        ("latitude", 100, np.nan),
+        ("longitude", 0, np.nan),
+        ("longitude", 100, 185.0),
+    ],
+)
+def test_fine_transfer_rejects_source_complete_bad_coordinates(
+    column: str, row: int, value: float
+) -> None:
+    order = _order()
+    order.loc[row, column] = value
+    with pytest.raises(ValueError, match=f"source-complete {column}"):
+        mod.build_fine_patch_transfer(order, unit_id="CIR06")
+
+
+def test_fine_transfer_rejects_invalid_support_and_cell_id() -> None:
+    missing_support = _order()
+    missing_support.loc[50, "structural_support"] = np.nan
+    with pytest.raises(ValueError, match="structural support must be finite"):
+        mod.build_fine_patch_transfer(missing_support, unit_id="CIR06")
+
+    missing_id = _order()
+    missing_id.loc[0, "candidate_cell_id"] = ""
+    with pytest.raises(ValueError, match="candidate IDs must be nonempty"):
+        mod.build_fine_patch_transfer(missing_id, unit_id="CIR06")
