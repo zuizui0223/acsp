@@ -72,10 +72,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/acsp-gsi-replay/job-logs
-          gh api "repos/${{ github.repository }}/actions/jobs/112881046494/logs" > /tmp/acsp-gsi-replay/job-logs/CIR06_original.log
-          gh api "repos/${{ github.repository }}/actions/jobs/113079588295/logs" > /tmp/acsp-gsi-replay/job-logs/CIR06_replay.log
-          gh api "repos/${{ github.repository }}/actions/jobs/112881046755/logs" > /tmp/acsp-gsi-replay/job-logs/CIR13_original.log
-          gh api "repos/${{ github.repository }}/actions/jobs/113079588247/logs" > /tmp/acsp-gsi-replay/job-logs/CIR13_replay.log
+          gh api --allow-escape-sequences "repos/${{ github.repository }}/actions/jobs/112881046494/logs" > /tmp/acsp-gsi-replay/job-logs/CIR06_original.log
+          gh api --allow-escape-sequences "repos/${{ github.repository }}/actions/jobs/113079588295/logs" > /tmp/acsp-gsi-replay/job-logs/CIR06_replay.log
+          gh api --allow-escape-sequences "repos/${{ github.repository }}/actions/jobs/112881046755/logs" > /tmp/acsp-gsi-replay/job-logs/CIR13_original.log
+          gh api --allow-escape-sequences "repos/${{ github.repository }}/actions/jobs/113079588247/logs" > /tmp/acsp-gsi-replay/job-logs/CIR13_replay.log
       - name: Audit unchanged source attribution and pinned software environment
         run: |
           python research/audit_cirsium_fresh_sentinel_v2_chunk_logs.py \
