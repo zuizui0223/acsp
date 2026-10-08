@@ -8,9 +8,19 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_public_paired_precision_comparison_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-public-paired-gsi-precision.yml"
   workflow_dispatch:
+    inputs:
+      first_run_id:
+        description: "First successful full GSI matrix workflow run ID"
+        required: true
+        type: string
+      second_run_id:
+        description: "Second independent successful full GSI matrix workflow run ID"
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   public_compare:
@@ -38,3 +48,64 @@ jobs:
           assert value["public_output"]["field_outcomes_opened"] is False
           assert value["interpretation"]["any_native_implementation_root_cause_identified"] is False
           PY
+
+  compare_real_public_receipts:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify run identities and successful complete source workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST_RUN: ${{ inputs.first_run_id }}
+          SECOND_RUN: ${{ inputs.second_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$FIRST_RUN" =~ ^[0-9]+$ ]] && [[ "$SECOND_RUN" =~ ^[0-9]+$ ]]
+          test "$FIRST_RUN" != "$SECOND_RUN"
+          for run in "$FIRST_RUN" "$SECOND_RUN"; do
+            gh api "repos/${{ github.repository }}/actions/runs/$run" > "/tmp/gsi_run_${run}.json"
+            RUN_ID="$run" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          run=int(os.environ["RUN_ID"])
+          d=json.loads(Path(f"/tmp/gsi_run_{run}.json").read_text())
+          assert d["id"]==run
+          assert d["status"]=="completed" and d["conclusion"]=="success"
+          assert d["name"]=="Fresh-SENTINEL v2 fixed GSI terrain all units"
+          assert d["repository"]["full_name"]=="${{ github.repository }}"
+          PY
+          done
+      - name: Download exact four public-only receipts from each completed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST_RUN: ${{ inputs.first_run_id }}
+          SECOND_RUN: ${{ inputs.second_run_id }}
+        run: |
+          set -euo pipefail
+          for unit in CIR02 CIR06 CIR12 CIR13; do
+            for label in first second; do
+              if [[ "$label" == "first" ]]; then run="$FIRST_RUN"; else run="$SECOND_RUN"; fi
+              dir="/tmp/acsp-public-gsi-pair/$label/$unit"
+              mkdir -p "$dir"
+              gh run download "$run" --repo "${{ github.repository }}" \
+                --name "cirsium-fresh-sentinel-v2-fixed-gsi-${unit}-receipt" --dir "$dir"
+            done
+          done
+      - name: Compare read-only complete four-unit source and precision hashes
+        env:
+          FIRST_RUN: ${{ inputs.first_run_id }}
+          SECOND_RUN: ${{ inputs.second_run_id }}
+        run: |
+          python research/compare_cirsium_fresh_sentinel_v2_public_gsi_precision_runs.py \
+            --first-run-id "$FIRST_RUN" --second-run-id "$SECOND_RUN" \
+            --first-receipts /tmp/acsp-public-gsi-pair/first \
+            --second-receipts /tmp/acsp-public-gsi-pair/second \
+            --public-safe-summary-json /tmp/acsp-paired-gsi-precision-result.json
+      - name: Export only coordinate-free source and numeric hash diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-public-two-run-gsi-precision-diagnostic
+          path: /tmp/acsp-paired-gsi-precision-result.json
+          if-no-files-found: error
