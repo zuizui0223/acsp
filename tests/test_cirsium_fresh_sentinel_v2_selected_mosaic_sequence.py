@@ -57,6 +57,9 @@ def test_missing_sources_preserved_as_explicit_input_states(tmp_path: Path) -> N
     assert result["selected_dem_chunks"]==0
     assert result["unavailable_dem_chunks"]==1
     assert result["cross_run_numeric_reproduction_proven"] is False
+    blank=SelectedMosaicSequence(unit_id="CIR02",cache_dir=tmp_path)
+    blank(0,"")
+    assert blank.summary(chunk_count=1)==result
 
 
 def test_fail_closed_for_missing_or_outside_cache_and_chunk_gaps(tmp_path: Path) -> None:
