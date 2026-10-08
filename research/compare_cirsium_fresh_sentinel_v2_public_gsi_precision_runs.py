@@ -55,6 +55,19 @@ def _unit_info(data: dict[str, Any], unit: str) -> dict[str, Any]:
     blocks = ("grid","gsi","structural","fine_patch_transfer",
               "gsi_cache_content","gsi_feature_precision_fingerprints")
     _require(all(isinstance(data.get(k),dict) for k in blocks), f"{unit} required provenance missing")
+    # Completeness is a source-state census, not a biological absence.
+    total = data["grid"].get("candidate_rows")
+    states = tuple(data["gsi"].get(k) for k in (
+        "source_complete_rows",
+        "provider_unavailable_rows",
+        "terrain_vector_unavailable_rows",
+    ))
+    _require(
+        isinstance(total, int) and not isinstance(total, bool) and total > 0
+        and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in states)
+        and sum(states) == total,
+        f"{unit} source-state denominator does not conserve all candidate cells",
+    )
     f = data["gsi_feature_precision_fingerprints"]
     _require(f.get("status") == "SOURCE_COMPLETE_GSI_PRECISION_FINGERPRINTED_PRE_OUTCOME",
              f"{unit} per-feature provenance missing")
