@@ -187,7 +187,7 @@ def audit_frozen_patch_membership(
         "singleton_patch_count": singleton_count,
         "all_retained_cells_accounted_for": True,
         "patch_membership_unchanged": True,
-        "original_structural_order_reproduced": False,
+        "original_structural_order_reproduced": None,
         "original_structural_order_reproduction_tested_by_this_route": False,
         "source_integrity_claim_authorized": False,
         "ecological_connectivity_claim_authorized": False,
