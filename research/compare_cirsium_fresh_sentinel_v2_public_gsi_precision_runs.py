@@ -101,6 +101,26 @@ def _unit_info(data: dict[str, Any], unit: str) -> dict[str, Any]:
              f"{unit} tile filenames exposed")
     _require(data["gsi_cache_content"].get("field_outcomes_opened") is False,
              f"{unit} tile source used outcomes")
+    selected=data.get("gsi_selected_mosaic_sequence")
+    if selected is not None:
+        _require(isinstance(selected,dict) and
+                 selected.get("status")=="ACTUAL_SELECTED_DEM_CONTENT_SEQUENCE_AUDITED_PRE_OUTCOME",
+                 f"{unit} selected DEM identity receipt invalid")
+        _require(_sha(selected.get("selected_mosaic_content_sequence_sha256")),
+                 f"{unit} selected DEM identity SHA missing")
+        n=selected.get("chunk_count")
+        chosen=selected.get("selected_dem_chunks")
+        missing=selected.get("unavailable_dem_chunks")
+        _require(all(isinstance(v,int) and not isinstance(v,bool) and v>=0 for v in (n,chosen,missing))
+                 and n>0 and n==chosen+missing and n==data["gsi"].get("chunk_count"),
+                 f"{unit} selected DEM chunk denominator drifted")
+        for key in ("private_source_paths_or_tile_coordinates_exported",
+                    "per_chunk_source_content_hashes_exported",
+                    "production_gsi_selection_changed",
+                    "field_outcomes_opened",
+                    "cross_run_numeric_reproduction_proven"):
+            _require(selected.get(key) is False,
+                     f"{unit} selected DEM provenance privacy/claim violation: {key}")
     return data
 
 
@@ -136,14 +156,26 @@ def compare_complete_public_runs(
         grid_match=a["grid"]["private_grid_sha256"]==b["grid"]["private_grid_sha256"]
         state_match=a["structural"]["source_state_digest_sha256"]==b["structural"]["source_state_digest_sha256"]
         counts_match=a["gsi"]["source_complete_rows"]==b["gsi"]["source_complete_rows"]
+        a_selected=a.get("gsi_selected_mosaic_sequence")
+        b_selected=b.get("gsi_selected_mosaic_sequence")
+        selected_input_equality=(
+            a_selected["selected_mosaic_content_sequence_sha256"]
+            == b_selected["selected_mosaic_content_sequence_sha256"]
+            if a_selected is not None and b_selected is not None
+            else None
+        )
         if not grid_match:
             stage="FINE_CANDIDATE_GRID_INPUT_DIFFERS"
         elif not counts_match or not state_match:
             stage="GSI_SOURCE_COMPLETENESS_OR_STATE_DIFFERS"
         elif not (png_match and mosaic_match):
             stage="GSI_CACHE_INPUT_CONTENT_DIFFERS"
+        elif selected_input_equality is False:
+            stage="SAME_CACHE_BUT_DIFFERENT_ACTUALLY_SELECTED_DEM_CONTENT"
+        elif not feature_match and selected_input_equality is None:
+            stage="SAME_CACHE_AND_SOURCE_STATES_SELECTED_DEM_IDENTITY_UNVERIFIED"
         elif not feature_match:
-            stage="SAME_CACHED_GSI_BYTES_AND_STATES_DIFFERENT_TERRAIN_FEATURES_UNRESOLVED"
+            stage="SAME_SELECTED_DEM_CONTENT_AND_STATES_DIFFERENT_TERRAIN_UNRESOLVED"
         elif not all(all(precisions.values()) for precisions in feature_equal.values()):
             stage="WHOLE_TERRAIN_DIGEST_MATCHES_BUT_PRECISION_FINGERPRINT_DIFFERS"
         elif a["structural"]["private_structural_order_sha256"] != b["structural"]["private_structural_order_sha256"]:
@@ -156,6 +188,8 @@ def compare_complete_public_runs(
             "fine_grid_hashes_equal":a["grid"]["private_grid_sha256"]==b["grid"]["private_grid_sha256"],
             "gsi_png_inventory_equal":png_match,
             "gsi_mosaic_inventory_equal":mosaic_match,
+            "selected_mosaic_content_sequence_equal":selected_input_equality,
+            "selected_mosaic_identity_verified_in_both_runs":selected_input_equality is not None,
             "gsi_terrain_feature_digest_equal":feature_match,
             "private_gsi_frame_sha_equal":a["gsi"]["private_gsi_frame_sha256"]==b["gsi"]["private_gsi_frame_sha256"],
             "structural_order_sha_equal":a["structural"]["private_structural_order_sha256"]==b["structural"]["private_structural_order_sha256"],
