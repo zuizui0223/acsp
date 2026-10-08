@@ -234,9 +234,17 @@ class SameMosaicReplayCollector:
                     )
                 dst["all_exact"] = dst["all_exact"] and src["all_exact"]
                 dst["all_near"] = dst["all_near"] and src["all_near"]
+        if not used:
+            for pair in PAIRS:
+                totals[pair]["all_exact"] = None
+                totals[pair]["all_near"] = None
         return {
             "schema_version": "cirsium-fresh-sentinel-v2-same-mosaic-numerical-replay-v1",
-            "status": "SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE",
+            "status": (
+                "SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE"
+                if used
+                else "NUMERICAL_DIAGNOSTIC_NO_ELIGIBLE_SELECTED_CHUNKS"
+            ),
             "cohort_unit_id": unit_id,
             "source_chunk_count": total_chunks,
             "predeclared_selected_chunk_count": len(selected),
