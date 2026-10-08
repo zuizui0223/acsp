@@ -25,9 +25,11 @@ def _inputs():
             "status":"FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME",
             "field_outcomes_opened":False,
             "coordinate_bearing_artifacts_uploaded":False,
-            "grid":{"private_grid_sha256":_sha(1)},
+            "grid":{"private_grid_sha256":_sha(1),"candidate_rows":patch["fine_grid_candidate_count"]},
             "gsi":{
                 "source_complete_rows":patch["gsi_source_complete_count"],
+                "provider_unavailable_rows":patch["fine_grid_candidate_count"]-patch["gsi_source_complete_count"],
+                "terrain_vector_unavailable_rows":0,
                 "terrain_feature_digest_sha256":_sha(2),
                 "private_gsi_frame_sha256":_sha(3),
             },
@@ -121,7 +123,7 @@ def test_structural_only_drift_and_patch_failure_reported_without_promotion():
 
 @pytest.mark.parametrize("what",[
     "same_run","missing_unit","different_species_label","outcomes_open",
-    "coordinates_uploaded","missing_precision","fake_source_count",
+    "coordinates_uploaded","missing_precision","fake_source_count","invalid_source_denominator",
     "promoted_selector","bad_source_hash",
 ])
 def test_malformed_pair_fails_closed(what):
@@ -142,6 +144,8 @@ def test_malformed_pair_fails_closed(what):
         two["CIR02"]["gsi_feature_precision_fingerprints"]["feature_precision_sha256"]["elev"].pop("8")
     elif what=="fake_source_count":
         two["CIR02"]["gsi_feature_precision_fingerprints"]["source_complete_count"]=1
+    elif what=="invalid_source_denominator":
+        two["CIR02"]["gsi"]["provider_unavailable_rows"]+=1
     elif what=="promoted_selector":
         two["CIR02"]["fine_patch_transfer"]["transfer_is_validated_selector"]=True
     elif what=="bad_source_hash":
