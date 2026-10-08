@@ -133,10 +133,17 @@ def compare_complete_public_runs(
         png_match=a["gsi_cache_content"]["tile_inventory_sha256"]==b["gsi_cache_content"]["tile_inventory_sha256"]
         mosaic_match=a["gsi_cache_content"]["mosaic_inventory_sha256"]==b["gsi_cache_content"]["mosaic_inventory_sha256"]
         feature_match=a["gsi"]["terrain_feature_digest_sha256"]==b["gsi"]["terrain_feature_digest_sha256"]
-        if not (png_match and mosaic_match):
+        grid_match=a["grid"]["private_grid_sha256"]==b["grid"]["private_grid_sha256"]
+        state_match=a["structural"]["source_state_digest_sha256"]==b["structural"]["source_state_digest_sha256"]
+        counts_match=a["gsi"]["source_complete_rows"]==b["gsi"]["source_complete_rows"]
+        if not grid_match:
+            stage="FINE_CANDIDATE_GRID_INPUT_DIFFERS"
+        elif not counts_match or not state_match:
+            stage="GSI_SOURCE_COMPLETENESS_OR_STATE_DIFFERS"
+        elif not (png_match and mosaic_match):
             stage="GSI_CACHE_INPUT_CONTENT_DIFFERS"
         elif not feature_match:
-            stage="SAME_CACHED_GSI_BYTES_DIFFERENT_TERRAIN_FEATURES_UNRESOLVED"
+            stage="SAME_CACHED_GSI_BYTES_AND_STATES_DIFFERENT_TERRAIN_FEATURES_UNRESOLVED"
         elif not all(all(precisions.values()) for precisions in feature_equal.values()):
             stage="WHOLE_TERRAIN_DIGEST_MATCHES_BUT_PRECISION_FINGERPRINT_DIFFERS"
         elif a["structural"]["private_structural_order_sha256"] != b["structural"]["private_structural_order_sha256"]:
