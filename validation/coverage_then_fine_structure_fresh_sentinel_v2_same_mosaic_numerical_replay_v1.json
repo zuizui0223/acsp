@@ -1,0 +1,64 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-same-mosaic-numerical-replay-v1",
+  "status": "FROZEN_BEFORE_DIAGNOSTIC_SAME_MOSAIC_RERUN",
+  "as_of_date": "2026-10-08",
+  "source_issue": 253,
+  "source_prs": [
+    255,
+    256,
+    257
+  ],
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "fixed_source_and_scoring_policy": "unchanged from validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json",
+  "diagnostic_input": "the exact DEM TIFF path and original complete sampled rows already obtained in each frozen GSI chunk",
+  "probed_chunk_indices_rule": "sorted unique of 0, floor((chunk_count - 1)/2), chunk_count - 1",
+  "max_complete_candidates_per_probed_chunk": 24,
+  "candidate_sample_rule": "stable sorted complete candidate_cell_id; integer linspace positions from first to last; never by terrain score, occurrence or field outcome",
+  "replays_per_sample": 2,
+  "compared_numeric_features": [
+    "elev",
+    "slope100",
+    "slope_sd100",
+    "rough100",
+    "tpi100",
+    "range100",
+    "tpi300",
+    "rough300"
+  ],
+  "exact_value_comparison": "float64 elementwise exact equality, including original vs replay1 and replay1 vs replay2",
+  "near_value_comparison": {
+    "rtol": 0,
+    "atol": 1e-8
+  },
+  "dem_content_guard": "SHA256 the exact sampled DEM file before and after both repeated calculations; abort if changed",
+  "failure_or_missing_source_handling": "report unavailable selected chunks separately; never treat as ecological absence",
+  "records_public": {
+    "per_selected_chunk_source_file_paths": false,
+    "per_candidate_identity_or_coordinate": false,
+    "per_candidate_numeric_features": false,
+    "aggregated_sample_count": true,
+    "aggregated_exact_mismatch_count_by_feature": true,
+    "aggregated_near_mismatch_count_by_feature": true,
+    "aggregated_max_abs_difference_by_feature": true,
+    "same_file_byte_hash_before_after": true,
+    "native_library_version_labels": true
+  },
+  "interpretation": {
+    "diagnostic_only": true,
+    "test_same_file_same_process_only": true,
+    "does_not_establish_cross_run_reproducibility": true,
+    "biological_habitat_connectivity_claim": false,
+    "field_discovery_or_occupancy_claim": false,
+    "original_structural_order_replay_claim": false,
+    "original_frozen_patch_hash_waived": false,
+    "no_change_to_source_retrieval_or_order": true,
+    "no_change_to_support_fraction_or_patch_merge_distance": true,
+    "prospective_field_outcomes_opened": false
+  },
+  "next_gate": "If the exact same file produces different numerical vectors within one process, isolate the numerical reader/transformation stage. If all sampled vectors agree, cross-run differences remain unresolved; never infer that all chunks or field outcomes are deterministic."
+}
