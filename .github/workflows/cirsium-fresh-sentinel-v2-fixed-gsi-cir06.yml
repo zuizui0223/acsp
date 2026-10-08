@@ -20,6 +20,9 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_v1.json"
       - "research/audit_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
       - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_sequence_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_only_topology_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
@@ -65,7 +68,8 @@ jobs:
             tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
             tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py \
             tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py \
-            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py
+            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py \
+            tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,7 +89,8 @@ jobs:
         run: |
           unit="${{ matrix.unit }}"
           python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json" \
-            --same-mosaic-numerical-diagnostic-json "/tmp/acsp-fixed-gsi/public/${unit}_same_mosaic.json"
+            --same-mosaic-numerical-diagnostic-json "/tmp/acsp-fixed-gsi/public/${unit}_same_mosaic.json" \
+            --selected-mosaic-sequence-json "/tmp/acsp-fixed-gsi/public/${unit}_selected_dem_sequence.json"
       - name: Fingerprint original GSI tile and mosaic cache bytes without exporting paths
         run: |
           unit="${{ matrix.unit }}"
@@ -150,6 +155,17 @@ jobs:
           grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
           gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
           numerical=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_same_mosaic.json').read_text())
+          selected=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_selected_dem_sequence.json').read_text())
+          assert selected['status']=='ACTUAL_SELECTED_DEM_CONTENT_SEQUENCE_AUDITED_PRE_OUTCOME'
+          assert selected['cohort_unit_id']==unit
+          assert selected['chunk_count']==gsi['chunk_count']
+          assert selected['selected_dem_chunks']+selected['unavailable_dem_chunks']==gsi['chunk_count']
+          assert len(selected['selected_mosaic_content_sequence_sha256'])==64
+          assert selected['private_source_paths_or_tile_coordinates_exported'] is False
+          assert selected['per_chunk_source_content_hashes_exported'] is False
+          assert selected['production_gsi_selection_changed'] is False
+          assert selected['field_outcomes_opened'] is False
+          assert selected['cross_run_numeric_reproduction_proven'] is False
           assert numerical['status'] in (
             'SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE',
             'NUMERICAL_DIAGNOSTIC_NO_ELIGIBLE_SELECTED_CHUNKS',
@@ -309,6 +325,18 @@ jobs:
               'private_chunk_paths_or_coordinates_exported':False,
               'field_outcomes_opened':False,
               'field_selector_or_habitat_connectivity_claim':False,
+            },
+            'gsi_selected_mosaic_sequence':{
+              'status':selected['status'],
+              'chunk_count':selected['chunk_count'],
+              'selected_dem_chunks':selected['selected_dem_chunks'],
+              'unavailable_dem_chunks':selected['unavailable_dem_chunks'],
+              'selected_mosaic_content_sequence_sha256':selected['selected_mosaic_content_sequence_sha256'],
+              'private_source_paths_or_tile_coordinates_exported':False,
+              'per_chunk_source_content_hashes_exported':False,
+              'production_gsi_selection_changed':False,
+              'field_outcomes_opened':False,
+              'cross_run_numeric_reproduction_proven':False,
             },
             'gsi_cache_content':{
               'tile_file_count':inventory['tile_file_count'],
