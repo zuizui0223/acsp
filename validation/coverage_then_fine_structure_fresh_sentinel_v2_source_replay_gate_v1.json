@@ -49,5 +49,29 @@
     "change_gsi_chunk_phase_after_observing_drift": false,
     "patch_hash_identity_does_not_waive_structural_order_hash": true
   },
-  "next_gate": "Pin source-world identifiers and diagnose per-chunk terrain/provider differences without coordinates or outcomes. Do not bypass PR250's frozen structural-order SHA check."
+  "next_gate": "Pin source-world identifiers and diagnose per-chunk terrain/provider differences without coordinates or outcomes. Do not bypass PR250's frozen structural-order SHA check.",
+  "chunk_log_verification": {
+    "expected_original_job_ids": {
+      "CIR06": 112881046494,
+      "CIR13": 112881046755
+    },
+    "expected_replay_job_ids": {
+      "CIR06": 113079588295,
+      "CIR13": 113079588247
+    },
+    "expected_chunk_counts": {
+      "CIR06": 81,
+      "CIR13": 237
+    },
+    "expected_matching_chunk_counts": {
+      "CIR06": 81,
+      "CIR13": 237
+    },
+    "expected_installed_package_token_count": 59,
+    "expected_runner_image": "ubuntu-24.04",
+    "expected_runner_image_version": "20261004.327.1",
+    "matching_source_classes_and_counts_proves_tile_content_identity": false,
+    "source_tile_and_mosaic_content_hashes_available": false,
+    "private_coordinates_opened": false
+  }
 }
