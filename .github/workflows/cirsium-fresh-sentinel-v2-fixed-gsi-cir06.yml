@@ -17,6 +17,9 @@ on:
       - "tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py"
       - "research/audit_cirsium_fresh_sentinel_v2_frozen_patch_topology.py"
       - "tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_v1.json"
+      - "research/audit_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_only_topology_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
@@ -61,7 +64,8 @@ jobs:
             tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py \
             tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
             tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py \
-            tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py
+            tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py \
+            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,7 +84,8 @@ jobs:
       - name: Attach fixed-policy GSI terrain
         run: |
           unit="${{ matrix.unit }}"
-          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json"
+          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json" \
+            --same-mosaic-numerical-diagnostic-json "/tmp/acsp-fixed-gsi/public/${unit}_same_mosaic.json"
       - name: Fingerprint original GSI tile and mosaic cache bytes without exporting paths
         run: |
           unit="${{ matrix.unit }}"
@@ -144,6 +149,24 @@ jobs:
           expected=int(os.environ['EXPECTED'])
           grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
           gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
+          numerical=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_same_mosaic.json').read_text())
+          assert numerical['status'] in (
+            'SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE',
+            'NUMERICAL_DIAGNOSTIC_NO_ELIGIBLE_SELECTED_CHUNKS',
+          )
+          assert numerical['cohort_unit_id']==unit
+          assert numerical['source_chunk_count']==gsi['chunk_count']
+          assert numerical['probed_chunk_count']+numerical['unavailable_selected_chunk_count']==numerical['predeclared_selected_chunk_count']
+          assert numerical['predeclared_selected_chunk_count']<=3
+          assert numerical['source_complete_cells_probed']<=72
+          assert numerical['replays_per_sample']==2
+          assert numerical['same_mosaic_bytes_before_after_all_probes'] is True
+          assert numerical['private_sampled_vectors_exported'] is False
+          assert numerical['private_chunk_paths_or_coordinates_exported'] is False
+          assert numerical['selected_support_or_patch_membership_changed'] is False
+          assert numerical['source_integrity_and_full_order_reproduction_claim'] is False
+          assert numerical['field_selector_or_habitat_connectivity_claim'] is False
+          assert numerical['field_outcomes_opened'] is False
           inventory=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi_cache_provenance.json').read_text())
           assert inventory['status']=='GSI_RAW_CACHE_CONTENT_INVENTORY_AUDITED_PRE_OUTCOME'
           assert inventory['cohort_unit_id']==unit
@@ -272,6 +295,20 @@ jobs:
               'full_structural_order_reproduction_tested':False,
               'ecological_connectivity_claim_authorized':False,
               'field_selector_validation':False,
+            },
+            'same_mosaic_numerical_replay':{
+              'status':numerical['status'],
+              'source_chunk_count':numerical['source_chunk_count'],
+              'probed_chunk_count':numerical['probed_chunk_count'],
+              'unavailable_selected_chunk_count':numerical['unavailable_selected_chunk_count'],
+              'source_complete_cells_probed':numerical['source_complete_cells_probed'],
+              'replays_per_sample':2,
+              'same_mosaic_bytes_before_after_all_probes':numerical['same_mosaic_bytes_before_after_all_probes'],
+              'comparison':numerical['comparison'],
+              'native_versions':numerical['native_versions'],
+              'private_chunk_paths_or_coordinates_exported':False,
+              'field_outcomes_opened':False,
+              'field_selector_or_habitat_connectivity_claim':False,
             },
             'gsi_cache_content':{
               'tile_file_count':inventory['tile_file_count'],
