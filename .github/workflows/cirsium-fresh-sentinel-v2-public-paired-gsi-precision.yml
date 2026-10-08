@@ -1,0 +1,40 @@
+name: Fresh-SENTINEL v2 public GSI paired-run precision diagnosis
+
+on:
+  pull_request:
+    paths:
+      - "research/compare_cirsium_fresh_sentinel_v2_public_gsi_precision_runs.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_public_gsi_precision_runs.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_public_paired_precision_comparison_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-public-paired-gsi-precision.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public_compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test runner only
+        run: python -m pip install pytest
+      - name: Verify complete independent-run source classifications and forbidden claims
+        run: python -m pytest -q tests/test_cirsium_fresh_sentinel_v2_public_gsi_precision_runs.py
+      - name: Reaffirm preregistered precision and outcome firewall
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          value=json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_public_paired_precision_comparison_v1.json").read_text())
+          assert value["status"]=="FROZEN_BEFORE_TWO_PUBLIC_RUN_COMPARISON"
+          assert value["features"]==["elev","slope100","tpi300","rough300"]
+          assert value["precision_decimals"]==["0","2","4","6","8"]
+          assert value["minimum_independent_completed_workflow_runs"]==2
+          assert value["public_output"]["field_outcomes_opened"] is False
+          assert value["interpretation"]["any_native_implementation_root_cause_identified"] is False
+          PY
