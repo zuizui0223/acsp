@@ -34,6 +34,11 @@ def test_public_contract_audit_finds_shared_grassland_policy_not_confirmed_spati
     assert x["different_gzip_sha256_establishes_spatial_independence"] is False
     assert x["prospective_field_outcomes_opened"] is False
     assert x["species_specific_model_generality_claim_authorized"] is False
+    frozen = json.loads(
+        (ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_cross_unit_policy_alias_result_v1.json")
+        .read_text(encoding="utf-8")
+    )
+    assert x == frozen
 
 
 def _contract_copies(tmp_path: Path) -> Path:
