@@ -108,6 +108,7 @@ def attach_fixed_gsi_terrain(
     cache_dir: Path,
     dem_builder: Callable[..., tuple[str | None, str]] | None = None,
     terrain_sampler: Callable[[pd.DataFrame, Path], pd.DataFrame] | None = None,
+    numerical_probe: Callable[..., None] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     contract = _load_contract()
     if unit_id not in UNITS:
@@ -142,9 +143,8 @@ def attach_fixed_gsi_terrain(
     pieces: list[pd.DataFrame] = []
     audits: list[dict[str, Any]] = []
 
-    for chunk_index, component in enumerate(
-        _chunk_groups(fine_grid, int(chunk["chunk_grid_cells"]))
-    ):
+    groups = _chunk_groups(fine_grid, int(chunk["chunk_grid_cells"]))
+    for chunk_index, component in enumerate(groups):
         west = float(component["longitude"].min()) - float(chunk["chunk_margin_degrees"])
         east = float(component["longitude"].max()) + float(chunk["chunk_margin_degrees"])
         south = float(component["latitude"].min()) - float(chunk["chunk_margin_degrees"])
@@ -198,6 +198,18 @@ def attach_fixed_gsi_terrain(
             pieces.append(out)
             continue
 
+        # An optional read-only diagnostic repeats selected original samples
+        # against this *same* resolved mosaic; its output never changes the
+        # primary sampled rows or their frozen source/selection semantics.
+        if numerical_probe is not None:
+            numerical_probe(
+                chunk_index,
+                len(groups),
+                component.drop(columns=["_input_order"]).copy(),
+                sampled.copy(),
+                Path(dem_path),
+                sampler,
+            )
         sampled_by_id = sampled.set_index(sampled["candidate_cell_id"].astype(str))
         complete_ids = set(sampled_by_id.index)
         complete = out["candidate_cell_id"].astype(str).isin(complete_ids)
@@ -289,6 +301,11 @@ def main() -> int:
     parser.add_argument("--cache-dir", type=Path, required=True)
     parser.add_argument("--private-out-csv-gz", type=Path, required=True)
     parser.add_argument("--public-safe-summary-json", type=Path, required=True)
+    parser.add_argument(
+        "--same-mosaic-numerical-diagnostic-json",
+        type=Path,
+        help="Optional read-only pre-outcome sampled DEM replay summary without candidate IDs",
+    )
     args = parser.parse_args()
 
     if not args.fine_grid_csv_gz.is_file():
@@ -297,12 +314,21 @@ def main() -> int:
         raise SystemExit("refusing to write coordinate-bearing GSI output inside repository")
     if args.private_out_csv_gz.exists() or args.public_safe_summary_json.exists():
         raise SystemExit("refusing to overwrite fixed GSI terrain outputs")
+    if args.same_mosaic_numerical_diagnostic_json is not None and args.same_mosaic_numerical_diagnostic_json.exists():
+        raise SystemExit("refusing to overwrite numerical diagnostic")
 
     fine_grid = pd.read_csv(args.fine_grid_csv_gz, low_memory=False)
+    collector = None
+    if args.same_mosaic_numerical_diagnostic_json is not None:
+        from research.audit_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay import (
+            SameMosaicReplayCollector,
+        )
+        collector = SameMosaicReplayCollector()
     audited, summary = attach_fixed_gsi_terrain(
         fine_grid,
         unit_id=args.unit_id,
         cache_dir=args.cache_dir,
+        numerical_probe=collector,
     )
     args.private_out_csv_gz.parent.mkdir(parents=True, exist_ok=True)
     args.public_safe_summary_json.parent.mkdir(parents=True, exist_ok=True)
@@ -316,6 +342,15 @@ def main() -> int:
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    if collector is not None:
+        diagnostic = collector.summary(args.unit_id, int(summary["chunk_count"]))
+        args.same_mosaic_numerical_diagnostic_json.parent.mkdir(
+            parents=True, exist_ok=True
+        )
+        args.same_mosaic_numerical_diagnostic_json.write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
