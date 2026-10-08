@@ -94,7 +94,7 @@ def test_mosaic_bytes_equal_but_numerical_feature_drift_is_separated():
     assert result["gsi_png_inventory_equal"] is True
     assert result["gsi_mosaic_inventory_equal"] is True
     assert result["gsi_terrain_feature_digest_equal"] is False
-    assert result["stage_diagnosis"]=="SAME_CACHED_GSI_BYTES_DIFFERENT_TERRAIN_FEATURES_UNRESOLVED"
+    assert result["stage_diagnosis"]=="SAME_CACHED_GSI_BYTES_AND_STATES_DIFFERENT_TERRAIN_FEATURES_UNRESOLVED"
     assert result["first_difference_decimal_precision_by_feature"]["slope100"]=="8"
     assert result["first_difference_decimal_precision_by_feature"]["elev"] is None
     assert result["root_cause_identified"] is False
@@ -109,6 +109,18 @@ def test_changed_cache_source_does_not_establish_provider_failure():
     assert result["gsi_png_inventory_equal"] is False
     assert result["gsi_mosaic_inventory_equal"] is False
     assert result["root_cause_identified"] is False
+
+
+def test_grid_or_source_state_divergence_cannot_be_claimed_as_numeric_drift():
+    one,two,frozen=_inputs()
+    two["CIR02"]["grid"]["private_grid_sha256"]=_sha(300)
+    two["CIR02"]["gsi"]["terrain_feature_digest_sha256"]=_sha(301)
+    assert _compare(one,two,frozen)["units"]["CIR02"]["stage_diagnosis"]=="FINE_CANDIDATE_GRID_INPUT_DIFFERS"
+
+    one,two,frozen=_inputs()
+    two["CIR02"]["structural"]["source_state_digest_sha256"]=_sha(302)
+    two["CIR02"]["gsi"]["terrain_feature_digest_sha256"]=_sha(303)
+    assert _compare(one,two,frozen)["units"]["CIR02"]["stage_diagnosis"]=="GSI_SOURCE_COMPLETENESS_OR_STATE_DIFFERS"
 
 
 def test_structural_only_drift_and_patch_failure_reported_without_promotion():
