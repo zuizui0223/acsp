@@ -12,6 +12,9 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_feasibility_v1.json"
       - "research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
       - "tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_support_connectivity_audit_v1.json"
+      - "research/audit_cirsium_fresh_sentinel_v2_patch_support_connectivity.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_patch_support_connectivity.py"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
 
@@ -53,7 +56,8 @@ jobs:
           pytest -q \
             tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
             tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py \
-            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py
+            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
+            tests/test_cirsium_fresh_sentinel_v2_patch_support_connectivity.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -110,6 +114,14 @@ jobs:
             --structural-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
             --private-patches-csv-gz "/tmp/acsp-fixed-gsi/patches/${unit}_fine_patch_transfer.csv.gz" \
             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_patch_transfer.json"
+      - name: Audit retained 2.5-percent patch support-mask connectivity
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/audit_cirsium_fresh_sentinel_v2_patch_support_connectivity.py \
+            --unit-id "$unit" \
+            --structural-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+            --private-patches-csv-gz "/tmp/acsp-fixed-gsi/patches/${unit}_fine_patch_transfer.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_patch_connectivity.json"
       - name: Guard denominator and public-safe source receipt
         env:
           UNIT: ${{ matrix.unit }}
@@ -140,6 +152,7 @@ jobs:
           assert gsi['exact_coordinates_public'] is False
           structural=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_structural.json').read_text())
           patch=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_patch_transfer.json').read_text())
+          connectivity=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_patch_connectivity.json').read_text())
           assert structural['status']=='FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME'
           assert structural['cohort_unit_id']==unit
           assert structural['candidate_rows']==expected
@@ -169,6 +182,22 @@ jobs:
           assert patch['top_k_added_beyond_transferred_fraction'] is False
           assert patch['support_threshold_refit'] is False
           assert patch['target_patch_count_used'] is False
+          assert connectivity['status']=='RETAINED_SUPPORT_MASK_CONNECTIVITY_AUDITED_PRE_OUTCOME'
+          assert connectivity['cohort_unit_id']==unit
+          assert connectivity['retained_support_cell_count']==patch['retained_support_cell_count']
+          assert connectivity['complete_link_patch_count']==patch['patch_count']
+          assert connectivity['frozen_structural_order_sha256']==structural['private_structural_order_sha256']
+          assert connectivity['frozen_private_patch_sha256']==patch['private_patch_sha256']
+          assert connectivity['fragmented_patch_count']+connectivity['connected_patch_count']==patch['patch_count']
+          assert connectivity['within_patch_component_count_total']>=patch['patch_count']
+          assert connectivity['extra_within_patch_components']==connectivity['within_patch_component_count_total']-patch['patch_count']
+          assert connectivity['all_retained_cells_represented_once'] is True
+          assert connectivity['source_indeterminate_reclassified_as_absence'] is False
+          assert connectivity['support_mask_gap_interpreted_as_biological_barrier'] is False
+          assert connectivity['geographic_patch_selector_unchanged'] is True
+          assert connectivity['prospective_field_outcomes_opened'] is False
+          assert connectivity['field_selector_validation'] is False
+          assert connectivity['coordinates_in_public_summary'] is False
           receipt={
             'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v2',
             'status':'FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
@@ -205,6 +234,19 @@ jobs:
               'maximum_patch_member_count':patch['maximum_patch_member_count'],
               'private_patch_sha256':patch['private_patch_sha256'],
               'transfer_is_validated_selector':False
+            },
+            'support_mask_connectivity':{
+              'status':connectivity['status'],
+              'retained_support_cell_count':connectivity['retained_support_cell_count'],
+              'complete_link_patch_count':connectivity['complete_link_patch_count'],
+              'fragmented_patch_count':connectivity['fragmented_patch_count'],
+              'fragmented_patch_fraction':connectivity['fragmented_patch_fraction'],
+              'retained_cells_in_fragmented_patches':connectivity['retained_cells_in_fragmented_patches'],
+              'retained_cells_in_fragmented_fraction':connectivity['retained_cells_in_fragmented_fraction'],
+              'support_mask_connected_component_count':connectivity['support_mask_connected_component_count'],
+              'extra_within_patch_components':connectivity['extra_within_patch_components'],
+              'maximum_components_per_patch':connectivity['maximum_components_per_patch'],
+              'field_selector_validation':False,
             },
             'coordinate_bearing_artifacts_uploaded':False,
             'structural_graph_computed':True,
