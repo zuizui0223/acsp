@@ -63,7 +63,9 @@ class SelectedMosaicSequence:
     def __call__(self, chunk_index: int, selected_dem_path: str | Path | None) -> None:
         if not isinstance(chunk_index,int) or chunk_index!=self._seen:
             raise ValueError("selected mosaic chunks must be complete and in original order")
-        if selected_dem_path is None:
+        # Follow the production builder's "if not dem_path" semantics:
+        # both None and an empty path mean an unavailable source, not a file.
+        if not selected_dem_path:
             token="SOURCE_UNAVAILABLE"
             self._unavailable+=1
         else:
