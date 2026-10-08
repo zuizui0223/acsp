@@ -1,0 +1,54 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-patch-only-topology-v1",
+  "status": "FROZEN_BEFORE_PATCH_MEMBERSHIP_ONLY_TOPOLOGY_AUDIT",
+  "as_of_date": "2026-10-08",
+  "original_patch_result": "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json",
+  "frozen_patch_source_pr": 247,
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "support_fraction": 0.025,
+  "complete_link_max_distance_m": 1000,
+  "grid_spacing_m": 100,
+  "grid_cell_id_pattern": "{cohort_unit_id}_r{signed_integer}_c{signed_integer}",
+  "connectivity": "MOORE_8_NEIGHBOUR_WITHIN_RETAINED_MASK_ONLY",
+  "sole_private_input": "private_patch_csv_gz_from_fixed_fine_patch_transfer",
+  "cryptographic_guard": "SHA256 of exact compressed private patch file equals the independently frozen original PR247 patch SHA256 per unit",
+  "eligible_if_full_structural_order_replay_differs": true,
+  "prerequisites": [
+    "patch SHA256 exactly equals original frozen patch SHA256",
+    "patch member IDs parse as the frozen 100-m integer grid",
+    "all retained 2.5% support cells represented exactly once in patches",
+    "zone count and singleton count match frozen PR247 result",
+    "no private coordinates or field outcomes are accessed"
+  ],
+  "interpretation": {
+    "inferential_target": "topology of exactly frozen retained high-support-cell membership, not reproducibility of full upstream GSI/structural order",
+    "source_input_integrity_evaluated": false,
+    "ecological_connectivity_validated": false,
+    "full_structural_order_hash_gate_waived": false,
+    "existing_strict_pr250_gate_unchanged": true,
+    "field_selector_validated": false,
+    "prospective_field_outcomes_opened": false,
+    "support_gap_is_biological_absence": false,
+    "user_budget_or_field_efficiency_inferred": false
+  },
+  "predeclared_metrics": [
+    "retained_support_cell_count",
+    "complete_link_patch_count",
+    "connected_patch_count",
+    "disconnected_patch_count",
+    "disconnected_patch_fraction",
+    "cells_in_disconnected_patches",
+    "cells_in_disconnected_patch_fraction",
+    "global_mask_component_count",
+    "within_patch_component_count_total",
+    "extra_within_patch_components",
+    "maximum_components_per_patch",
+    "singleton_patch_count"
+  ],
+  "next_gate": "Release coordinate-free geometry diagnostics only if every patch SHA matches the original frozen PR247 receipt; upstream GSI reproducibility and prospective biological recovery remain separate blocked claims."
+}
