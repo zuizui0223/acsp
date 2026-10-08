@@ -113,6 +113,7 @@ def test_audit_fails_on_invalid_source_grid_and_rank() -> None:
         audit_patch_support_connectivity(frame, _patches(), unit_id="CIR02")
 
     frame = _order()
+    frame["structural_rank"] = frame["structural_rank"].astype(float)
     frame.loc[0, "structural_rank"] = 1.5
     with pytest.raises(ValueError, match="structural_rank must be complete finite integers"):
         audit_patch_support_connectivity(frame, _patches(), unit_id="CIR02")
