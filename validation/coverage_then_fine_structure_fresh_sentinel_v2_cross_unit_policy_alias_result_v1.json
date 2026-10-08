@@ -1,0 +1,54 @@
+{
+  "schema_version": "cirsium-fresh-sentinel-cross-unit-policy-alias-audit-v1",
+  "status": "SHARED_GRASSLAND_POLICY_CONFIRMED_SPATIAL_IDENTITY_UNVERIFIED",
+  "as_of_date": "2026-10-08",
+  "cohort_units": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "biological_taxon_count": 4,
+  "distinct_frozen_structural_family_count": 3,
+  "families": {
+    "CIR02": "WETLAND_MOISTURE_STRUCTURE",
+    "CIR06": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+    "CIR12": "OPEN_GRASSLAND_STRUCTURE",
+    "CIR13": "OPEN_GRASSLAND_STRUCTURE"
+  },
+  "shared_policy_units": [
+    "CIR12",
+    "CIR13"
+  ],
+  "shared_source_requirements": [
+    "terrain",
+    "worldcover"
+  ],
+  "shared_coarse_order_rule": [
+    "direct_grass_signal DESC",
+    "stable_candidate_sha256 ASC"
+  ],
+  "same_public_coarse_and_fine_counts": true,
+  "shared_counts": {
+    "coarse_source_ready": 32754,
+    "retained_coarse_centers": 819,
+    "fine_grid_candidate_count": 715103,
+    "gsi_source_complete_count": 610592,
+    "structural_source_complete_count": 607501,
+    "structural_source_indeterminate_count": 107602,
+    "transferred_2p5pct_retained_cell_count": 15187,
+    "complete_link_patch_count": 654,
+    "singleton_patch_count": 35,
+    "median_patch_member_count": 19,
+    "maximum_patch_member_count": 73
+  },
+  "private_coordinate_set_equality_verified": false,
+  "private_ecological_support_vector_equality_verified": false,
+  "private_patch_membership_equality_verified": false,
+  "different_gzip_sha256_establishes_spatial_independence": false,
+  "prospective_field_outcomes_opened": false,
+  "species_specific_model_generality_claim_authorized": false,
+  "field_selector_validation": false,
+  "interpretation": "Four biological taxa share three declared structural recipe families; CIR12 and CIR13 have the same input requirements and coarse rules. Matching public counts are not a private coordinate-level parity test. A prospective field contrast may still have four distinct biological response taxa, but not four independent species-specific selection recipes.",
+  "next_gate": "Hash-verify and compare normalized private grid coordinates, ecological support and patch membership without publishing coordinates; retain the original preregistered four-taxon estimand unchanged."
+}
