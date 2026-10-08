@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_output_manifest_v1.json"
       - ".github/workflows/cirsium-fresh-sentinel-v2-current-endpoint.yml"
   workflow_dispatch:
@@ -74,4 +75,29 @@ jobs:
           assert m["public_boundary"]["source_indeterminate_recoded_as_absence"] is False
           assert m["coarse_order_summary_facts"]["candidate_selection_added"] is False
           assert m["coarse_order_summary_facts"]["top_k_or_threshold_applied"] is False
+          fine = json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json").read_text())
+          assert fine["status"] == "FINE_PATCH_REPRESENTATION_FEASIBLE_SELECTOR_UNVALIDATED"
+          assert fine["source_pr"] == 247
+          assert fine["transferred_constants"] == {"support_fraction": 0.025, "complete_link_max_distance_m": 1000}
+          expected = {
+              "CIR02": (464633, 381842, 9546, 573, 43),
+              "CIR06": (847239, 816364, 20409, 3883, 342),
+              "CIR12": (715103, 607501, 15187, 654, 35),
+              "CIR13": (715103, 607501, 15187, 654, 35),
+          }
+          assert set(fine["units"]) == set(expected)
+          for unit, (n,complete,retained,patches,singletons) in expected.items():
+              x = fine["units"][unit]
+              assert (x["fine_grid_candidate_count"], x["structural_source_complete_count"],
+                      x["transferred_2p5pct_retained_cell_count"], x["complete_link_patch_count"],
+                      x["singleton_patch_count"]) == (n,complete,retained,patches,singletons)
+              assert x["structural_source_complete_count"] + x["structural_source_indeterminate_count"] == n
+              assert 0 <= x["singleton_patch_fraction"] <= 1
+              assert len(x["private_patch_sha256"]) == 64
+              assert len(x["structural_order_sha256"]) == 64
+          assert fine["interpretation"]["field_selector_validation"] is False
+          assert fine["interpretation"]["compact_field_site_count_validated"] is False
+          assert fine["interpretation"]["source_indeterminate_remains_unranked"] is True
+          assert fine["prospective_field_outcomes_opened"] is False
+          assert fine["coordinate_bearing_artifacts_in_repository"] is False
           PY
