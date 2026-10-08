@@ -1,0 +1,40 @@
+name: Fresh-SENTINEL v2 source-complete feature fingerprint audit
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_feature_precision_fingerprints_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-gsi-feature-fingerprints.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  feature_precision_test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install only test dependencies
+        run: python -m pip install pytest numpy pandas
+      - name: Test exact per-feature hashing, coarse sensitivity and missing-source boundary
+        run: python -m pytest -q tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py
+      - name: Freeze source and interpretation scope
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_feature_precision_fingerprints_v1.json').read_text())
+          assert c['status']=='FROZEN_PRE_OUTCOME_FEATURE_DIGEST_DIAGNOSTIC'
+          assert c['precision_decimals']==[0,2,4,6,8]
+          assert c['feature_columns']==['elev','slope100','tpi300','rough300']
+          assert c['read_only'] is True
+          for key in ('source_priority_changed','merge_phase_or_threshold_changed','individual_candidate_or_coordinate_export','field_outcomes_opened','field_selector_validated'):
+              assert c[key] is False
+          PY
