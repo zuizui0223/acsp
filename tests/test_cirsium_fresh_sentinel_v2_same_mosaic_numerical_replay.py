@@ -150,3 +150,50 @@ def test_empty_and_denominator_cases_fail_closed(tmp_path: Path) -> None:
     collector = SameMosaicReplayCollector()
     with pytest.raises(ValueError, match="unknown numerical replay"):
         collector.summary("UNDECLARED", 3)
+
+
+def test_actual_terrain_surface_rasterio_and_scipy_repeat_on_same_tiff(
+    tmp_path: Path,
+) -> None:
+    """Native rasterio read/average + scipy filters, not a mocked sampler."""
+    import rasterio
+    from pyproj import Transformer
+    from rasterio.transform import from_origin
+    from research.build_cirsium_private_alpine_local_grid_v1 import _sample_terrain
+
+    mosaic = tmp_path / "deterministic-source.tif"
+    width = height = 80
+    x0, y0, pixel = 15_450_000.0, 4_200_000.0, 25.0
+    yy, xx = np.meshgrid(
+        np.arange(height, dtype=np.float32),
+        np.arange(width, dtype=np.float32),
+        indexing="ij",
+    )
+    elevation = (125.0 + 0.31 * xx + 0.17 * yy + 1.5 * np.sin(xx / 7)).astype(np.float32)
+    with rasterio.open(
+        mosaic, "w", driver="GTiff", width=width, height=height,
+        count=1, dtype="float32", crs="EPSG:3857",
+        transform=from_origin(x0, y0, pixel, pixel),
+        nodata=-9999.0,
+    ) as dst:
+        dst.write(elevation, 1)
+    reverse = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
+    points = [(r, c) for r in range(20, 60, 5) for c in range(20, 60, 5)]
+    longitudes, latitudes = reverse.transform(
+        [x0 + (c + 0.5) * pixel for _, c in points],
+        [y0 - (r + 0.5) * pixel for r, _ in points],
+    )
+    frame = pd.DataFrame({
+        "candidate_cell_id": [f"CIR02_r{i}_c{i}" for i in range(len(points))],
+        "cohort_unit_id": ["CIR02"] * len(points),
+        "grid_row": [r for r, _ in points],
+        "grid_col": [c for _, c in points],
+        "latitude": latitudes,
+        "longitude": longitudes,
+    })
+    original = _sample_terrain(frame, mosaic)
+    assert len(original) == len(frame)
+    comparison = _run_probe(original, frame, mosaic, _sample_terrain)
+    assert comparison["sampled_source_complete_cells"] == 24
+    assert comparison["original_vs_replay_1"]["all_exact"] is True
+    assert comparison["replay_1_vs_replay_2"]["all_exact"] is True
