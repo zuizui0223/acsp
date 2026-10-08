@@ -12,6 +12,9 @@ on:
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_feasibility_v1.json"
       - "research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
       - "tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_cache_provenance_v1.json"
+      - "research/audit_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py"
       - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
   workflow_dispatch:
 
@@ -53,7 +56,8 @@ jobs:
           pytest -q \
             tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
             tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py \
-            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py
+            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
+            tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,6 +77,13 @@ jobs:
         run: |
           unit="${{ matrix.unit }}"
           python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json"
+      - name: Fingerprint original GSI tile and mosaic cache bytes without exporting paths
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/audit_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py \
+            --unit-id "$unit" \
+            --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi_cache_provenance.json"
       - name: Audit WorldCover on declared units
         run: |
           unit="${{ matrix.unit }}"
@@ -122,6 +133,18 @@ jobs:
           expected=int(os.environ['EXPECTED'])
           grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
           gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
+          inventory=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi_cache_provenance.json').read_text())
+          assert inventory['status']=='GSI_RAW_CACHE_CONTENT_INVENTORY_AUDITED_PRE_OUTCOME'
+          assert inventory['cohort_unit_id']==unit
+          assert inventory['tile_file_count']>0 and inventory['mosaic_file_count']>0
+          assert len(inventory['tile_inventory_sha256'])==64
+          assert len(inventory['mosaic_inventory_sha256'])==64
+          assert inventory['files_read_only'] is True
+          assert inventory['coordinate_bearing_filenames_exported'] is False
+          assert inventory['source_png_bytes_pinned_to_release_version'] is False
+          assert inventory['field_outcomes_opened'] is False
+          assert inventory['terrain_values_changed_by_audit'] is False
+          assert inventory['field_selector_validation'] is False
           assert grid['fine_grid_cell_count'] == expected
           assert gsi['status'] == 'FIXED_GSI_TERRAIN_ATTACHED_PRE_OUTCOME'
           assert gsi['cohort_unit_id'] == unit
@@ -205,6 +228,17 @@ jobs:
               'maximum_patch_member_count':patch['maximum_patch_member_count'],
               'private_patch_sha256':patch['private_patch_sha256'],
               'transfer_is_validated_selector':False
+            },
+            'gsi_cache_content':{
+              'tile_file_count':inventory['tile_file_count'],
+              'tile_total_bytes':inventory['tile_total_bytes'],
+              'tile_inventory_sha256':inventory['tile_inventory_sha256'],
+              'mosaic_file_count':inventory['mosaic_file_count'],
+              'mosaic_total_bytes':inventory['mosaic_total_bytes'],
+              'mosaic_inventory_sha256':inventory['mosaic_inventory_sha256'],
+              'coordinate_bearing_filenames_exported':False,
+              'source_png_bytes_pinned_to_release_version':False,
+              'field_outcomes_opened':False,
             },
             'coordinate_bearing_artifacts_uploaded':False,
             'structural_graph_computed':True,
