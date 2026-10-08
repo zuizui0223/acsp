@@ -1,0 +1,55 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-patch-support-connectivity-audit-v1",
+  "status": "FROZEN_BEFORE_SUPPORT_MASK_CONNECTIVITY_AUDIT",
+  "date": "2026-10-08",
+  "source_receipt": "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json",
+  "source_method": "FINE_PATCH_REPRESENTATION_FEASIBLE_SELECTOR_UNVALIDATED",
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "frozen_inputs": {
+    "source_complete_fine_structural_order": true,
+    "retained_cells_rule": "structural_rank / source_complete_rows <= 0.025",
+    "support_fraction": 0.025,
+    "patch_merge_distance_m": 1000,
+    "patch_membership": "unchanged exact greedy complete-link transfer from PR 247",
+    "support_mask_neighborhood": "EXACT_GRID_MOORE_8_NEIGHBOR",
+    "neighborhood_radius_cells": 1,
+    "source_indeterminate_cells_as_non_detection": false,
+    "access_or_route_used": false,
+    "field_outcomes_opened": false
+  },
+  "questions": [
+    "Does a 1-km bounded complete-link patch contain one connected retained-support component or several?",
+    "How many patches and retained cells are affected by fragmentation of the retained 2.5% support mask?",
+    "How many connected components occur in the overall retained-support mask before patch splitting?"
+  ],
+  "predeclared_metrics": [
+    "retained_support_cell_count",
+    "complete_link_patch_count",
+    "connected_patch_count",
+    "fragmented_patch_count",
+    "fragmented_patch_fraction",
+    "retained_cells_in_fragmented_patches",
+    "retained_cells_in_fragmented_fraction",
+    "support_mask_connected_component_count",
+    "within_patch_component_count_total",
+    "extra_within_patch_components",
+    "maximum_components_per_patch"
+  ],
+  "interpretation": {
+    "diagnostic_only": true,
+    "retained_support_connectedness_is_biological_habitat_connectivity": false,
+    "isolated_retained_support_cell_is_biological_absence": false,
+    "patches_are_field_routes": false,
+    "supports_fine_patch_selector_promotion": false,
+    "may_retune_support_fraction_or_merge_distance": false,
+    "may_reclassify_existing_four_unit_receipt": false,
+    "prospective_field_outcomes_read": false,
+    "all_private_coordinate_data_deleted_before_public_artifact_upload": true,
+    "next_gate": "Separately freeze any component-constrained representation and evaluate it on disjoint outcome-blind data before field discovery claims."
+  }
+}
