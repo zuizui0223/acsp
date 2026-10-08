@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
+import research.audit_cirsium_fresh_sentinel_v2_patch_support_connectivity as mod
 from research.audit_cirsium_fresh_sentinel_v2_patch_support_connectivity import (
     audit_patch_support_connectivity,
 )
@@ -117,3 +123,71 @@ def test_audit_rejects_wrong_unit_and_empty_input() -> None:
         audit_patch_support_connectivity(_order(), _patches(), unit_id="CIR13")
     with pytest.raises(ValueError, match="nonempty"):
         audit_patch_support_connectivity(_order().iloc[:0], _patches(), unit_id="CIR02")
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _private_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    order_path = tmp_path / "order.csv.gz"
+    patch_path = tmp_path / "patches.csv.gz"
+    _order().to_csv(order_path, index=False, compression={"method": "gzip", "mtime": 0})
+    _patches().to_csv(patch_path, index=False, compression={"method": "gzip", "mtime": 0})
+    receipt = {
+        "status": "FINE_PATCH_REPRESENTATION_FEASIBLE_SELECTOR_UNVALIDATED",
+        "units": {
+            "CIR02": {
+                "structural_order_sha256": _sha256(order_path),
+                "private_patch_sha256": _sha256(patch_path),
+                "structural_source_complete_count": 200,
+                "transferred_2p5pct_retained_cell_count": 5,
+                "complete_link_patch_count": 2,
+            }
+        },
+    }
+    receipt_path = tmp_path / "frozen.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    monkeypatch.setattr(mod, "RECEIPT", receipt_path)
+    return order_path, patch_path
+
+
+def test_cli_checks_frozen_hash_and_writes_coordinate_free_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    order_path, patch_path = _private_inputs(tmp_path, monkeypatch)
+    output = tmp_path / "summary.json"
+    monkeypatch.setattr(sys, "argv", [
+        "audit", "--unit-id", "CIR02",
+        "--structural-order-csv-gz", str(order_path),
+        "--private-patches-csv-gz", str(patch_path),
+        "--public-safe-summary-json", str(output),
+    ])
+    assert mod.main() == 0
+    result = json.loads(output.read_text(encoding="utf-8"))
+    assert result["fragmented_patch_count"] == 1
+    assert result["frozen_structural_order_sha256"] == _sha256(order_path)
+    assert result["frozen_private_patch_sha256"] == _sha256(patch_path)
+    for sensitive_field in ("latitude", "longitude", "candidate_cell_id", "zone_member_site_ids"):
+        assert sensitive_field not in output.read_text(encoding="utf-8")
+    with pytest.raises(SystemExit, match="refusing to overwrite"):
+        mod.main()
+
+
+def test_cli_rejects_tampered_private_order_without_writing_public_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    order_path, patch_path = _private_inputs(tmp_path, monkeypatch)
+    bad = _order()
+    bad.loc[2, "grid_row"] = 8
+    bad.to_csv(order_path, index=False, compression={"method": "gzip", "mtime": 0})
+    output = tmp_path / "should_not_exist.json"
+    monkeypatch.setattr(sys, "argv", [
+        "audit", "--unit-id", "CIR02",
+        "--structural-order-csv-gz", str(order_path),
+        "--private-patches-csv-gz", str(patch_path),
+        "--public-safe-summary-json", str(output),
+    ])
+    with pytest.raises(SystemExit, match="hash differs"):
+        mod.main()
+    assert not output.exists()
