@@ -342,6 +342,15 @@ def main() -> int:
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    if collector is not None:
+        diagnostic = collector.summary(args.unit_id, int(summary["chunk_count"]))
+        args.same_mosaic_numerical_diagnostic_json.parent.mkdir(
+            parents=True, exist_ok=True
+        )
+        args.same_mosaic_numerical_diagnostic_json.write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
