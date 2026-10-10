@@ -75,7 +75,8 @@ def test_two_complete_identical_public_runs_have_no_divergence():
     value=_compare(one,two,frozen)
     assert value["compared_unit_count"]==4
     assert value["workflow_run_ids"]==[101,102]
-    assert all(r["stage_diagnosis"]=="ALL_CHECKED_HASH_STAGES_EQUAL"
+    assert all(r["stage_diagnosis"]=="RECORDED_HASH_STAGES_EQUAL_SELECTED_DEM_IDENTITY_UNVERIFIED"
+               and r["selected_mosaic_identity_verified_in_both_runs"] is False
                and r["final_patch_sha_equal"] is True
                and r["first_patch_matches_original_freeze"] is True
                and r["second_patch_matches_original_freeze"] is True
@@ -84,6 +85,20 @@ def test_two_complete_identical_public_runs_have_no_divergence():
     assert value["full_source_replay_equivalence_claimed"] is False
     assert "candidate_cell_id" not in json.dumps(value)
     assert "latitude" not in json.dumps(value)
+
+
+def test_exact_selected_mosaics_are_required_to_report_full_checked_hash_parity():
+    one,two,frozen=_inputs()
+    for unit,chunks in (("CIR02",177),("CIR06",81),("CIR12",237),("CIR13",237)):
+        for run in (one,two):
+            run[unit]["gsi"]["chunk_count"]=chunks
+            run[unit]["gsi_selected_mosaic_sequence"]=_selected_dem_receipt(_sha(420),chunks)
+    report=_compare(one,two,frozen)
+    assert all(r["stage_diagnosis"]=="ALL_CHECKED_HASH_STAGES_EQUAL"
+               and r["selected_mosaic_identity_verified_in_both_runs"] is True
+               and r["selected_mosaic_content_sequence_equal"] is True
+               for r in report["units"].values())
+    assert report["full_source_replay_equivalence_claimed"] is False
 
 
 def test_mosaic_bytes_equal_but_numerical_feature_drift_is_separated():
