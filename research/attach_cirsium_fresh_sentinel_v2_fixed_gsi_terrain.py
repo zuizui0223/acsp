@@ -109,6 +109,7 @@ def attach_fixed_gsi_terrain(
     dem_builder: Callable[..., tuple[str | None, str]] | None = None,
     terrain_sampler: Callable[[pd.DataFrame, Path], pd.DataFrame] | None = None,
     numerical_probe: Callable[..., None] | None = None,
+    selected_mosaic_observer: Callable[[int, str | Path | None], None] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     contract = _load_contract()
     if unit_id not in UNITS:
@@ -156,6 +157,10 @@ def attach_fixed_gsi_terrain(
             refs,
             max_tiles=int(chunk["max_gsi_tiles_per_chunk"]),
         )
+        # Only records a unit-level content-sequence commitment; it may
+        # neither change the returned mosaic nor the actual terrain sample.
+        if selected_mosaic_observer is not None:
+            selected_mosaic_observer(int(chunk_index), dem_path)
 
         out = component.copy()
         out["gsi_source_state"] = "INDETERMINATE_GSI_PROVIDER_UNAVAILABLE"
@@ -306,6 +311,11 @@ def main() -> int:
         type=Path,
         help="Optional read-only pre-outcome sampled DEM replay summary without candidate IDs",
     )
+    parser.add_argument(
+        "--selected-mosaic-sequence-json",
+        type=Path,
+        help="Optional read-only aggregate commitment to actual chosen GSI DEM file bytes",
+    )
     args = parser.parse_args()
 
     if not args.fine_grid_csv_gz.is_file():
@@ -316,6 +326,8 @@ def main() -> int:
         raise SystemExit("refusing to overwrite fixed GSI terrain outputs")
     if args.same_mosaic_numerical_diagnostic_json is not None and args.same_mosaic_numerical_diagnostic_json.exists():
         raise SystemExit("refusing to overwrite numerical diagnostic")
+    if args.selected_mosaic_sequence_json is not None and args.selected_mosaic_sequence_json.exists():
+        raise SystemExit("refusing to overwrite selected mosaic sequence receipt")
 
     fine_grid = pd.read_csv(args.fine_grid_csv_gz, low_memory=False)
     collector = None
@@ -324,11 +336,20 @@ def main() -> int:
             SameMosaicReplayCollector,
         )
         collector = SameMosaicReplayCollector()
+    selected_observer = None
+    if args.selected_mosaic_sequence_json is not None:
+        from research.audit_cirsium_fresh_sentinel_v2_selected_mosaic_sequence import (
+            SelectedMosaicSequence,
+        )
+        selected_observer = SelectedMosaicSequence(
+            unit_id=args.unit_id, cache_dir=args.cache_dir,
+        )
     audited, summary = attach_fixed_gsi_terrain(
         fine_grid,
         unit_id=args.unit_id,
         cache_dir=args.cache_dir,
         numerical_probe=collector,
+        selected_mosaic_observer=selected_observer,
     )
     args.private_out_csv_gz.parent.mkdir(parents=True, exist_ok=True)
     args.public_safe_summary_json.parent.mkdir(parents=True, exist_ok=True)
@@ -349,6 +370,13 @@ def main() -> int:
         )
         args.same_mosaic_numerical_diagnostic_json.write_text(
             json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    if selected_observer is not None:
+        commitment = selected_observer.summary(chunk_count=int(summary["chunk_count"]))
+        args.selected_mosaic_sequence_json.parent.mkdir(parents=True, exist_ok=True)
+        args.selected_mosaic_sequence_json.write_text(
+            json.dumps(commitment, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
     print(json.dumps(summary, ensure_ascii=False, indent=2))

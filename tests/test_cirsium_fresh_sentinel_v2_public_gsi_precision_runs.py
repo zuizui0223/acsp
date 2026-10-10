@@ -94,10 +94,57 @@ def test_mosaic_bytes_equal_but_numerical_feature_drift_is_separated():
     assert result["gsi_png_inventory_equal"] is True
     assert result["gsi_mosaic_inventory_equal"] is True
     assert result["gsi_terrain_feature_digest_equal"] is False
-    assert result["stage_diagnosis"]=="SAME_CACHED_GSI_BYTES_AND_STATES_DIFFERENT_TERRAIN_FEATURES_UNRESOLVED"
+    assert result["stage_diagnosis"]=="SAME_CACHE_AND_SOURCE_STATES_SELECTED_DEM_IDENTITY_UNVERIFIED"
+    assert result["selected_mosaic_identity_verified_in_both_runs"] is False
     assert result["first_difference_decimal_precision_by_feature"]["slope100"]=="8"
     assert result["first_difference_decimal_precision_by_feature"]["elev"] is None
     assert result["root_cause_identified"] is False
+
+
+def _selected_dem_receipt(digest: str, chunks: int = 81) -> dict:
+    return {
+        "status":"ACTUAL_SELECTED_DEM_CONTENT_SEQUENCE_AUDITED_PRE_OUTCOME",
+        "chunk_count":chunks,
+        "selected_dem_chunks":chunks,
+        "unavailable_dem_chunks":0,
+        "selected_mosaic_content_sequence_sha256":digest,
+        "private_source_paths_or_tile_coordinates_exported":False,
+        "per_chunk_source_content_hashes_exported":False,
+        "production_gsi_selection_changed":False,
+        "field_outcomes_opened":False,
+        "cross_run_numeric_reproduction_proven":False,
+    }
+
+
+def test_actual_selected_DEM_sequence_is_required_for_post_input_numeric_diagnosis():
+    one,two,frozen=_inputs()
+    for run in (one,two):
+        run["CIR06"]["gsi"]["chunk_count"]=81
+        run["CIR06"]["gsi_selected_mosaic_sequence"]=_selected_dem_receipt(_sha(410))
+    two["CIR06"]["gsi"]["terrain_feature_digest_sha256"]=_sha(411)
+    result=_compare(one,two,frozen)["units"]["CIR06"]
+    assert result["stage_diagnosis"]=="SAME_SELECTED_DEM_CONTENT_AND_STATES_DIFFERENT_TERRAIN_UNRESOLVED"
+    assert result["selected_mosaic_content_sequence_equal"] is True
+    assert result["root_cause_identified"] is False
+
+    two["CIR06"]["gsi_selected_mosaic_sequence"]["selected_mosaic_content_sequence_sha256"]=_sha(412)
+    result=_compare(one,two,frozen)["units"]["CIR06"]
+    assert result["stage_diagnosis"]=="SAME_CACHE_BUT_DIFFERENT_ACTUALLY_SELECTED_DEM_CONTENT"
+    assert result["selected_mosaic_content_sequence_equal"] is False
+
+
+def test_selected_dem_receipt_guard_rejects_missing_sequence_denominator_or_privacy():
+    one,two,frozen=_inputs()
+    for run in (one,two):
+        run["CIR06"]["gsi"]["chunk_count"]=81
+        run["CIR06"]["gsi_selected_mosaic_sequence"]=_selected_dem_receipt(_sha(500))
+    two["CIR06"]["gsi_selected_mosaic_sequence"]["selected_dem_chunks"]=80
+    with pytest.raises(ValueError,match="selected DEM chunk denominator"):
+        _compare(one,two,frozen)
+    two["CIR06"]["gsi_selected_mosaic_sequence"]["selected_dem_chunks"]=81
+    two["CIR06"]["gsi_selected_mosaic_sequence"]["per_chunk_source_content_hashes_exported"]=True
+    with pytest.raises(ValueError,match="privacy/claim violation"):
+        _compare(one,two,frozen)
 
 
 def test_changed_cache_source_does_not_establish_provider_failure():
