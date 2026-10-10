@@ -1,0 +1,103 @@
+name: Fresh-SENTINEL v2 current endpoint
+
+on:
+  pull_request:
+    paths:
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_output_manifest_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-current-endpoint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  endpoint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Guard current evidence boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_current_endpoint_v1.json")
+          x = json.loads(p.read_text())
+          assert x["status"] == "COARSE_EVIDENCE_ENDPOINT_ACTIVE_FINE_STOPPING_UNVALIDATED"
+          assert x["cohort_unit_ids"] == ["CIR02","CIR06","CIR12","CIR13"]
+          stages = {row["stage"]: row for row in x["active_promoted_chain"]}
+          assert stages["family_specific_coarse_evidence_order"]["status"] == "ACTIVE_ENDPOINT"
+          assert stages["source_state_composition"]["result"].startswith("SOURCE_READY_FOR_FAMILY_COARSE_STAGE")
+          diag = x["non_promoted_diagnostics"][0]
+          assert diag["identity"] == "COMPLETE_5KM_COARSE_TO_FINE_SEED_COVER_V1"
+          assert diag["source_pr"] == 234
+          assert diag["disposition"] == "CLOSED_WITHOUT_MERGE_AFTER_GREEN_REPRODUCTION"
+          assert diag["do_not_promote_to_field_selector"] is True
+          assert diag["do_not_execute_full_national_100m_fine_expansion_from_this_rule"] is True
+          assert diag["frozen_counts"] == {"CIR02":8327,"CIR06":8889,"CIR12":6934,"CIR13":6934}
+          assert x["current_scientific_output"]["automatic_compact_patch_count_claim"] is False
+          assert x["prospective_field_outcomes_opened"] is False
+          forbidden = set(x["forbidden_rescues"])
+          assert "post-result Top-k" in forbidden
+          assert "post-result knee" in forbidden
+          assert "reclassifying provider-indeterminate candidates as biological absence" in forbidden
+          assert "retuning validated 2.5% or 1-km constants on the fresh four-unit coarse endpoint" in forbidden
+
+          transfer = [d for d in x["non_promoted_diagnostics"] if d["identity"] == "VALIDATED_2P5PCT_1KM_CONSTANT_TRANSFER_V1"]
+          assert len(transfer) == 1
+          transfer = transfer[0]
+          assert transfer["source_pr"] == 236
+          assert transfer["disposition"] == "CLOSED_WITHOUT_MERGE_AFTER_GREEN_REPRODUCTION"
+          assert transfer["transferred_constants"] == {"support_fraction": 0.025, "patch_merge_distance_m": 1000.0}
+          assert transfer["unit_results"]["CIR02"]["patches"] == 510
+          assert transfer["unit_results"]["CIR06"]["patches"] == 792
+          assert transfer["unit_results"]["CIR12"]["patches"] == 703
+          assert transfer["unit_results"]["CIR13"]["patches"] == 703
+          assert transfer["unit_results"]["CIR06"]["median_patch_members"] == 1.0
+          assert transfer["do_not_tune_support_fraction"] is True
+          assert transfer["do_not_tune_merge_distance"] is True
+          assert transfer["do_not_add_top_k_or_target_patch_count"] is True
+          assert transfer["do_not_promote_to_field_selector"] is True
+
+          m = json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_output_manifest_v1.json").read_text())
+          assert m["status"] == "PUBLIC_SAFE_COARSE_OUTPUT_MANIFEST_FROZEN"
+          assert m["candidate_count_per_unit"] == 39200
+          assert m["units"]["CIR02"]["coarse_order_sha256"] == "b2c0b4e4480703f2273c4eec0498f843b536c0d8546b679b7172556091a0dd76"
+          assert m["units"]["CIR06"]["coarse_order_sha256"] == "1cdb23641607253f11d0da4df1c6c5b50d25e2da7f23eb9d03cba3a265c35251"
+          assert m["units"]["CIR12"]["coarse_order_sha256"] == "a014eeaa75319065b03ab5cff6723fd508378d09961210d32cd7634110147537"
+          assert m["units"]["CIR13"]["coarse_order_sha256"] == "37f1276415e9d0cb58f3d2d86cc771fc7375458aed32142c038ac7f53398b423"
+          assert m["public_boundary"]["coordinates_included"] is False
+          assert m["public_boundary"]["source_indeterminate_recoded_as_absence"] is False
+          assert m["coarse_order_summary_facts"]["candidate_selection_added"] is False
+          assert m["coarse_order_summary_facts"]["top_k_or_threshold_applied"] is False
+          fine = json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json").read_text())
+          assert fine["status"] == "FINE_PATCH_REPRESENTATION_FEASIBLE_SELECTOR_UNVALIDATED"
+          assert fine["source_pr"] == 247
+          assert fine["transferred_constants"] == {"support_fraction": 0.025, "complete_link_max_distance_m": 1000}
+          expected = {
+              "CIR02": (464633, 381842, 9546, 573, 43),
+              "CIR06": (847239, 816364, 20409, 3883, 342),
+              "CIR12": (715103, 607501, 15187, 654, 35),
+              "CIR13": (715103, 607501, 15187, 654, 35),
+          }
+          assert set(fine["units"]) == set(expected)
+          for unit, (n,complete,retained,patches,singletons) in expected.items():
+              x = fine["units"][unit]
+              assert (x["fine_grid_candidate_count"], x["structural_source_complete_count"],
+                      x["transferred_2p5pct_retained_cell_count"], x["complete_link_patch_count"],
+                      x["singleton_patch_count"]) == (n,complete,retained,patches,singletons)
+              assert x["structural_source_complete_count"] + x["structural_source_indeterminate_count"] == n
+              assert 0 <= x["singleton_patch_fraction"] <= 1
+              assert len(x["private_patch_sha256"]) == 64
+              assert len(x["structural_order_sha256"]) == 64
+          assert fine["interpretation"]["field_selector_validation"] is False
+          assert fine["interpretation"]["compact_field_site_count_validated"] is False
+          assert fine["interpretation"]["source_indeterminate_remains_unranked"] is True
+          assert fine["prospective_field_outcomes_opened"] is False
+          assert fine["coordinate_bearing_artifacts_in_repository"] is False
+          PY

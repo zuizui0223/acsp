@@ -1,0 +1,52 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fine-worldcover-availability-v1",
+  "status": "FROZEN_BEFORE_FINE_WORLDCOVER_AVAILABILITY_AUDIT",
+  "source_primary_fine_grid_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_v1.json",
+  "required_units": ["CIR02", "CIR12", "CIR13"],
+  "excluded_units": {
+    "CIR06": "ALPINE_TOPOGRAPHIC_STRUCTURE has no frozen ESA WorldCover dependency"
+  },
+  "provider": {
+    "identity": "ESA_WORLDCOVER",
+    "release": "2021_v200",
+    "neighbourhood_radius_m": 250.0,
+    "sparse_reference_implementation": "acsp.discovery.providers.worldcover_neighborhood_points.attach_worldcover_neighbourhood_fractions",
+    "blocked_execution_implementation": "acsp.discovery.providers.worldcover_neighborhood_points.audit_worldcover_neighbourhood_availability_blocked",
+    "blocked_pixel_chunk": 2048,
+    "blocked_pixel_chunk_role": "transport/runtime only; scientific output must remain parity-equivalent to the sparse reference"
+  },
+  "candidate_denominator": {
+    "preserve_all_primary_fine_grid_rows": true,
+    "drop_provider_failure_rows": false,
+    "drop_tile_boundary_or_nodata_rows": false,
+    "source_states": [
+      "SOURCE_COMPLETE",
+      "INDETERMINATE_NEIGHBOURHOOD_UNAVAILABLE",
+      "INDETERMINATE_PROVIDER_FAILURE"
+    ]
+  },
+  "source_complete_features": [
+    "wc_tree_frac_250m",
+    "wc_grass_frac_250m",
+    "wc_bare_frac_250m",
+    "wc_water_frac_250m",
+    "wc_wetland_frac_250m",
+    "wc_edge_mix_250m"
+  ],
+  "interpretation_boundary": {
+    "provider_failure_is_biological_absence": false,
+    "neighbourhood_unavailable_is_biological_absence": false,
+    "source_complete_is_occupancy": false,
+    "source_complete_is_habitat_suitability": false,
+    "audit_authorizes_structural_ranking": false
+  },
+  "forbidden": [
+    "do not substitute another WorldCover release or provider",
+    "do not clip 250-m windows across official 3-degree tile boundaries",
+    "do not recode provider failure or missing neighbourhood as zero habitat support",
+    "do not drop source-indeterminate rows from the denominator in the public audit",
+    "do not use field outcomes, access, routes, budget or private exact sites"
+  ],
+  "prospective_field_outcomes_opened": false,
+  "next_gate": "Freeze per-unit WorldCover fine-source completeness/digest. Only source-complete rows may proceed to family-specific structural raw-layer construction; source-indeterminate rows remain retained separately."
+}

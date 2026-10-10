@@ -1,0 +1,69 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fixed-gsi-terrain-policy-v1",
+  "status": "FROZEN_BEFORE_FINE_GSI_TERRAIN_ATTACHMENT",
+  "scientific_role": "deterministic public-source attachment policy; chunk geometry is part of source semantics and is not assumed to be pure transport",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "source_requirements": {
+    "requires_gsi_dem_for_all_four_units": true,
+    "source_table": "validation/cirsium_private_frame_source_requirements_v1.csv"
+  },
+  "provider": {
+    "identity": "GSI DEM via production build_gsi_dem_for_bounds",
+    "source_priority": "unchanged production GSI_DEM_SOURCES order",
+    "terrain_sampling_semantics": "research.build_cirsium_private_alpine_local_grid_v1._sample_terrain",
+    "required_columns": ["elev", "slope100", "tpi300", "rough300"]
+  },
+  "chunk_policy": {
+    "physical_chunk_width_m": 40000,
+    "derivation": "existing public structural holdout uses 8 cells x 5000 m = 40000 m",
+    "fine_grid_spacing_m": 100,
+    "chunk_grid_cells": 400,
+    "shared_grid_phase_offset_cells": [0, 0],
+    "phase_origin": "shared JAPAN_CENTERED_AEQD_V1 integer grid origin",
+    "chunk_margin_degrees": 0.02,
+    "max_gsi_tiles_per_chunk": 900,
+    "reference_points_per_chunk_max": 8,
+    "reference_point_rule": "sort by grid_row then grid_col; step=max(1,floor(n/8)); take first 8 stepped rows",
+    "chunk_phase_tunable": false,
+    "chunk_width_tunable": false,
+    "margin_tunable": false,
+    "max_tiles_tunable": false
+  },
+  "denominator_policy": {
+    "preserve_all_primary_fine_grid_rows": true,
+    "source_states": [
+      "SOURCE_COMPLETE",
+      "INDETERMINATE_GSI_PROVIDER_UNAVAILABLE",
+      "INDETERMINATE_TERRAIN_VECTOR_UNAVAILABLE"
+    ],
+    "provider_failure_is_biological_absence": false,
+    "terrain_vector_unavailable_is_biological_absence": false,
+    "indeterminate_rows_may_be_recoded_as_zero_support": false
+  },
+  "execution_boundary": {
+    "field_outcomes_used": false,
+    "candidate_ranking_computed": false,
+    "structural_graph_computed": false,
+    "worldcover_logic_changed": false,
+    "access_or_budget_used": false,
+    "private_exact_sites_used": false,
+    "p02_results_used": false
+  },
+  "relationship_to_chunk_invariance_audit": {
+    "audit_pr": 243,
+    "audit_required_for_this_fixed_policy_to_execute": false,
+    "reason": "this policy does not claim chunking is pure transport; it freezes one pre-outcome chunk/source-selection convention as part of the source layer",
+    "if_audit_later_shows_invariance": "interpretation may be relaxed to transport-equivalent, but the frozen execution policy does not change",
+    "if_audit_later_shows_noninvariance": "the fixed phase remains the declared source-selection policy; do not choose the more favorable phase"
+  },
+  "forbidden": [
+    "do not change chunk phase after seeing terrain values",
+    "do not change chunk width after seeing terrain values",
+    "do not change GSI source priority",
+    "do not drop source-indeterminate fine cells from public source accounting",
+    "do not interpret missing terrain as ecological absence",
+    "do not compute structural ranking before source-complete terrain attachment is frozen"
+  ],
+  "prospective_field_outcomes_opened": false,
+  "next_gate": "Execute fixed-policy GSI terrain attachment with denominator-preserving source states, freeze per-unit source-completeness and terrain-feature digests, then intersect required source-complete layers before G_E_LOCAL_GRID_V1."
+}

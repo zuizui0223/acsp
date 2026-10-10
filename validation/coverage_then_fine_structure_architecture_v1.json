@@ -1,0 +1,68 @@
+{
+  "schema_version": "coverage-then-fine-structure-architecture-v1",
+  "status": "FROZEN_BEFORE_FRESH_EVALUATION",
+  "source_pr": 184,
+  "source_parent_issue": 183,
+  "source_terminal": "validation/cirsium_structural_population_holdout_development_terminal_v1.json",
+  "validated_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "new_confirmation_claim": false,
+  "motivation": "The completed coarse 5-km structural holdout did not replace nearest-known and added only a small increment over spatial balance at 5 km. The next architecture separates regional exploration from fine localization instead of retuning opened structural recipes.",
+  "scope": {
+    "intended_lanes": ["DETACHED_COMPONENT", "SENTINEL"],
+    "excluded_lane": "LOCAL_CONTINUATION",
+    "local_lane_reason": "nearest-known retains a strong local comparator/exploitation role and should not be displaced by this architecture",
+    "field_outcomes_used_to_define_order": false
+  },
+  "role_separation": {
+    "coarse_role": "broad geographic coverage only",
+    "coarse_default_order_identity": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+    "fine_role": "within-coarse-cell structural localization only",
+    "fine_support_source": "already frozen family-specific structural support machinery or a separately frozen future fine structural support generator",
+    "cross_cell_structural_score_comparison": false,
+    "coverage_structure_weight": null,
+    "budget_parameter": null
+  },
+  "global_order": {
+    "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+    "rule": "rank fine candidates within each coarse cell by structural support; then order globally by within-cell structural rank first and coarse coverage rank second",
+    "equivalent_description": "take the best fine candidate from every non-empty coarse cell in coverage order, then the second-best from every cell, then the third-best, continuing until all candidates are exhausted",
+    "stable_tie_break": "SHA-256 candidate ID hash",
+    "full_order_required": true,
+    "prefix_evaluation_allowed": true,
+    "favorable_prefix_selection_allowed": false
+  },
+  "why_rank_not_score_fusion": {
+    "reason": "Structural-support magnitudes can have family- and cell-specific calibration. Only within-cell structural rank is used, so broad coverage cannot be overwhelmed by an arbitrary absolute support scale.",
+    "fitted_weights": false,
+    "post_outcome_calibration": false
+  },
+  "fresh_evaluation_requirements": {
+    "fresh_or_disjoint_outcomes_required": true,
+    "consumed_cirsium_12_folds_may_be_used_for_promotion": false,
+    "freeze_before_outcomes": [
+      "coarse cell geometry and resolution",
+      "fine candidate resolution",
+      "source providers and source-completeness rules",
+      "structural support generator",
+      "known-point exclusion",
+      "coarse coverage order",
+      "comparators",
+      "prefix fractions",
+      "recovery endpoints",
+      "failure and abstention semantics"
+    ],
+    "minimum_comparators": [
+      "same fine frame with deterministic spatial balance",
+      "coverage order with within-cell stable non-structural ordering"
+    ]
+  },
+  "forbidden": [
+    "do not fit a coverage/structure weight on the opened Cirsium holdout",
+    "do not pick coarse or fine resolution after seeing a fresh outcome",
+    "do not compare absolute structural scores across coarse cells in v1",
+    "do not merge LOCAL and DETACHED lanes into one fitted score",
+    "do not let roads, access, permissions, route cost, time or budget create ecological support",
+    "do not claim field efficiency or occupancy without prospective complete effort and detection/non-detection logs"
+  ]
+}

@@ -1,0 +1,85 @@
+name: Global availability parity country freeze v2
+
+on:
+  pull_request:
+    paths:
+      - "validation/acsp_global_availability_parity_confirmation_v2.json"
+      - "validation/acsp_global_availability_parity_identities_v2.csv"
+      - "validation/acsp_global_availability_parity_identity_freeze_v2_result.json"
+      - "research/freeze_global_availability_parity_countries_v2.py"
+      - "tests/test_global_availability_parity_country_freeze_v2.py"
+      - ".github/workflows/global-availability-parity-country-freeze-v2.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: global-availability-parity-country-freeze-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  freeze-countries-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test stage-2 receipt and country-freeze mechanics
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python tests/test_global_availability_parity_country_freeze_v2.py -v
+      - name: Verify frozen stage-1-v2 identity receipt before provider queries
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          import freeze_global_availability_parity_countries_v2 as s
+          x, r = s.verify_stage1()
+          assert len(x) == 48
+          assert r['workflow_run_id'] == 34120710303
+          assert r['artifact']['id'] == 10018103754
+          assert r['information_boundary']['heldout_2021_2025_opened'] is False
+          print({'identity_count': len(x), 'identity_canonical_sha256': r['identity_canonical_sha256']})
+          PY
+      - name: Freeze historical-only country plans for exactly 48 taxa
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/global-availability-parity-countries-v2
+          mkdir -p /tmp/global-availability-parity-countries-v2
+          python research/freeze_global_availability_parity_countries_v2.py \
+            --country-output /tmp/global-availability-parity-countries-v2/country_plans.csv \
+            --audit-output /tmp/global-availability-parity-countries-v2/audit.json
+      - name: Guard stage-2 information boundary
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          a = json.load(open('/tmp/global-availability-parity-countries-v2/audit.json'))
+          x = pd.read_csv('/tmp/global-availability-parity-countries-v2/country_plans.csv')
+          assert a['status'] == 'HISTORICAL_COUNTRY_PLANS_FROZEN_PRE_GEOMETRY_PRE_CANDIDATES_PRE_HELDOUT_V2'
+          assert a['taxon_count'] == 48 and a['historical_facet_query_count'] == 48
+          assert len(x) == 48 and x['speciesKey'].nunique() == 48
+          assert a['country_geometry_opened'] is False
+          assert a['candidate_generation_run'] is False
+          assert a['heldout_2021_2025_opened'] is False
+          assert a['robust_support_run'] is False
+          assert a['random_baseline_run'] is False
+          assert a['recall_or_lift_read'] is False
+          assert a['field_outcomes_used'] is False
+          assert a['country_selection_uses_historical_evidence_only'] is True
+          assert a['taxon_replacement_after_identity_freeze'] is False
+          assert a['validated_japan_core_changed'] is False
+          print({'ready_country_count': a['ready_country_count'], 'state_counts': a['state_counts']})
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-availability-parity-countries-v2
+          path: /tmp/global-availability-parity-countries-v2/
+          if-no-files-found: error
+          retention-days: 90

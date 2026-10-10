@@ -1,0 +1,49 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-primary-fine-grid-v1",
+  "status": "FROZEN_BEFORE_PRIMARY_FINE_GRID_MATERIALIZATION",
+  "source_size_audit": "validation/coverage_then_fine_structure_fresh_sentinel_v2_local_refinement_size_audit_result_v1.json",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "coarse_center_rule": {
+    "support_fraction": 0.025,
+    "source_ready_only": true,
+    "retained_count_rule": "ceil(0.025 * source_ready_candidate_count)",
+    "source_indeterminate_included": false
+  },
+  "fine_grid": {
+    "radius_km": 2.0,
+    "grid_spacing_m": 100.0,
+    "projection_identity": "JAPAN_CENTERED_AEQD_V1",
+    "proj_string": "+proj=aeqd +lat_0=36 +lon_0=138 +datum=WGS84 +units=m +no_defs",
+    "grid_row_definition": "floor(projected_y_m / 100)",
+    "grid_col_definition": "floor(projected_x_m / 100)",
+    "cell_center_x_m": "(grid_col + 0.5) * 100",
+    "cell_center_y_m": "(grid_row + 0.5) * 100",
+    "overlapping_center_windows": "union exact grid_row/grid_col pairs",
+    "output_order": "grid_row then grid_col ascending"
+  },
+  "expected_unit_cell_counts_from_frozen_audit": {
+    "CIR02": 464633,
+    "CIR06": 847239,
+    "CIR12": 715103,
+    "CIR13": 715103
+  },
+  "output_boundary": {
+    "coordinate_bearing_grid_private": true,
+    "private_grid_may_be_committed": false,
+    "public_summary_coordinates_included": false,
+    "field_outcomes_used": false,
+    "ecological_sources_attached": false,
+    "structural_graph_computed": false,
+    "candidate_ranking_computed": false,
+    "access_or_budget_used": false
+  },
+  "forbidden": [
+    "do not use the 5-km sensitivity frame as the primary fine grid",
+    "do not change 2.5%, 2 km or 100 m",
+    "do not include SOURCE_INDETERMINATE_RETAIN in the source-ready fine grid",
+    "do not attach ecological scores in the geometry materialization step",
+    "do not write coordinate-bearing fine-grid files into the public repository"
+  ],
+  "prospective_field_outcomes_opened": false,
+  "next_gate": "Hash the private primary fine grids and attach only the already-frozen family-specific public ecological primitives before running G_E_LOCAL_GRID_V1."
+}

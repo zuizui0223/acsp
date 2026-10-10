@@ -1,0 +1,95 @@
+{
+  "schema_version": "cirsium-japan38-broad-frame-confirmation-v2",
+  "status": "FROZEN_BEFORE_2021_2025_OUTCOME_FETCH",
+  "parent_issue": 198,
+  "scientific_role": "fully disjoint candidate-frame confirmation; not structural-selector validation and not a change to the validated Japanese ACSP robust product or confirmed automatic global adapter",
+  "question": "Across all previously unused Japan38 Cirsium concepts retained in the frozen v2 roster, does a training-only BROAD land candidate universe materially increase novel later-population reachability beyond a bounded LOCAL frame?",
+  "validated_japan_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "cohort": {
+    "roster_path": "validation/cirsium_japan38_disjoint_v2_roster.csv",
+    "include_rule": "include_v2 == true",
+    "declared_taxa": 31,
+    "taxon_replacement_allowed": false,
+    "selection_uses_2021_2025": false,
+    "excluded_rows_remain_excluded": true
+  },
+  "fixed_region_registry": {
+    "source": "acsp.taxon_patches.VALIDATED_JAPAN_REGIONS",
+    "region_count": 12,
+    "all_12_regions_allowed_for_every_included_taxon": true,
+    "selection_rule": "Choose the fixed region with the largest number of strict 2000-2020 population clusters; ties follow existing VALIDATED_JAPAN_REGIONS order. If all regions have zero strict historical populations, retain the taxon as NO_HISTORICAL_ANCHOR and do not replace it.",
+    "selection_uses_recent_outcomes": false
+  },
+  "historical_evidence": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2000, 2020],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_exact": false,
+    "has_geospatial_issue_allowed": false,
+    "occurrence_status": "PRESENT",
+    "population_cluster_rule": "deterministic complete-link maximum diameter 0.5 km",
+    "region_choice_uses_population_clusters_not_raw_record_density": true
+  },
+  "candidate_universes": {
+    "grid_spacing_m": 1000,
+    "known_exclusion_km": 0.5,
+    "local_outer_radii_km": [2, 5, 10],
+    "broad_outer_frame": "the selected fixed VALIDATED_JAPAN_REGIONS rectangle",
+    "matched_grid_resolution_across_local_and_broad": true,
+    "land_filter": {
+      "provider": "ESA WorldCover",
+      "release": "2021_v200",
+      "mode": "official 3-degree COG point sampling at frozen candidate coordinates",
+      "valid_classes": [10, 20, 30, 40, 50, 60, 70, 90, 95, 100],
+      "water_class_removed": 80,
+      "component_segmentation_used": false
+    },
+    "structural_selector_used": false,
+    "spatial_selector_used": false,
+    "human_access_used": false
+  },
+  "outcome": {
+    "provider": "GBIF",
+    "country": "JP",
+    "period": [2021, 2025],
+    "coordinate_uncertainty_m_max": 1000,
+    "missing_uncertainty_is_evaluable": false,
+    "has_geospatial_issue_allowed": false,
+    "occurrence_status": "PRESENT",
+    "fetch_only_after_all_31_preflight_states_are_frozen": true,
+    "novel_population_rule": "Apply the same declared uncertainty <=1 km rule, then deterministic complete-link 0.5 km; a recent cluster is novel when >0.5 km from every strict historical population in the selected fixed region",
+    "recovery_radii_km": [0.5, 1.0],
+    "primary_recovery_radius_km": 1.0
+  },
+  "primary_endpoint": {
+    "contrast": "BROAD_LAND full-frame recall minus LOCAL_5KM_LAND full-frame recall at 1.0 km",
+    "minimum_temporally_evaluable_taxa": 8,
+    "minimum_fraction_evaluable_taxa_with_strictly_positive_difference": 0.5,
+    "minimum_cluster_weighted_added_recall": 0.1,
+    "all_three_conditions_required": true,
+    "zero_recent_or_zero_novel_taxa": "retain as non-evaluable/zero-information; never replace after outcome opening",
+    "interpretation": "candidate-universe adequacy only; BROAD is a superset of LOCAL so nonnegative differences do not imply selector superiority"
+  },
+  "secondary_outputs": [
+    "LOCAL_2KM_LAND ceiling at 0.5 and 1.0 km",
+    "LOCAL_5KM_LAND ceiling at 0.5 and 1.0 km",
+    "LOCAL_10KM_LAND ceiling at 0.5 and 1.0 km",
+    "BROAD_LAND ceiling at 0.5 and 1.0 km",
+    "constructible/no-anchor/provider-failure counts across all 31 frozen taxa",
+    "candidate counts and strict historical/recent/novel population counts for every taxon"
+  ],
+  "next_stage_if_pass": "On a new disjoint cohort, compare source-backed structural/DETACHED ranking with strong spatial coverage within an adequate frozen candidate universe; do not use this outcome cohort to tune selectors.",
+  "forbidden": [
+    "do not change roster membership after outcome opening",
+    "do not select regions using 2021-2025 information",
+    "do not relax historical or recent 1000-m precision rules",
+    "do not treat missing uncertainty as exact/evaluable",
+    "do not tune LOCAL radii or WorldCover land classes after outcome opening",
+    "do not fit or nominate structural/spatial selectors on this cohort",
+    "do not add access roads trails travel budget or cost to ecological candidate membership",
+    "do not call broad full-frame reachability field efficiency occupancy probability or exact-site prediction",
+    "do not modify the independently validated Japanese robust product or confirmed automatic global adapter"
+  ]
+}

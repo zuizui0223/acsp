@@ -1,0 +1,49 @@
+name: Fresh-SENTINEL v2 same DEM numerical replay diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-same-mosaic-numerical-replay.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  same_mosaic_synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned project dependencies and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test unchanged GSI source outputs, same-file double replay and fail-closed boundaries
+        run: |
+          python -m pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py
+      - name: Assert diagnostic does not claim external or biological validation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_v1.json').read_text())
+          assert c['status']=='FROZEN_BEFORE_DIAGNOSTIC_SAME_MOSAIC_RERUN'
+          assert c['max_complete_candidates_per_probed_chunk']==24
+          assert c['replays_per_sample']==2
+          assert c['probed_chunk_indices_rule']=='sorted unique of 0, floor((chunk_count - 1)/2), chunk_count - 1'
+          assert c['interpretation']['no_change_to_source_retrieval_or_order'] is True
+          assert c['interpretation']['no_change_to_support_fraction_or_patch_merge_distance'] is True
+          assert c['interpretation']['original_structural_order_replay_claim'] is False
+          assert c['interpretation']['field_discovery_or_occupancy_claim'] is False
+          assert c['interpretation']['prospective_field_outcomes_opened'] is False
+          PY

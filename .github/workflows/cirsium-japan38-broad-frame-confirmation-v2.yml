@@ -1,0 +1,92 @@
+name: Cirsium Japan38 broad-frame confirmation v2
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_japan38_broad_frame_confirmation_v2.json"
+      - "validation/cirsium_japan38_disjoint_v2_roster.csv"
+      - "validation/cirsium_japan38_provider_identity_amendment_v2.json"
+      - "research/run_cirsium_japan38_broad_frame_confirmation_v2.py"
+      - "research/run_cirsium_disjoint_broad_frame_replication_v1.py"
+      - "tests/test_cirsium_japan38_broad_frame_outcome_v2.py"
+      - ".github/workflows/cirsium-japan38-broad-frame-confirmation-v2.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: cirsium-japan38-broad-frame-confirmation-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+  PREFLIGHT_RUN_ID: "34314536154"
+  PREFLIGHT_ARTIFACT: "cirsium-japan38-broad-frame-preflight-v2"
+
+jobs:
+  heldout-confirmation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test provider-identity and heldout boundary
+        run: python -m unittest -v tests/test_cirsium_japan38_broad_frame_outcome_v2.py
+      - name: Download exact historical-only preflight artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PREFLIGHT_ARTIFACT }}
+          path: preflight-source
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.PREFLIGHT_RUN_ID }}
+      - name: Verify pinned preflight and provider-identity amendment before heldout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import run_cirsium_japan38_broad_frame_confirmation_v2 as r
+          p = Path('preflight-source/preflight_result.json')
+          contract, amendment, preflight, roster = r.verify_preoutcome_documents(p)
+          assert len(amendment['constructible_provider_identities']) == 11
+          assert amendment['recent_outcomes_opened_before_amendment'] is False
+          assert preflight['recent_outcomes_fetched'] is False
+          print('PREHELDOUT_DOCUMENT_GATE_PASS')
+          PY
+      - name: Open frozen 2021-2025 heldout after full live reconstruction and evaluate
+        run: |
+          mkdir -p japan38-outcome
+          python research/run_cirsium_japan38_broad_frame_confirmation_v2.py \
+            --preflight preflight-source/preflight_result.json \
+            --out-dir japan38-outcome
+      - name: Verify public artifact contains no coordinate rows
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          summary = json.loads(Path('japan38-outcome/summary.json').read_text(encoding='utf-8'))
+          assert summary['status'] == 'JAPAN38_BROAD_FRAME_CONFIRMATION_COMPLETE'
+          assert summary['declared_paper_concepts'] == 31
+          assert summary['preflight_constructible_concept_rows'] == 13
+          assert summary['primary']['unique_constructible_provider_identities'] == 11
+          assert summary['validated_japan_product_changed'] is False
+          assert summary['automatic_global_adapter_changed'] is False
+          assert summary['selector_evaluated'] is False
+          for path in Path('japan38-outcome').glob('*'):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding='utf-8').lower()
+              for token in ('"latitude"', '"longitude"', 'occurrence_id'):
+                  assert token not in text, (path, token)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-japan38-broad-frame-confirmation-v2
+          path: japan38-outcome/
+          if-no-files-found: error
+          retention-days: 90

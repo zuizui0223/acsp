@@ -1,0 +1,114 @@
+name: Japan plant population-holdout LOCAL vs DETACHED diagnostic v1
+
+on:
+  push:
+    branches:
+      - research/occurrence-anchored-local-discovery-v1
+    paths:
+      - "validation/japan_plant_population_holdout_lane_diagnostic_v1.json"
+      - "validation/japan_plant_population_holdout_selector_development_result_v1.json"
+      - "research/diagnose_japan_plant_population_holdout_lanes_v1.py"
+      - "tests/test_japan_plant_population_holdout_lane_diagnostic_v1.py"
+      - ".github/workflows/japan-plant-population-holdout-lane-diagnostic-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: japan-plant-population-holdout-lane-diagnostic-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+  SOURCE_207_RUN_ID: "34670865955"
+  SOURCE_207_ARTIFACT: "japan-plant-population-holdout-selector-development-v1"
+  SOURCE_96_RUN_ID: "32335791948"
+  SOURCE_96_ARTIFACT: "acsp-robust-patch-untouched-confirmation-cohort-v2"
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test frozen lane diagnostic mechanics
+        run: python -m unittest -v tests/test_japan_plant_population_holdout_lane_diagnostic_v1.py
+      - name: Download exact terminal #207 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOURCE_207_ARTIFACT }}
+          path: source-207
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.SOURCE_207_RUN_ID }}
+      - name: Download exact original frozen 96-pair cohort
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOURCE_96_ARTIFACT }}
+          path: source-96
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: ${{ env.SOURCE_96_RUN_ID }}
+      - name: Verify exact consumed input bytes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          cfg=json.loads(Path('validation/japan_plant_population_holdout_lane_diagnostic_v1.json').read_text())
+          folds=Path('source-207/population_holdout_folds.csv')
+          sample=Path('source-96/predeclared_taxon_region_pairs.csv')
+          assert hashlib.sha256(folds.read_bytes()).hexdigest() == cfg['source_207']['folds_sha256']
+          assert hashlib.sha256(sample.read_bytes()).hexdigest() == cfg['source_cohort']['sample_sha256']
+          terminal=json.loads(Path(cfg['source_207']['terminal_result_path']).read_text())
+          assert terminal['workflow_run_id'] == cfg['source_207']['workflow_run_id']
+          assert terminal['artifact_id'] == cfg['source_207']['artifact_id']
+          assert terminal['successful_population_holdout_folds'] == 25
+          print('FROZEN_INPUT_BYTES_PASS')
+          PY
+      - name: Reconstruct hidden-to-retained population distances and assign frozen lanes
+        run: |
+          mkdir -p lane-diagnostic
+          python research/diagnose_japan_plant_population_holdout_lanes_v1.py \
+            --folds source-207/population_holdout_folds.csv \
+            --sample-file source-96/predeclared_taxon_region_pairs.csv \
+            --out-dir lane-diagnostic
+      - name: Verify post-hoc boundary and public-safe outputs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, pandas as pd
+          root=Path('lane-diagnostic')
+          summary=json.loads((root/'summary.json').read_text())
+          folds=pd.read_csv(root/'lane_folds.csv')
+          audits=pd.read_csv(root/'reconstruction_audit.csv')
+          assert summary['status'] == 'POSTHOC_DIAGNOSTIC_COMPLETE'
+          assert summary['source_207_terminal_unchanged'] is True
+          assert summary['independent_confirmation'] is False
+          assert summary['selector_rebuilt'] is False
+          assert summary['selector_rescored'] is False
+          assert summary['lane_boundary_km'] == 5.0
+          assert summary['lane_boundary_tuned'] is False
+          assert len(folds) == 25
+          assert set(folds['discovery_lane']) <= {'LOCAL','DETACHED'}
+          assert len(audits) == folds['pair_id'].nunique()
+          assert audits['fold_identity_match'].astype(bool).all()
+          for path in root.glob('*'):
+              if path.is_file():
+                  text=path.read_text(encoding='utf-8').lower()
+                  assert '"latitude"' not in text
+                  assert '"longitude"' not in text
+          print('POSTHOC_LANE_BOUNDARY_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: japan-plant-population-holdout-lane-diagnostic-v1
+          path: lane-diagnostic/
+          if-no-files-found: error
+          retention-days: 90

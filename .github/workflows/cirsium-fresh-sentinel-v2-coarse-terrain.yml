@@ -1,0 +1,86 @@
+name: Fresh-SENTINEL v2 coarse terrain smoke
+
+on:
+  pull_request:
+    paths:
+      - "research/attach_cirsium_fresh_sentinel_v2_coarse_terrain.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_coarse_terrain.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_coarse_terrain_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-coarse-terrain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  coarse-terrain-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test lossless terrain attachment
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_coarse_terrain.py
+      - name: Build stable geometry-only smoke tile
+        run: |
+          mkdir -p /tmp/acsp-fresh-sentinel-v2-terrain
+          python - <<'PY'
+          import hashlib
+          import pandas as pd
+          from acsp.global_geometry import fetch_geoboundaries_country_geometry
+          from research.build_cirsium_fresh_sentinel_public_broad_frame_v2 import build_fresh_sentinel_v2_outer_frame
+
+          geometry = fetch_geoboundaries_country_geometry("JP")
+          frame, _ = build_fresh_sentinel_v2_outer_frame(geometry)
+          tiles = sorted(frame["regional_tile_id"].astype(str).unique())
+          selected = min(tiles, key=lambda value: hashlib.sha256(value.encode()).hexdigest())
+          smoke = frame.loc[frame["regional_tile_id"].astype(str).eq(selected)].copy()
+          assert len(smoke) == 800
+          smoke.to_csv("/tmp/acsp-fresh-sentinel-v2-terrain/smoke_outer.csv", index=False)
+          print({"stable_hash_min_tile": selected, "candidate_count": len(smoke)})
+          PY
+      - name: Attach live coarse terrain
+        run: |
+          python research/attach_cirsium_fresh_sentinel_v2_coarse_terrain.py \
+            --input-csv /tmp/acsp-fresh-sentinel-v2-terrain/smoke_outer.csv \
+            --output-csv /tmp/acsp-fresh-sentinel-v2-terrain/smoke_terrain.csv \
+            --summary-json /tmp/acsp-fresh-sentinel-v2-terrain/summary.json
+      - name: Guard smoke boundary
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+
+          before = pd.read_csv("/tmp/acsp-fresh-sentinel-v2-terrain/smoke_outer.csv")
+          after = pd.read_csv("/tmp/acsp-fresh-sentinel-v2-terrain/smoke_terrain.csv")
+          summary = json.loads(Path("/tmp/acsp-fresh-sentinel-v2-terrain/summary.json").read_text())
+          assert before["candidate_cell_id"].astype(str).tolist() == after["candidate_cell_id"].astype(str).tolist()
+          assert len(before) == len(after) == 800
+          assert summary["input_candidate_count"] == summary["output_candidate_count"] == 800
+          assert summary["candidate_rows_dropped"] == 0
+          assert summary["candidate_selection_added"] is False
+          assert summary["candidate_ranking_added"] is False
+          assert summary["occurrence_prototypes_used"] is False
+          assert summary["private_exact_site_geometry_used"] is False
+          assert summary["field_outcomes_used"] is False
+          assert set(after["coarse_terrain_status"].astype(str)).issubset({
+              "COMPLETE",
+              "INDETERMINATE_TERRAIN_MISSING",
+              "INDETERMINATE_PROVIDER_FAILURE",
+          })
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-coarse-terrain-smoke
+          path: /tmp/acsp-fresh-sentinel-v2-terrain/summary.json
+          if-no-files-found: error

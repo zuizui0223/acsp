@@ -1,0 +1,32 @@
+{
+  "schema_version": "japan-plant-v4-temporal-persistence-gate-development-result-v1",
+  "status": "DEVELOPMENT_TERMINAL_PROMISING_BUT_INSUFFICIENT_FOR_SOLO_PROMOTION",
+  "issue": 206,
+  "source_confirmation_issue": 203,
+  "workflow_run_id": 34670464910,
+  "workflow_head_sha": "6ced3a4aa5441c1ecd676f5a44302a764ae9b7db",
+  "artifact_id": 10290293648,
+  "artifact_digest": "sha256:97a48f623bb9bc9a6353a7c0f48f9fa5a5352709f47f87bfd0ad23996dbbc293",
+  "summary_json_sha256": "2c225b3892deeddf0ac6c5e79f5ecd8dcaa94a73e5c8b24a10863c9593957587",
+  "taxon_temporal_persistence_diagnostics_csv_sha256": "ac08e1f9d53ae164f73e8768a87e13e08328f1e535504eead27176dd81b00328",
+  "taxa": 24,
+  "historical_reconstruction_match_taxa": 24,
+  "candidate_gate": "frozen selected region has >=1 strict 0.5-km population cluster during 2016-2020",
+  "gate_pass_taxa": 12,
+  "ungated_temporally_evaluable_taxa": 6,
+  "ungated_evaluable_fraction": 0.25,
+  "two_by_two": {
+    "true_positive": 5,
+    "false_positive": 7,
+    "false_negative": 1,
+    "true_negative": 11
+  },
+  "evaluable_retention_sensitivity": 0.8333333333333334,
+  "evaluable_fraction_among_gate_pass_ppv": 0.4166666666666667,
+  "ppv_enrichment_over_ungated": 1.6666666666666667,
+  "threshold_search_performed": false,
+  "candidate_frames_rescored": false,
+  "terminal_203_decision_changed": false,
+  "promotion_decision": "DO_NOT_PROMOTE_AS_SOLE_CONFIRMATORY_GATE",
+  "interpretation": "Immediate pre-heldout persistence is informative and retains 5/6 evaluable taxa while enriching evaluability 1.67-fold, but PPV remains only 0.417. It is therefore insufficient as a sole fix for the same-region temporal observability problem. Further threshold search on the consumed cohort is not authorized."
+}

@@ -1,0 +1,24 @@
+{
+  "scientific_role": "development_diagnostic_only",
+  "independent_validation": false,
+  "clusters": 19,
+  "unique_historical_anchors_inside_five_islands": 22,
+  "anchor_regime_counts": {
+    "anchor_absent": 1,
+    "distant_tail": 2,
+    "local_continuation": 14,
+    "regional_tail": 2
+  },
+  "cumulative_clusters_within_km": {
+    "0.5": 5,
+    "1.0": 8,
+    "2.0": 14,
+    "5.0": 16
+  },
+  "clusters_without_same_island_anchor": 1,
+  "median_nearest_same_island_known_km": 1.1684685080042208,
+  "maximum_nearest_same_island_known_km": 5.545550890855951,
+  "local_radius_km": 2.0,
+  "tail_radius_km": 5.0,
+  "interpretation_boundary": "Describes inspected Campanula outcomes only; distances cannot define a universal discovery radius or confirmation claim."
+}

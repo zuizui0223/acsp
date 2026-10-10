@@ -1,0 +1,7 @@
+issue=205
+source_confirmation_issue=203
+source_region_diagnostic_issue=204
+mode=posthoc_historical_support_diagnostic_only
+candidate_frame_rescoring=false
+future_cohort_selected=false
+terminal_203_decision_changed=false

@@ -1,0 +1,101 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-source-indeterminate-retention-v1",
+  "status": "FROZEN_BEFORE_SOURCE_AVAILABILITY_COMPOSITION",
+  "source_inputs": {
+    "terrain": {
+      "result_record": "validation/coverage_then_fine_structure_fresh_sentinel_v2_full_terrain_result_v1.json",
+      "workflow_run_id": 36071510382,
+      "artifact_id": 10838218318,
+      "artifact_name": "cirsium-fresh-sentinel-v2-full-coarse-terrain",
+      "full_csv_gz_sha256": "f1ba23ec6e1a6493f598c2d027911906cd9b08c273a228017d7f0f710d205be9"
+    },
+    "worldcover": {
+      "result_record": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_pointcog_repair_result_v1.json",
+      "workflow_run_id": 36121342866,
+      "artifact_id": 10857382952,
+      "artifact_name": "cirsium-fresh-sentinel-v2-worldcover-pointcog-repair",
+      "full_csv_gz_sha256": "83870f3e6d9aca417811d463260c819eceb8c216f93d9b8e8b3ab857ac1cda8b"
+    },
+    "worldcover_required_cog_http_diagnostic": {
+      "result_record": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_required_cog_http_diagnostic_result_v1.json",
+      "classification": "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL",
+      "required_cog_count": 4
+    }
+  },
+  "outer_frame": {
+    "identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+    "candidate_count": 39200,
+    "candidate_membership_change_allowed": false,
+    "candidate_order_change_allowed": false,
+    "coordinate_change_allowed": false
+  },
+  "unit_source_requirements": {
+    "CIR02": {
+      "species_binomial": "Cirsium inundatum",
+      "feature_family": "WETLAND_MOISTURE_STRUCTURE",
+      "required_coarse_sources": ["terrain", "worldcover"],
+      "worldcover_authorized_role": "source readiness for later wetland/water coarse evidence only; no ecological score yet"
+    },
+    "CIR06": {
+      "species_binomial": "Cirsium yezoalpinum",
+      "feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "required_coarse_sources": ["terrain"],
+      "worldcover_authorized_role": "not required and not authorized as alpine structural evidence at this stage"
+    },
+    "CIR12": {
+      "species_binomial": "Cirsium dipsacolepis",
+      "feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "required_coarse_sources": ["terrain", "worldcover"],
+      "worldcover_authorized_role": "source readiness for later grassland coarse evidence only; no ecological score yet"
+    },
+    "CIR13": {
+      "species_binomial": "Cirsium lineare",
+      "feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "required_coarse_sources": ["terrain", "worldcover"],
+      "worldcover_authorized_role": "source readiness for later grassland coarse evidence only; no ecological score yet"
+    }
+  },
+  "state_vocabulary": {
+    "source_ready": "SOURCE_READY_FOR_FAMILY_COARSE_STAGE",
+    "source_indeterminate": "SOURCE_INDETERMINATE_RETAIN"
+  },
+  "composition_rule": {
+    "terrain_complete_status": "COMPLETE",
+    "worldcover_complete_status": "COMPLETE",
+    "source_ready_requires_every_required_source_complete": true,
+    "any_required_source_missing_or_provider_failure": "SOURCE_INDETERMINATE_RETAIN",
+    "source_indeterminate_candidate_is_retained": true,
+    "source_indeterminate_candidate_may_be_recoded_as_unsuitable": false,
+    "source_indeterminate_candidate_may_be_dropped": false,
+    "source_indeterminate_candidate_may_receive_worst_ecological_score": false,
+    "source_indeterminate_candidate_may_be_ranked_below_source_ready_by_missingness": false
+  },
+  "execution_boundary": {
+    "ecological_score_computed": false,
+    "habitat_threshold_applied": false,
+    "candidate_rank_added": false,
+    "candidate_selection_added": false,
+    "coarse_to_fine_expansion_applied": false,
+    "neighborhood_fraction_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "prospective_field_outcomes_opened": false,
+    "field_outcomes_used": false,
+    "human_access_used": false,
+    "survey_days_input": false,
+    "monetary_budget_input": false
+  },
+  "expected_source_coverage_from_frozen_inputs": {
+    "terrain_complete_candidates": 33578,
+    "worldcover_complete_candidates": 35974,
+    "both_terrain_and_worldcover_complete_candidates": 32754,
+    "terrain_incomplete_worldcover_complete": 3220,
+    "terrain_complete_worldcover_incomplete": 824,
+    "both_incomplete": 2402,
+    "CIR06_source_ready_candidates": 33578,
+    "CIR06_source_indeterminate_retain_candidates": 5622,
+    "CIR02_CIR12_CIR13_source_ready_candidates_each": 32754,
+    "CIR02_CIR12_CIR13_source_indeterminate_retain_candidates_each": 6446
+  },
+  "next_gate": "After reproducing the exact source-state ledger, freeze family-specific coarse ecological evidence formulas prospectively. Source-indeterminate candidates must remain in a parallel retained lane and cannot be excluded by source missingness."
+}

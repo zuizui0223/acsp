@@ -1,0 +1,30 @@
+{
+  "schema_version": "public-cirsium-alpine-structural-smoke-result-v1",
+  "status": "BLOCKED_EVIDENCE_CONTRACT_MISMATCH",
+  "cohort_unit_id": "CIR04",
+  "species": "Cirsium otayae",
+  "family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+  "workflow_run_id": 33949781975,
+  "artifact_id": 9964447195,
+  "artifact_digest": "sha256:24c1424b3cbad2e933584e190f30e60da11e86dcb31704dc12306420161c4f97",
+  "head_sha": "9e2bbba39318af53991e35d5bc84fe8ee8704906",
+  "validated_product_changed": false,
+  "new_confirmation_claim": false,
+  "required_frozen_primary_anchor_count": 4,
+  "strict_historical_population_clusters_observed": 3,
+  "strict_historical_period": [2000, 2020],
+  "strict_coordinate_uncertainty_m_max": 1000,
+  "raw_api_records_seen": 16,
+  "strict_eligible_records_2000_2025": 4,
+  "structural_layer_run": false,
+  "temporal_outcome_scoring_run": false,
+  "replacement_or_anchor_count_relaxation_used": false,
+  "decision": "ABSTAIN_CIR04_PUBLIC_STRUCTURAL_SMOKE_NO_RESCUE",
+  "interpretation": "The frozen four-anchor Myoko slot cannot be reconstructed from the strict 2000-2020 public evidence snapshot. The public alpine family was therefore not tested on CIR04; this is an evidence-adequacy failure, not a negative structural-selector result.",
+  "unaffected_scope": "The independently validated Japan 2.5% / 10-km regional robust candidate-patch product is unchanged.",
+  "forbidden": [
+    "do not relax the CIR04 anchor count from four to three after observing this preflight",
+    "do not replace CIR04 and call the replacement part of the same frozen three-unit smoke",
+    "do not report this blocked run as evidence that alpine structural support is ineffective"
+  ]
+}

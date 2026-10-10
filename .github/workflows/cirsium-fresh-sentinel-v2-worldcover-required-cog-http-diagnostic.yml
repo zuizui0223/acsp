@@ -1,0 +1,75 @@
+name: Fresh-SENTINEL v2 required WorldCover COG HTTP diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "research/diagnose_cirsium_fresh_sentinel_v2_worldcover_required_cogs.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_worldcover_required_cog_http_diagnostic.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_pointcog_repair_result_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_required_cog_http_diagnostic_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-worldcover-required-cog-http-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test frozen source diagnostic
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_worldcover_required_cog_http_diagnostic.py
+      - name: Probe exact four frozen WorldCover objects
+        run: |
+          mkdir -p /tmp/acsp-wc-required-cog-diagnostic
+          python research/diagnose_cirsium_fresh_sentinel_v2_worldcover_required_cogs.py \
+            --out-json /tmp/acsp-wc-required-cog-diagnostic/result.json
+      - name: Guard diagnostic-only boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          value = json.loads(Path('/tmp/acsp-wc-required-cog-diagnostic/result.json').read_text())
+          assert value['status'] == 'REQUIRED_COG_HTTP_DIAGNOSTIC_COMPLETE'
+          assert value['provider_identity'] == 'ESA_WORLDCOVER'
+          assert value['provider_release'] == '2021_v200'
+          assert value['required_cog_ids'] == ['N24E141', 'N24E153', 'N27E138', 'N27E141']
+          assert len(value['results']) == 4
+          assert [row['worldcover_cog_id'] for row in value['results']] == value['required_cog_ids']
+          assert value['full_cog_downloaded'] is False
+          assert value['worldcover_class_read'] is False
+          assert value['candidate_membership_changed'] is False
+          assert value['candidate_order_changed'] is False
+          assert value['candidate_coordinates_changed'] is False
+          assert value['alternate_provider_used'] is False
+          assert value['alternate_release_used'] is False
+          assert value['prospective_field_outcomes_opened'] is False
+          assert value['field_outcomes_used'] is False
+          assert value['diagnostic_can_authorize_ecological_screening'] is False
+          allowed = {
+              'OBJECT_ACCESSIBLE',
+              'OBJECT_NOT_PUBLISHED_AT_FROZEN_URL',
+              'OBJECT_ACCESS_DENIED_OR_UNAVAILABLE',
+              'TRANSIENT_PROVIDER_FAILURE',
+              'OTHER_PROVIDER_HTTP_ERROR',
+          }
+          assert set(value['classification_counts']).issubset(allowed)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-required-worldcover-cog-http-diagnostic
+          path: /tmp/acsp-wc-required-cog-diagnostic/result.json
+          if-no-files-found: error

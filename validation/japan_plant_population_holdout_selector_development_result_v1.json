@@ -1,0 +1,69 @@
+{
+  "schema_version": "japan-plant-population-holdout-selector-development-terminal-v1",
+  "status": "DEVELOPMENT_TERMINAL",
+  "source_issue": 207,
+  "independent_confirmation": false,
+  "workflow_run_id": 34670865955,
+  "artifact_id": 10290014788,
+  "artifact_name": "japan-plant-population-holdout-selector-development-v1",
+  "artifact_digest": "sha256:b1f9200b2d0069197dd53729759f9298c025f30c3997932f160875abdbab8958",
+  "source_commit": "7a9056f14277200df963e3eadbb76b64eaba63b9",
+  "declared_plant_pairs": 48,
+  "pairs_with_three_or_more_populations": 21,
+  "pairs_with_at_least_one_successful_fold": 13,
+  "successful_population_holdout_folds": 25,
+  "pair_status_counts": {
+    "NOT_EVALUABLE_FEWER_THAN_3_POPULATIONS": 27,
+    "EVALUATED": 13,
+    "PAIR_GENERATION_FAILED": 8
+  },
+  "pair_generation_failure_diagnosis": {
+    "training_coordinates_below_validated_minimum_5": 5,
+    "complete_environment_prototypes_below_validated_minimum_5": 1,
+    "environment_selector_zero_post_exclusion_candidates": 2,
+    "same_cohort_filtering_or_rescue_performed": false
+  },
+  "mean_recovery": {
+    "2km": {
+      "environment": 0.08,
+      "nearest_known": 0.20,
+      "spatial_balance": 0.0,
+      "random": 0.007
+    },
+    "5km": {
+      "environment": 0.32,
+      "nearest_known": 0.52,
+      "spatial_balance": 0.0,
+      "random": 0.0522
+    },
+    "10km": {
+      "environment": 0.56,
+      "nearest_known": 0.60,
+      "spatial_balance": 0.12,
+      "random": 0.177
+    }
+  },
+  "mean_contrasts": {
+    "2km": {
+      "environment_minus_nearest": -0.12,
+      "environment_minus_spatial_balance": 0.08,
+      "environment_minus_random": 0.073
+    },
+    "5km": {
+      "environment_minus_nearest": -0.20,
+      "environment_minus_spatial_balance": 0.32,
+      "environment_minus_random": 0.2678
+    },
+    "10km": {
+      "environment_minus_nearest": -0.04,
+      "environment_minus_spatial_balance": 0.44,
+      "environment_minus_random": 0.383
+    }
+  },
+  "primary_5km_win_tie_loss": {
+    "environment_vs_nearest": {"win": 1, "tie": 18, "loss": 6},
+    "environment_vs_spatial_balance": {"win": 8, "tie": 17, "loss": 0}
+  },
+  "interpretation": "Whole-population holdout removes temporal-provider dependence. Environmental support contains discovery signal beyond uninformed spatial balance and random placement, but nearest-known is stronger overall at the frozen 5-km local-discovery scale. This motivates post-hoc LOCAL-versus-DETACHED diagnosis without changing this terminal result.",
+  "claim_boundary": "Consumed 48-plant cohort; development only. No independent confirmation, same-cohort rescue, selector-weight tuning, route/access/time/budget inference, occupancy claim, or production selector change."
+}

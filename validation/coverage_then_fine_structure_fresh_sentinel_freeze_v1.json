@@ -1,0 +1,162 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-freeze-v1",
+  "status": "FROZEN_PRE_FIELD_OUTCOME_SOURCE_BLOCKED",
+  "source_parent_issue": 183,
+  "source_pr": 184,
+  "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+  "freshness_scope": "prospective field outcomes are unopened; public occurrence context may already have been audited and is not treated as an independent confirmation outcome",
+  "source_blob_sha1s": {
+    "architecture": "c0185dca451a3ff8dc3bbe5f6cb5a32584e8bd8e",
+    "aza3_prospective_cohort": "4084355ae091ec992e4f9e64e26522341c65d058",
+    "candidate_frame_contract": "470b0145da1f89787e9279323841759feae65619",
+    "structural_family_contract": "71c859ab1d1928c730e06acc9b09fa55819844fd",
+    "structural_raw_adapter_contract": "03e246d831ed745bc6aec65b814b33552e743b24",
+    "private_source_requirements": "c827ed9ce71379bcc91d54fd5e20434886cd5fda",
+    "opened_coarse_structural_terminal": "b2e25aaafd30dde9796678fb68c8825a13f78e2c"
+  },
+  "cohort_file": "validation/coverage_then_fine_structure_fresh_sentinel_cohort_v1.csv",
+  "field_evaluation_contract": "validation/coverage_then_fine_structure_fresh_sentinel_field_evaluation_contract_v1.json",
+  "selection_rule": {
+    "source_table": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+    "include": [
+      "occurrence_problem_class == SENTINEL",
+      "outcome_opened == false",
+      "structural_feature_family != GENERAL_SPATIAL_BASELINE_ONLY"
+    ],
+    "no_replacement_after_source_or_frame_failure": true,
+    "selected_units": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ]
+  },
+  "explicit_exclusions": {
+    "opened_structural_holdout_units": [
+      "CIR01",
+      "CIR04",
+      "CIR07"
+    ],
+    "opened_coastal_development_unit": [
+      "CIR08"
+    ],
+    "local_lane_not_in_v1_scope": [
+      "CIR03",
+      "CIR05",
+      "CIR09",
+      "CIR10",
+      "CIR11"
+    ],
+    "reason": "Fresh v1 is restricted to the architecture's predeclared SENTINEL/DETACHED scope; opened development units cannot be recycled for promotion."
+  },
+  "cohort": [
+    {
+      "cohort_unit_id": "CIR02",
+      "species_binomial": "Cirsium inundatum",
+      "sentinel_subregime": "UNCERTAINTY_FOOTPRINT",
+      "structural_feature_family": "WETLAND_MOISTURE_STRUCTURE",
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "esa_worldcover_2021_snapshot",
+        "sentinel_support_input"
+      ],
+      "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
+    },
+    {
+      "cohort_unit_id": "CIR06",
+      "species_binomial": "Cirsium yezoalpinum",
+      "sentinel_subregime": "LEGACY_RANGE_CONTEXT",
+      "structural_feature_family": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "declared_range_sector_geometry"
+      ],
+      "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
+    },
+    {
+      "cohort_unit_id": "CIR12",
+      "species_binomial": "Cirsium dipsacolepis",
+      "sentinel_subregime": "UNCERTAINTY_FOOTPRINT",
+      "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "esa_worldcover_2021_snapshot",
+        "sentinel_support_input"
+      ],
+      "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
+    },
+    {
+      "cohort_unit_id": "CIR13",
+      "species_binomial": "Cirsium lineare",
+      "sentinel_subregime": "COARSE_RANGE_CONTEXT",
+      "structural_feature_family": "OPEN_GRASSLAND_STRUCTURE",
+      "required_sources": [
+        "private_source_manifest",
+        "gsi_dem_snapshot",
+        "esa_worldcover_2021_snapshot",
+        "declared_range_sector_geometry"
+      ],
+      "execution_status": "BLOCKED_PRIVATE_SOURCE_FREEZE"
+    }
+  ],
+  "frozen_method_boundary": {
+    "fine_candidate_spacing_m": 100,
+    "coarse_coverage_cell_size_m": 5000,
+    "coarse_cell_assignment": "On the frozen 100-m regular candidate grid, assign each candidate to a 50-by-50 fine-cell block relative to the declared frame grid origin; empty blocks are absent.",
+    "coarse_coverage_order": "Build one row per non-empty coarse cell using integer block row/column and rank cells with MORTON_DYADIC_COVERAGE_ORDER_V1.",
+    "fine_order": "Within each coarse cell rank only by the already-frozen family structural support, stable SHA-256 candidate-id tie break.",
+    "global_order": "within_cell_structure_rank ASC -> coarse coverage rank ASC -> stable candidate hash ASC",
+    "cross_cell_structural_score_comparison": false,
+    "coverage_structure_weight": null,
+    "budget_parameter": null,
+    "known_point_kernel_for_sentinel": false
+  },
+  "comparators_to_freeze_before_execution": {
+    "same_fine_frame_spatial_balance": "MORTON_DYADIC_COVERAGE_ORDER_V1 applied directly to all fine candidate cells",
+    "coverage_nonstructural": "same frozen coarse coverage-cell order and same round-robin depth, but stable SHA-256 candidate-id ordering within each coarse cell",
+    "nearest_known": "NOT_DEFINED_FOR_SENTINEL because the frozen candidate-frame contract forbids a known-point local kernel when primary anchors are absent"
+  },
+  "prefix_curve": {
+    "fractions": [
+      0.01,
+      0.025,
+      0.05,
+      0.1,
+      0.2,
+      0.5,
+      1
+    ],
+    "selected_count_rule": "ceil(fraction * candidate count), minimum one when nonempty",
+    "favorable_prefix_selection_allowed": false,
+    "note": "These are ranking diagnostics. External field-performance promotion still requires matched search effort and complete detection/non-detection logs."
+  },
+  "source_failure_policy": {
+    "provider_relaxation": false,
+    "cohort_replacement": false,
+    "family_switch": false,
+    "subregime_switch": false,
+    "invented_geometry": false,
+    "failure_interpretation": "unavailable source evidence, not a biological negative"
+  },
+  "execution_blocker": {
+    "current": true,
+    "reason": "The four fresh sentinel units still lack executable private range-sector/candidate-frame inputs, and the single human movement constraint must be declared and immutably pinned before those private geometries are opened.",
+    "next_legal_step": "declare and commit the canonical max_network_transition_km movement constraint first; verify its immutable pin; only then supply the four-feature private range-sector GeoJSON, materialize/hash the declared sources, build the 100-m candidate frame, and freeze all method/comparator rankings before prospective field outcomes are opened",
+    "pre_geometry_movement_constraint_required": true,
+    "movement_constraint_canonical_path": "validation/cirsium_fresh_sentinel_movement_constraint_v1.json"
+  },
+  "forbidden": [
+    "do not recycle CIR01/CIR04/CIR07/CIR08 as fresh promotion outcomes",
+    "do not add a LOCAL_CONTINUATION unit to this v1 fresh cohort",
+    "do not select or drop one of CIR02/CIR06/CIR12/CIR13 after seeing field outcome",
+    "do not change 100-m fine spacing or 5-km coarse cells after outcome",
+    "do not fit coverage/structure weights",
+    "do not invent a sentinel nearest-known kernel",
+    "do not let roads, access, route cost, survey days or money create ecological support",
+    "do not claim field efficiency without matched effort and complete detection/non-detection logs",
+    "do not open prospective outcomes until both the immutable candidate/order prescription receipt and the candidate-specific field allocation/effort schedule have been frozen and publicly pinned"
+  ]
+}

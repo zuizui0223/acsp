@@ -1,0 +1,53 @@
+{
+  "schema_version": "public-cirsium-structural-three-family-smoke-anchor-slot-amendment-v1",
+  "status": "PRE_EXECUTION_UNDERSPECIFICATION_FIXED_BEFORE_FIRST_STRUCTURAL_LAYER_RUN",
+  "parent_contract": "validation/public_cirsium_structural_three_family_smoke_v1.json",
+  "parent_contract_blob_sha": "34d6d7000de30a4c9bfbf8d501eae03c2ac9af31",
+  "structural_layer_execution_before_amendment": false,
+  "validated_product_changed": false,
+  "scientific_role": "development-only clarification of how public occurrence rows become population anchors and how the frozen CIR04 Myoko slot is localized; no structural outcome has been scored under the underspecified implementation",
+  "problem_fixed": [
+    "raw historical GBIF rows must not be treated as independent population anchors",
+    "species-wide Cirsium otayae anchors from the Northern Alps or Hakusan must not silently expand the frozen Myoko slot",
+    "later public clusters outside the historical Myoko slot catchment must not enter the local-slot recovery denominator"
+  ],
+  "generic_anchor_representation": {
+    "historical_cluster_rule": "deterministic complete-link greedy clusters with maximum within-cluster distance 0.5 km",
+    "anchor_rule": "one deterministic medoid per historical cluster",
+    "medoid_objective": "member minimizing the sum of haversine distances to all members of its cluster",
+    "medoid_tie_break": ["latitude ascending", "longitude ascending", "gbif_key ascending"],
+    "duplicate_occurrence_rows_never_create_extra_anchors": true
+  },
+  "cir04_myoko_slot": {
+    "cohort_unit_id": "CIR04",
+    "species": "Cirsium otayae",
+    "frozen_primary_anchor_count": 4,
+    "anchor_count_source": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv primary_unique_coordinate_count for CIR04",
+    "public_reference": {
+      "name": "Mount Myoko / Myokosan elevation point",
+      "latitude": 36.8913888889,
+      "longitude": 138.1136111111,
+      "source": "Japan Meteorological Agency Myokosan volcano page",
+      "source_url": "https://www.data.jma.go.jp/vois/data/tokyo/308_Myokosan/308_index.html",
+      "published_coordinate": "36°53′29″N 138°06′49″E"
+    },
+    "historical_slot_selection": "select exactly the four historical cluster medoids with the smallest haversine distance to the frozen public Myoko reference; tie-break by medoid latitude, longitude and gbif_key",
+    "recent_slot_attribution": "assign each 2021-2025 complete-link cluster to the historical cluster with minimum cluster-to-cluster distance; tie-break by the historical medoid stable order; a later cluster belongs to the CIR04 slot only when its nearest historical cluster is one of the four selected Myoko anchors",
+    "reobservation_rule": "later cluster at <=0.5 km from its nearest historical cluster is a reobservation and is excluded from the novel-cluster denominator",
+    "no_recent_outcome_used_to_choose_anchor_identity": true,
+    "no_distance_cutoff_to_myoko_reference_fitted": true
+  },
+  "execution_boundary": {
+    "candidate_frames": "unchanged 0.5-2.0 km primary and 0.5-5.0 km sensitivity annuli around the selected cluster medoids",
+    "structural_family": "unchanged ALPINE_TOPOGRAPHIC_STRUCTURE",
+    "prefix_curve": "unchanged all-prefix reporting",
+    "recovery_radii": "unchanged 0.25/0.5/1.0 km",
+    "promotion_allowed": false
+  },
+  "forbidden": [
+    "do not replace the four anchors after structural results",
+    "do not change the Myoko reference after structural results",
+    "do not expand the slot with later occurrence coordinates",
+    "do not relabel this development smoke as prospective confirmation"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-gsi-public-paired-precision-comparison-v1",
+  "status": "FROZEN_BEFORE_TWO_PUBLIC_RUN_COMPARISON",
+  "as_of_date": "2026-10-08",
+  "issue": 253,
+  "prerequisite_pr": 260,
+  "minimum_independent_completed_workflow_runs": 2,
+  "eligible_receipt_source": "public coordinate-free CIR02/CIR06/CIR12/CIR13 GSI fixed-terrain receipt from complete four-unit CI matrix including gsi_feature_precision_fingerprints",
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "features": [
+    "elev",
+    "slope100",
+    "tpi300",
+    "rough300"
+  ],
+  "precision_decimals": [
+    "0",
+    "2",
+    "4",
+    "6",
+    "8"
+  ],
+  "match_policy": {
+    "require_different_workflow_run_id": true,
+    "all_four_units_per_run": true,
+    "require_source_complete_row_counts_equal": true,
+    "compare_gsi_tile_inventory_sha256": true,
+    "compare_gsi_mosaic_inventory_sha256": true,
+    "compare_private_fine_grid_hash_if_present": true,
+    "compare_frozen_final_patch_sha256": true,
+    "compare_full_structural_order_sha256": true,
+    "classify_per_feature_by_lowest_decimal_precision_with_different_hash": true,
+    "exact_precision_is_not_bitwise_equality": true,
+    "source_changed_is_not_attributed_to_single_provider_failure": true,
+    "identical_source_bytes_but_different_terrain_is_unexplained_computational_or_unrecorded_environment_condition": true
+  },
+  "public_output": {
+    "per_unit_source_inventory_equality_booleans": true,
+    "per_unit_count_equality_booleans": true,
+    "per_unit_per_feature_decimal_precision_equality": true,
+    "per_unit_original_patch_hash_match": true,
+    "expose_candidate_ids": false,
+    "expose_geocoordinates": false,
+    "expose_GSI_tile_coordinate_paths": false,
+    "expose_individual_terrain_vectors": false,
+    "field_outcomes_opened": false
+  },
+  "interpretation": {
+    "two_source_worlds_can_differ_without_biological_difference": true,
+    "selected_support_patch_identity_does_not_rescue_full_order_reproducibility": true,
+    "any_native_implementation_root_cause_identified": false,
+    "field_selector_validated": false,
+    "habitat_connectivity_validated": false,
+    "biological_absence_imputed": false,
+    "arbitrary_preferred_run_selection": false
+  },
+  "next_gate": "Run only when two complete public-safe original GSI matrix runs with per-feature precision SHA are available; report conditional provenance classes and never invent missing second-run values."
+}

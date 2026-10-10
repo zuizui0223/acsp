@@ -1,0 +1,46 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-coarse-terrain-v1",
+  "status": "FROZEN_BEFORE_COARSE_TERRAIN_ATTACHMENT",
+  "source_outer_frame_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2.json",
+  "source_outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "scientific_role": "outcome-blind coarse public terrain primitive attachment only; no candidate selection or ranking",
+  "terrain_source": {
+    "adapter": "gbif_fieldmap_builder_app.extract_environment",
+    "resolution_token": "2.5m",
+    "raw_features": ["elevation", "slope", "aspect", "roughness", "tpi"],
+    "robust_features": ["elevation", "slope", "aspect_sin", "aspect_cos", "roughness", "tpi"],
+    "mechanics_reused_from": "acsp.global_patches.regional_terrain_inputs",
+    "focal_occurrence_prototypes_used": false
+  },
+  "candidate_identity_rule": {
+    "input_candidate_rows_must_be_preserved": true,
+    "candidate_id_order_must_be_preserved": true,
+    "candidate_drop_on_missing_terrain_allowed": false,
+    "tile_drop_on_provider_failure_allowed": false,
+    "candidate_ranking_added": false,
+    "candidate_selection_added": false
+  },
+  "missingness_semantics": {
+    "complete_status": "COMPLETE",
+    "point_missing_status": "INDETERMINATE_TERRAIN_MISSING",
+    "provider_failure_status": "INDETERMINATE_PROVIDER_FAILURE",
+    "missing_or_provider_failure_is_biological_negative": false,
+    "missing_or_provider_failure_may_be_recoded_as_unsuitable": false
+  },
+  "live_smoke": {
+    "role": "software/provider smoke only",
+    "tile_rule": "stable hash-min regional_tile_id from the frozen complete Japan outer frame",
+    "may_promote_or_reject_scientific_method": false,
+    "full_49_tile_execution_required_before_stage_complete": true
+  },
+  "forbidden": [
+    "do not drop points with missing terrain",
+    "do not choose tiles using focal occurrence evidence",
+    "do not use field outcomes",
+    "do not use private exact-site geometry",
+    "do not add structural-support thresholds or weights at this stage",
+    "do not add roads, access, travel budget or field effort"
+  ],
+  "next_gate": "After software/provider smoke, execute all 49 frozen tiles and freeze a complete-vs-indeterminate terrain coverage audit before adding WorldCover or coarse ecological screening."
+}

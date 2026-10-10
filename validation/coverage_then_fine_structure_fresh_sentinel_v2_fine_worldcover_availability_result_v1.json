@@ -1,0 +1,68 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fine-worldcover-availability-result-v1",
+  "status": "FINE_WORLDCOVER_FULLY_SOURCE_COMPLETE_PRE_OUTCOME",
+  "source_pr": 242,
+  "workflow_run_id": 37481971956,
+  "workflow_head_sha": "3b79bd97fd8780c084e800bc93f449293cad97bc",
+  "artifact_id": 11427031133,
+  "artifact_digest": "sha256:e5d255ff65f18f9b487e610228f12e955ec3787764df12cee59be252d9a9dedc",
+  "provider": {
+    "identity": "ESA_WORLDCOVER",
+    "release": "2021_v200",
+    "neighbourhood_radius_m": 250.0,
+    "blocked_execution_parity_tested_against_sparse_reference": true
+  },
+  "units": {
+    "CIR02": {
+      "candidate_rows": 464633,
+      "source_complete_rows": 464633,
+      "source_complete_fraction": 1.0,
+      "neighbourhood_unavailable_rows": 0,
+      "provider_failure_rows": 0,
+      "provider_failure_tile_ids": [],
+      "source_complete_feature_digest_sha256": "b3a0dbd91210d44ac61f78cdbf56df1d948b0b2c0edce06ad5840198d748b218",
+      "private_audited_frame_sha256": "aafad131dc37f22562ff9a44a5ca57d05a4c6e60d635dc5f91afcd6cc208f9a1"
+    },
+    "CIR12": {
+      "candidate_rows": 715103,
+      "source_complete_rows": 715103,
+      "source_complete_fraction": 1.0,
+      "neighbourhood_unavailable_rows": 0,
+      "provider_failure_rows": 0,
+      "provider_failure_tile_ids": [],
+      "source_complete_feature_digest_sha256": "a7e6bbd965b84d9dcf29f9980261a7823337b9cdd391b93a30c13d3d73c2b909",
+      "private_audited_frame_sha256": "abfb654a014bcdfe6c89bd7039a9448bb6d3fbe1fef46d6a3edee7cbef69e2e4"
+    },
+    "CIR13": {
+      "candidate_rows": 715103,
+      "source_complete_rows": 715103,
+      "source_complete_fraction": 1.0,
+      "neighbourhood_unavailable_rows": 0,
+      "provider_failure_rows": 0,
+      "provider_failure_tile_ids": [],
+      "source_complete_feature_digest_sha256": "a7e6bbd965b84d9dcf29f9980261a7823337b9cdd391b93a30c13d3d73c2b909",
+      "private_audited_frame_sha256": "1fdd60a6905f8e78547a15a84bd96356c03f1146f8ca35f7ccad41e8cb31f8f1"
+    }
+  },
+  "excluded_unit": {
+    "CIR06": "ALPINE_TOPOGRAPHIC_STRUCTURE has no frozen ESA WorldCover dependency"
+  },
+  "interpretation": {
+    "worldcover_source_availability_is_not_a_current_fine_frame_bottleneck": true,
+    "all_declared_worldcover_units_are_fully_source_complete": true,
+    "source_indeterminate_semantics_retained_for_future_fail_closed_execution": true,
+    "biological_absence_inferred": false,
+    "habitat_suitability_claimed": false,
+    "structural_ranking_authorized_by_this_result": false
+  },
+  "boundary": {
+    "candidate_denominator_preserved": true,
+    "source_indeterminate_recoded_as_absence": false,
+    "structural_graph_computed": false,
+    "candidate_ranking_computed": false,
+    "field_outcomes_opened": false,
+    "human_access_used": false,
+    "exact_coordinates_public": false
+  },
+  "next_gate": "Freeze GSI microterrain source-retrieval chunk/source-selection semantics before attaching terrain to the primary fine grids. Do not assume arbitrary chunk-size invariance because build_gsi_dem_for_bounds selects the best available DEM source from chunk reference points."
+}

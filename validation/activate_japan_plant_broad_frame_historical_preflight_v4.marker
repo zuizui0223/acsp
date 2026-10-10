@@ -1,0 +1,9 @@
+{
+  "activation": "JAPAN_PLANT_BROAD_FRAME_HISTORICAL_PREFLIGHT_V4_FIRST",
+  "parent_issue": 203,
+  "implementation_parent_sha": "b4173ade96c7c3ed87f89410899083fb9ebc504c",
+  "protocol_sha256": "5f7cac8afa1917fb1dc99976d122f03975f440a2a6671d532aae57c94fb76b8f",
+  "source_identity_run_id": 34565100325,
+  "source_identity_artifact_id": 10186066547,
+  "heldout_2021_2025_authorized": false
+}

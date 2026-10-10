@@ -1,0 +1,44 @@
+name: Public Japan Cirsium GBIF precision attrition diagnostic v1
+
+on:
+  pull_request:
+    paths:
+      - "research/diagnose_public_japan_cirsium_gbif_precision_attrition_v1.py"
+      - "tests/test_public_japan_cirsium_gbif_precision_attrition.py"
+      - "validation/public_japan_cirsium_gbif_precision_attrition_diagnostic_v1.json"
+      - "validation/cirsium_aza3_prospective_validation_cohort_v1.csv"
+      - ".github/workflows/public-japan-cirsium-gbif-precision-attrition-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run deterministic unit tests
+        run: python tests/test_public_japan_cirsium_gbif_precision_attrition.py -v
+      - name: Run frozen aggregate diagnostic
+        run: |
+          rm -rf /tmp/public-japan-cirsium-gbif-precision-attrition-v1
+          python research/diagnose_public_japan_cirsium_gbif_precision_attrition_v1.py \
+            --out-dir /tmp/public-japan-cirsium-gbif-precision-attrition-v1
+      - name: Guard aggregate-only outputs
+        run: |
+          if head -n 1 /tmp/public-japan-cirsium-gbif-precision-attrition-v1/*.csv | grep -E '(^|,)(latitude|longitude|decimalLatitude|decimalLongitude)(,|$)'; then
+            echo 'coordinate column leaked into aggregate attrition output'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-japan-cirsium-gbif-precision-attrition-v1
+          path: /tmp/public-japan-cirsium-gbif-precision-attrition-v1/
+          if-no-files-found: error

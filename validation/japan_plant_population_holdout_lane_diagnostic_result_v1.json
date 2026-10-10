@@ -1,0 +1,71 @@
+{
+  "schema_version": "japan-plant-population-holdout-lane-diagnostic-terminal-v1",
+  "status": "POSTHOC_DIAGNOSTIC_TERMINAL",
+  "source_issue": 208,
+  "independent_confirmation": false,
+  "workflow_run_id": 34672262934,
+  "artifact_id": 10291391536,
+  "artifact_name": "japan-plant-population-holdout-lane-diagnostic-v1",
+  "artifact_digest": "sha256:6847cd01ce88699c819d9b4a34e6ba7bce435ab5573f3fa92efa12e2f3edfb83",
+  "source_commit": "4921e548e8777e8cbd62bf864519d91111ab3121",
+  "source_207_terminal_unchanged": true,
+  "selector_rebuilt": false,
+  "selector_rescored": false,
+  "lane_boundary_km": 5.0,
+  "lane_boundary_tuned": false,
+  "successful_source_folds": 25,
+  "source_unique_pairs": 13,
+  "lanes": {
+    "LOCAL": {
+      "folds": 17,
+      "unique_pairs": 11,
+      "nearest_training_population_km_mean": 1.6375954212064474,
+      "nearest_training_population_km_median": 1.2343511201328463,
+      "5km": {
+        "environment_recovery": 0.47058823529411764,
+        "nearest_known_recovery": 0.7647058823529411,
+        "spatial_balance_recovery": 0.0,
+        "random_recovery": 0.0511764705882353,
+        "environment_minus_nearest": -0.29411764705882354,
+        "environment_vs_nearest_win_tie_loss": {"win": 1, "tie": 10, "loss": 6},
+        "environment_minus_spatial_balance": 0.47058823529411764
+      },
+      "10km": {
+        "environment_recovery": 0.7058823529411765,
+        "nearest_known_recovery": 0.8823529411764706,
+        "spatial_balance_recovery": 0.17647058823529413,
+        "random_recovery": 0.18764705882352942,
+        "environment_minus_nearest": -0.17647058823529413,
+        "environment_minus_spatial_balance": 0.5294117647058824
+      }
+    },
+    "DETACHED": {
+      "folds": 8,
+      "unique_pairs": 6,
+      "nearest_training_population_km_mean": 22.538321987706315,
+      "nearest_training_population_km_median": 22.159617627888977,
+      "5km": {
+        "environment_recovery": 0.0,
+        "nearest_known_recovery": 0.0,
+        "spatial_balance_recovery": 0.0,
+        "random_recovery": 0.054375,
+        "environment_minus_nearest": 0.0,
+        "environment_vs_nearest_win_tie_loss": {"win": 0, "tie": 8, "loss": 0},
+        "environment_minus_spatial_balance": 0.0
+      },
+      "10km": {
+        "environment_recovery": 0.25,
+        "nearest_known_recovery": 0.0,
+        "spatial_balance_recovery": 0.0,
+        "random_recovery": 0.154375,
+        "environment_minus_nearest": 0.25,
+        "environment_vs_nearest_win_tie_loss": {"win": 2, "tie": 6, "loss": 0},
+        "environment_minus_spatial_balance": 0.25,
+        "environment_minus_random": 0.095625
+      }
+    }
+  },
+  "primary_5km_directional_lane_separation": false,
+  "interpretation": "The overall nearest-known advantage in #207 is concentrated in LOCAL hidden populations. DETACHED hidden populations are not localized within 5 km by environment, nearest-known, or spatial-balance. Environmental support shows a limited positive DETACHED signal at 10 km, consistent with a broad regional-support role rather than a validated 5-km local selector. A separate structural/process localization layer is still required before any lane-specific selector can be promoted.",
+  "claim_boundary": "Post-hoc consumed-cohort diagnosis only. Does not alter #207, validate a lane-specific selector, or authorize fitted environment-distance blending, production changes, field-efficiency claims, or access/route/time/budget inference."
+}

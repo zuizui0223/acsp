@@ -1,0 +1,84 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-gsi-chunk-invariance-audit-result-v1",
+  "status": "GSI_CHUNK_PHASE_NONINVARIANT_FIXED_POLICY_REQUIRED",
+  "source_pr": 243,
+  "source_workflow_run_id": 37639317591,
+  "source_workflow_head_sha": "1a01a36506c5ef41849700560a446dc75b5c8ddb",
+  "source_artifact_id": 11493015544,
+  "source_artifact_digest": "sha256:34bba1c61fac3fde036c36fc65aa46aa55f5614a92b082f2e71c4433d73ea279",
+  "chunk_width_m": 40000,
+  "fine_grid_spacing_m": 100,
+  "phase_offsets_cells": [[0,0],[200,200]],
+  "all_units_invariant": false,
+  "units": {
+    "CIR02": {
+      "audit_candidate_rows": 160,
+      "source_state_match_rows": 160,
+      "attribution_match_rows": 160,
+      "terrain_vector_match_rows": 129,
+      "all_match_rows": 129,
+      "all_match_fraction": 0.80625,
+      "max_abs_terrain_difference": 12.993133544921875,
+      "phase0_source_complete_rows": 149,
+      "phase0_terrain_vector_unavailable_rows": 11,
+      "phase200_source_complete_rows": 149,
+      "phase200_terrain_vector_unavailable_rows": 11
+    },
+    "CIR06": {
+      "audit_candidate_rows": 160,
+      "source_state_match_rows": 154,
+      "attribution_match_rows": 150,
+      "terrain_vector_match_rows": 57,
+      "all_match_rows": 57,
+      "all_match_fraction": 0.35625,
+      "max_abs_terrain_difference": 12.998779296875,
+      "phase0_source_complete_rows": 153,
+      "phase0_terrain_vector_unavailable_rows": 7,
+      "phase200_source_complete_rows": 147,
+      "phase200_terrain_vector_unavailable_rows": 13
+    },
+    "CIR12": {
+      "audit_candidate_rows": 160,
+      "source_state_match_rows": 159,
+      "attribution_match_rows": 159,
+      "terrain_vector_match_rows": 138,
+      "all_match_rows": 138,
+      "all_match_fraction": 0.8625,
+      "max_abs_terrain_difference": 4.75958251953125,
+      "phase0_source_complete_rows": 158,
+      "phase0_terrain_vector_unavailable_rows": 2,
+      "phase200_source_complete_rows": 159,
+      "phase200_terrain_vector_unavailable_rows": 1
+    },
+    "CIR13": {
+      "audit_candidate_rows": 160,
+      "source_state_match_rows": 159,
+      "attribution_match_rows": 159,
+      "terrain_vector_match_rows": 138,
+      "all_match_rows": 138,
+      "all_match_fraction": 0.8625,
+      "max_abs_terrain_difference": 4.75958251953125,
+      "phase0_source_complete_rows": 158,
+      "phase0_terrain_vector_unavailable_rows": 2,
+      "phase200_source_complete_rows": 159,
+      "phase200_terrain_vector_unavailable_rows": 1
+    }
+  },
+  "interpretation": {
+    "chunking_is_pure_transport": false,
+    "source_selection_and_or_terrain_vectors_change_with_chunk_phase": true,
+    "field_outcome_used": false,
+    "biological_negative": false,
+    "selector_result": false,
+    "consequence": "A single chunk phase must be declared before full terrain execution. The fixed phase (0,0) in the fine-grid GSI terrain policy is retained; the alternative phase must not be selected based on source completeness or terrain values."
+  },
+  "relationship_to_fixed_policy": {
+    "policy_path": "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json",
+    "fixed_phase_offset_cells": [0,0],
+    "fixed_policy_preceded_diagnostic_result": true,
+    "retune_phase_after_result_allowed": false,
+    "full_fixed_policy_execution_authorized_by_this_diagnostic": false,
+    "reason": "The diagnostic establishes the need for a fixed policy, not ecological validity. Full execution remains a separate source-attachment step."
+  },
+  "prospective_field_outcomes_opened": false
+}

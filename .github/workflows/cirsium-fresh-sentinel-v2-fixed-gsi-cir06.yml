@@ -1,0 +1,406 @@
+name: Fresh-SENTINEL v2 fixed GSI terrain all units
+
+on:
+  pull_request:
+    paths:
+      - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fixed_gsi_terrain_policy_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_structural_order_v1.json"
+      - "research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_feasibility_v1.json"
+      - "research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_cache_provenance_v1.json"
+      - "research/audit_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_frozen_patch_topology.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_v1.json"
+      - "research/audit_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_feature_precision_fingerprints_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_sequence_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_only_topology_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-fixed-gsi-cir06.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  terrain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - unit: CIR02
+            expected_cells: 464633
+          - unit: CIR06
+            expected_cells: 847239
+          - unit: CIR12
+            expected_cells: 715103
+          - unit: CIR13
+            expected_cells: 715103
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test fixed source and structural-order policies
+        run: |
+          pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+            tests/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
+            tests/test_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py \
+            tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py \
+            tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py \
+            tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py \
+            tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py
+      - name: Download exact frozen coarse-source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-fixed-gsi/terrain /tmp/acsp-fixed-gsi/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-fixed-gsi/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-fixed-gsi/worldcover
+      - name: Rebuild frozen coarse orders
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-fixed-gsi/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-fixed-gsi/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-fixed-gsi/orders
+      - name: Materialize primary fine grid
+        run: |
+          mkdir -p /tmp/acsp-fixed-gsi/private /tmp/acsp-fixed-gsi/public
+          unit="${{ matrix.unit }}"
+          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py             --unit-id "$unit"             --order-csv-gz "/tmp/acsp-fixed-gsi/orders/${unit}_coarse_evidence_order.csv.gz"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_grid.json"
+      - name: Attach fixed-policy GSI terrain
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json" \
+            --same-mosaic-numerical-diagnostic-json "/tmp/acsp-fixed-gsi/public/${unit}_same_mosaic.json" \
+            --selected-mosaic-sequence-json "/tmp/acsp-fixed-gsi/public/${unit}_selected_dem_sequence.json"
+      - name: Fingerprint source-complete numerical GSI features at frozen precisions
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/audit_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py \
+            --unit-id "$unit" \
+            --private-gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_feature_fingerprints.json"
+      - name: Fingerprint original GSI tile and mosaic cache bytes without exporting paths
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/audit_cirsium_fresh_sentinel_v2_gsi_cache_provenance.py \
+            --unit-id "$unit" \
+            --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi_cache_provenance.json"
+      - name: Audit WorldCover on declared units
+        run: |
+          unit="${{ matrix.unit }}"
+          if [ "$unit" != "CIR06" ]; then
+            python research/audit_cirsium_fresh_sentinel_v2_fine_worldcover_availability.py \
+              --unit-id "$unit" \
+              --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz" \
+              --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_worldcover.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_worldcover.json"
+          fi
+      - name: Build full frozen fine structural order
+        run: |
+          unit="${{ matrix.unit }}"
+          mkdir -p /tmp/acsp-fixed-gsi/orders-fine
+          if [ "$unit" = "CIR06" ]; then
+            python research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+              --unit-id "$unit" \
+              --gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+              --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
+          else
+            python research/build_cirsium_fresh_sentinel_v2_fine_structural_order.py \
+              --unit-id "$unit" \
+              --gsi-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz" \
+              --worldcover-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_worldcover.csv.gz" \
+              --private-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+              --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_structural.json"
+          fi
+      - name: Test transferred fine patch representation
+        run: |
+          unit="${{ matrix.unit }}"
+          mkdir -p /tmp/acsp-fixed-gsi/patches
+          python research/test_cirsium_fresh_sentinel_v2_fine_patch_transfer_feasibility.py \
+            --unit-id "$unit" \
+            --structural-order-csv-gz "/tmp/acsp-fixed-gsi/orders-fine/${unit}_fine_structural_order.csv.gz" \
+            --private-patches-csv-gz "/tmp/acsp-fixed-gsi/patches/${unit}_fine_patch_transfer.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_patch_transfer.json"
+      - name: Audit exact original-patch support-mask topology without structural-order replay
+        run: |
+          unit="${{ matrix.unit }}"
+          python research/audit_cirsium_fresh_sentinel_v2_frozen_patch_topology.py \
+            --unit-id "$unit" \
+            --private-patches-csv-gz "/tmp/acsp-fixed-gsi/patches/${unit}_fine_patch_transfer.csv.gz" \
+            --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_frozen_patch_topology.json"
+      - name: Guard denominator and public-safe source receipt
+        env:
+          UNIT: ${{ matrix.unit }}
+          EXPECTED: ${{ matrix.expected_cells }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          unit=os.environ['UNIT']
+          expected=int(os.environ['EXPECTED'])
+          grid=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_grid.json').read_text())
+          gsi=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi.json').read_text())
+          feature_fingerprints=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_feature_fingerprints.json').read_text())
+          assert feature_fingerprints['status']=='SOURCE_COMPLETE_GSI_PRECISION_FINGERPRINTED_PRE_OUTCOME'
+          assert feature_fingerprints['cohort_unit_id']==unit
+          assert feature_fingerprints['candidate_count']==gsi['candidate_rows']
+          assert feature_fingerprints['source_complete_count']==gsi['source_complete_rows']
+          assert feature_fingerprints['private_gsi_frame_sha256']==gsi['private_gsi_frame_sha256']
+          assert set(feature_fingerprints['feature_precision_sha256'])=={'elev','slope100','tpi300','rough300'}
+          for precisions in feature_fingerprints['feature_precision_sha256'].values():
+            assert set(precisions)=={'0','2','4','6','8'}
+            assert all(len(h)==64 for h in precisions.values())
+          assert feature_fingerprints['per_candidate_data_exported'] is False
+          assert feature_fingerprints['private_coordinates_or_IDs_exported'] is False
+          assert feature_fingerprints['ranking_or_patch_selection_changed'] is False
+          assert feature_fingerprints['field_outcomes_opened'] is False
+          assert feature_fingerprints['full_cross_run_reproducibility_proven'] is False
+          numerical=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_same_mosaic.json').read_text())
+          selected=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_selected_dem_sequence.json').read_text())
+          assert selected['status']=='ACTUAL_SELECTED_DEM_CONTENT_SEQUENCE_AUDITED_PRE_OUTCOME'
+          assert selected['cohort_unit_id']==unit
+          assert selected['chunk_count']==gsi['chunk_count']
+          assert selected['selected_dem_chunks']+selected['unavailable_dem_chunks']==gsi['chunk_count']
+          assert len(selected['selected_mosaic_content_sequence_sha256'])==64
+          assert selected['private_source_paths_or_tile_coordinates_exported'] is False
+          assert selected['per_chunk_source_content_hashes_exported'] is False
+          assert selected['production_gsi_selection_changed'] is False
+          assert selected['field_outcomes_opened'] is False
+          assert selected['cross_run_numeric_reproduction_proven'] is False
+          assert numerical['status'] in (
+            'SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE',
+            'NUMERICAL_DIAGNOSTIC_NO_ELIGIBLE_SELECTED_CHUNKS',
+          )
+          assert numerical['cohort_unit_id']==unit
+          assert numerical['source_chunk_count']==gsi['chunk_count']
+          assert numerical['probed_chunk_count']+numerical['unavailable_selected_chunk_count']==numerical['predeclared_selected_chunk_count']
+          assert numerical['predeclared_selected_chunk_count']<=3
+          assert numerical['source_complete_cells_probed']<=72
+          assert numerical['replays_per_sample']==2
+          assert numerical['same_mosaic_bytes_before_after_all_probes'] is True
+          assert numerical['private_sampled_vectors_exported'] is False
+          assert numerical['private_chunk_paths_or_coordinates_exported'] is False
+          assert numerical['selected_support_or_patch_membership_changed'] is False
+          assert numerical['source_integrity_and_full_order_reproduction_claim'] is False
+          assert numerical['field_selector_or_habitat_connectivity_claim'] is False
+          assert numerical['field_outcomes_opened'] is False
+          inventory=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_gsi_cache_provenance.json').read_text())
+          assert inventory['status']=='GSI_RAW_CACHE_CONTENT_INVENTORY_AUDITED_PRE_OUTCOME'
+          assert inventory['cohort_unit_id']==unit
+          assert inventory['tile_file_count']>0 and inventory['mosaic_file_count']>0
+          assert len(inventory['tile_inventory_sha256'])==64
+          assert len(inventory['mosaic_inventory_sha256'])==64
+          assert inventory['files_read_only'] is True
+          assert inventory['coordinate_bearing_filenames_exported'] is False
+          assert inventory['source_png_bytes_pinned_to_release_version'] is False
+          assert inventory['field_outcomes_opened'] is False
+          assert inventory['terrain_values_changed_by_audit'] is False
+          assert inventory['field_selector_validation'] is False
+          assert grid['fine_grid_cell_count'] == expected
+          assert gsi['status'] == 'FIXED_GSI_TERRAIN_ATTACHED_PRE_OUTCOME'
+          assert gsi['cohort_unit_id'] == unit
+          assert gsi['candidate_rows'] == expected
+          assert gsi['candidate_denominator_preserved'] is True
+          assert gsi['source_complete_rows'] + gsi['provider_unavailable_rows'] + gsi['terrain_vector_unavailable_rows'] == expected
+          assert gsi['physical_chunk_width_m'] == 40000
+          assert gsi['chunk_grid_cells'] == 400
+          assert gsi['chunk_phase_offset_cells'] == [0,0]
+          assert gsi['chunk_margin_degrees'] == 0.02
+          assert gsi['max_gsi_tiles_per_chunk'] == 900
+          assert gsi['source_indeterminate_recoded_as_absence'] is False
+          assert gsi['source_indeterminate_recoded_as_zero_support'] is False
+          assert gsi['structural_graph_computed'] is False
+          assert gsi['field_outcomes_opened'] is False
+          assert gsi['exact_coordinates_public'] is False
+          structural=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_structural.json').read_text())
+          patch=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_patch_transfer.json').read_text())
+          topology=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_frozen_patch_topology.json').read_text())
+          original=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json').read_text())['units'][unit]
+          assert topology['status']=='FROZEN_PATCH_MASK_TOPOLOGY_AUDITED_UPSTREAM_UNCERTAINTY_RETAINED'
+          assert topology['verified_original_patch_sha256']==original['private_patch_sha256']
+          assert topology['verified_original_patch_sha256']==patch['private_patch_sha256']
+          assert topology['retained_support_cell_count']==patch['retained_support_cell_count']
+          assert topology['complete_link_patch_count']==patch['patch_count']
+          assert topology['singleton_patch_count']==patch['singleton_patch_count']
+          assert topology['connected_patch_count']+topology['disconnected_patch_count']==patch['patch_count']
+          assert topology['within_patch_component_count_total']-patch['patch_count']==topology['extra_within_patch_components']
+          assert topology['all_retained_cells_accounted_for'] is True
+          assert topology['original_structural_order_reproduction_tested_by_this_route'] is False
+          assert topology['source_integrity_claim_authorized'] is False
+          assert topology['ecological_connectivity_claim_authorized'] is False
+          assert topology['field_selector_validation'] is False
+          assert topology['prospective_field_outcomes_opened'] is False
+          assert topology['coordinates_or_candidate_ids_in_public_output'] is False
+          assert structural['status']=='FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME'
+          assert structural['cohort_unit_id']==unit
+          assert structural['candidate_rows']==expected
+          assert structural['structural_order_rows']==structural['source_complete_rows']
+          assert structural['source_complete_rows']+structural['source_indeterminate_rows']==expected
+          assert structural['source_indeterminate_ranked'] is False
+          assert structural['source_indeterminate_recoded_as_absence'] is False
+          assert structural['top_k_applied'] is False
+          assert structural['support_threshold_applied'] is False
+          assert structural['patch_count_applied'] is False
+          assert structural['survey_budget_applied'] is False
+          assert structural['support_audit']['composition_rule']=='ROW_MIN_CONJUNCTIVE_SUPPORT'
+          assert structural['graph_audit']['graph_type']=='REGULAR_GRID_MOORE_8_NEIGHBOUR'
+          assert structural['graph_audit']['neighbourhood_radius_cells']==1
+          assert patch['status']=='FINE_PATCH_TRANSFER_REPRESENTATION_FEASIBILITY_COMPLETE'
+          assert patch['cohort_unit_id']==unit
+          assert patch['source_complete_structural_order_rows']==structural['structural_order_rows']
+          assert patch['support_fraction']==0.025
+          assert patch['patch_merge_distance_m']==1000.0
+          assert patch['retained_support_cell_count']>0
+          assert patch['patch_count']>0
+          assert patch['source_indeterminate_included'] is False
+          assert patch['source_indeterminate_ranked'] is False
+          assert patch['field_outcomes_opened'] is False
+          assert patch['recovery_used'] is False
+          assert patch['transfer_is_validated_selector'] is False
+          assert patch['top_k_added_beyond_transferred_fraction'] is False
+          assert patch['support_threshold_refit'] is False
+          assert patch['target_patch_count_used'] is False
+          receipt={
+            'schema_version':'cirsium-fresh-sentinel-v2-fixed-gsi-unit-receipt-v2',
+            'status':'FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME',
+            'cohort_unit_id':unit,
+            'grid':{
+              'candidate_rows':grid['fine_grid_cell_count'],
+              'private_grid_sha256':grid['private_grid_sha256'],
+            },
+            'gsi':{
+              'source_complete_rows':gsi['source_complete_rows'],
+              'source_complete_fraction':gsi['source_complete_fraction'],
+              'provider_unavailable_rows':gsi['provider_unavailable_rows'],
+              'terrain_vector_unavailable_rows':gsi['terrain_vector_unavailable_rows'],
+              'chunk_count':gsi['chunk_count'],
+              'attributions':gsi['attributions'],
+              'terrain_feature_digest_sha256':gsi['terrain_feature_digest_sha256'],
+              'private_gsi_frame_sha256':gsi['private_gsi_frame_sha256'],
+            },
+            'structural':{
+              'feature_family':structural['feature_family'],
+              'source_complete_rows':structural['source_complete_rows'],
+              'source_indeterminate_rows':structural['source_indeterminate_rows'],
+              'structural_order_rows':structural['structural_order_rows'],
+              'source_state_digest_sha256':structural['source_state_digest_sha256'],
+              'private_structural_order_sha256':structural['private_structural_order_sha256']
+            },
+            'fine_patch_transfer':{
+              'retained_support_cell_count':patch['retained_support_cell_count'],
+              'patch_count':patch['patch_count'],
+              'compression_ratio_patch_per_retained_cell':patch['compression_ratio_patch_per_retained_cell'],
+              'singleton_patch_count':patch['singleton_patch_count'],
+              'singleton_patch_fraction':patch['singleton_patch_fraction'],
+              'median_patch_member_count':patch['median_patch_member_count'],
+              'maximum_patch_member_count':patch['maximum_patch_member_count'],
+              'private_patch_sha256':patch['private_patch_sha256'],
+              'transfer_is_validated_selector':False
+            },
+            'frozen_patch_membership_topology':{
+              'status':topology['status'],
+              'verified_original_patch_sha256':topology['verified_original_patch_sha256'],
+              'retained_support_cell_count':topology['retained_support_cell_count'],
+              'complete_link_patch_count':topology['complete_link_patch_count'],
+              'connected_patch_count':topology['connected_patch_count'],
+              'disconnected_patch_count':topology['disconnected_patch_count'],
+              'disconnected_patch_fraction':topology['disconnected_patch_fraction'],
+              'cells_in_disconnected_patches':topology['cells_in_disconnected_patches'],
+              'global_mask_component_count':topology['global_mask_component_count'],
+              'extra_within_patch_components':topology['extra_within_patch_components'],
+              'maximum_components_per_patch':topology['maximum_components_per_patch'],
+              'full_structural_order_reproduction_tested':False,
+              'ecological_connectivity_claim_authorized':False,
+              'field_selector_validation':False,
+            },
+            'gsi_feature_precision_fingerprints':{
+              'status':feature_fingerprints['status'],
+              'source_complete_count':feature_fingerprints['source_complete_count'],
+              'private_gsi_frame_sha256':feature_fingerprints['private_gsi_frame_sha256'],
+              'feature_precision_sha256':feature_fingerprints['feature_precision_sha256'],
+              'field_outcomes_opened':False,
+              'full_cross_run_reproducibility_proven':False,
+              'private_coordinates_or_IDs_exported':False,
+            },
+            'same_mosaic_numerical_replay':{
+              'status':numerical['status'],
+              'source_chunk_count':numerical['source_chunk_count'],
+              'probed_chunk_count':numerical['probed_chunk_count'],
+              'unavailable_selected_chunk_count':numerical['unavailable_selected_chunk_count'],
+              'source_complete_cells_probed':numerical['source_complete_cells_probed'],
+              'replays_per_sample':2,
+              'same_mosaic_bytes_before_after_all_probes':numerical['same_mosaic_bytes_before_after_all_probes'],
+              'comparison':numerical['comparison'],
+              'native_versions':numerical['native_versions'],
+              'private_chunk_paths_or_coordinates_exported':False,
+              'field_outcomes_opened':False,
+              'field_selector_or_habitat_connectivity_claim':False,
+            },
+            'gsi_selected_mosaic_sequence':{
+              'status':selected['status'],
+              'chunk_count':selected['chunk_count'],
+              'selected_dem_chunks':selected['selected_dem_chunks'],
+              'unavailable_dem_chunks':selected['unavailable_dem_chunks'],
+              'selected_mosaic_content_sequence_sha256':selected['selected_mosaic_content_sequence_sha256'],
+              'private_source_paths_or_tile_coordinates_exported':False,
+              'per_chunk_source_content_hashes_exported':False,
+              'production_gsi_selection_changed':False,
+              'field_outcomes_opened':False,
+              'cross_run_numeric_reproduction_proven':False,
+            },
+            'gsi_cache_content':{
+              'tile_file_count':inventory['tile_file_count'],
+              'tile_total_bytes':inventory['tile_total_bytes'],
+              'tile_inventory_sha256':inventory['tile_inventory_sha256'],
+              'mosaic_file_count':inventory['mosaic_file_count'],
+              'mosaic_total_bytes':inventory['mosaic_total_bytes'],
+              'mosaic_inventory_sha256':inventory['mosaic_inventory_sha256'],
+              'coordinate_bearing_filenames_exported':False,
+              'source_png_bytes_pinned_to_release_version':False,
+              'field_outcomes_opened':False,
+            },
+            'coordinate_bearing_artifacts_uploaded':False,
+            'structural_graph_computed':True,
+            'fine_structural_full_order_computed':True,
+            'top_k_applied':False,
+            'field_outcomes_opened':False,
+          }
+          Path(f'/tmp/acsp-fixed-gsi/{unit}_receipt.json').write_text(
+            json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
+          )
+          PY
+      - name: Delete coordinate-bearing private artifacts
+        run: |
+          rm -f /tmp/acsp-fixed-gsi/private/*.csv.gz
+          rm -f /tmp/acsp-fixed-gsi/orders-fine/*.csv.gz
+          rm -f /tmp/acsp-fixed-gsi/patches/*.csv.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-fixed-gsi-${{ matrix.unit }}-receipt
+          path: /tmp/acsp-fixed-gsi/${{ matrix.unit }}_receipt.json
+          if-no-files-found: error

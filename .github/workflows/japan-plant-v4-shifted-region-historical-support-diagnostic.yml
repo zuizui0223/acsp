@@ -1,0 +1,59 @@
+name: Japan plant v4 shifted-region historical support diagnostic
+
+on:
+  push:
+    paths:
+      - "validation/activate_japan_plant_v4_shifted_region_historical_support.marker"
+  workflow_dispatch:
+
+concurrency:
+  group: japan-plant-v4-shifted-region-historical-support-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test diagnostic mechanics and frozen shifted cohort
+        run: python -m unittest -v tests/test_japan_plant_v4_shifted_region_historical_support.py
+      - name: Reconstruct 2000-2020 support across fixed regions
+        run: |
+          mkdir -p shifted-region-historical-support
+          python research/diagnose_japan_plant_v4_shifted_region_historical_support.py \
+            --out-dir shifted-region-historical-support
+      - name: Verify diagnostic boundary and public-safe outputs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(Path('shifted-region-historical-support/summary.json').read_text(encoding='utf-8'))
+          assert summary['taxa'] == 10
+          assert summary['terminal_203_decision_changed'] is False
+          assert summary['candidate_frames_rescored'] is False
+          assert summary['future_cohort_selected'] is False
+          for path in Path('shifted-region-historical-support').glob('*'):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding='utf-8').lower()
+              for token in ('latitude', 'longitude', 'occurrence_id'):
+                  assert token not in text, (path, token)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: japan-plant-v4-shifted-region-historical-support-diagnostic
+          path: shifted-region-historical-support/
+          if-no-files-found: error
+          retention-days: 90

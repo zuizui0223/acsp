@@ -1,0 +1,111 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fine-patch-transfer-result-v1",
+  "status": "FINE_PATCH_REPRESENTATION_FEASIBLE_SELECTOR_UNVALIDATED",
+  "as_of_date": "2026-10-08",
+  "source_pr": 247,
+  "merged_commit": "b547372a77dda909b7b13fea676ef5a2319f0652",
+  "source_workflow_run": 37647225829,
+  "source_head_sha": "9249608b745aaeee10d2f824666e49560536f519",
+  "transferred_constants": {
+    "support_fraction": 0.025,
+    "complete_link_max_distance_m": 1000
+  },
+  "source_policy": {
+    "gsi_chunk_width_m": 40000,
+    "gsi_chunk_phase_cells": [
+      0,
+      0
+    ],
+    "gsi_chunk_margin_degrees": 0.02,
+    "gsi_max_tiles": 900,
+    "worldcover_2021_v200_required_for": [
+      "CIR02",
+      "CIR12",
+      "CIR13"
+    ]
+  },
+  "units": {
+    "CIR02": {
+      "source_artifact_id": 11498811685,
+      "source_artifact_zip_sha256": "bea90ea4083b95bc4b1cc66a6c9fb99567fa522e11098dceda7f5aebe040b2d7",
+      "fine_grid_candidate_count": 464633,
+      "gsi_source_complete_count": 383460,
+      "structural_source_complete_count": 381842,
+      "structural_source_indeterminate_count": 82791,
+      "structural_order_sha256": "8d5693e2fdc39b7474e76b39fb94a1758c49768d77c013fbe8536f88cc7118f4",
+      "transferred_2p5pct_retained_cell_count": 9546,
+      "complete_link_patch_count": 573,
+      "patch_per_retained_cell_ratio": 0.06002514142049026,
+      "singleton_patch_count": 43,
+      "singleton_patch_fraction": 0.07504363001745201,
+      "median_patch_member_count": 9,
+      "maximum_patch_member_count": 70,
+      "private_patch_sha256": "181e5c4de86d18d7c6a86215d9a1ece41bac7ff81170ae4092f60a55956995f4"
+    },
+    "CIR06": {
+      "source_artifact_id": 11499228027,
+      "source_artifact_zip_sha256": "4fe7b90b8d95b45c5247e2d1adc83dc2facdc1f03d91e10f0e7f1bda2548089f",
+      "fine_grid_candidate_count": 847239,
+      "gsi_source_complete_count": 816364,
+      "structural_source_complete_count": 816364,
+      "structural_source_indeterminate_count": 30875,
+      "structural_order_sha256": "1d974681d6586fbe3b99cd26ecddf98bd53fe734c0c26d31c461b7cfdd25bd26",
+      "transferred_2p5pct_retained_cell_count": 20409,
+      "complete_link_patch_count": 3883,
+      "patch_per_retained_cell_ratio": 0.1902591993728257,
+      "singleton_patch_count": 342,
+      "singleton_patch_fraction": 0.0880762297192892,
+      "median_patch_member_count": 5,
+      "maximum_patch_member_count": 20,
+      "private_patch_sha256": "3f932c0a0b0af7d2217980cc8f332f589187de5efffa66e474a20dea31ccca89"
+    },
+    "CIR12": {
+      "source_artifact_id": 11502445722,
+      "source_artifact_zip_sha256": "58e7e7c1e23082b22f5ea5071435f40ccdb54cc3396676a482e89b0f95376010",
+      "fine_grid_candidate_count": 715103,
+      "gsi_source_complete_count": 610592,
+      "structural_source_complete_count": 607501,
+      "structural_source_indeterminate_count": 107602,
+      "structural_order_sha256": "47273b8f0261726f61b4d7e3a1b110c961195645db5ce1531515c0976f0b62d7",
+      "transferred_2p5pct_retained_cell_count": 15187,
+      "complete_link_patch_count": 654,
+      "patch_per_retained_cell_ratio": 0.04306314611180615,
+      "singleton_patch_count": 35,
+      "singleton_patch_fraction": 0.053516819571865444,
+      "median_patch_member_count": 19,
+      "maximum_patch_member_count": 73,
+      "private_patch_sha256": "094f2e8092a2893dfac92fb65887cf95ddcbc5acbf50e6c4288993156c66fd51"
+    },
+    "CIR13": {
+      "source_artifact_id": 11503379024,
+      "source_artifact_zip_sha256": "5d27b859fd863c361764338dd9d69252d918d102038e8daed6ed9ab28485a273",
+      "fine_grid_candidate_count": 715103,
+      "gsi_source_complete_count": 610592,
+      "structural_source_complete_count": 607501,
+      "structural_source_indeterminate_count": 107602,
+      "structural_order_sha256": "394b36742dc2b7cf5078ffa8244eae799fefeb89f5b0ef3df73586d89275d38b",
+      "transferred_2p5pct_retained_cell_count": 15187,
+      "complete_link_patch_count": 654,
+      "patch_per_retained_cell_ratio": 0.04306314611180615,
+      "singleton_patch_count": 35,
+      "singleton_patch_fraction": 0.053516819571865444,
+      "median_patch_member_count": 19,
+      "maximum_patch_member_count": 73,
+      "private_patch_sha256": "18100899f9d39e1db0452fccb87fa268d1775d01943fb6f05bc982a3d89a4fe1"
+    }
+  },
+  "interpretation": {
+    "representation_feasibility": true,
+    "direct_coarse_lattice_1km_transfer_was_weak": true,
+    "fine_grid_transfer_reduces_singletons": true,
+    "field_selector_validation": false,
+    "compact_field_site_count_validated": false,
+    "generalizable_biological_recovery": false,
+    "source_indeterminate_remains_unranked": true,
+    "no_posthoc_parameter_retuning": true,
+    "scientific_boundary": "2.5%/1-km transfer on source-complete fine support yields bounded patch objects but has no untouched field recovery or matched-effort validation; patch count is not a survey budget."
+  },
+  "prospective_field_outcomes_opened": false,
+  "coordinate_bearing_artifacts_in_repository": false,
+  "next_gate": "Keep results as representation feasibility. Test field-relevant recovery on a predeclared disjoint cohort with matched effort and baseline comparators before promoting compact field-site selection."
+}

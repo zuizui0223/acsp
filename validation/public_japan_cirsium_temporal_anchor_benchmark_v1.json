@@ -1,0 +1,53 @@
+{
+  "schema_version": "public-japan-cirsium-temporal-anchor-benchmark-v1",
+  "status": "PRE_OUTCOME_PUBLIC_DATA_BENCHMARK_FROZEN",
+  "scientific_role": "retrospective_public_data_development_only",
+  "validated_product_changed": false,
+  "field_outcomes_used": false,
+  "country": "JP",
+  "species_source": "validation/cirsium_aza3_prospective_validation_cohort_v1.csv",
+  "species_column": "species_binomial",
+  "species_count": 13,
+  "gbif_endpoint": "https://api.gbif.org/v1/occurrence/search",
+  "gbif_query": {
+    "hasCoordinate": true,
+    "year": "2000,2025",
+    "occurrenceStatus": "PRESENT",
+    "page_size": 300,
+    "maximum_records_per_species": 10000
+  },
+  "record_filter": {
+    "exact_species_field_match_required": true,
+    "coordinate_uncertainty_m_must_be_declared": true,
+    "coordinate_uncertainty_m_max": 1000,
+    "event_year_min": 2000,
+    "event_year_max": 2025,
+    "deduplicate_exact_coordinates_within_period": true
+  },
+  "temporal_split": {
+    "historical_anchor_years": [2000, 2020],
+    "recent_evaluation_years": [2021, 2025]
+  },
+  "cluster_rule": {
+    "algorithm": "deterministic_complete_link_greedy",
+    "maximum_within_cluster_distance_km": 0.5,
+    "stable_order": "latitude_longitude_gbif_key"
+  },
+  "recent_novelty_rule": {
+    "already_known_if_nearest_historical_cluster_km_le": 0.5,
+    "primary_local_recovery_km": 2.0,
+    "secondary_local_recovery_km": 5.0,
+    "no_historical_anchor": "SENTINEL"
+  },
+  "primary_outputs": [
+    "species_with_historical_and_recent_clusters",
+    "novel_recent_cluster_count",
+    "pooled_fraction_novel_recent_within_2km",
+    "pooled_fraction_novel_recent_within_5km",
+    "species_level_fraction_within_2km",
+    "species_level_fraction_within_5km",
+    "sentinel_species_count"
+  ],
+  "interpretation_boundary": "This benchmark tests whether public post-2020 occurrence clusters tend to appear near pre-2021 known clusters in Japan. It does not validate structural habitat ranking, occupancy, field detectability, route efficiency, days, budget, or the already validated 2.5% robust candidate-patch product.",
+  "retuning_after_result": false
+}
