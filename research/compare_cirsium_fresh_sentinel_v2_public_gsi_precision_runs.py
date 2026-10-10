@@ -180,6 +180,10 @@ def compare_complete_public_runs(
             stage="WHOLE_TERRAIN_DIGEST_MATCHES_BUT_PRECISION_FINGERPRINT_DIFFERS"
         elif a["structural"]["private_structural_order_sha256"] != b["structural"]["private_structural_order_sha256"]:
             stage="SAME_GSI_FEATURES_DIFFERENT_STRUCTURAL_ORDER"
+        elif selected_input_equality is None:
+            # Cache inventory equality does not establish the identities of
+            # the DEM mosaics actually selected by the frozen builder.
+            stage="RECORDED_HASH_STAGES_EQUAL_SELECTED_DEM_IDENTITY_UNVERIFIED"
         else:
             stage="ALL_CHECKED_HASH_STAGES_EQUAL"
         units[unit] = {
