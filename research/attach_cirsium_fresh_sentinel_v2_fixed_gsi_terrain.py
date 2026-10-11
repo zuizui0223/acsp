@@ -110,6 +110,7 @@ def attach_fixed_gsi_terrain(
     terrain_sampler: Callable[[pd.DataFrame, Path], pd.DataFrame] | None = None,
     numerical_probe: Callable[..., None] | None = None,
     selected_mosaic_observer: Callable[[int, str | Path | None], None] | None = None,
+    real_slope_stage_probe: Callable[..., None] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     contract = _load_contract()
     if unit_id not in UNITS:
@@ -215,6 +216,17 @@ def attach_fixed_gsi_terrain(
                 Path(dem_path),
                 sampler,
             )
+        # Diagnostic-only actual-DEM numerical-stage audit. The callback
+        # cannot mutate sampled or the chosen source path; all stage hashes
+        # are formed from copies of the original frozen complete cells.
+        if real_slope_stage_probe is not None:
+            real_slope_stage_probe(
+                int(chunk_index),
+                len(groups),
+                component.drop(columns=["_input_order"]).copy(),
+                sampled.copy(),
+                Path(dem_path),
+            )
         sampled_by_id = sampled.set_index(sampled["candidate_cell_id"].astype(str))
         complete_ids = set(sampled_by_id.index)
         complete = out["candidate_cell_id"].astype(str).isin(complete_ids)
@@ -316,6 +328,11 @@ def main() -> int:
         type=Path,
         help="Optional read-only aggregate commitment to actual chosen GSI DEM file bytes",
     )
+    parser.add_argument(
+        "--real-cir02-slope-stage-json",
+        type=Path,
+        help="CIR02-only original-GSI three-chunk coordinate-free slope-stage hashes",
+    )
     args = parser.parse_args()
 
     if not args.fine_grid_csv_gz.is_file():
@@ -328,6 +345,11 @@ def main() -> int:
         raise SystemExit("refusing to overwrite numerical diagnostic")
     if args.selected_mosaic_sequence_json is not None and args.selected_mosaic_sequence_json.exists():
         raise SystemExit("refusing to overwrite selected mosaic sequence receipt")
+    if args.real_cir02_slope_stage_json is not None:
+        if args.unit_id != "CIR02":
+            raise SystemExit("real slope stage probe is preregistered only for CIR02")
+        if args.real_cir02_slope_stage_json.exists():
+            raise SystemExit("refusing to overwrite actual CIR02 slope stage receipt")
 
     fine_grid = pd.read_csv(args.fine_grid_csv_gz, low_memory=False)
     collector = None
@@ -344,12 +366,19 @@ def main() -> int:
         selected_observer = SelectedMosaicSequence(
             unit_id=args.unit_id, cache_dir=args.cache_dir,
         )
+    real_slope_stage_probe = None
+    if args.real_cir02_slope_stage_json is not None:
+        from research.audit_cirsium_fresh_sentinel_v2_real_dem_slope_stages import (
+            CIR02RealDEMSlopeStageCollector,
+        )
+        real_slope_stage_probe = CIR02RealDEMSlopeStageCollector()
     audited, summary = attach_fixed_gsi_terrain(
         fine_grid,
         unit_id=args.unit_id,
         cache_dir=args.cache_dir,
         numerical_probe=collector,
         selected_mosaic_observer=selected_observer,
+        real_slope_stage_probe=real_slope_stage_probe,
     )
     args.private_out_csv_gz.parent.mkdir(parents=True, exist_ok=True)
     args.public_safe_summary_json.parent.mkdir(parents=True, exist_ok=True)
@@ -377,6 +406,15 @@ def main() -> int:
         args.selected_mosaic_sequence_json.parent.mkdir(parents=True, exist_ok=True)
         args.selected_mosaic_sequence_json.write_text(
             json.dumps(commitment, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    if real_slope_stage_probe is not None:
+        stage_summary = real_slope_stage_probe.summary(
+            unit_id=args.unit_id, source_chunk_count=int(summary["chunk_count"]),
+        )
+        args.real_cir02_slope_stage_json.parent.mkdir(parents=True, exist_ok=True)
+        args.real_cir02_slope_stage_json.write_text(
+            json.dumps(stage_summary, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
     print(json.dumps(summary, ensure_ascii=False, indent=2))

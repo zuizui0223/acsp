@@ -22,6 +22,9 @@ on:
       - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py"
       - "research/audit_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
       - "tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "research/audit_cirsium_fresh_sentinel_v2_real_dem_slope_stages.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_real_dem_slope_stages.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_dem_slope_stage_probe_v1.json"
       - "research/audit_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
       - "tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py"
       - "validation/coverage_then_fine_structure_fresh_sentinel_v2_gsi_feature_precision_fingerprints_v1.json"
@@ -73,7 +76,8 @@ jobs:
             tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py \
             tests/test_cirsium_fresh_sentinel_v2_same_mosaic_numerical_replay.py \
             tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py \
-            tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py
+            tests/test_cirsium_fresh_sentinel_v2_gsi_feature_fingerprints.py \
+            tests/test_cirsium_fresh_sentinel_v2_real_dem_slope_stages.py
       - name: Download exact frozen coarse-source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,9 +96,14 @@ jobs:
       - name: Attach fixed-policy GSI terrain
         run: |
           unit="${{ matrix.unit }}"
+          extra=()
+          if [ "$unit" = "CIR02" ]; then
+            extra=(--real-cir02-slope-stage-json "/tmp/acsp-fixed-gsi/public/${unit}_real_dem_slope_stages.json")
+          fi
           python research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py             --unit-id "$unit"             --fine-grid-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_primary_2km_100m.csv.gz"             --cache-dir "/tmp/acsp-fixed-gsi/gsi-cache-${unit}"             --private-out-csv-gz "/tmp/acsp-fixed-gsi/private/${unit}_gsi_terrain.csv.gz"             --public-safe-summary-json "/tmp/acsp-fixed-gsi/public/${unit}_gsi.json" \
             --same-mosaic-numerical-diagnostic-json "/tmp/acsp-fixed-gsi/public/${unit}_same_mosaic.json" \
-            --selected-mosaic-sequence-json "/tmp/acsp-fixed-gsi/public/${unit}_selected_dem_sequence.json"
+            --selected-mosaic-sequence-json "/tmp/acsp-fixed-gsi/public/${unit}_selected_dem_sequence.json" \
+            "${extra[@]}"
       - name: Fingerprint source-complete numerical GSI features at frozen precisions
         run: |
           unit="${{ matrix.unit }}"
@@ -192,6 +201,24 @@ jobs:
           assert selected['production_gsi_selection_changed'] is False
           assert selected['field_outcomes_opened'] is False
           assert selected['cross_run_numeric_reproduction_proven'] is False
+          real_stages=None
+          if unit=='CIR02':
+            real_stages=json.loads(Path(f'/tmp/acsp-fixed-gsi/public/{unit}_real_dem_slope_stages.json').read_text())
+            assert real_stages['status']=='ORIGINAL_REAL_DEM_CIR02_THREE_CHUNK_STAGE_AUDIT_COMPLETE'
+            assert real_stages['cohort_unit_id']==unit
+            assert real_stages['source_chunk_count']==177
+            assert real_stages['probed_chunk_count']==3
+            assert real_stages['source_complete_cells_probed']==72
+            assert real_stages['all_predeclared_chunks_eligible'] is True
+            assert len(real_stages['stages_exact_float64_sha256'])==9
+            assert all(len(h)==64 for h in real_stages['stages_exact_float64_sha256'].values())
+            assert all(set(row)=={'2','8'} for row in real_stages['stages_decimal_sha256'].values())
+            assert real_stages['stage_sampled_individual_coordinates_or_ids_public'] is False
+            assert real_stages['individual_slope_values_public'] is False
+            assert real_stages['per_chunk_stage_hashes_public'] is False
+            assert real_stages['primary_source_selection_or_sampled_vectors_changed'] is False
+            assert real_stages['field_outcomes_opened'] is False
+            assert real_stages['all_177_chunks_or_actual_historical_CIR02_cause_reproduced'] is False
           assert numerical['status'] in (
             'SELECTED_ORIGINAL_GSI_MOSAIC_NUMERICAL_DIAGNOSTIC_COMPLETE',
             'NUMERICAL_DIAGNOSTIC_NO_ELIGIBLE_SELECTED_CHUNKS',
@@ -390,6 +417,8 @@ jobs:
             'top_k_applied':False,
             'field_outcomes_opened':False,
           }
+          if unit=='CIR02':
+            receipt['real_cir02_slope_stages']=real_stages
           Path(f'/tmp/acsp-fixed-gsi/{unit}_receipt.json').write_text(
             json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
           )
