@@ -1,5 +1,21 @@
 # AI Change Log
 
+## 2026-10-11 - ChatGPT (OpenAI) - Fail closed on paired CIR02 original denominators
+
+Changed files:
+- research/compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages.py
+- tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
+- CHANGELOG_AI.md
+
+Summary:
+- Strengthen the already preregistered public-only real-GSI stage comparator by requiring *each* CIR02 receipt to match the original PR #247 primary candidate and GSI source-complete counts, not merely match another independent run.
+- Cover matching-but-drifted runs, one-sided drift, and omitted counts with fail-closed regressions.
+- Reuse preexisting frozen denominator fields; do not inspect field outcomes or change real DEM sampling, source preference, 2.5% support, 1-km patches, or the validated Japan product.
+
+Claim boundary / follow-up:
+- This is an input-integrity guard, not the completed historical CIR02 slope cause analysis.
+- Original real-GSI PR #267 stays independently gated on its four-unit CI; two successful source-complete stage-probed receipts are still required before a numerical-stage conclusion.
+
 ## 2026-09-15 - Codex (OpenAI) - Isolate global entry imports from experimental discovery
 
 Changed files:
