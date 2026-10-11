@@ -28,7 +28,7 @@
   "precision_decimals": 8,
   "run_count": 2,
   "runner_label": "ubuntu-24.04",
-  "python_version": "3.11",
+  "python_version": "paired exact patch versions: 3.11.16 and 3.11.17",
   "no_private_dem_or_coords_exported": true,
   "no_field_outcomes_opened": true,
   "no_change_to_original_GSI_pipeline": true,
@@ -41,5 +41,9 @@
     "full_field_selector_validation": false,
     "reported_changes_restricted_to_synthetic_output_hashes_and_versions": true
   },
-  "next_gate": "If same synthetic raster stage hashes disagree across runners, isolate earliest stage and native runner/hardware version; if all stages agree, do not dismiss actual CIR02 slope100 drift under matched selected DEMs and separately account for Python version/runner image."
+  "next_gate": "Compare the same deterministic synthetic slope stages across Python 3.11.16 and 3.11.17. A match only rules out a universal synthetic-kernel effect of that version difference; the real source-matched CIR02 discrepancy still needs native runner/hardware/stage-controlled verification.",
+  "python_exact_version_pairs": {
+    "A": "3.11.16",
+    "B": "3.11.17"
+  }
 }
