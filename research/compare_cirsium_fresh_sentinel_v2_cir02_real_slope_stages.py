@@ -58,7 +58,10 @@ def _contract() -> None:
         _expect(flags.get(k) is False, "unsupported causal or private claim")
 
 
-def _verified_unit(receipt: dict[str, Any], expected_patch: str) -> dict[str, Any]:
+def _verified_unit(
+    receipt: dict[str, Any], expected_patch: str,
+    frozen_original_unit: dict[str, Any],
+) -> dict[str, Any]:
     _expect(isinstance(receipt, dict) and receipt.get("cohort_unit_id") == "CIR02",
             "paired GSI receipt must be CIR02")
     _expect(receipt.get("status") == "FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME",
@@ -72,6 +75,19 @@ def _verified_unit(receipt: dict[str, Any], expected_patch: str) -> dict[str, An
     _expect(receipt["fine_patch_transfer"].get("private_patch_sha256") == expected_patch and
             receipt["fine_patch_transfer"].get("transfer_is_validated_selector") is False,
             "original frozen private patch hash or selector claim invalid")
+    # In addition to cross-run identity, require the already frozen PR #247
+    # source population. Two runs can match each other yet both silently use
+    # a different primary candidate frame or source-complete denominator.
+    _expect(
+        type(receipt["grid"].get("candidate_rows")) is int
+        and receipt["grid"]["candidate_rows"] == frozen_original_unit["fine_grid_candidate_count"],
+        "CIR02 original frozen primary candidate denominator changed",
+    )
+    _expect(
+        type(receipt["gsi"].get("source_complete_rows")) is int
+        and receipt["gsi"]["source_complete_rows"] == frozen_original_unit["gsi_source_complete_count"],
+        "CIR02 original frozen GSI source-complete denominator changed",
+    )
     stage = receipt["real_cir02_slope_stages"]
     _expect(stage.get("status") == "ORIGINAL_REAL_DEM_CIR02_THREE_CHUNK_STAGE_AUDIT_COMPLETE"
             and stage.get("cohort_unit_id") == "CIR02"
@@ -123,9 +139,10 @@ def compare_original_CIR02_slope_stage_receipts(
             and first_run_id != second_run_id, "two independent source workflow runs required")
     patch = json.loads(ORIGINAL.read_text(encoding="utf-8"))
     _expect(patch.get("source_pr") == 247, "original frozen private patch source changed")
-    frozen_patch = patch["units"]["CIR02"]["private_patch_sha256"]
-    a = _verified_unit(first, frozen_patch)
-    b = _verified_unit(second, frozen_patch)
+    original_unit = patch["units"]["CIR02"]
+    frozen_patch = original_unit["private_patch_sha256"]
+    a = _verified_unit(first, frozen_patch, original_unit)
+    b = _verified_unit(second, frozen_patch, original_unit)
     gates = {
         "grid_sha_equal": a["grid"]["private_grid_sha256"] == b["grid"]["private_grid_sha256"],
         "source_state_sha_equal": (a["structural"]["source_state_digest_sha256"]
