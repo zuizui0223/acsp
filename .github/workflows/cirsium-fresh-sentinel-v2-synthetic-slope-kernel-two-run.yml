@@ -21,12 +21,16 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        slot: [A, B]
+        include:
+          - slot: A
+            python: "3.11.16"
+          - slot: B
+            python: "3.11.17"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
       - name: Install exact project dependency group and regression tests
         run: |
           python -m pip install -e .
