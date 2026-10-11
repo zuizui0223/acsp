@@ -138,7 +138,7 @@ class CIR02RealDEMSlopeStageCollector:
             raise ValueError("private real source IDs duplicated")
         if not set(ids).issubset(cells.index):
             raise ValueError("predeclared source candidates missing from actual chunk")
-        locations = cells.loc[ids].reset_index(drop=False)
+        locations = cells.loc[ids].reset_index(drop=True)
         rows, cols = _surface_coordinates(locations, path, stages[STAGES[0]].shape)
         original_slope = original.loc[ids, "slope100"].to_numpy(dtype=np.float64)
         staged_slope = np.asarray(stages["slope100"][rows, cols], dtype=np.float64)
