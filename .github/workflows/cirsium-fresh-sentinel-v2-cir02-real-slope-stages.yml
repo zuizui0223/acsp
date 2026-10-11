@@ -1,0 +1,53 @@
+name: Fresh-SENTINEL CIR02 real DEM slope stage probe
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_real_dem_slope_stages.py"
+      - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_real_dem_slope_stages.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_dem_slope_stage_probe_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-cir02-real-slope-stages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  cir02_slope_stages_synthetic_fixture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install original project dependencies and unit tests
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Check slope pipeline on generated real GeoTIFF with unchanged original samples
+        run: |
+          python -m pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            tests/test_cirsium_fresh_sentinel_v2_real_dem_slope_stages.py
+      - name: Preserve preregistered CIR02-only source-outcome firewall
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_dem_slope_stage_probe_v1.json").read_text())
+          assert c["status"]=="FROZEN_BEFORE_NEW_CIR02_REAL_DEM_STAGE_RUN"
+          assert c["cohort_unit_id"]=="CIR02"
+          assert c["sample_policy"]["expected_source_chunk_count"]==177
+          assert c["sample_policy"]["max_source_complete_candidates_per_chunk"]==24
+          assert c["sample_policy"]["no_outcome_based_selection"] is True
+          assert c["digest_protocol"]["no_candidate_ids_or_coordinates_export"] is True
+          assert c["digest_protocol"]["no_per_chunk_hash_export"] is True
+          assert c["execution"]["never_change_original_dem_sampler_or_candidate_order"] is True
+          assert c["interpretation"]["three_sampled_chunks_are_not_complete_cir02_source_world"] is True
+          assert c["interpretation"]["no_private_sites_or_field_outcomes"] is True
+          PY
