@@ -65,6 +65,17 @@ jobs:
         with:
           name: cirsium-synthetic-slope-kernel-B
           path: /tmp/acsp-synthetic-paired/B
+      - name: Enforce exact Python patch-version A/B identities
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("/tmp/acsp-synthetic-paired/A/receipt.json").read_text())
+          b=json.loads(Path("/tmp/acsp-synthetic-paired/B/receipt.json").read_text())
+          assert a["native_versions"]["python"] == "3.11.16"
+          assert b["native_versions"]["python"] == "3.11.17"
+          assert a["native_versions"]["python"] != b["native_versions"]["python"]
+          PY
       - name: Refuse different synthetic source bytes, report first divergent stage
         run: |
           python -m research.compare_cirsium_synthetic_slope_kernel_runs \
