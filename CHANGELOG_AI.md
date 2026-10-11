@@ -11,6 +11,7 @@ Summary:
 - Strengthen the already preregistered public-only real-GSI stage comparator by requiring *each* CIR02 receipt to match the original PR #247 primary candidate and GSI source-complete counts, not merely match another independent run.
 - Cover matching-but-drifted runs, one-sided drift, and omitted counts with fail-closed regressions.
 - Additionally require both runs' selected full DEM-content sequence to equal the already frozen PR #266 CIR02 historical source identity (not only each other); compare numeric stages only in that original source world. Add matched-but-new-source and one-sided-source-change regression tests.
+- Require every original CIR02 receipt to match the independently reproduced PR #241 exact private candidate-grid SHA, not merely the original count. Prevent two matching-but-changed grids from being interpreted as a replay; add changed/missing-grid regression tests.
 - Reuse preexisting frozen denominator fields; do not inspect field outcomes or change real DEM sampling, source preference, 2.5% support, 1-km patches, or the validated Japan product.
 
 Claim boundary / follow-up:
