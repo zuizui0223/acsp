@@ -16,6 +16,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_slope_stage_pair_v1.json"
 ORIGINAL = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json"
+FROZEN_GRID = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_materialization_result_v1.json"
 HISTORICAL_SELECTED = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_complete_cross_run_result_v1.json"
 STAGES = (
     "resampled_elevation", "local_mean100", "filled_elevation",
@@ -61,7 +62,7 @@ def _contract() -> None:
 
 def _verified_unit(
     receipt: dict[str, Any], expected_patch: str,
-    frozen_original_unit: dict[str, Any],
+    frozen_original_unit: dict[str, Any], original_grid_sha: str,
 ) -> dict[str, Any]:
     _expect(isinstance(receipt, dict) and receipt.get("cohort_unit_id") == "CIR02",
             "paired GSI receipt must be CIR02")
@@ -88,6 +89,10 @@ def _verified_unit(
         type(receipt["gsi"].get("source_complete_rows")) is int
         and receipt["gsi"]["source_complete_rows"] == frozen_original_unit["gsi_source_complete_count"],
         "CIR02 original frozen GSI source-complete denominator changed",
+    )
+    _expect(
+        receipt["grid"].get("private_grid_sha256") == original_grid_sha,
+        "CIR02 original frozen candidate-grid content SHA changed",
     )
     stage = receipt["real_cir02_slope_stages"]
     _expect(stage.get("status") == "ORIGINAL_REAL_DEM_CIR02_THREE_CHUNK_STAGE_AUDIT_COMPLETE"
@@ -142,8 +147,19 @@ def compare_original_CIR02_slope_stage_receipts(
     _expect(patch.get("source_pr") == 247, "original frozen private patch source changed")
     original_unit = patch["units"]["CIR02"]
     frozen_patch = original_unit["private_patch_sha256"]
-    a = _verified_unit(first, frozen_patch, original_unit)
-    b = _verified_unit(second, frozen_patch, original_unit)
+    grid_freeze = json.loads(FROZEN_GRID.read_text(encoding="utf-8"))
+    grid_unit = grid_freeze.get("units", {}).get("CIR02", {})
+    original_grid_sha = grid_unit.get("private_grid_sha256")
+    _expect(
+        grid_freeze.get("status") == "PRIMARY_FINE_GRID_MATERIALIZATION_REPRODUCED_PRE_OUTCOME"
+        and grid_freeze.get("source_pr") == 241
+        and grid_freeze.get("independent_receipt_bytes_identical") is True
+        and grid_unit.get("fine_grid_cell_count") == original_unit["fine_grid_candidate_count"]
+        and _sha(original_grid_sha),
+        "PR241 frozen original CIR02 grid identity missing or inconsistent",
+    )
+    a = _verified_unit(first, frozen_patch, original_unit, original_grid_sha)
+    b = _verified_unit(second, frozen_patch, original_unit, original_grid_sha)
     # A pair of new runs agreeing with each other does not necessarily replay
     # the *historical* CIR02 selected DEM input that displayed slope drift.
     # This previous public-only original-source freeze is read before examining
