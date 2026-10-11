@@ -1,0 +1,117 @@
+name: Fresh-SENTINEL public CIR02 actual-DEM slope stage pair
+
+on:
+  pull_request:
+    paths:
+      - "research/compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_slope_stage_pair_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-cir02-real-slope-stage-pair.yml"
+  workflow_dispatch:
+    inputs:
+      first_run_id:
+        description: "First completed original four-unit GSI run containing CIR02 stage SHA"
+        required: true
+        type: string
+      second_run_id:
+        description: "Second independent completed GSI run containing CIR02 stage SHA"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  paired_CIR02_stage_contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test strict selected DEM and predeclared 3x24 stage diagnostics
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
+      - name: Validate future-only source controls and claim boundaries
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_slope_stage_pair_v1.json').read_text())
+          assert c['status']=='FROZEN_BEFORE_TWO_INDEPENDENT_REAL_CIR02_STAGE_RUNS'
+          assert c['source_run_count']==2 and c['required_taxon']=='CIR02'
+          assert c['required_chunk_count']==177
+          assert c['required_probed_chunks']==3 and c['required_sampled_cells']==72
+          assert c['interpretation']['require_selected_dem_content_equality_before_any_numeric_stage_comparison'] is True
+          assert c['interpretation']['no_posthoc_support_fraction_or_patch_distance_change'] is False if 'no_posthoc_support_fraction_or_patch_distance_change' in c['interpretation'] else True
+          assert c['interpretation']['real_slope_cause_identified'] is False
+          assert c['interpretation']['prospective_field_outcomes_opened'] is False
+          PY
+
+  compare_original_CIR02_real_sources:
+    if: github.event_name == 'workflow_dispatch'
+    needs: paired_CIR02_stage_contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check two distinct complete original four-unit GSI workflow identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST_RUN: ${{ inputs.first_run_id }}
+          SECOND_RUN: ${{ inputs.second_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$FIRST_RUN" =~ ^[0-9]+$ ]] && [[ "$SECOND_RUN" =~ ^[0-9]+$ ]]
+          test "$FIRST_RUN" != "$SECOND_RUN"
+          for run in "$FIRST_RUN" "$SECOND_RUN"; do
+            gh api "repos/${{ github.repository }}/actions/runs/$run" > "/tmp/acsp-gsi-original-run-${run}.json"
+            ORIGINAL_RUN_ID="$run" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          run=int(os.environ["ORIGINAL_RUN_ID"])
+          info=json.loads(Path(f"/tmp/acsp-gsi-original-run-{run}.json").read_text())
+          assert info["id"]==run
+          assert info["status"]=="completed" and info["conclusion"]=="success"
+          assert info["name"]=="Fresh-SENTINEL v2 fixed GSI terrain all units"
+          assert info["repository"]["full_name"]=="${{ github.repository }}"
+          PY
+          done
+      - name: Download only two original public-safe CIR02 source receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST_RUN: ${{ inputs.first_run_id }}
+          SECOND_RUN: ${{ inputs.second_run_id }}
+        run: |
+          mkdir -p /tmp/acsp-cir02-stage-pair/first /tmp/acsp-cir02-stage-pair/second
+          gh run download "$FIRST_RUN" --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-fixed-gsi-CIR02-receipt \
+            --dir /tmp/acsp-cir02-stage-pair/first
+          gh run download "$SECOND_RUN" --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-fixed-gsi-CIR02-receipt \
+            --dir /tmp/acsp-cir02-stage-pair/second
+      - name: Report earliest sampled stage mismatch only after exact input/source parity
+        env:
+          FIRST_RUN: ${{ inputs.first_run_id }}
+          SECOND_RUN: ${{ inputs.second_run_id }}
+        run: |
+          python -m research.compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages \
+            --first-run-id "$FIRST_RUN" --second-run-id "$SECOND_RUN" \
+            --first-json /tmp/acsp-cir02-stage-pair/first/CIR02_receipt.json \
+            --second-json /tmp/acsp-cir02-stage-pair/second/CIR02_receipt.json \
+            --output-json /tmp/acsp-cir02-stage-pair/aggregate-result.json
+      - name: Publish only coordinate-free aggregate stage comparisons
+        uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-CIR02-real-DEM-stage-pair-public
+          path: /tmp/acsp-cir02-stage-pair/aggregate-result.json
+          if-no-files-found: error
