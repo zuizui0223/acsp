@@ -72,6 +72,11 @@ def test_stage_hashes_react_to_changed_selected_DEM_content(tmp_path: Path):
     first = initial.summary(unit_id="CIR02", source_chunk_count=177)
     assert first["status"] == "ORIGINAL_REAL_DEM_STAGE_SAMPLING_INCOMPLETE"
     assert first["stages_exact_float64_sha256"] == {}
+    # Finish the first prospective run under its original unchanged TIFF;
+    # do NOT mix old sampled vectors with modified DEM bytes across chunks.
+    for i in (88, 176):
+        initial(i, 177, grid, original, path)
+    before = initial.summary(unit_id="CIR02", source_chunk_count=177)
 
     with rasterio.open(path, "r+") as dst:
         values = dst.read(1)
@@ -79,16 +84,10 @@ def test_stage_hashes_react_to_changed_selected_DEM_content(tmp_path: Path):
         dst.write(values, 1)
     second_original = _sample_terrain(grid, path)
     later = CIR02RealDEMSlopeStageCollector()
-    later(0, 177, grid, second_original, path)
-    # Diagnostic full stage fingerprints are published only when the 3
-    # preregistered chunks have all succeeded.
-    for collector, state in ((initial, original), (later, second_original)):
-        for i in (88, 176):
-            collector(i, 177, grid, state, path)
-    assert (initial.summary(unit_id="CIR02", source_chunk_count=177)
-            ["sampled_mosaics_content_order_sha256"] !=
-            later.summary(unit_id="CIR02", source_chunk_count=177)
-            ["sampled_mosaics_content_order_sha256"])
+    for i in (0, 88, 176):
+        later(i, 177, grid, second_original, path)
+    after = later.summary(unit_id="CIR02", source_chunk_count=177)
+    assert before["sampled_mosaics_content_order_sha256"] != after["sampled_mosaics_content_order_sha256"]
 
 
 def test_unfinished_selected_chunks_fail_closed_and_source_counts_are_frozen(tmp_path: Path):
