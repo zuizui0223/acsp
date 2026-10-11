@@ -199,7 +199,7 @@
       "source_a_artifact_id": 11561050683,
       "source_a_receipt_content_sha256": "bdecde37ed009987c037bacca6fa330808b9f1934fd0161c9c5fdc216c39427e",
       "source_b_artifact_id": 11688497752,
-      "source_b_receipt_content_sha256": "bdecde37ed009987c037bacca6fa330808b9f1934fd0161c9c5fd216c39427e",
+      "source_b_receipt_content_sha256": "bdecde37ed009987c037bacca6fa330808b9f1934fd0161c9c5fdc216c39427e",
       "original_frozen_patch_sha256": "18100899f9d39e1db0452fccb87fa268d1775d01943fb6f05bc982a3d89a4fe1",
       "source_chunk_count": 237,
       "actual_selected_source_mosaic_chunks_a": 237,
