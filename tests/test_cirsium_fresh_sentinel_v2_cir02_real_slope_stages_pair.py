@@ -15,16 +15,25 @@ def _digest(n: int) -> str:
 
 
 def _one_original_receipt() -> dict:
-    from research.compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages import ORIGINAL
+    from research.compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages import (
+        ORIGINAL, HISTORICAL_SELECTED, FROZEN_GRID,
+    )
     frozen = json.loads(ORIGINAL.read_text(encoding="utf-8"))
+    historical = json.loads(HISTORICAL_SELECTED.read_text(encoding="utf-8"))
+    original_grid = json.loads(FROZEN_GRID.read_text(encoding="utf-8"))
     return {
         "status": "FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME",
         "cohort_unit_id": "CIR02",
         "coordinate_bearing_artifacts_uploaded": False,
         "field_outcomes_opened": False,
-        "grid": {"private_grid_sha256": _digest(1)},
+        "grid": {
+            "candidate_rows": frozen["units"]["CIR02"]["fine_grid_candidate_count"],
+            "private_grid_sha256": original_grid["units"]["CIR02"]["private_grid_sha256"],
+        },
         "structural": {"source_state_digest_sha256": _digest(2)},
-        "gsi": {"source_complete_rows": 383460},
+        "gsi": {
+            "source_complete_rows": frozen["units"]["CIR02"]["gsi_source_complete_count"],
+        },
         "fine_patch_transfer": {
             "private_patch_sha256": frozen["units"]["CIR02"]["private_patch_sha256"],
             "transfer_is_validated_selector": False,
@@ -34,7 +43,7 @@ def _one_original_receipt() -> dict:
             "chunk_count": 177,
             "selected_dem_chunks": 177,
             "unavailable_dem_chunks": 0,
-            "selected_mosaic_content_sequence_sha256": _digest(3),
+            "selected_mosaic_content_sequence_sha256": historical["units"]["CIR02"]["source_a_selected_mosaic_sequence_sha256"],
         },
         "real_cir02_slope_stages": {
             "status": "ORIGINAL_REAL_DEM_CIR02_THREE_CHUNK_STAGE_AUDIT_COMPLETE",
@@ -71,6 +80,7 @@ def test_two_original_source_identical_receipts_may_be_compared_without_coordina
     b = copy.deepcopy(a)
     result = _compare(a, b)
     assert result["source_input_identity_verified"] is True
+    assert result["source_identity_gates"]["historical_frozen_full_selected_dem_sequence_equal"] is True
     assert result["status"] == "MATCHED_SELECTED_SOURCE_REAL_NUMERICAL_STAGES_COMPARED"
     assert result["first_differing_exact_stage"] is None
     assert result["first_differing_decimal2_stage"] is None
@@ -95,7 +105,7 @@ def test_gradient_stage_disagreement_is_identified_without_causal_promotion():
 
 
 @pytest.mark.parametrize("mismatch", [
-    "full_selected", "three_selected", "grid", "source_state", "source_complete_count",
+    "full_selected", "three_selected", "source_state",
 ])
 def test_missing_real_source_equivalence_blocks_stage_inference(mismatch):
     a = _one_original_receipt()
@@ -104,12 +114,8 @@ def test_missing_real_source_equivalence_blocks_stage_inference(mismatch):
         b["gsi_selected_mosaic_sequence"]["selected_mosaic_content_sequence_sha256"] = _digest(91)
     elif mismatch == "three_selected":
         b["real_cir02_slope_stages"]["sampled_mosaics_content_order_sha256"] = _digest(92)
-    elif mismatch == "grid":
-        b["grid"]["private_grid_sha256"] = _digest(93)
-    elif mismatch == "source_state":
-        b["structural"]["source_state_digest_sha256"] = _digest(94)
     else:
-        b["gsi"]["source_complete_rows"] = 383459
+        b["structural"]["source_state_digest_sha256"] = _digest(94)
     result = _compare(a, b)
     assert result["status"] == "REAL_DEM_SOURCE_IDENTITY_GATE_BLOCKED_STAGE_COMPARISON"
     assert result["source_input_identity_verified"] is False
@@ -143,3 +149,60 @@ def test_invalid_original_run_or_private_outcome_claim_fails_closed(bad):
         b["fine_patch_transfer"]["private_patch_sha256"] = _digest(0)
     with pytest.raises(ValueError):
         _compare(a, b)
+
+
+@pytest.mark.parametrize("denominator", ["primary_grid", "gsi_source_complete"])
+@pytest.mark.parametrize("changed_receipts", ["both", "second_only"])
+def test_frozen_pr247_denominator_cannot_drift_even_when_two_runs_agree(
+    denominator, changed_receipts,
+):
+    a = _one_original_receipt()
+    b = copy.deepcopy(a)
+    receipts = (a, b) if changed_receipts == "both" else (b,)
+    for row in receipts:
+        if denominator == "primary_grid":
+            row["grid"]["candidate_rows"] -= 1
+        else:
+            row["gsi"]["source_complete_rows"] -= 1
+    with pytest.raises(ValueError, match="original frozen"):
+        _compare(a, b)
+
+
+@pytest.mark.parametrize("field", ["candidate_rows", "source_complete_rows"])
+def test_missing_original_denominator_fails_closed(field):
+    a = _one_original_receipt()
+    b = copy.deepcopy(a)
+    block = b["grid"] if field == "candidate_rows" else b["gsi"]
+    block.pop(field)
+    with pytest.raises(ValueError, match="original frozen"):
+        _compare(a, b)
+
+
+@pytest.mark.parametrize("changes", ["both", "second_only"])
+def test_both_new_runs_can_agree_but_not_replay_historical_selected_dem(changes):
+    first = _one_original_receipt()
+    second = copy.deepcopy(first)
+    for receipt in ((first, second) if changes == "both" else (second,)):
+        receipt["gsi_selected_mosaic_sequence"]["selected_mosaic_content_sequence_sha256"] = _digest(91)
+    compared = _compare(first, second)
+    assert compared["status"] == "REAL_DEM_SOURCE_IDENTITY_GATE_BLOCKED_STAGE_COMPARISON"
+    assert compared["source_input_identity_verified"] is False
+    assert compared["source_identity_gates"]["historical_frozen_full_selected_dem_sequence_equal"] is False
+    assert compared["source_identity_gates"]["full_selected_mosaic_sequence_equal"] is (changes == "both")
+    assert compared["per_stage_equal_if_source_matched"] == {}
+    assert compared["first_differing_exact_stage"] is None
+
+
+@pytest.mark.parametrize("changed", ["both", "second_only", "missing"])
+def test_original_pr241_grid_content_must_match_not_just_grid_count(changed):
+    first = _one_original_receipt()
+    second = copy.deepcopy(first)
+    if changed == "both":
+        first["grid"]["private_grid_sha256"] = _digest(97)
+        second["grid"]["private_grid_sha256"] = _digest(97)
+    elif changed == "second_only":
+        second["grid"]["private_grid_sha256"] = _digest(97)
+    else:
+        second["grid"].pop("private_grid_sha256")
+    with pytest.raises(ValueError, match="original frozen candidate-grid content SHA"):
+        _compare(first, second)

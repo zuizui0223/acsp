@@ -16,6 +16,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_slope_stage_pair_v1.json"
 ORIGINAL = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json"
+FROZEN_GRID = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_materialization_result_v1.json"
+HISTORICAL_SELECTED = ROOT / "validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_complete_cross_run_result_v1.json"
 STAGES = (
     "resampled_elevation", "local_mean100", "filled_elevation",
     "gradient_dx", "gradient_dy", "instantaneous_slope",
@@ -58,7 +60,10 @@ def _contract() -> None:
         _expect(flags.get(k) is False, "unsupported causal or private claim")
 
 
-def _verified_unit(receipt: dict[str, Any], expected_patch: str) -> dict[str, Any]:
+def _verified_unit(
+    receipt: dict[str, Any], expected_patch: str,
+    frozen_original_unit: dict[str, Any], original_grid_sha: str,
+) -> dict[str, Any]:
     _expect(isinstance(receipt, dict) and receipt.get("cohort_unit_id") == "CIR02",
             "paired GSI receipt must be CIR02")
     _expect(receipt.get("status") == "FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME",
@@ -72,6 +77,23 @@ def _verified_unit(receipt: dict[str, Any], expected_patch: str) -> dict[str, An
     _expect(receipt["fine_patch_transfer"].get("private_patch_sha256") == expected_patch and
             receipt["fine_patch_transfer"].get("transfer_is_validated_selector") is False,
             "original frozen private patch hash or selector claim invalid")
+    # In addition to cross-run identity, require the already frozen PR #247
+    # source population. Two runs can match each other yet both silently use
+    # a different primary candidate frame or source-complete denominator.
+    _expect(
+        type(receipt["grid"].get("candidate_rows")) is int
+        and receipt["grid"]["candidate_rows"] == frozen_original_unit["fine_grid_candidate_count"],
+        "CIR02 original frozen primary candidate denominator changed",
+    )
+    _expect(
+        type(receipt["gsi"].get("source_complete_rows")) is int
+        and receipt["gsi"]["source_complete_rows"] == frozen_original_unit["gsi_source_complete_count"],
+        "CIR02 original frozen GSI source-complete denominator changed",
+    )
+    _expect(
+        receipt["grid"].get("private_grid_sha256") == original_grid_sha,
+        "CIR02 original frozen candidate-grid content SHA changed",
+    )
     stage = receipt["real_cir02_slope_stages"]
     _expect(stage.get("status") == "ORIGINAL_REAL_DEM_CIR02_THREE_CHUNK_STAGE_AUDIT_COMPLETE"
             and stage.get("cohort_unit_id") == "CIR02"
@@ -123,9 +145,41 @@ def compare_original_CIR02_slope_stage_receipts(
             and first_run_id != second_run_id, "two independent source workflow runs required")
     patch = json.loads(ORIGINAL.read_text(encoding="utf-8"))
     _expect(patch.get("source_pr") == 247, "original frozen private patch source changed")
-    frozen_patch = patch["units"]["CIR02"]["private_patch_sha256"]
-    a = _verified_unit(first, frozen_patch)
-    b = _verified_unit(second, frozen_patch)
+    original_unit = patch["units"]["CIR02"]
+    frozen_patch = original_unit["private_patch_sha256"]
+    grid_freeze = json.loads(FROZEN_GRID.read_text(encoding="utf-8"))
+    grid_unit = grid_freeze.get("units", {}).get("CIR02", {})
+    original_grid_sha = grid_unit.get("private_grid_sha256")
+    _expect(
+        grid_freeze.get("status") == "PRIMARY_FINE_GRID_MATERIALIZATION_REPRODUCED_PRE_OUTCOME"
+        and grid_freeze.get("source_pr") == 241
+        and grid_freeze.get("independent_receipt_bytes_identical") is True
+        and grid_unit.get("fine_grid_cell_count") == original_unit["fine_grid_candidate_count"]
+        and _sha(original_grid_sha),
+        "PR241 frozen original CIR02 grid identity missing or inconsistent",
+    )
+    a = _verified_unit(first, frozen_patch, original_unit, original_grid_sha)
+    b = _verified_unit(second, frozen_patch, original_unit, original_grid_sha)
+    # A pair of new runs agreeing with each other does not necessarily replay
+    # the *historical* CIR02 selected DEM input that displayed slope drift.
+    # This previous public-only original-source freeze is read before examining
+    # any prospective numerical-stage results. A source mismatch suppresses
+    # numerical comparisons rather than relabeling it as native math drift.
+    historical = json.loads(HISTORICAL_SELECTED.read_text(encoding="utf-8"))
+    historical_unit = historical.get("units", {}).get("CIR02", {})
+    original_selected_sha = historical_unit.get("source_a_selected_mosaic_sequence_sha256")
+    _expect(
+        historical.get("status") ==
+        "FOUR_ORIGINAL_SHA_VERIFIED_SOURCE_SELECTED_REPLAY_DIAGNOSTIC_COMPLETE_PRE_OUTCOME"
+        and historical_unit.get("original_frozen_patch_sha256") == frozen_patch
+        and historical_unit.get("source_chunk_count") == 177
+        and historical_unit.get("actual_selected_mosaic_content_sequence_equal") is True
+        and _sha(original_selected_sha)
+        and original_selected_sha == historical_unit.get(
+            "source_b_selected_mosaic_sequence_sha256"
+        ),
+        "historical CIR02 selected DEM source freeze unavailable or inconsistent",
+    )
     gates = {
         "grid_sha_equal": a["grid"]["private_grid_sha256"] == b["grid"]["private_grid_sha256"],
         "source_state_sha_equal": (a["structural"]["source_state_digest_sha256"]
@@ -139,6 +193,12 @@ def compare_original_CIR02_slope_stage_receipts(
         "sampled_three_mosaic_sequence_equal": (
             a["real_cir02_slope_stages"]["sampled_mosaics_content_order_sha256"] ==
             b["real_cir02_slope_stages"]["sampled_mosaics_content_order_sha256"]
+        ),
+        "historical_frozen_full_selected_dem_sequence_equal": (
+            a["gsi_selected_mosaic_sequence"]["selected_mosaic_content_sequence_sha256"] ==
+            original_selected_sha
+            and b["gsi_selected_mosaic_sequence"]["selected_mosaic_content_sequence_sha256"] ==
+            original_selected_sha
         ),
     }
     same_inputs = all(gates.values())
