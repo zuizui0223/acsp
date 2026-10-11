@@ -1,0 +1,280 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-selected-mosaic-complete-cross-run-result-v1",
+  "status": "FOUR_ORIGINAL_SHA_VERIFIED_SOURCE_SELECTED_REPLAY_DIAGNOSTIC_COMPLETE_PRE_OUTCOME",
+  "date": "2026-10-11",
+  "original_patch_source_pr": 247,
+  "original_fine_patch_freeze_path": "validation/coverage_then_fine_structure_fresh_sentinel_v2_fine_patch_transfer_result_v1.json",
+  "source_run_a": {
+    "run_id": 37785966356,
+    "source_pr": 263,
+    "head_sha": "66267116b7b17745ac0c22b7880ca4e87e1b53fc",
+    "description": "first complete actual-selected-mosaic-instrumented run"
+  },
+  "source_run_b": {
+    "run_id": 38058577057,
+    "head_sha": "77ac330bb5180bbfa43a25de47206d0f81939415",
+    "rerun_cancelled_CIR13_only": true,
+    "description": "independent development run with cancelled CIR13 job rerun; original run artifacts preserved"
+  },
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "feature_order": [
+    "elev",
+    "slope100",
+    "tpi300",
+    "rough300"
+  ],
+  "fixed_decimal_precision_order": [
+    "0",
+    "2",
+    "4",
+    "6",
+    "8"
+  ],
+  "units": {
+    "CIR02": {
+      "source_a_artifact_id": 11556325188,
+      "source_a_receipt_content_sha256": "51482917fc6f44b6fa790ea3263a5543f65dd3ed30fb070a420e0119c48182a4",
+      "source_b_artifact_id": 11673526451,
+      "source_b_receipt_content_sha256": "8f78596ea9b2cc086e586107d6855329203708ff71f11107dbf1a45bb4d6f075",
+      "original_frozen_patch_sha256": "181e5c4de86d18d7c6a86215d9a1ece41bac7ff81170ae4092f60a55956995f4",
+      "source_chunk_count": 177,
+      "actual_selected_source_mosaic_chunks_a": 177,
+      "actual_selected_source_mosaic_chunks_b": 177,
+      "source_a_selected_mosaic_sequence_sha256": "7ef762da0577e94d4f94bf1f171cfe1aa6f8fc9046cd6c03ee364cd334a43ddf",
+      "source_b_selected_mosaic_sequence_sha256": "7ef762da0577e94d4f94bf1f171cfe1aa6f8fc9046cd6c03ee364cd334a43ddf",
+      "candidate_grid_sha_equal": true,
+      "source_state_digest_sha_equal": true,
+      "source_complete_row_count_equal": true,
+      "cache_png_and_mosaic_sha_equal": true,
+      "actual_selected_mosaic_content_sequence_equal": true,
+      "terrain_digest_equal": false,
+      "full_structural_order_sha_equal": false,
+      "final_patch_sha_equal": true,
+      "final_patch_matches_original_frozen_shas_a_and_b": true,
+      "original_source_receipt_bytes_equal": false,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": false,
+          "4": false,
+          "6": false,
+          "8": false
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      },
+      "stage_classification": "SAME_ACTUALLY_SELECTED_GSI_SOURCE_DIFFERENT_SLOPE_PRECISION_UNRESOLVED"
+    },
+    "CIR06": {
+      "source_a_artifact_id": 11556452407,
+      "source_a_receipt_content_sha256": "63cf3265946a5736b334fd58b9be7fc0216a010daaad48bf8fdd96c8a1e1a0b4",
+      "source_b_artifact_id": 11673619271,
+      "source_b_receipt_content_sha256": "63cf3265946a5736b334fd58b9be7fc0216a010daaad48bf8fdd96c8a1e1a0b4",
+      "original_frozen_patch_sha256": "3f932c0a0b0af7d2217980cc8f332f589187de5efffa66e474a20dea31ccca89",
+      "source_chunk_count": 81,
+      "actual_selected_source_mosaic_chunks_a": 81,
+      "actual_selected_source_mosaic_chunks_b": 81,
+      "source_a_selected_mosaic_sequence_sha256": "dbf2e55726e29604c80dc418efbad457f66317abf71ef6c3d96145592de51ce6",
+      "source_b_selected_mosaic_sequence_sha256": "dbf2e55726e29604c80dc418efbad457f66317abf71ef6c3d96145592de51ce6",
+      "candidate_grid_sha_equal": true,
+      "source_state_digest_sha_equal": true,
+      "source_complete_row_count_equal": true,
+      "cache_png_and_mosaic_sha_equal": true,
+      "actual_selected_mosaic_content_sequence_equal": true,
+      "terrain_digest_equal": true,
+      "full_structural_order_sha_equal": true,
+      "final_patch_sha_equal": true,
+      "final_patch_matches_original_frozen_shas_a_and_b": true,
+      "original_source_receipt_bytes_equal": true,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      },
+      "stage_classification": "ACTUAL_SELECTED_INPUT_AND_ALL_CHECKED_DIGESTS_MATCH"
+    },
+    "CIR12": {
+      "source_a_artifact_id": 11558915747,
+      "source_a_receipt_content_sha256": "ff55ff43357476396848f470131d2842cff9e1defb18e1dd013b934a636fcf9d",
+      "source_b_artifact_id": 11674144935,
+      "source_b_receipt_content_sha256": "c6c5c610ebbffdf18a9e4c90d3871281e98852e8cdbae0f91712b514d397f536",
+      "original_frozen_patch_sha256": "094f2e8092a2893dfac92fb65887cf95ddcbc5acbf50e6c4288993156c66fd51",
+      "source_chunk_count": 237,
+      "actual_selected_source_mosaic_chunks_a": 237,
+      "actual_selected_source_mosaic_chunks_b": 237,
+      "source_a_selected_mosaic_sequence_sha256": "cd0f6d5d8626984544dcb125d108278bd213d504c53a7e68dae4e2a39e259e09",
+      "source_b_selected_mosaic_sequence_sha256": "90105a1d74082d6a51b3241035eaa84962364a3bd331e2614476903ee943c81b",
+      "candidate_grid_sha_equal": true,
+      "source_state_digest_sha_equal": true,
+      "source_complete_row_count_equal": true,
+      "cache_png_and_mosaic_sha_equal": false,
+      "actual_selected_mosaic_content_sequence_equal": false,
+      "terrain_digest_equal": false,
+      "full_structural_order_sha_equal": false,
+      "final_patch_sha_equal": true,
+      "final_patch_matches_original_frozen_shas_a_and_b": true,
+      "original_source_receipt_bytes_equal": false,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": false,
+          "4": false,
+          "6": false,
+          "8": false
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      },
+      "stage_classification": "GSI_ACTUALLY_SELECTED_MOSAIC_CONTENT_DIFFERS"
+    },
+    "CIR13": {
+      "source_a_artifact_id": 11561050683,
+      "source_a_receipt_content_sha256": "bdecde37ed009987c037bacca6fa330808b9f1934fd0161c9c5fdc216c39427e",
+      "source_b_artifact_id": 11688497752,
+      "source_b_receipt_content_sha256": "bdecde37ed009987c037bacca6fa330808b9f1934fd0161c9c5fd216c39427e",
+      "original_frozen_patch_sha256": "18100899f9d39e1db0452fccb87fa268d1775d01943fb6f05bc982a3d89a4fe1",
+      "source_chunk_count": 237,
+      "actual_selected_source_mosaic_chunks_a": 237,
+      "actual_selected_source_mosaic_chunks_b": 237,
+      "source_a_selected_mosaic_sequence_sha256": "cd0f6d5d8626984544dcb125d108278bd213d504c53a7e68dae4e2a39e259e09",
+      "source_b_selected_mosaic_sequence_sha256": "cd0f6d5d8626984544dcb125d108278bd213d504c53a7e68dae4e2a39e259e09",
+      "candidate_grid_sha_equal": true,
+      "source_state_digest_sha_equal": true,
+      "source_complete_row_count_equal": true,
+      "cache_png_and_mosaic_sha_equal": true,
+      "actual_selected_mosaic_content_sequence_equal": true,
+      "terrain_digest_equal": true,
+      "full_structural_order_sha_equal": true,
+      "final_patch_sha_equal": true,
+      "final_patch_matches_original_frozen_shas_a_and_b": true,
+      "original_source_receipt_bytes_equal": true,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      },
+      "stage_classification": "ACTUAL_SELECTED_INPUT_AND_ALL_CHECKED_DIGESTS_MATCH"
+    }
+  },
+  "aggregate": {
+    "units": 4,
+    "same_candidate_grid_units": 4,
+    "same_source_state_units": 4,
+    "same_tile_and_mosaic_cache_units": 3,
+    "same_actually_selected_mosaic_sequence_units": 3,
+    "same_all_feature_precision_hashes_units": 2,
+    "same_structural_full_order_units": 2,
+    "same_exact_frozen_patch_sha_units": 4,
+    "first_source_controlled_slope_precision_drift_unit": "CIR02",
+    "different_selected_source_and_slope_precision_drift_unit": "CIR12"
+  },
+  "claim_boundary": {
+    "selected_sequence_digest_is_content_order_commitment_not_private_chunk_map": true,
+    "original_frozen_patch_sha_verified_four_of_four": true,
+    "whole_cache_equality_is_not_selected_source_identity": true,
+    "source_same_slopes_differ_does_not_isolate_numeric_root_cause": true,
+    "source_changed_unit_not_evidence_of_identical_input_math": true,
+    "rounded_precision_hashes_do_not_bound_value_difference": true,
+    "different_runner_image_or_patch_python_version_remains_possible": true,
+    "full_structural_order_reproducibility_achieved_all_four": false,
+    "real_occupancy_or_habitat_inference_authorized": false,
+    "field_selector_validated": false,
+    "prospective_field_outcomes_opened": false,
+    "private_coordinates_exported": false,
+    "original_GSI_chunk_source_priority_threshold_or_patch_rule_modified": false
+  },
+  "next_gate": "For CIR02 only, rerun fixed selected DEM bytes and candidate-grid privately under controlled runner/native environment and log aggregate pre-gradient, dx/dy, raw slope, smoothing and post-serialization SHA; do not retune 2.5% support or 1 km patch and do not open outcomes."
+}
