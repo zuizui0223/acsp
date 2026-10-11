@@ -49,7 +49,7 @@ jobs:
           assert c['required_chunk_count']==177
           assert c['required_probed_chunks']==3 and c['required_sampled_cells']==72
           assert c['interpretation']['require_selected_dem_content_equality_before_any_numeric_stage_comparison'] is True
-          assert c['interpretation']['no_posthoc_support_fraction_or_patch_distance_change'] is False if 'no_posthoc_support_fraction_or_patch_distance_change' in c['interpretation'] else True
+          assert c['interpretation']['full_177_chunk_slope_replay_conclusion_authorized'] is False
           assert c['interpretation']['real_slope_cause_identified'] is False
           assert c['interpretation']['prospective_field_outcomes_opened'] is False
           PY
