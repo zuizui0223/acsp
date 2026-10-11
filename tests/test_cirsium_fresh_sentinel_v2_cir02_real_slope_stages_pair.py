@@ -22,9 +22,14 @@ def _one_original_receipt() -> dict:
         "cohort_unit_id": "CIR02",
         "coordinate_bearing_artifacts_uploaded": False,
         "field_outcomes_opened": False,
-        "grid": {"private_grid_sha256": _digest(1)},
+        "grid": {
+            "candidate_rows": frozen["units"]["CIR02"]["fine_grid_candidate_count"],
+            "private_grid_sha256": _digest(1),
+        },
         "structural": {"source_state_digest_sha256": _digest(2)},
-        "gsi": {"source_complete_rows": 383460},
+        "gsi": {
+            "source_complete_rows": frozen["units"]["CIR02"]["gsi_source_complete_count"],
+        },
         "fine_patch_transfer": {
             "private_patch_sha256": frozen["units"]["CIR02"]["private_patch_sha256"],
             "transfer_is_validated_selector": False,
@@ -95,7 +100,7 @@ def test_gradient_stage_disagreement_is_identified_without_causal_promotion():
 
 
 @pytest.mark.parametrize("mismatch", [
-    "full_selected", "three_selected", "grid", "source_state", "source_complete_count",
+    "full_selected", "three_selected", "grid", "source_state",
 ])
 def test_missing_real_source_equivalence_blocks_stage_inference(mismatch):
     a = _one_original_receipt()
@@ -106,10 +111,8 @@ def test_missing_real_source_equivalence_blocks_stage_inference(mismatch):
         b["real_cir02_slope_stages"]["sampled_mosaics_content_order_sha256"] = _digest(92)
     elif mismatch == "grid":
         b["grid"]["private_grid_sha256"] = _digest(93)
-    elif mismatch == "source_state":
-        b["structural"]["source_state_digest_sha256"] = _digest(94)
     else:
-        b["gsi"]["source_complete_rows"] = 383459
+        b["structural"]["source_state_digest_sha256"] = _digest(94)
     result = _compare(a, b)
     assert result["status"] == "REAL_DEM_SOURCE_IDENTITY_GATE_BLOCKED_STAGE_COMPARISON"
     assert result["source_input_identity_verified"] is False
@@ -142,4 +145,31 @@ def test_invalid_original_run_or_private_outcome_claim_fails_closed(bad):
     else:
         b["fine_patch_transfer"]["private_patch_sha256"] = _digest(0)
     with pytest.raises(ValueError):
+        _compare(a, b)
+
+
+@pytest.mark.parametrize("denominator", ["primary_grid", "gsi_source_complete"])
+@pytest.mark.parametrize("changed_receipts", ["both", "second_only"])
+def test_frozen_pr247_denominator_cannot_drift_even_when_two_runs_agree(
+    denominator, changed_receipts,
+):
+    a = _one_original_receipt()
+    b = copy.deepcopy(a)
+    receipts = (a, b) if changed_receipts == "both" else (b,)
+    for row in receipts:
+        if denominator == "primary_grid":
+            row["grid"]["candidate_rows"] -= 1
+        else:
+            row["gsi"]["source_complete_rows"] -= 1
+    with pytest.raises(ValueError, match="original frozen"):
+        _compare(a, b)
+
+
+@pytest.mark.parametrize("field", ["candidate_rows", "source_complete_rows"])
+def test_missing_original_denominator_fails_closed(field):
+    a = _one_original_receipt()
+    b = copy.deepcopy(a)
+    block = b["grid"] if field == "candidate_rows" else b["gsi"]
+    block.pop(field)
+    with pytest.raises(ValueError, match="original frozen"):
         _compare(a, b)
