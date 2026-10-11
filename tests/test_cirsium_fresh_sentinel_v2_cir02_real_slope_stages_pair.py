@@ -15,8 +15,9 @@ def _digest(n: int) -> str:
 
 
 def _one_original_receipt() -> dict:
-    from research.compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages import ORIGINAL
+    from research.compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages import ORIGINAL, HISTORICAL_SELECTED
     frozen = json.loads(ORIGINAL.read_text(encoding="utf-8"))
+    historical = json.loads(HISTORICAL_SELECTED.read_text(encoding="utf-8"))
     return {
         "status": "FIXED_GSI_TERRAIN_EXECUTION_COMPLETE_PRE_OUTCOME",
         "cohort_unit_id": "CIR02",
@@ -39,7 +40,7 @@ def _one_original_receipt() -> dict:
             "chunk_count": 177,
             "selected_dem_chunks": 177,
             "unavailable_dem_chunks": 0,
-            "selected_mosaic_content_sequence_sha256": _digest(3),
+            "selected_mosaic_content_sequence_sha256": historical["units"]["CIR02"]["source_a_selected_mosaic_sequence_sha256"],
         },
         "real_cir02_slope_stages": {
             "status": "ORIGINAL_REAL_DEM_CIR02_THREE_CHUNK_STAGE_AUDIT_COMPLETE",
@@ -76,6 +77,7 @@ def test_two_original_source_identical_receipts_may_be_compared_without_coordina
     b = copy.deepcopy(a)
     result = _compare(a, b)
     assert result["source_input_identity_verified"] is True
+    assert result["source_identity_gates"]["historical_frozen_full_selected_dem_sequence_equal"] is True
     assert result["status"] == "MATCHED_SELECTED_SOURCE_REAL_NUMERICAL_STAGES_COMPARED"
     assert result["first_differing_exact_stage"] is None
     assert result["first_differing_decimal2_stage"] is None
@@ -173,3 +175,18 @@ def test_missing_original_denominator_fails_closed(field):
     block.pop(field)
     with pytest.raises(ValueError, match="original frozen"):
         _compare(a, b)
+
+
+@pytest.mark.parametrize("changes", ["both", "second_only"])
+def test_both_new_runs_can_agree_but_not_replay_historical_selected_dem(changes):
+    first = _one_original_receipt()
+    second = copy.deepcopy(first)
+    for receipt in ((first, second) if changes == "both" else (second,)):
+        receipt["gsi_selected_mosaic_sequence"]["selected_mosaic_content_sequence_sha256"] = _digest(91)
+    compared = _compare(first, second)
+    assert compared["status"] == "REAL_DEM_SOURCE_IDENTITY_GATE_BLOCKED_STAGE_COMPARISON"
+    assert compared["source_input_identity_verified"] is False
+    assert compared["source_identity_gates"]["historical_frozen_full_selected_dem_sequence_equal"] is False
+    assert compared["source_identity_gates"]["full_selected_mosaic_sequence_equal"] is (changes == "both")
+    assert compared["per_stage_equal_if_source_matched"] == {}
+    assert compared["first_differing_exact_stage"] is None
