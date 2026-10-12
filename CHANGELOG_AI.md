@@ -1,5 +1,27 @@
 # AI Change Log
 
+## 2026-10-12 - ChatGPT (OpenAI) - Supplementary CIR02 angle-operator diagnosis
+
+Changed files:
+- research/cir02_angle_operators.py
+- research/run_cir02_angle_operators.py
+- tests/test_cir02_angle_operators.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Add a standalone read-only six-operator observer after the unchanged parent nine-stage diagnosis. Preserve full float32 array arithmetic before the original 3x24 sample, and bind sampled source/gradient/angle commitments to the parent.
+- Record actual NumPy float32 loop-dispatch metadata and explicitly mark unreported functions; do not infer baseline paths or alter CPU flags.
+- Add a manual-only two-runner supplementary diagnostic with declared original runtime versions. A normal PR executes tests only, not real GSI acquisition.
+
+Features preserved:
+- No existing scientific module, source priority, primary grid, 2.5% support, 1-km patch membership, old comparison protocol, field outcome, or validated Japan path is changed.
+
+Known risks / TODO:
+- Designed after the completed angle-stage discrepancy, not an untouched preregistration. New real GSI operator capture has not yet run. Local tests exercise the new recorder and synthetic controls, not the entire upstream integration.
+- Full original source acquisition, end-to-end parent callback parity, native historical-runtime execution, and independent-runner provenance remain required before scientific use. The observed first operation is not proof of CPU causality.
+- The manual workflow has a separate 90-minute diagnostic budget; existing 60-minute workflows remain unmodified. No new production or field-selector claim.
+
 ## 2026-10-11 - ChatGPT (OpenAI) - Fail closed on paired CIR02 original denominators
 
 Changed files:
