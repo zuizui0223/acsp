@@ -1,0 +1,63 @@
+name: CIR02 supplementary angle operator diagnostic
+on:
+  pull_request:
+    paths:
+      - 'research/cir02_angle_operators.py'
+      - 'research/run_cir02_angle_operators.py'
+      - 'tests/test_cir02_angle_operators.py'
+      - '.github/workflows/cir02-angle-operators-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+jobs:
+  unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.17'
+      - run: python -m pip install numpy pytest
+      - run: |
+          python -m pytest -q tests/test_cir02_angle_operators.py tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
+          python -m py_compile gbif_fieldmap_builder_app.py research/cir02_angle_operators.py research/run_cir02_angle_operators.py
+  original-source-diagnostic:
+    if: github.event_name == 'workflow_dispatch'
+    needs: unit-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        replica: [A, B]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.17'
+      - run: python -m pip install -e . numpy==2.4.6 scipy==1.17.1 rasterio==1.4.4 pandas==3.0.6 pyproj==3.7.2
+      - name: Verify original modules and runtime before network acquisition
+        run: python -c 'from research.run_cir02_angle_operators import verify_original_modules,require_original_runtime; verify_original_modules(); require_original_runtime()'
+      - name: Original source reconstruction and supplementary capture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          work=$(mktemp -d /tmp/acsp-angle-XXXXXX)
+          trap 'rm -rf "$work"' EXIT
+          mkdir -p "$work/terrain" "$work/worldcover" "$work/private"
+          gh run download 36071510382 --repo "$GITHUB_REPOSITORY" --name cirsium-fresh-sentinel-v2-full-coarse-terrain --dir "$work/terrain"
+          gh run download 36121342866 --repo "$GITHUB_REPOSITORY" --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair --dir "$work/worldcover"
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py --terrain-csv-gz "$work/terrain/full_terrain.csv.gz" --worldcover-csv-gz "$work/worldcover/full_worldcover_repair.csv.gz" --out-dir "$work/orders"
+          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py --unit-id CIR02 --order-csv-gz "$work/orders/CIR02_coarse_evidence_order.csv.gz" --private-out-csv-gz "$work/private/CIR02_primary_2km_100m.csv.gz" --public-safe-summary-json "$work/grid.json"
+          python -m research.run_cir02_angle_operators --fine-grid-csv-gz "$work/private/CIR02_primary_2km_100m.csv.gz" --cache-dir "$work/cache" --public-json "$RUNNER_TEMP/cir02-angle-${{ matrix.replica }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cir02-angle-public-${{ matrix.replica }}
+          path: ${{ runner.temp }}/cir02-angle-${{ matrix.replica }}.json
+          if-no-files-found: error
