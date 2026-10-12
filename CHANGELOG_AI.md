@@ -21,6 +21,7 @@ Known risks / TODO:
 - Designed after the completed angle-stage discrepancy, not an untouched preregistration. New real GSI operator capture has not yet run. Local tests exercise the new recorder and synthetic controls, not the entire upstream integration.
 - Full original source acquisition, end-to-end parent callback parity, native historical-runtime execution, and independent-runner provenance remain required before scientific use. The observed first operation is not proof of CPU causality.
 - The manual workflow has a separate 90-minute diagnostic budget; existing 60-minute workflows remain unmodified. No new production or field-selector claim.
+- Trial execution: temporarily allowed the original-source diagnostic on this PR's own synchronize event, recorded queued jobs A/B under workflow 38219363976, and immediately restored the final workflow file to manual-only before any additional edits. This trial is an exploratory post-observation experiment, not an automatic production workflow and not proof of a completed real-GSI result.
 
 ## 2026-10-11 - ChatGPT (OpenAI) - Fail closed on paired CIR02 original denominators
 
