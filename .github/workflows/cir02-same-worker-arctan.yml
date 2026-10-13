@@ -30,7 +30,7 @@ jobs:
           python -m pytest -q tests/test_cir02_same_worker_arctan.py tests/test_cir02_same_worker_callback.py tests/test_cir02_angle_operators.py tests/test_sourceworld_gate_detail.py tests/test_cir02_angle_operator_pair_result.py tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
           python -m py_compile gbif_fieldmap_builder_app.py research/audit_cir02_same_worker_arctan.py research/run_cir02_angle_operators.py
   original-source-same-worker-intervention:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.head_ref == 'agent/cir02-original-same-worker-arctan-20261014')
     needs: bounded-unit-tests
     runs-on: ubuntu-24.04
     timeout-minutes: 90
