@@ -1,5 +1,70 @@
 # AI Change Log
 
+## 2026-10-13 - ChatGPT (OpenAI) - Record complete source-identical CIR02 six-operator real-GSI comparison
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_angle_operator_pair_result_v1.json
+- tests/test_cir02_angle_operator_pair_result.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Both original supplementary A and B operator jobs now have original public-safe receipts after one unchanged A source-world retry. Archived first failed A remains recorded. Provenance consists of two distinct GitHub jobs in one workflow, not two independent workflow IDs.
+- Verify exact original 464,633-cell candidate frame, 383,460 GSI source-complete cells, 177 selected DEM contents/order, 3 chunks × 24 original complete cells, source-state membership, parent observer and gradient hashes, and public-only artifact SHA values.
+- The first differing sampled elementary angle operation is arctan_radians at exact and decimal-8 precision; dx², dy², sum and sqrt agree exactly; sampled decimal-2 hashes all agree. Parent nine-stage mode of A matches historical second run; B matches historical first run.
+- NumPy 2.4.6 and its binary extension SHA match, but selected float32 arctan loop is baseline(X86_V2) for A and X86_V4 for B. This is an observed covariate across different workers and regions, NOT a controlled within-worker causal experiment.
+- Add five frozen-outcome regression tests with RED missing-result failure followed by local 70/70 GREEN including 31 angle, 11 source-world and 23 original nine-stage comparison tests; run all 70 in regular PR CI.
+
+Features preserved:
+- No production code, original nine-stage observer, GSI source selection, CPU flags, raw geographic data, field outcomes, float32 2.5% support or 1-km patches changed. PR #250 strict original structural order and draft field-selector remain gated.
+
+Known risks / TODO:
+- This is post-observation exploratory numerical evidence on 72 original CIR02 cells, not a preregistered biological replication. No actual slope error magnitude, full 177-chunk numerical agreement, cause-specific CPU proof, field efficiency, species occurrence or occupancy result established.
+- Next hypothesis test must hold the original private DEM, same cells and worker fixed and intervene on only the NumPy float32 arctan dispatch, without leaking source mosaics or changing the original validated product.
+
+## 2026-10-13 - ChatGPT (OpenAI) - Classify frozen CIR02 source-world failures without disclosing input values
+
+Changed files:
+- research/run_cir02_angle_operators.py
+- tests/test_sourceworld_gate_detail.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Preserve the exact original fail-closed candidate, source-complete and 177 selected-DEM content/count checks. Name only which of their four public safety gates failed; never disclose actual DEM hashes, coordinates, cell IDs or values in error text.
+- TDD verified 11 new regressions (including missing counts and two simultaneous failures): all 11 failed before implementation because the gate helper did not exist, then 42/42 local tests passed after implementing the smallest helper. A mistaken two-test assertion about gate-name spelling was corrected and the entire suite rerun green.
+- Extend ordinary PR CI from 54 to 65 tests (31 angle + 11 source gate + 23 original pair comparator); original-source acquisition remains manual-only.
+
+Features preserved:
+- No original terrain source sampling, parent nine-stage recorder, DEM priority, numerical CPU flags, 2.5% consensus, 1-km patches, validated Japan product, or historical public receipts are changed.
+
+Known risks / TODO:
+- This is a diagnostic improvement prompted by failed A job 114711688727; it is NOT a fix for inconsistent upstream GSI source content. The one predeclared unchanged retry 115317402801 was already running on the original workflow SHA when these files were committed.
+- Do not rerun selectively for favorable numerical results; if source conditions fail again, diagnose the original source world separately. No six-operator paired real conclusion until two independent source-identical instrumented receipts exist.
+
+## 2026-10-12 - ChatGPT (OpenAI) - Supplementary CIR02 angle-operator diagnosis
+
+Changed files:
+- research/cir02_angle_operators.py
+- research/run_cir02_angle_operators.py
+- tests/test_cir02_angle_operators.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Add a standalone read-only six-operator observer after the unchanged parent nine-stage diagnosis. Preserve full float32 array arithmetic before the original 3x24 sample, and bind sampled source/gradient/angle commitments to the parent.
+- Record actual NumPy float32 loop-dispatch metadata and explicitly mark unreported functions; do not infer baseline paths or alter CPU flags.
+- Add a manual-only two-runner supplementary diagnostic with declared original runtime versions. A normal PR executes tests only, not real GSI acquisition.
+
+Features preserved:
+- No existing scientific module, source priority, primary grid, 2.5% support, 1-km patch membership, old comparison protocol, field outcome, or validated Japan path is changed.
+
+Known risks / TODO:
+- Designed after the completed angle-stage discrepancy, not an untouched preregistration. New real GSI operator capture has not yet run. Local tests exercise the new recorder and synthetic controls, not the entire upstream integration.
+- Full original source acquisition, end-to-end parent callback parity, native historical-runtime execution, and independent-runner provenance remain required before scientific use. The observed first operation is not proof of CPU causality.
+- The manual workflow has a separate 90-minute diagnostic budget; existing 60-minute workflows remain unmodified. No new production or field-selector claim.
+- Trial execution: temporarily allowed the original-source diagnostic on this PR's own synchronize event, recorded queued jobs A/B under workflow 38219363976, and immediately restored the final workflow file to manual-only before any additional edits. This trial is an exploratory post-observation experiment, not an automatic production workflow and not proof of a completed real-GSI result.
+
 ## 2026-10-11 - ChatGPT (OpenAI) - Fail closed on paired CIR02 original denominators
 
 Changed files:
