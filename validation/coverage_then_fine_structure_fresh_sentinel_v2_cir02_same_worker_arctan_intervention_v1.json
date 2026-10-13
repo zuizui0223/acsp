@@ -1,0 +1,46 @@
+{
+  "schema_version": "cir02-original-gsi-same-worker-arctan-intervention-protocol-v1",
+  "status": "FROZEN_BEFORE_REAL_SAME_WORKER_CPU_INTERVENTION",
+  "as_of_date": "2026-10-14",
+  "source_issue": 253,
+  "preceding_observation_pr": 270,
+  "source_world": {
+    "unit": "CIR02",
+    "original_candidate_rows": 464633,
+    "gsi_source_complete_rows": 383460,
+    "selected_source_dem_chunks": 177,
+    "original_grid_sha256": "c87fe4b3158a5c63253a5bb73039e18e72c288cecb7d071989cff448dbac14a5",
+    "historical_selected_dem_content_order_sha256": "7ef762da0577e94d4f94bf1f171cfe1aa6f8fc9046cd6c03ee364cd334a43ddf"
+  },
+  "sample": {
+    "original_chunks": [0, 88, 176],
+    "source_complete_per_chunk": 24,
+    "total_sampled_original_cells": 72,
+    "no_outcome_based_reselection": true,
+    "full_float32_magnitude_array_before_candidate_sample": true
+  },
+  "cpu_intervention": {
+    "compare_only_arctan_on_exact_same_full_float32_magnitude_file_bytes": true,
+    "original_mode_disabled_flags": null,
+    "only_disabled_feature": "AVX512F",
+    "fresh_process_repeats_per_mode": 2,
+    "same_runner_job": true,
+    "selected_loop_must_actually_change_for_informative_contrast": true,
+    "original_mode_must_match_parent_source_observer": true,
+    "input_arrays_sha_identical_between_modes": true,
+    "archive_only_aggregate_hashes_and_operator_loop_metadata": true,
+    "required_historical_python": "3.11.17",
+    "required_historical_numpy": "2.4.6"
+  },
+  "scientific_scope": {
+    "diagnostic_designed_after_original_arctan_discrepancy": true,
+    "no_field_outcomes_or_exact_locations_public": true,
+    "no_raw_dem_or_private_arrays_in_artifact": true,
+    "no_2p5pct_or_1km_selector_rule_changed": true,
+    "cpu_dispatch_causes_historical_rank_change_established": false,
+    "full_177_chunk_intermediate_numerical_reproducibility_proven": false,
+    "field_detection_efficiency_established": false,
+    "original_complete_workflow_pair_retained_unmodified": true,
+    "no_favorable_result_retry_if_dispatch_cannot_be_switched": true
+  }
+}

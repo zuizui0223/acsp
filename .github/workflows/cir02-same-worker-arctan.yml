@@ -1,0 +1,66 @@
+name: CIR02 one-worker original real-GSI arctan CPU dispatch intervention
+on:
+  pull_request:
+    paths:
+      - 'research/audit_cir02_same_worker_arctan.py'
+      - 'research/run_cir02_angle_operators.py'
+      - 'tests/test_cir02_same_worker_arctan.py'
+      - 'tests/test_cir02_same_worker_callback.py'
+      - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_arctan_intervention_v1.json'
+      - '.github/workflows/cir02-same-worker-arctan.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+jobs:
+  bounded-unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.17'
+      - name: Install original NumPy/pandas and pytest
+        run: python -m pip install numpy==2.4.6 pandas==3.0.6 pytest
+      - name: Verify CPU intervention red-green regression and original frozen source checks
+        run: |
+          python -m pytest -q tests/test_cir02_same_worker_arctan.py tests/test_cir02_same_worker_callback.py tests/test_cir02_angle_operators.py tests/test_sourceworld_gate_detail.py tests/test_cir02_angle_operator_pair_result.py tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
+          python -m py_compile gbif_fieldmap_builder_app.py research/audit_cir02_same_worker_arctan.py research/run_cir02_angle_operators.py
+  original-source-same-worker-intervention:
+    if: github.event_name == 'workflow_dispatch'
+    needs: bounded-unit-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.17'
+      - name: Install exact earlier original real-GSI runtime
+        run: python -m pip install -e . numpy==2.4.6 scipy==1.17.1 rasterio==1.4.4 pandas==3.0.6 pyproj==3.7.2
+      - name: Fail closed unless exact original upstream source and runtime
+        run: python -c 'from research.run_cir02_angle_operators import verify_original_modules, require_original_runtime; verify_original_modules(); require_original_runtime()'
+      - name: Acquire one original fixed GSI source world and switch only the arctan process dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          work=$(mktemp -d /tmp/acsp-one-worker-arctan-XXXXXX)
+          trap 'rm -rf "$work"' EXIT
+          mkdir -p "$work/terrain" "$work/worldcover" "$work/private"
+          gh run download 36071510382 --repo "$GITHUB_REPOSITORY" --name cirsium-fresh-sentinel-v2-full-coarse-terrain --dir "$work/terrain"
+          gh run download 36121342866 --repo "$GITHUB_REPOSITORY" --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair --dir "$work/worldcover"
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py --terrain-csv-gz "$work/terrain/full_terrain.csv.gz" --worldcover-csv-gz "$work/worldcover/full_worldcover_repair.csv.gz" --out-dir "$work/orders"
+          python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py --unit-id CIR02 --order-csv-gz "$work/orders/CIR02_coarse_evidence_order.csv.gz" --private-out-csv-gz "$work/private/CIR02_primary_2km_100m.csv.gz" --public-safe-summary-json "$work/grid.json"
+          python -m research.run_cir02_angle_operators --fine-grid-csv-gz "$work/private/CIR02_primary_2km_100m.csv.gz" --cache-dir "$work/cache" --public-json "$RUNNER_TEMP/cir02-original-nine-plus-six.json" --same-worker-arctan-public-json "$RUNNER_TEMP/cir02-arctan-intervention.json"
+      - name: Export only source-bound aggregate hashes and CPU selected loop metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: cir02-public-one-worker-arctan-intervention
+          path: |
+            ${{ runner.temp }}/cir02-original-nine-plus-six.json
+            ${{ runner.temp }}/cir02-arctan-intervention.json
+          if-no-files-found: error

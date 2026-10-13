@@ -81,10 +81,12 @@ def require_original_source_world(gsi: dict[str, Any], selected: dict[str, Any])
 
 
 class SupplementaryCallback:
-    def __init__(self) -> None:
+    def __init__(self, *, capture_same_worker_magnitude: bool = False) -> None:
         from research.audit_cirsium_fresh_sentinel_v2_real_dem_slope_stages import CIR02RealDEMSlopeStageCollector
         self.parent = CIR02RealDEMSlopeStageCollector()
         self.operators = AngleProbe()
+        self.capture_same_worker_magnitude = capture_same_worker_magnitude
+        self._private_magnitudes: list[dict[str, Any]] = []
 
     def __call__(self, chunk_index, total_chunks, component, sampled, mosaic_path) -> None:
         from research.audit_cirsium_slope_kernel_synthetic_two_run import generate_stage_arrays
@@ -108,6 +110,17 @@ class SupplementaryCallback:
             raise ValueError('supplementary reread disagrees with original sampled slope')
         self.operators.record(chunk_index,total_chunks,before,ids,rows,cols,
                               stages['gradient_dx'],stages['gradient_dy'],stages['instantaneous_slope'])
+        if self.capture_same_worker_magnitude:
+            # Private-only full float32 input: generated from the original
+            # gradients BEFORE selecting the unchanged 24 source-complete cells.
+            # No raster path, ID, coordinate or numeric array is exported.
+            from research.cir02_angle_operators import angle_arrays
+            magnitude = angle_arrays(stages['gradient_dx'], stages['gradient_dy'],
+                                     stages['instantaneous_slope'])['gradient_magnitude']
+            self._private_magnitudes.append(dict(
+                chunk_index=chunk_index, ids=list(ids),
+                rows=rows.copy(), cols=cols.copy(), magnitude=magnitude.copy(),
+            ))
         if _sha256_file(path) != before:
             raise ValueError('selected original raster bytes changed during supplementary read')
 
@@ -122,11 +135,18 @@ def main() -> int:
     p.add_argument('--fine-grid-csv-gz', required=True, type=Path)
     p.add_argument('--cache-dir', required=True, type=Path)
     p.add_argument('--public-json', required=True, type=Path)
+    p.add_argument('--same-worker-arctan-public-json', default=None, type=Path,
+                   help='Optional post-observation within-worker AVX512F intervention on original fixed magnitudes')
     args = p.parse_args()
     verify_original_modules()
     require_original_runtime()
     if args.public_json.exists() or args.public_json.is_symlink():
         raise ValueError('refusing to overwrite an existing diagnostic')
+    if args.same_worker_arctan_public_json is not None:
+        if (args.same_worker_arctan_public_json.exists()
+                or args.same_worker_arctan_public_json.is_symlink()
+                or args.same_worker_arctan_public_json.resolve() == args.public_json.resolve()):
+            raise ValueError('refusing to overwrite same-worker intervention output')
     if args.cache_dir.resolve().is_relative_to(ROOT.resolve()):
         raise ValueError('private GSI cache must stay outside the repository')
     if args.fine_grid_csv_gz.is_symlink() or _sha256_file(args.fine_grid_csv_gz) != FROZEN_GRID_SHA:
@@ -138,7 +158,9 @@ def main() -> int:
     if len(frame) != 464633:
         raise ValueError('original fine-grid denominator changed')
     sequence = SelectedMosaicSequence(unit_id='CIR02', cache_dir=args.cache_dir)
-    callback = SupplementaryCallback()
+    callback = SupplementaryCallback(
+        capture_same_worker_magnitude=args.same_worker_arctan_public_json is not None,
+    )
     # No change to sampler, builder, source priority, chunk phase or CPU settings.
     audited, gsi = attach_fixed_gsi_terrain(frame, unit_id='CIR02', cache_dir=args.cache_dir,
         selected_mosaic_observer=sequence, real_slope_stage_probe=callback)
@@ -160,10 +182,24 @@ def main() -> int:
     result['actual_CIR02_operator_cause_identified'] = False
     result['field_outcomes_opened'] = False
     result['private_values_or_ids_exported'] = False
+    intervention = None
+    if args.same_worker_arctan_public_json is not None:
+        from research.audit_cir02_same_worker_arctan import run_intervention
+        intervention = run_intervention(callback._private_magnitudes,
+                                        result['supplementary_six_operator_record'])
+        intervention['original_source_bound_to_frozen_CIR02'] = True
+        intervention['original_selected_mosaic_content_sequence_sha256'] = FROZEN_SELECTED_SHA
+        intervention['original_grid_sha256'] = FROZEN_GRID_SHA
+        intervention['original_source_state_sha256'] = states.hexdigest()
     args.public_json.parent.mkdir(parents=True,exist_ok=True)
     with args.public_json.open('x',encoding='utf-8') as f:
         json.dump(result,f,indent=2,allow_nan=False);f.write('\n')
-    print(json.dumps({'status':result['status'],'recorded_cells':72,'operator_count':6}))
+    if intervention is not None:
+        args.same_worker_arctan_public_json.parent.mkdir(parents=True,exist_ok=True)
+        with args.same_worker_arctan_public_json.open('x',encoding='utf-8') as f:
+            json.dump(intervention,f,indent=2,allow_nan=False);f.write('\n')
+    print(json.dumps({'status':result['status'],'recorded_cells':72,'operator_count':6,
+                      'same_worker_intervention':intervention is not None}))
     return 0
 
 
