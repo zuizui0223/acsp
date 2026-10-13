@@ -48,6 +48,8 @@ def test_same_worker_process_intervention_uses_identical_full_arrays_and_private
     assert record['same_mode_repeats_exact'] is True
     assert record['modes']['original']['runtime']['disabled_cpu_features'] is None
     assert record['modes']['avx512f_disabled']['runtime']['disabled_cpu_features'] == 'AVX512F'
+    assert record['modes']['original']['runtime']['cpu_flags_changed_by_instrument'] is False
+    assert record['modes']['avx512f_disabled']['runtime']['cpu_flags_changed_by_instrument'] is True
     assert record['comparison']['gradient_magnitude_exact_equal'] is True
     assert record['comparison']['sampled_candidate_identity_sha_equal'] is True
     assert isinstance(record['comparison']['arctan_radians_exact_equal'], bool)
