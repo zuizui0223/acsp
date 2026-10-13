@@ -24,6 +24,7 @@ Features preserved:
 Known risks / TODO:
 - This is a controlled POST-OBSERVATION numerical mechanism experiment, not a new biological validation or a measurement of full 177-chunk error magnitudes.
 - Hosted worker may lack an AVX512 mode; if real selected arctan loop does not switch, record an inconclusive observation, not a new CPU claim. Do not retry for favorable hardware or field outcomes.
+- One-time original-source experimental execution launched as PR-sync workflow run 38423447916, same-worker job 115386654176. Temporary PR-only activation was promptly restored to byte-identical manual-only workflow blob 74bcc4b007af58cc3aeace7de18bc3f6edfdfff8; the running job is pinned to the earlier event. Empirical result still pending at this edit, no inference yet.
 - Before any causal interpretation, verify the original selected DEM content/order, parent hashes and same-worker dispatch metadata in the actual public artifact.
 
 ## 2026-10-13 - ChatGPT (OpenAI) - Record complete source-identical CIR02 six-operator real-GSI comparison
