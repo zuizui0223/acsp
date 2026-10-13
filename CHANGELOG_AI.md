@@ -1,5 +1,25 @@
 # AI Change Log
 
+## 2026-10-13 - ChatGPT (OpenAI) - Classify frozen CIR02 source-world failures without disclosing input values
+
+Changed files:
+- research/run_cir02_angle_operators.py
+- tests/test_sourceworld_gate_detail.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Preserve the exact original fail-closed candidate, source-complete and 177 selected-DEM content/count checks. Name only which of their four public safety gates failed; never disclose actual DEM hashes, coordinates, cell IDs or values in error text.
+- TDD verified 11 new regressions (including missing counts and two simultaneous failures): all 11 failed before implementation because the gate helper did not exist, then 42/42 local tests passed after implementing the smallest helper. A mistaken two-test assertion about gate-name spelling was corrected and the entire suite rerun green.
+- Extend ordinary PR CI from 54 to 65 tests (31 angle + 11 source gate + 23 original pair comparator); original-source acquisition remains manual-only.
+
+Features preserved:
+- No original terrain source sampling, parent nine-stage recorder, DEM priority, numerical CPU flags, 2.5% consensus, 1-km patches, validated Japan product, or historical public receipts are changed.
+
+Known risks / TODO:
+- This is a diagnostic improvement prompted by failed A job 114711688727; it is NOT a fix for inconsistent upstream GSI source content. The one predeclared unchanged retry 115317402801 was already running on the original workflow SHA when these files were committed.
+- Do not rerun selectively for favorable numerical results; if source conditions fail again, diagnose the original source world separately. No six-operator paired real conclusion until two independent source-identical instrumented receipts exist.
+
 ## 2026-10-12 - ChatGPT (OpenAI) - Supplementary CIR02 angle-operator diagnosis
 
 Changed files:
