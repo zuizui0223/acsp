@@ -142,6 +142,7 @@ def _digest_manifest(entries: list[dict[str, Any]], mode: str) -> dict[str, Any]
         raise ValueError('original sampled 3x24 denominator changed')
     native = runtime_metadata()
     native['disabled_cpu_features'] = expected_flag
+    native['cpu_flags_changed_by_instrument'] = expected_flag is not None
     return {
         'mode':mode,'sampled_cells':count,
         'full_magnitude_byte_sequence_sha256':sha_bytes.hexdigest(),
