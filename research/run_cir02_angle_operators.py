@@ -49,6 +49,37 @@ def require_original_runtime() -> None:
         raise ValueError('real diagnostic requires the declared original runtime versions')
 
 
+def require_original_source_world(gsi: dict[str, Any], selected: dict[str, Any]) -> dict[str, bool]:
+    """Expose only the names of failed original-input gates, never private values.
+
+    The frozen denominator and source byte commitments remain unchanged.
+    An incomplete or altered original DEM source still aborts without
+    exporting a supplementary angle-stage result.
+    """
+    gates = {
+        'candidate_rows_match_original': (
+            type(gsi.get('candidate_rows')) is int
+            and gsi['candidate_rows'] == 464633
+        ),
+        'source_complete_rows_match_original': (
+            type(gsi.get('source_complete_rows')) is int
+            and gsi['source_complete_rows'] == 383460
+        ),
+        'selected_dem_content_sequence_matches_original': (
+            selected.get('selected_mosaic_content_sequence_sha256') == FROZEN_SELECTED_SHA
+        ),
+        'selected_dem_chunk_count_matches_original': (
+            type(selected.get('selected_dem_chunks')) is int
+            and selected['selected_dem_chunks'] == 177
+        ),
+    }
+    failed = [name for name, ok in gates.items() if not ok]
+    if failed:
+        raise ValueError('real source world differs from frozen historical CIR02; '
+                         'no operator verdict; failed public gates: ' + ', '.join(failed))
+    return gates
+
+
 class SupplementaryCallback:
     def __init__(self) -> None:
         from research.audit_cirsium_fresh_sentinel_v2_real_dem_slope_stages import CIR02RealDEMSlopeStageCollector
@@ -112,10 +143,7 @@ def main() -> int:
     audited, gsi = attach_fixed_gsi_terrain(frame, unit_id='CIR02', cache_dir=args.cache_dir,
         selected_mosaic_observer=sequence, real_slope_stage_probe=callback)
     selected = sequence.summary(chunk_count=int(gsi['chunk_count']))
-    if (gsi['candidate_rows'] != 464633 or gsi['source_complete_rows'] != 383460
-            or selected['selected_mosaic_content_sequence_sha256'] != FROZEN_SELECTED_SHA
-            or selected['selected_dem_chunks'] != 177):
-        raise ValueError('real source world differs from frozen historical CIR02; no operator verdict')
+    require_original_source_world(gsi, selected)
     if _sha256_file(args.fine_grid_csv_gz) != FROZEN_GRID_SHA:
         raise ValueError('original grid archive changed during diagnostic')
     states = hashlib.sha256(b'CIR02_ANGLE_GSI_SOURCE_STATES_V1\n')
