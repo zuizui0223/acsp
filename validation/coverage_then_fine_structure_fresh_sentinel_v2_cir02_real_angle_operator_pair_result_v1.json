@@ -1,0 +1,141 @@
+{
+  "schema_version": "fresh-sentinel-v2-real-cir02-six-operator-two-runner-diagnostic-result-v1",
+  "status": "SOURCE_MATCHED_POST_OBSERVATION_REAL_CIR02_SAMPLED_ANGLE_SUBSTAGE_DIAGNOSTIC_COMPLETE_NO_CPU_CAUSAL_PROMOTION",
+  "as_of_date": "2026-10-13",
+  "source_issue": 253,
+  "source_pr": 270,
+  "original_upstream_nine_stage_workflow_runs": [
+    38107491539,
+    38146934331
+  ],
+  "supplementary_source_workflow_run": 38219363976,
+  "supplementary_source_workflow_head_sha": "ea01a6330fc7563c22a1819f9fe400e149cee010",
+  "supplementary_current_PR_head_at_recording": "57173dcf722aa1c87e6c6d0015fceacbb1890047",
+  "source_provenance": {
+    "A": {
+      "initial_job_id": 114711688727,
+      "initial_conclusion": "failed_closed_original_source_world_identity_mismatch",
+      "successful_single_retry_job_id": 115317402801,
+      "artifact_id": 11820703230,
+      "archive_sha256": "9064b67a0fc3bb382c55ff9dd87ba76cef7e34ffe4fd8b27481dda0e187c89f4",
+      "inner_json_sha256": "eb3c4146b2695c370697bde6a2829b24b7655caec75d5f3e9a4687b6bb9d2d07",
+      "runner_cloud_region": "canadaeast"
+    },
+    "B": {
+      "original_success_job_id": 114711688652,
+      "artifact_id": 11736262541,
+      "archive_sha256": "e05b85a3cda665b9498d43875e582c9962bcae1ebdf940df3a5858c13bdc8c48",
+      "inner_json_sha256": "60bec29b710dfd3f4293b19a18272e368000ffa52a36dcf01c71b1c04ad03dc7",
+      "runner_cloud_region": "centralus"
+    },
+    "replicas_are_distinct_workflow_run_ids": false,
+    "replicas_are_distinct_GitHub_jobs": true,
+    "original_A_failure_retained_not_silently_substituted": true,
+    "source_retry_count_for_A": 1
+  },
+  "original_world": {
+    "candidate_grid_rows": 464633,
+    "gsi_source_complete_rows": 383460,
+    "source_selected_mosaic_chunks": 177,
+    "original_grid_sha256": "c87fe4b3158a5c63253a5bb73039e18e72c288cecb7d071989cff448dbac14a5",
+    "original_selected_dem_content_sequence_sha256": "7ef762da0577e94d4f94bf1f171cfe1aa6f8fc9046cd6c03ee364cd334a43ddf",
+    "source_world_bindings_equal": true,
+    "input_sample_identity_and_gradient_gates": {
+      "sampled_mosaics_content_order_sha256": true,
+      "sampled_candidate_identity_sha256": true,
+      "parent_gradient_exact_float64_sha256": true
+    },
+    "all_original_parent_and_child_checks_passed": true,
+    "private_coordinates_or_cell_ids_exported": false,
+    "prospective_field_outcomes_opened": false
+  },
+  "sampled_stage_protocol": {
+    "original_source_chunks": [
+      0,
+      88,
+      176
+    ],
+    "complete_cells_per_chunk": 24,
+    "sampled_complete_cells": 72,
+    "all_177_chunk_intermediate_values_compared": false
+  },
+  "comparisons": {
+    "six_angle_operators": {
+      "dx_squared": {
+        "exact": true,
+        "decimal2": true,
+        "decimal8": true
+      },
+      "dy_squared": {
+        "exact": true,
+        "decimal2": true,
+        "decimal8": true
+      },
+      "squared_sum": {
+        "exact": true,
+        "decimal2": true,
+        "decimal8": true
+      },
+      "gradient_magnitude": {
+        "exact": true,
+        "decimal2": true,
+        "decimal8": true
+      },
+      "arctan_radians": {
+        "exact": false,
+        "decimal2": true,
+        "decimal8": false
+      },
+      "instantaneous_slope": {
+        "exact": false,
+        "decimal2": true,
+        "decimal8": false
+      }
+    },
+    "first_differing_exact_operator": "arctan_radians",
+    "first_differing_decimal8_operator": "arctan_radians",
+    "first_differing_decimal2_operator": null,
+    "dx_and_dy_squares_parallel_inputs": true,
+    "previous_nine_stages_A_matches_historical_second_run": true,
+    "previous_nine_stages_B_matches_historical_first_run": true,
+    "older_nine_stage_first_differing_stage": "instantaneous_slope",
+    "original_final_573_patch_sha_unchanged_across_prior_two_original_workflow_runs": true
+  },
+  "runtime": {
+    "python_A": "3.11.17",
+    "python_B": "3.11.17",
+    "numpy_A": "2.4.6",
+    "numpy_B": "2.4.6",
+    "numpy_extension_sha_equal": true,
+    "numpy_extension_sha256": "1535fbed1e9ac6b717e72ad9bd5c20b9f0536a21084fcadc40c00255a8f35d1d",
+    "float32_arctan_selected_loop_A": "baseline(X86_V2)",
+    "float32_arctan_selected_loop_B": "X86_V4",
+    "multiply_loop_equal": true,
+    "add_loop_equal": true,
+    "sqrt_loop_equal": true,
+    "degree_loop_reported_by_numpy": false,
+    "runner_image": "ubuntu-24.04 20261004.327.1",
+    "original_dem_source_sampling_and_cpu_flags_unchanged": true
+  },
+  "verification": {
+    "offline_assertions_passed": 54,
+    "local_regression_tests_passed": 65,
+    "original_parent_nine_stage_regressions_included": 23,
+    "new_source_world_error_regressions_included": 11,
+    "supplementary_source_archive_verified_against_GitHub_metadata": true
+  },
+  "claim_boundary": {
+    "first_arctan_output_divergence_is_observed_on_72_cells": true,
+    "arctan_dispatch_difference_is_an_observed_covariate": true,
+    "within_same_worker_CPU_dispatch_intervention_on_original_real_DEM_done": false,
+    "arctan_CPU_dispatch_causal_effect_established_on_original_real_DEM": false,
+    "real_slope_difference_magnitude_quantified": false,
+    "whole_177_chunk_numerical_replay_established": false,
+    "full_structural_rank_swap_count_measured": false,
+    "field_discovery_efficiency_or_occupancy_validated": false,
+    "local_structural_selector_validated": false,
+    "main_validated_Japan_product_modified": false,
+    "frozen_2p5pct_or_1km_rule_changed": false
+  },
+  "next_gate": "Same_original_real_DEM_and_original_candidate_samples_on_single_worker_with_only_numpy_arctan_dispatch_intervention; do not leak private arrays or change original candidate patch algorithm."
+}

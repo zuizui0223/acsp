@@ -1,5 +1,27 @@
 # AI Change Log
 
+## 2026-10-13 - ChatGPT (OpenAI) - Record complete source-identical CIR02 six-operator real-GSI comparison
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_angle_operator_pair_result_v1.json
+- tests/test_cir02_angle_operator_pair_result.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Both original supplementary A and B operator jobs now have original public-safe receipts after one unchanged A source-world retry. Archived first failed A remains recorded. Provenance consists of two distinct GitHub jobs in one workflow, not two independent workflow IDs.
+- Verify exact original 464,633-cell candidate frame, 383,460 GSI source-complete cells, 177 selected DEM contents/order, 3 chunks × 24 original complete cells, source-state membership, parent observer and gradient hashes, and public-only artifact SHA values.
+- The first differing sampled elementary angle operation is arctan_radians at exact and decimal-8 precision; dx², dy², sum and sqrt agree exactly; sampled decimal-2 hashes all agree. Parent nine-stage mode of A matches historical second run; B matches historical first run.
+- NumPy 2.4.6 and its binary extension SHA match, but selected float32 arctan loop is baseline(X86_V2) for A and X86_V4 for B. This is an observed covariate across different workers and regions, NOT a controlled within-worker causal experiment.
+- Add five frozen-outcome regression tests with RED missing-result failure followed by local 70/70 GREEN including 31 angle, 11 source-world and 23 original nine-stage comparison tests; run all 70 in regular PR CI.
+
+Features preserved:
+- No production code, original nine-stage observer, GSI source selection, CPU flags, raw geographic data, field outcomes, float32 2.5% support or 1-km patches changed. PR #250 strict original structural order and draft field-selector remain gated.
+
+Known risks / TODO:
+- This is post-observation exploratory numerical evidence on 72 original CIR02 cells, not a preregistered biological replication. No actual slope error magnitude, full 177-chunk numerical agreement, cause-specific CPU proof, field efficiency, species occurrence or occupancy result established.
+- Next hypothesis test must hold the original private DEM, same cells and worker fixed and intervene on only the NumPy float32 arctan dispatch, without leaking source mosaics or changing the original validated product.
+
 ## 2026-10-13 - ChatGPT (OpenAI) - Classify frozen CIR02 source-world failures without disclosing input values
 
 Changed files:
