@@ -1,0 +1,64 @@
+{
+  "schema_version": "cirsium-original-cir02-same-worker-avx512f-intervention-result-v1",
+  "status": "REAL_SOURCE_BOUND_DISPATCH_MANIPULATION_NOT_INFORMATIVE",
+  "readout": "DISPATCH_INTERVENTION_NOT_DISTINGUISHABLE_ON_THIS_WORKER",
+  "source": {
+    "workflow_id": 38423447916,
+    "job_id": 115386654176,
+    "run_attempt": 1,
+    "original_artifact_id": 11829764004,
+    "workflow_result": "completed/success",
+    "archive_sha256": "117b711f158d58670dea973b5be9c13cb0f3bf23716e9adc4938dcecc09c2960",
+    "unchanged_parent_json_sha256": "60bec29b710dfd3f4293b19a18272e368000ffa52a36dcf01c71b1c04ad03dc7",
+    "intervention_json_sha256": "e40198f911551296376ecb3e64c4c306281f78f5032dd758b3892acb5c214a32",
+    "original_parent_identical_to_previous_successful_B": true
+  },
+  "original_source_world": {
+    "candidate_rows": 464633,
+    "source_complete_rows": 383460,
+    "selected_dem_chunks": 177,
+    "sampled_original_cells": 72,
+    "selected_mosaic_content_sequence_sha256": "7ef762da0577e94d4f94bf1f171cfe1aa6f8fc9046cd6c03ee364cd334a43ddf",
+    "original_grid_sha256": "c87fe4b3158a5c63253a5bb73039e18e72c288cecb7d071989cff448dbac14a5"
+  },
+  "original_input_files_and_magnitudes_bound": true,
+  "two_within_mode_repetitions_equal": true,
+  "same_python_numpy_extension_binary": true,
+  "native_versions": {
+    "python": "3.11.17",
+    "numpy": "2.4.6",
+    "numpy_extension_sha256": "1535fbed1e9ac6b717e72ad9bd5c20b9f0536a21084fcadc40c00255a8f35d1d"
+  },
+  "modes": {
+    "original": {
+      "flag": null,
+      "selected_float32_arctan_loop": "X86_V4"
+    },
+    "intervention": {
+      "flag": "AVX512F",
+      "selected_float32_arctan_loop": "X86_V4"
+    },
+    "actual_loop_changed": false,
+    "original_and_intervention_arctan_exact_equal": true,
+    "original_and_intervention_arctan_decimal8_equal": true,
+    "original_and_intervention_slope_exact_equal": true
+  },
+  "dispatch_effect_identified": false,
+  "cpu_causality_established": false,
+  "interpretation": "The declared AVX512F flag was set before NumPy import, but the actual selected arctan X86_V4 loop did not change; equality is not a measured causal null effect of a changed dispatch.",
+  "documentation_context": {
+    "numpy_2_4_runtime_dispatch_url": "https://numpy.org/doc/2.4/reference/simd/build-options.html",
+    "official_runtime_x86_v4_disable_example": "NPY_DISABLE_CPU_FEATURES=X86_V4",
+    "prospective_followup_requires_new_explicit_contract": true,
+    "prior_original_frozen_protocol_retained_unchanged": true
+  },
+  "scientific_limits": {
+    "no_real_cpu_dispatch_causal_claim": true,
+    "not_full_177_chunk_numeric_replay": true,
+    "no_field_outcomes_opened": true,
+    "no_validated_patch_rule_change": true,
+    "original_complete_two_workflow_result_kept_separate": true,
+    "no_full_structural_order_promoted": true,
+    "no_occupancy_or_field_efficiency_claim": true
+  }
+}

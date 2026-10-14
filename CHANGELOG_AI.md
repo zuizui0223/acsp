@@ -1,5 +1,26 @@
 # AI Change Log
 
+## 2026-10-14 - ChatGPT (OpenAI) - Archive non-informative original CIR02 AVX512F dispatch intervention
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_avx512f_result_v1.json
+- tests/test_cir02_same_worker_null_result.py
+- .github/workflows/cir02-same-worker-arctan.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Original one-worker real GSI workflow 38423447916 completed/success; original public-only artifact 11829764004 ZIP SHA256 117b711f158d58670dea973b5be9c13cb0f3bf23716e9adc4938dcecc09c2960 verified independently.
+- Confirmed exact frozen CIR02 candidate grid, 383460 source-complete rows, selected 177 DEM content/order and 3x24 original complete cells. The parent nine/six-stage original JSON matches historic successful B byte-for-byte.
+- Original and NPY_DISABLE_CPU_FEATURES=AVX512F child both selected X86_V4 float32 arctan loops; all sampled arctan/angle hashes equal. Two within-mode repeats were stable. Record outcome as DISPATCH_INTERVENTION_NOT_DISTINGUISHABLE_ON_THIS_WORKER, not no-effect or proven CPU causality.
+- New evidence-result contract and five fail-closed regression checks (all observed red on missing frozen result, then green when result was added). Include the five checks in regular PR CI; previous 79 unaffected.
+
+Features preserved:
+- The before-run v1 AVX512F protocol and original raw GitHub artifact remain immutable. No source/CPU settings are changed in the original workflow, nor validated Japan candidate patches, 2.5% float32 support, 1 km same-area merge, original Cirsium source preference, 177-chunk selection, field outcomes or original-order PR250 gate.
+
+Known risks / TODO:
+- NumPy v2.4 docs explicitly document X86_V4 rather than AVX512F for runtime feature suppression; a future follow-up requires a separately frozen protocol and CPU-only selected-loop preflight, not retrospective relabeling of this result.
+- Historical cross-worker arctan numeric difference remains source-verified but the CPU-dispatch causal mechanism has not yet been independently demonstrated on actual original GSI.
+
 ## 2026-10-14 - ChatGPT (OpenAI) - Same-worker intervention on frozen CIR02 arctan magnitude input
 
 Changed files:

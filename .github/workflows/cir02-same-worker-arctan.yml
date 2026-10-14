@@ -6,6 +6,8 @@ on:
       - 'research/run_cir02_angle_operators.py'
       - 'tests/test_cir02_same_worker_arctan.py'
       - 'tests/test_cir02_same_worker_callback.py'
+      - 'tests/test_cir02_same_worker_null_result.py'
+      - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_avx512f_result_v1.json'
       - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_arctan_intervention_v1.json'
       - '.github/workflows/cir02-same-worker-arctan.yml'
   workflow_dispatch:
@@ -27,7 +29,7 @@ jobs:
         run: python -m pip install numpy==2.4.6 pandas==3.0.6 pytest
       - name: Verify CPU intervention red-green regression and original frozen source checks
         run: |
-          python -m pytest -q tests/test_cir02_same_worker_arctan.py tests/test_cir02_same_worker_callback.py tests/test_cir02_angle_operators.py tests/test_sourceworld_gate_detail.py tests/test_cir02_angle_operator_pair_result.py tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
+          python -m pytest -q tests/test_cir02_same_worker_arctan.py tests/test_cir02_same_worker_callback.py tests/test_cir02_same_worker_null_result.py tests/test_cir02_angle_operators.py tests/test_sourceworld_gate_detail.py tests/test_cir02_angle_operator_pair_result.py tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
           python -m py_compile gbif_fieldmap_builder_app.py research/audit_cir02_same_worker_arctan.py research/run_cir02_angle_operators.py
   original-source-same-worker-intervention:
     if: github.event_name == 'workflow_dispatch'
