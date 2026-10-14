@@ -1,0 +1,33 @@
+name: CIR02 NumPy 2.4 X86_V4 CPU-only preflight
+on:
+  pull_request:
+    paths:
+      - 'research/preflight_cir02_numpy_v4_dispatch.py'
+      - 'tests/test_cir02_numpy_v4_preflight.py'
+      - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_v1.json'
+      - '.github/workflows/cir02-numpy24-x86v4-preflight.yml'
+permissions:
+  contents: read
+jobs:
+  cpu-only-dispatch-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.17'
+      - name: Install exact original NumPy and test framework
+        run: python -m pip install numpy==2.4.6 pytest
+      - name: Verify frozen CPU-only protocol and clean script syntax
+        run: |
+          python -m pytest -q tests/test_cir02_numpy_v4_preflight.py
+          python -m py_compile research/preflight_cir02_numpy_v4_dispatch.py
+      - name: Native NumPy X86_V4 flag selected-loop verification on synthetic arrays only
+        run: |
+          python -m research.preflight_cir02_numpy_v4_dispatch --out-json "$RUNNER_TEMP/cir02-num24-x86v4-cpu-only.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cir02-numpy24-x86v4-public-cpu-preflight
+          path: ${{ runner.temp }}/cir02-num24-x86v4-cpu-only.json
+          if-no-files-found: error
