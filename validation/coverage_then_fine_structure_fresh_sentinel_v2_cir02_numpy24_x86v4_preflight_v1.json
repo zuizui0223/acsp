@@ -1,0 +1,21 @@
+{
+  "schema_version": "cirsium-numpy24-x86-v4-dispatch-preflight-v1",
+  "status": "FROZEN_BEFORE_NUMPY_2_4_NATIVE_X86_V4_CPU_PREFLIGHT",
+  "as_of_date": "2026-10-14",
+  "source_issue": 253,
+  "preceding_pr": 271,
+  "v1_avx512f_source_result_is_immutable": true,
+  "source_kind": "SYNTHETIC_CPU_ONLY_NO_GSI",
+  "numpy_version": "2.4.6",
+  "python_version": "3.11.17",
+  "disable_only_feature": "X86_V4",
+  "repeats_per_mode": 2,
+  "synthetic_input": "deterministic full-array float32 linspace [1e-5,10] with 100000 positions, no geographic observations",
+  "forbid_real_dem_or_field_records": true,
+  "selected_loop_must_actually_change_before_next_real_dem_acquisition": true,
+  "do_not_require_numerical_effect_on_synthetic_values_for_hardware_eligibility": true,
+  "only_report_native_loop_hashes_and_runtime_binary_shas": true,
+  "no_positive_outcome_based_hardware_resampling": true,
+  "original_pr270_real_two_worker_finding_retained": true,
+  "scientific_scope": "CPU flag feasibility only; no actual CIR02, slope magnitude, rank, occupancy or field efficiency result"
+}
