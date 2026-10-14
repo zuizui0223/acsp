@@ -1,5 +1,53 @@
 # AI Change Log
 
+## 2026-10-14 - ChatGPT (OpenAI) - Archive non-informative original CIR02 AVX512F dispatch intervention
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_avx512f_result_v1.json
+- tests/test_cir02_same_worker_null_result.py
+- .github/workflows/cir02-same-worker-arctan.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Original one-worker real GSI workflow 38423447916 completed/success; original public-only artifact 11829764004 ZIP SHA256 117b711f158d58670dea973b5be9c13cb0f3bf23716e9adc4938dcecc09c2960 verified independently.
+- Confirmed exact frozen CIR02 candidate grid, 383460 source-complete rows, selected 177 DEM content/order and 3x24 original complete cells. The parent nine/six-stage original JSON matches historic successful B byte-for-byte.
+- Original and NPY_DISABLE_CPU_FEATURES=AVX512F child both selected X86_V4 float32 arctan loops; all sampled arctan/angle hashes equal. Two within-mode repeats were stable. Record outcome as DISPATCH_INTERVENTION_NOT_DISTINGUISHABLE_ON_THIS_WORKER, not no-effect or proven CPU causality.
+- New evidence-result contract and five fail-closed regression checks (all observed red on missing frozen result, then green when result was added). Include the five checks in regular PR CI; previous 79 unaffected.
+
+Features preserved:
+- The before-run v1 AVX512F protocol and original raw GitHub artifact remain immutable. No source/CPU settings are changed in the original workflow, nor validated Japan candidate patches, 2.5% float32 support, 1 km same-area merge, original Cirsium source preference, 177-chunk selection, field outcomes or original-order PR250 gate.
+
+Known risks / TODO:
+- NumPy v2.4 docs explicitly document X86_V4 rather than AVX512F for runtime feature suppression; a future follow-up requires a separately frozen protocol and CPU-only selected-loop preflight, not retrospective relabeling of this result.
+- Historical cross-worker arctan numeric difference remains source-verified but the CPU-dispatch causal mechanism has not yet been independently demonstrated on actual original GSI.
+
+## 2026-10-14 - ChatGPT (OpenAI) - Same-worker intervention on frozen CIR02 arctan magnitude input
+
+Changed files:
+- research/audit_cir02_same_worker_arctan.py
+- research/run_cir02_angle_operators.py
+- tests/test_cir02_same_worker_arctan.py
+- tests/test_cir02_same_worker_callback.py
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_arctan_intervention_v1.json
+- .github/workflows/cir02-same-worker-arctan.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Freeze before new actual GSI execution the original CIR02 464,633/383,460/177 source world and 3 × 24 originally complete cell sample, with a post-observation same-worker CPU-dispatch mechanism test.
+- Following the unchanged original GSI attachment and nine/six-stage parent observer, retain only three private full-float32 gradient-magnitude arrays in temporary worker memory. Reuse original selected cell IDs/raster indices and require exact agreement with the original observer.
+- On the SAME worker, serialize those magnitudes privately, run two fresh NumPy processes without flags and two with NPY_DISABLE_CPU_FEATURES=AVX512F, verify identical private source array bytes, repeated hashes, original-parent equivalence and chosen float32 arctan loops. Record that the instrument explicitly changes CPU flags in the disabled subprocess (never mislabel it as unmodified). Save only aggregate SHA values, runtime/loop metadata and explicitly limited interpretation; securely discard private array files via temporary directory.
+- Provide separate manual-only original-source workflow with 90-minute diagnostic timeout, leaving the previous real-GSI 60-minute matrix unchanged. CI runs nine new synthetic/callback tests plus the original 70 regressions (79 total). Local 79/79 passed against exact previously verified diagnostic modules. Real GSI intervention not yet executed.
+
+Features preserved:
+- No validated Japan non-ranked candidate patches, float32 support convention, 2.5% consensus, 1 km same-area patch membership, source provider preference, historical full-GSI jobs, original nine-stage observer or field outcome was modified.
+- Existing original public source world and original rank-replay PR #250 gate remain unchanged.
+
+Known risks / TODO:
+- This is a controlled POST-OBSERVATION numerical mechanism experiment, not a new biological validation or a measurement of full 177-chunk error magnitudes.
+- Hosted worker may lack an AVX512 mode; if real selected arctan loop does not switch, record an inconclusive observation, not a new CPU claim. Do not retry for favorable hardware or field outcomes.
+- One-time original-source experimental execution launched as PR-sync workflow run 38423447916, same-worker job 115386654176. Temporary PR-only activation was promptly restored to byte-identical manual-only workflow blob 74bcc4b007af58cc3aeace7de18bc3f6edfdfff8; the running job is pinned to the earlier event. Empirical result still pending at this edit, no inference yet.
+- Before any causal interpretation, verify the original selected DEM content/order, parent hashes and same-worker dispatch metadata in the actual public artifact.
+
 ## 2026-10-13 - ChatGPT (OpenAI) - Record complete source-identical CIR02 six-operator real-GSI comparison
 
 Changed files:
