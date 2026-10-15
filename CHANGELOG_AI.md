@@ -1,5 +1,48 @@
 # AI Change Log
 
+## 2026-10-15 - ChatGPT (OpenAI) - Preserve original native X86_V4-ineligible synthetic preflight result
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_result_v1.json
+- tests/test_cir02_numpy24_v4_native_result.py
+- .github/workflows/cir02-numpy24-x86v4-preflight.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Original already-predeclared native run 38493683528 completed successfully, original single worker job 115624489337, immutable public ZIP artifact 11863436251.
+- Independently downloaded artifact SHA256 c786d07816cc22290db0f72afa4d633a3d63919b78ab1de00aeeea5941b27839 and inner JSON SHA256 1014e36c0454a586afd165f02a5a44af78341c5c3a7703d8e563e13b4816c02e. Archive unmodified original JSON as a nested source record with a separate explicit provenance and claim ceiling.
+- Actual Python 3.11.17 and NumPy 2.4.6, identical binary and synthetic input SHAs and repeated outputs; both default and X86_V4-disabled children chose baseline(X86_V2). The original native classification NATIVE_WORKER_NOT_RUNNING_X86_V4 is a failed eligibility prerequisite, NOT an arctan causal null.
+- After the missing-result tests failed as intended, seven new regression tests pass locally; the dedicated CI now runs 11 original + 7 new tests = 18, then the original synthetic-only preflight. No new original GSI source was acquired.
+
+Features preserved:
+- The prior original PR271 AVX512F trial and PR270 source-bound 72-cell arctan divergence are untouched; validated Japan unranked float32 2.5% support / 1km same-area patches, original GSI source preference, private site records and PR250 strict original order gate are unaffected.
+
+Known risks / TODO:
+- Do not schedule repeated hosted CPU workers until a favorable X86_V4 processor appears. An explicitly qualified, reproducible CPU architecture would be required for a separately frozen actual-source causal experiment.
+- In absence of that prerequisite, the physical cause of historical different-worker CIR02 arctan outputs, absolute slope errors, changed rank counts, field efficiency and occupancy all remain unproven.
+
+## 2026-10-14 - ChatGPT (OpenAI) - Native NumPy 2.4 X86_V4 CPU-only feasibility preflight
+
+Changed files:
+- research/preflight_cir02_numpy_v4_dispatch.py
+- tests/test_cir02_numpy_v4_preflight.py
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_v1.json
+- .github/workflows/cir02-numpy24-x86v4-preflight.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Keep the concluded original AVX512F one-worker GSI attempt immutable and separately test the NumPy v2.4 documentation's X86_V4 feature-group flag.
+- In exact Python 3.11.17 / NumPy 2.4.6 on one GitHub runner, compare two original and two X86_V4-disabled fresh subprocesses on the same synthetic float32 input. Verify identical input and NumPy binary SHA, stable within-mode repeats, and actual selected arctan loop. Archive only aggregate synthetic hashes and dispatch metadata.
+- Do not condition the hardware feasibility verdict on a favorable arctan numerical difference. If no actual X86_V4 switch occurs, mark this CPU-only preflight ineligible/inconclusive, with no real GSI acquisition.
+- Eleven pure preflight tests failed because the module was initially absent; the local complete test then passed 11/11. Run native CI and archive original output before any separate actual GSI intervention.
+
+Features preserved:
+- No production source selection, GSI provider, frozen 177 DEM world, 72 original CIR02 cells, original nine/six stage receipts, validated 2.5% float32/1 km patches, field outcomes or strict original full-order PR250 gate changed.
+
+Known risks / TODO:
+- This result is only a native CPU flag feasibility diagnostic on synthetic arrays, not actual real-CIR02 causality, error magnitude, rank movement or biological validation.
+- A NEW frozen real-GSI protocol is required after a verified actual X86_V4 loop switch, not a retrospective change of the original AVX512F experiment.
+
 ## 2026-10-14 - ChatGPT (OpenAI) - Archive non-informative original CIR02 AVX512F dispatch intervention
 
 Changed files:
