@@ -154,8 +154,8 @@ def build_topology_component_gap(result: dict[str, Any], frozen: dict[str, Any])
     require(repeated, "paired grassland aggregate metrics unexpectedly differ")
     # Identical aggregate counts do not mean spatial congruence; their exact
     # compressed frozen patch membership hashes are different.
-    different_membership_sha = grass_a["frozen_private_patch_sha256"] != grass_b["frozen_private_patch_sha256"]
-    require(different_membership_sha, "paired grassland source patch identity unexpectedly equal")
+    different_archive_sha = grass_a["frozen_private_patch_sha256"] != grass_b["frozen_private_patch_sha256"]
+    require(different_archive_sha, "paired grassland compressed patch archives unexpectedly identical")
 
     return {
         "schema_version": "acsp-cirsium-frozen-patch-topology-component-gap-secondary-v1",
@@ -173,7 +173,7 @@ def build_topology_component_gap(result: dict[str, Any], frozen: dict[str, Any])
         },
         "units": units,
         "grassland_aggregate_metrics_equal": repeated,
-        "grassland_patch_membership_sha_equal": not different_membership_sha,
+        "grassland_compressed_patch_archive_sha_equal": not different_archive_sha,
         "interpretation": {
             "component_count_identity": "within_patch_component_total = patch_count + extra_within_patch_components",
             "cross_patch_identity": "net_cross_patch_component_unions = within_patch_component_total - global_mask_component_count",

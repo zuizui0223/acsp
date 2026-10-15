@@ -11,7 +11,7 @@
     "validated_Japan_candidate_patch_algorithm_changed": false
   },
   "grassland_aggregate_metrics_equal": true,
-  "grassland_patch_membership_sha_equal": false,
+  "grassland_compressed_patch_archive_sha_equal": false,
   "interpretation": {
     "component_count_identity": "within_patch_component_total = patch_count + extra_within_patch_components",
     "cross_patch_identity": "net_cross_patch_component_unions = within_patch_component_total - global_mask_component_count",

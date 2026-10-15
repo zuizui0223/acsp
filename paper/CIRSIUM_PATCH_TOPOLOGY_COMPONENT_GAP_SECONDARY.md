@@ -29,7 +29,7 @@ A patch set may *under-count* or *over-count* globally connected high-support co
 
 Across the four **algorithmic configurations**, 42.5–84.8% of bounded patches were internally non-connected in their retained support mask. The strongest discrepancy was in the alpine-topography configuration: 84.8% of its patches were disconnected, enclosing 94.6% of its retained cells, and its global component count was 2.805 times the patch count. Wetland-moisture also had more components than patches (807 versus 573), whereas the grassland configurations had fewer (505 versus 654), because cross-patch reunions (547) exceeded extra within-patch components (398). The **sign reversal** rules out interpreting patch count as a consistent proxy for the number of connected high-support domains.
 
-CIR12 and CIR13 use the *same predeclared grassland structural family*. Their aggregate topology measures are equal, while the originally frozen patch-archive SHA-256 values are **different**. Equal counts therefore neither prove identical cell membership nor provide two independent confirmations of a species-level generalization.
+CIR12 and CIR13 use the *same predeclared grassland structural family*. Their aggregate topology measures are equal, while the originally frozen patch-archive SHA-256 values are **different**. Different compressed-file hashes may reflect unit labels or serialization and do **not** prove different geographic membership. Conversely, equal aggregate counts do not prove identical cell membership or provide two independent confirmations of a species-level generalization.
 
 ## Interpretation and limits
 

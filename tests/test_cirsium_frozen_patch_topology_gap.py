@@ -150,7 +150,7 @@ def test_frozen_grassland_aggregate_equality_not_spatial_membership():
     s, f = fixtures()
     a = build_topology_component_gap(s, f)
     assert a["grassland_aggregate_metrics_equal"] is True
-    assert a["grassland_patch_membership_sha_equal"] is False
+    assert a["grassland_compressed_patch_archive_sha_equal"] is False
     assert a["claims"]["grassland_units_are_spatially_identical"] is False
 
 
