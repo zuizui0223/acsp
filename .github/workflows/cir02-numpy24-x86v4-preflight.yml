@@ -4,6 +4,8 @@ on:
     paths:
       - 'research/preflight_cir02_numpy_v4_dispatch.py'
       - 'tests/test_cir02_numpy_v4_preflight.py'
+      - 'tests/test_cir02_numpy24_v4_native_result.py'
+      - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_result_v1.json'
       - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_v1.json'
       - '.github/workflows/cir02-numpy24-x86v4-preflight.yml'
 permissions:
@@ -21,7 +23,7 @@ jobs:
         run: python -m pip install numpy==2.4.6 pytest
       - name: Verify frozen CPU-only protocol and clean script syntax
         run: |
-          python -m pytest -q tests/test_cir02_numpy_v4_preflight.py
+          python -m pytest -q tests/test_cir02_numpy_v4_preflight.py tests/test_cir02_numpy24_v4_native_result.py
           python -m py_compile research/preflight_cir02_numpy_v4_dispatch.py
       - name: Native NumPy X86_V4 flag selected-loop verification on synthetic arrays only
         run: |
