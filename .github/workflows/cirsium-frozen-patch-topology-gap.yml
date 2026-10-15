@@ -1,0 +1,31 @@
+name: Cirsium frozen-patch topology component-gap secondary synthesis
+
+on:
+  pull_request:
+    paths:
+      - 'research/summarize_cirsium_frozen_patch_topology_gap.py'
+      - 'tests/test_cirsium_frozen_patch_topology_gap.py'
+      - 'validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_topology_component_gap_v1.json'
+      - 'paper/CIRSIUM_PATCH_TOPOLOGY_COMPONENT_GAP_SECONDARY.md'
+      - '.github/workflows/cirsium-frozen-patch-topology-gap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-source-synthesis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pytest without GSI or GIS dependencies
+        run: python -m pip install pytest
+      - name: Verify original frozen topology arithmetic and claim gates
+        run: |
+          python -m pytest -q tests/test_cirsium_frozen_patch_topology_gap.py
+          python -m research.summarize_cirsium_frozen_patch_topology_gap --verify-json validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_topology_component_gap_v1.json
+          python -m py_compile research/summarize_cirsium_frozen_patch_topology_gap.py gbif_fieldmap_builder_app.py

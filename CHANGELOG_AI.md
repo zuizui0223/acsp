@@ -1,5 +1,31 @@
 # AI Change Log
 
+## 2026-10-15 - ChatGPT (OpenAI) - Interpret existing frozen Cirsium patch topology as two competing graph terms
+
+Changed files:
+- research/summarize_cirsium_frozen_patch_topology_gap.py
+- tests/test_cirsium_frozen_patch_topology_gap.py
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_topology_component_gap_v1.json
+- paper/CIRSIUM_PATCH_TOPOLOGY_COMPONENT_GAP_SECONDARY.md
+- .github/workflows/cirsium-frozen-patch-topology-gap.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Perform a source-locked, post hoc mathematical synthesis of the *previously frozen* PR256 four-unit 100-m retained-support topology result and PR247 original fixed 2.5%/1km patch denominator, without re-running GSI or claiming new ecological samples.
+- Define within-patch component total S = patch_count + extra internal components; net cross-patch unions J = S - global 8-neighbour mask components; signed gap G - P = extra internal components - net cross-patch unions. J is a graph component-count reduction, not the number of physical edges, accessible routes or field visits.
+- Preserve exact original 4-unit source/patch SHA identities, counts, source flags and selected-support continuity semantics; report the sign inversion between alpine / wetland (>0) and grassland (<0) as algorithmic topology only.
+- Add 11 local regression tests plus an original frozen-file/snapshot verification path; make a separate paper-ready secondary methods/results note rather than silently appending this research result to the independently validated robust-patch submission manuscript.
+- Original four public-safe PR256 artifacts 11532064437 / 11534155745 / 11534893251 / 11536552476 had their original GitHub zip and JSON SHA256 independently checked before this derivation.
+
+Features preserved:
+- Original PR250 full structural-order replay remains blocked. No retuning of GSI source, support fraction 2.5%, grid spacing 100 m, complete-link patch diameter 1 km, or the validated Japanese float32 non-ranked robust patch output.
+- No raw private cell IDs, coordinates, original field observations, prospective outcomes or exposure of occurrence points.
+
+Known risks / TODO:
+- Secondary arithmetic does not add independent biological evidence; four units represent three declared structural families, with CIR12/CIR13 sharing a grassland policy. Identical grassland aggregate metrics and *different* frozen membership digests do not establish equal spatial geometry or independent confirmation.
+- A disconnected selected support mask is neither disconnected habitat nor inaccessible terrain; the global connected-component count is not the number of required survey visits.
+- Any connectivity-aware change to membership requires a separate frozen method and independent held-out/field validation; this study does not repair numerical slope cause or strict PR250 full-order integrity.
+
 ## 2026-10-15 - ChatGPT (OpenAI) - Preserve original native X86_V4-ineligible synthetic preflight result
 
 Changed files:
