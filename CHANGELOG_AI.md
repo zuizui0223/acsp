@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-10-16 - ChatGPT (OpenAI) - Separate topology-site comparison from frozen Cirsium field allocation
+
+Changed files:
+- research/design_cirsium_patch_connectivity_field_trial_v1.py
+- tests/test_cirsium_patch_connectivity_trial_design_v1.py
+- validation/coverage_then_fine_structure_patch_connectivity_field_trial_design_v1.json
+- paper/CIRSIUM_PATCH_CONNECTIVITY_FIELD_TRIAL_DESIGN.md
+- .github/workflows/cirsium-patch-connectivity-field-trial-design.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Convert the already-frozen four-unit Cirsium topology discrepancy into an explicitly untested, source-bound NEXT biological question: at equal field effort, can a within-patch largest-connected-fragment medoid better recover verified focal-species occurrence than an all-retained-cell geometry-only medoid?
+- Implement deterministic private design-preview-only algorithms on original 100-m integer grid cells; preserve 2.5% retained support and 1-km complete-link patch membership. Select only pre-outcome disconnected patches; keep identical counterfactual sites; balance hash-assigned patch counts and 3 x 30 min x 1 observer (90 person-minutes) planned efforts within cohort. Odd remainder stays a publicly counted pre-outcome balance reserve.
+- Report all unit statuses, including fewer than two eligible patches and connected-only units, and never convert these to biological non-detections. Export only aggregate counts/one full schedule digest, not candidate IDs or coordinates. No real private geometry, original patch sources or field outcomes were read by this new script.
+- Strictly separate this posthoc-method-design line from the existing three-arm frozen fresh-SENTINEL comparison. Development-exposed CIR02/CIR06/CIR12/CIR13 cannot be relabeled as new biological confirmations. A fresh disjoint taxa/sector registry, original private source SHA, access/permission vetting, pinned candidate assignment and schedule are prerequisites to any actual field comparison.
+- Standalone design and methodology description saved as a separate paper note, not appended to the independently validated robust-patch submission manuscript. Test-first initial missing implementation, then two pre-outcome accounting failures were observed and fixed; **16/16 local synthetic tests passed** with Python 3.13.5. Dedicated GitHub CI covers source contract and original app syntax on Python 3.11.
+
+Features preserved:
+- Main independently validated Japan non-ranked robust patches, 2.5% support fraction/float32, 1-km same-area complete-link membership, original original source/prioritization, three-arm fresh-SENTINEL pre-field endpoint and PERSON_MINUTES_V1, PR250 strict rank-replay block, and unresolved Issue253 CPU cause.
+
+Known risks / TODO:
+- This is a **method DESIGN ONLY**, not a frozen prospective biological cohort, a real field schedule, an ecological outcome, or a field-efficiency estimate. The proposal's conditional resolved-denominator estimand is not automatically causal if access/phenology/permissions/effort differ by arm.
+- Do not instantiate or expose a field schedule from synthetically valid IDs alone. The required private sector geometry, independently chosen disjoint cohort IDs, complete source SHA, access permissions and actual validated effort schedule remain absent. The public preview must remain non-authoritative until all prospective pins and safety checks exist.
+
 ## 2026-10-15 - ChatGPT (OpenAI) - Interpret existing frozen Cirsium patch topology as two competing graph terms
 
 Changed files:
