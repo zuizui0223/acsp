@@ -1,0 +1,109 @@
+{
+  "schema_version": "acsp-connectivity-overlay-versus-geometry-site-trial-design-v1",
+  "status": "METHOD_DESIGN_FROZEN_BEFORE_NEW_COHORT_SELECTION_NO_OUTCOMES",
+  "as_of_date": "2026-10-16",
+  "scientific_question": "Among newly selected, source-complete, internally disconnected retained-support patches, does selecting one 100-m support cell in the largest connected fragment improve verified current-occurrence recovery per equal planned search effort relative to a geometry-only medoid of all retained patch cells?",
+  "parent_observation": {
+    "source_pr": 273,
+    "source_type": "POSTHOC_DESCRIPTIVE_GEOMETRIC_TOPOLOGY_NOT_INDEPENDENT_FIELD_EVIDENCE",
+    "topology_result_git_blob_sha1": "06b7dbd6e1152e8187a7ecd31ee6ab4b5778d0f6",
+    "original_topology_result_git_blob_sha1": "6857adc4dab4f54bd5f81a4b859d51e5b84aa864",
+    "frozen_patch_reference_git_blob_sha1": "9744f3cb54c647801e934704dc0f3bf437d3bbe5",
+    "previously_exposed_cohort_units": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ]
+  },
+  "cohort_identity_frozen": false,
+  "new_disjoint_taxa_and_regions_required_for_independent_confirmation": true,
+  "previously_exposed_units_if_reused_are_development_only": true,
+  "trial_role": "SEPARATE_POSTHOC_METHOD_DEVELOPMENT_SPECIFICATION_NOT_ADDED_TO_ORIGINAL_THREE_ARM_PROTOCOL",
+  "original_three_arm_fresh_sentinel_protocol_changed": false,
+  "original_three_arm_analysis_plan_git_blob_sha1": "5ec7a7b3ae0f44855226463c43721a5eb0d83de7",
+  "original_three_arm_field_evaluation_git_blob_sha1": "0e94ab368d37ab2e9c9c93298d80b1d6cbb54fb6",
+  "original_three_arm_effort_git_blob_sha1": "3c0cd2329c106831936283a667edefddf586422f",
+  "sampling": {
+    "only_internal_disconnected_patches": true,
+    "grid_spacing_m": 100,
+    "moore_eight_neighbour_adjacency": true,
+    "existing_support_fraction": 0.025,
+    "existing_complete_link_patch_diameter_m": 1000,
+    "retained_support_membership_fixed_before_interpretation": true,
+    "no_missing_cells_interpreted_as_absences": true,
+    "no_patch_membership_changes_allowed": true,
+    "source_sha_pin_required_before_actual_field_assignment": true,
+    "new_cohort_registry_and_spatial_frame_pin_required": true,
+    "access_and_permission_preflight_required_before_field_visit": true,
+    "projection_identity": "JAPAN_CENTERED_AEQD_V1"
+  },
+  "strategy": {
+    "topology": "LARGEST_MOORE8_COMPONENT_MEDOID_V1",
+    "geometry": "ALL_RETAINED_PATCH_CELLS_MEDOID_V1",
+    "medoid_distance": "MINIMUM_SUM_OF_SQUARED_GRID_CELL_DISTANCES_WITH_GRID_ROW_COL_LEXICOGRAPHIC_TIE_BREAK",
+    "largest_fragment_tie": "MOST_CELLS_THEN_SMALLEST_ROW_COL_POINT",
+    "both_counterfactual_sites_must_be_existing_retained_cells": true,
+    "shared_counterfactual_site_must_be_retained_and_reported": true
+  },
+  "arm_assignment": {
+    "identity": "BLINDED_HASH_BALANCED_PATCH_ASSIGNMENT_V1",
+    "randomization_unit": "ORIGINAL_FROZEN_PATCH_NOT_CELL_OR_SEARCH_VISIT",
+    "stratum": "FROZEN_COHORT_UNIT_ONLY",
+    "hash_key": "SHA256(protocol_salt UTF8 + TAB + cohort_unit_id + TAB + private_patch_ref)",
+    "protocol_salt": "acsp-topology-field-trial-2026-10-16-v1-no-outcomes",
+    "allocation": "sort_by_hash_then_patch_ref; allocate equal numbers to topology and geometry by alternating the first even number, one odd-tail patch is pre-outcome balance reserve",
+    "no_postoutcome_resampling_or_substitution": true,
+    "same_site_in_both_strategies_kept": true,
+    "randomization_causal_claim_requires_pre_field_cohort_and_private_site_freeze": true
+  },
+  "effort": {
+    "identity": "PERSON_MINUTES_V1",
+    "visits_per_assigned_candidate": 3,
+    "active_search_minutes_per_visit": 30,
+    "observers_per_visit": 1,
+    "planned_person_minutes_per_assigned_candidate": 90,
+    "planned_effort_equal_between_arms_by_cohort": true,
+    "no_day_or_monetary_budget_optimized": true
+  },
+  "outcomes": {
+    "success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
+    "resolved_nondetection_state": "SEARCH_COMPLETED_NOT_DETECTED",
+    "unresolved_identity_state": "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED",
+    "nonbiological_unevaluable_states": [
+      "ACCESS_FAILED",
+      "PERMISSION_BLOCKED",
+      "PHENOLOGY_NOT_EVALUABLE",
+      "SEARCH_INCOMPLETE_OTHER"
+    ],
+    "unit_aggregation": "ANY_VERIFIED_ELSE_ALL_COMPLETED_NONDETECTION_V1",
+    "reported_primary_contrast_if_later_authorized": "per-cohort verified-success fraction among resolved candidates: topology minus geometry, with arm-specific access/non-evaluation counts mandatory; no pooling until cohort registry/estimand frozen",
+    "missingness_must_not_be_biological_absence": true,
+    "same_site_counterfactuals_never_discarded_postoutcome": true,
+    "outcomes_opened": false
+  },
+  "field_schedule_frozen": false,
+  "outcomes_may_be_opened": false,
+  "claims": {
+    "new_original_biological_trial_executed": false,
+    "equal_effort_field_recovery_effect_established": false,
+    "topological_high_support_is_habitat_continuity": false,
+    "full_structural_order_replay_repaired": false,
+    "validated_japan_robust_patches_unchanged": true,
+    "original_pr250_gate_unblocked": false
+  },
+  "claim_limits": {
+    "topological_high_support_is_habitat_continuity": false,
+    "disconnected_threshold_mask_is_biological_absence": false,
+    "CIR12_and_CIR13_are_two_independent_confirmations": false,
+    "study_design_itself_establishes_field_efficiency": false
+  },
+  "prerequisites_before_any_real_assignment": [
+    "freeze fresh disjoint taxa and regions before accessing their outcome records",
+    "obtain authorized private patch membership and exact coordinate-bearing candidate frame outside GitHub",
+    "pin source hashes, candidate IDs, rights and frozen 100-m 2.5-percent support membership before assignment",
+    "complete outcome-blind access, phenology and permission eligibility vetting symmetrically for both possible sites",
+    "assign patches by the original protocol salt and hash rule, then pin private field schedule and public hash-only receipt before visits",
+    "collect complete 3-by-30-minute one-observer logs including non-detections and all non-evaluable states"
+  ]
+}
