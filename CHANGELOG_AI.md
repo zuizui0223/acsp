@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-10-16 - ChatGPT (OpenAI) - Cirsium public registry exposure and field-readiness gate
+
+Changed files:
+- research/audit_cirsium_topology_cohort_exposure_screen.py
+- tests/test_cirsium_topology_cohort_exposure_screen.py
+- validation/cirsium_topology_new_cohort_public_exposure_screen_protocol_v1.json
+- paper/CIRSIUM_TOPOLOGY_COHORT_EXPOSURE_SCREEN_SECONDARY.md
+- .github/workflows/cirsium-topology-cohort-exposure-screen.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Cross-reference the original 13-row public aza3 Cirsium cohort with frozen private-source REQUIREMENT statuses, holdout preflight, three executed development pairs, one deferred pair, three-family smoke choices, opened CIR08 coastal development results, Japan38 original CIR01 public-outcome exclusion, and the newly merged topology method design. All ten inputs are pinned to exact original Git blob SHA-1.
+- Preserve the original 4 topology development-exposed units as excluded from the remaining 9-row public registry screen. Explicit prior method DEVELOPMENT use is documented for CIR01/CIR04/CIR07, and CIR08 has a separate opened coastal method development result. Five other names have no explicit use in these ten selected public sources; they are NOT certified untouched, independent, eligible or assigned.
+- CIR11 has a general spatial baseline only, not a declared source-backed structural family. All 9 public registry slots and private frames still say NOT_BUILT. Published "outcome_opened=false" for a planned field slot is NOT evidence that earlier public temporal outcomes, method development or genomic planning never existed.
+- Create a source-only fail-closed screening CLI and 17 local tests, including original byte-level Git SHA gates, executed-versus-nominated exposure, negative-evidence restraint, and original privacy/claim boundaries. GitHub CI runs exact original-source verification and exports aggregate public JSON only; no real DEM, private sector geometry, original site membership or field outcomes are opened.
+- Separately note aza3 genomic panel and its four-unit original SENTINEL range-sector readiness registry: neither is proof that the other nine public identities are field eligible.
+
+Features preserved:
+- Independently validated Japan robust patch core (2.5% float32 support, 1km same-area complete-link), original three-arm field protocol, original CIR02/06/12/13 topology results, trial design PR274, strict PR250 structural-order replay gate, and Issue253 numeric-source uncertainty remain unchanged.
+- No cohort was frozen and no field schedule created. This screen does not select a favorable taxon, sector, or field outcome.
+
+Known risk and next gate:
+- Absence of explicit method-use evidence in ten selected source files cannot establish absence elsewhere. Review other projects and exact disjoint sectors, find authorized non-private source proofs of candidate-patch availability, and freeze new identities BEFORE actual field allocation/outcomes.
+
 ## 2026-10-16 - ChatGPT (OpenAI) - Separate topology-site comparison from frozen Cirsium field allocation
 
 Changed files:
