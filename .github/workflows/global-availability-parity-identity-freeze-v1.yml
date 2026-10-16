@@ -1,0 +1,88 @@
+name: Global availability parity identity freeze v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/acsp_global_availability_parity_confirmation_v1.json"
+      - "validation/acsp_global_availability_prior_supply_exclusion_v1.json"
+      - "research/freeze_global_availability_parity_identities_v1.py"
+      - "tests/test_global_availability_parity_identity_freeze.py"
+      - ".github/workflows/global-availability-parity-identity-freeze-v1.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: global-availability-parity-identity-freeze-v1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  freeze-identities:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Test identity-only freeze mechanics
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python tests/test_global_availability_parity_identity_freeze.py -v
+      - name: Download prior provider-supply identity exclusion artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: zuizui0223/acsp
+          run-id: 33031292325
+          name: provider-eligible-observability-stage1-candidate-snapshot
+          path: /tmp/prior-provider-supply
+      - name: Freeze exactly 48 new identities before focal historical country queries
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/global-availability-parity-identities-v1
+          mkdir -p /tmp/global-availability-parity-identities-v1
+          python research/freeze_global_availability_parity_identities_v1.py \
+            --prior-supply-snapshot /tmp/prior-provider-supply/candidate_snapshot.csv \
+            --identities-output /tmp/global-availability-parity-identities-v1/identities.csv \
+            --audit-output /tmp/global-availability-parity-identities-v1/audit.json
+      - name: Guard stage-1 freeze boundary
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('/tmp/global-availability-parity-identities-v1')
+          audit = json.loads((root / 'audit.json').read_text())
+          identities = pd.read_csv(root / 'identities.csv')
+          assert audit['status'] == 'IDENTITY_FREEZE_COMPLETE_PRE_HISTORICAL_COUNTRY_QUERY'
+          assert audit['identity_count'] == 48
+          assert audit['plant_count'] == 24
+          assert audit['animal_count'] == 24
+          assert audit['focal_historical_country_facets_opened'] is False
+          assert audit['country_geometry_opened'] is False
+          assert audit['candidate_generation_run'] is False
+          assert audit['heldout_2021_2025_opened'] is False
+          assert audit['robust_support_run'] is False
+          assert audit['random_baseline_run'] is False
+          assert audit['recall_or_lift_read'] is False
+          assert audit['validated_japan_core_changed'] is False
+          assert len(identities) == 48
+          assert identities['speciesKey'].nunique() == 48
+          assert identities['scientific_name'].nunique() == 48
+          assert identities['taxon_group'].value_counts().to_dict() == {'plant': 24, 'animal': 24}
+          text = (root / 'identities.csv').read_text().lower()
+          for forbidden in ('selected_country', 'historical_country', 'recent_', 'robust_recall', 'random_recall', 'lift'):
+              assert forbidden not in text
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-availability-parity-identities-v1
+          path: /tmp/global-availability-parity-identities-v1
+          if-no-files-found: error
+          retention-days: 90

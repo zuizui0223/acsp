@@ -1,0 +1,60 @@
+{
+  "schema_version": "global-availability-parity-stage4-receipt-v2",
+  "status": "ALL_48_PREHELDOUT_ARTIFACTS_PINNED_BEFORE_HELDOUT_V2",
+  "parent_protocol": "validation/acsp_global_availability_parity_confirmation_v2.json",
+  "parent_issue": 197,
+  "stage3": {
+    "workflow_run_id": 34134427957,
+    "workflow_run_number": 2,
+    "workflow_head_sha": "6a2b4f3b76e16565813d0f4d777fd2e7bb91cc4e",
+    "workflow_conclusion": "success",
+    "aggregate_artifact_id": 10033756992,
+    "aggregate_artifact_name": "global-availability-parity-candidate-freeze-v2",
+    "aggregate_artifact_digest": "sha256:bb5ddb099f70347569008cd30ad35b62680330b5719418e3c75eed8d5646eaea",
+    "preheldout_states_sha256": "23554f0f189712a98d74ac1901c9c62037df3df3fc2c9fddf0d8299af0c1544d",
+    "state_counts": {
+      "ROBUST_READY_PREHELDOUT": 43,
+      "ROBUST_EMPTY": 1,
+      "SENTINEL_OR_ABSTAIN": 4
+    },
+    "robust_constructible_taxa": 44,
+    "robust_constructible_fraction": 0.9166666666666666,
+    "frozen_availability_gate_min": 0.75,
+    "availability_gate_passed_preheldout": true,
+    "pair_artifact_pattern": "global-parity-candidate-pair-{availability_pair_id}",
+    "pair_artifact_count": 48,
+    "pair_content_pinning": "the aggregate preheldout_states.csv pins every pair identity, state, selected country, candidate patch SHA-256, and exact candidate-surface SHA-256; stage5 must reverify those files before opening heldout"
+  },
+  "ru_surface": {
+    "pair_id": 48,
+    "workflow_run_id": 32795662847,
+    "artifact_id": 9544853686,
+    "artifact_name": "ru-complete-surface",
+    "surface_parquet_sha256": "77729dfa45b9e123f035ca15a421f834a6b155140ae410b8806e9f4eca19c982",
+    "surface_manifest_sha256": "a4cd321cee240f050d4223ab19b3af8f956ac80d675229703d2dffdbb0908d7e"
+  },
+  "stage5_frozen_gates": {
+    "robust_constructible_fraction_min": 0.75,
+    "conditional_retrospective_evaluability_fraction_min": 0.75,
+    "mean_robust_minus_random_lift_gt": 0.0,
+    "taxon_bootstrap_95_ci_lower_gt": 0.0,
+    "plant_mean_lift_gte": 0.0,
+    "animal_mean_lift_gte": 0.0,
+    "include_evaluable_ROBUST_EMPTY_as_zero_lift": true,
+    "random_baseline_repetitions": 200,
+    "random_seed": 2026090702,
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 2026090703,
+    "primary_radius_km": 10.0
+  },
+  "information_boundary": {
+    "heldout_2021_2025_opened": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false,
+    "taxon_or_country_replacement": false,
+    "same_cohort_retuning": false,
+    "candidate_surface_regeneration_after_heldout_allowed": false,
+    "validated_japan_core_changed": false
+  },
+  "decision_boundary": "Stage5 may open 2021-2025 only after verifying the aggregate state-table SHA and all 48 frozen pair artifacts. If any fixed artifact drifts, execution aborts before heldout. No same-cohort rescue, threshold change, country substitution, or candidate regeneration is allowed."
+}

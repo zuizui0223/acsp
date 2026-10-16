@@ -1,0 +1,51 @@
+name: Fresh-SENTINEL v2 four-unit same-mosaic replay receipt freeze
+
+on:
+  pull_request:
+    paths:
+      - "research/verify_cirsium_fresh_sentinel_v2_same_mosaic_result.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_same_mosaic_result.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_same_mosaic_numerical_replay_result_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-same-mosaic-result-freeze.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate frozen four-unit numerical scope and synthetic fail-closed controls
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_cirsium_fresh_sentinel_v2_same_mosaic_result.py
+          python research/verify_cirsium_fresh_sentinel_v2_same_mosaic_result.py
+      - name: Download only original coordinate-free public CI receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for unit in CIR02 CIR06 CIR12 CIR13; do
+            mkdir -p "/tmp/acsp-numerical-replay/${unit}"
+            gh run download 37752252722 --repo "${{ github.repository }}" \
+              --name "cirsium-fresh-sentinel-v2-fixed-gsi-${unit}-receipt" \
+              --dir "/tmp/acsp-numerical-replay/${unit}"
+          done
+      - name: Verify exact four receipt hashes and eight terrain features
+        run: |
+          python research/verify_cirsium_fresh_sentinel_v2_same_mosaic_result.py \
+            --receipt-dir /tmp/acsp-numerical-replay \
+            | tee /tmp/acsp-numerical-replay-verify.json
+      - name: Publish only aggregate verification result
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-four-unit-same-mosaic-verified-summary
+          path: /tmp/acsp-numerical-replay-verify.json
+          if-no-files-found: error

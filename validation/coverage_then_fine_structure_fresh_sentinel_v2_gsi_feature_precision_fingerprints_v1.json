@@ -1,0 +1,38 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-gsi-feature-precision-fingerprints-v1",
+  "status": "FROZEN_PRE_OUTCOME_FEATURE_DIGEST_DIAGNOSTIC",
+  "as_of_date": "2026-10-08",
+  "source_issue": 253,
+  "units": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "feature_columns": [
+    "elev",
+    "slope100",
+    "tpi300",
+    "rough300"
+  ],
+  "precision_decimals": [
+    0,
+    2,
+    4,
+    6,
+    8
+  ],
+  "canonical_order": "candidate_cell_id ascending mergesort on original source-complete GSI rows",
+  "canonical_hash": "sha256 UTF8 of (candidate_cell_id,tab,float(value) formatted with fixed decimals,newline) per feature and precision; no site IDs or values published",
+  "read_only": true,
+  "source_complete_denominator_required": true,
+  "source_state_digest_unchanged": true,
+  "record_comparable_feature_hashes_only": true,
+  "individual_candidate_or_coordinate_export": false,
+  "field_outcomes_opened": false,
+  "source_priority_changed": false,
+  "merge_phase_or_threshold_changed": false,
+  "field_selector_validated": false,
+  "interpretation": "An exploratory engineering diagnostic of numeric GSI feature reproducibility across independent, source-preserved executions. Equal rounded digests do not imply bitwise equality, and differing digests alone cannot identify hardware/provider causes.",
+  "next_gate": "Compare published 4-variable x 5-precision feature hashes across two otherwise pinned GSI source runs; investigate which feature first diverges without opening candidate coordinates or field outcomes."
+}

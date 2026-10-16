@@ -1,0 +1,69 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-cir02-real-dem-slope-stage-probe-v1",
+  "status": "FROZEN_BEFORE_NEW_CIR02_REAL_DEM_STAGE_RUN",
+  "as_of_date": "2026-10-11",
+  "source_issue": 253,
+  "source_context": {
+    "confirmed_independent_run_ids": [
+      37785966356,
+      38058577057
+    ],
+    "same_actual_selected_mosaic_sequence": true,
+    "chunk_count": 177,
+    "complete_source_row_count": 383460,
+    "slope100_precision_2_4_6_8_differs": true,
+    "first_numeric_stage_unknown": true
+  },
+  "cohort_unit_id": "CIR02",
+  "feature_focus": "slope100",
+  "sample_policy": {
+    "chunk_indices": "first middle last = sorted distinct(0, floor((n-1)/2), n-1)",
+    "expected_source_chunk_count": 177,
+    "max_source_complete_candidates_per_chunk": 24,
+    "select_source_complete_ids": "stable sorted candidate_cell_id then evenly spaced integer positions",
+    "no_outcome_based_selection": true,
+    "not_a_full_chunk_or_full_population_replay": true
+  },
+  "stage_order": [
+    "resampled_elevation",
+    "local_mean100",
+    "filled_elevation",
+    "gradient_dx",
+    "gradient_dy",
+    "instantaneous_slope",
+    "slope_valid_support",
+    "slope_smoothing_numerator",
+    "slope100"
+  ],
+  "digest_protocol": {
+    "candidate_order": "candidate_cell_id ascending",
+    "full_precision": "sha256 sorted candidate_cell_id UTF8 and exact little-endian float64 stage values",
+    "rounded_precision_decimals": [
+      2,
+      8
+    ],
+    "nan_policy": "reject nonfinite sampled stage values; source-complete candidates only",
+    "no_per_chunk_hash_export": true,
+    "no_per_candidate_values_export": true,
+    "no_candidate_ids_or_coordinates_export": true,
+    "one_ordered_aggregate_hash_per_stage": true
+  },
+  "execution": {
+    "use_existing_selected_dem_exactly": true,
+    "read_dem_again_for_diagnostic_only": true,
+    "assert_mirrored_kernel_equals_original_production_slope100": true,
+    "assert_first_pass_sampled_slope_equals_staged_surface_for_probed_cells": true,
+    "never_change_original_dem_sampler_or_candidate_order": true,
+    "never_retry_or_replace_source_provider": true
+  },
+  "interpretation": {
+    "three_sampled_chunks_are_not_complete_cir02_source_world": true,
+    "equal_stage_hashes_do_not_resolve_177_chunk_slope_divergence": true,
+    "first_divergent_stage_only_identifiable_in_future_pair_where_samples_differ": true,
+    "no_full_structural_order_replay_claim": true,
+    "no_field_selector_or_habitat_claim": true,
+    "no_private_sites_or_field_outcomes": true,
+    "no_posthoc_support_fraction_or_patch_distance_change": true
+  },
+  "next_gate": "Run CIR02 on a new independent frozen GSI source world with stage sample hashes; compare two independent complete source-selected stage-probed runs, report first divergent numerical stage only if both sampled identical selected DEM bytes and candidate cells."
+}

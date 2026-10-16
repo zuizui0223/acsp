@@ -1,0 +1,66 @@
+{
+  "schema_version": "public-cirsium-detached-broad-coastal-development-v1",
+  "status": "DEVELOPMENT_ONLY_FROZEN_BEFORE_DETACHED_BROAD_EXECUTION",
+  "scientific_role": "opened-outcome candidate-frame diagnosis; cannot support confirmation or promotion",
+  "validated_product_changed": false,
+  "cohort_unit_id": "CIR08",
+  "species": "Cirsium brevicaule",
+  "feature_family": "COASTAL_ISLAND_STRUCTURE",
+  "reason_for_test": "the previously frozen 2/5-km LOCAL portable-coastal frames reached only 1 of 15 later novel populations even at 100% candidate coverage, so the next question is frame reachability before selector refinement",
+  "declared_broad_frame": {
+    "frame_id": "okinawa_main",
+    "west": 127.6,
+    "south": 26.05,
+    "east": 128.35,
+    "north": 26.88,
+    "source": "pre-existing ACSP Okinawa-main frame; unchanged from the prior portable-coastal smoke"
+  },
+  "historical_evidence": {
+    "period": [2000, 2020],
+    "declared_coordinate_uncertainty_m_max": 1000,
+    "population_cluster_rule": "deterministic complete-link maximum diameter 0.5 km",
+    "anchor_representation": "observed-member medoid",
+    "replacement_after_outcomes": false
+  },
+  "candidate_frame": {
+    "grid_spacing_m": 250,
+    "grid_role": "broad screening grid selected before this execution for tractable provider-wide screening; not an exact-site claim and not candidate-count-equivalent to the prior 100-m LOCAL grid",
+    "water_cells_removed": true,
+    "local_boundary_km": 5.0,
+    "local_boundary_source": "the already-frozen sensitivity outer radius in public_cirsium_portable_coastal_smoke_v1",
+    "detached_rule": "candidate is DETACHED_BROAD when it lies on valid WorldCover land inside the declared broad frame and nearest historical population distance is > 5.0 km",
+    "definition_note": "DETACHED_BROAD includes both different ecological components and remote parts of the same source-backed component; it is defined by being outside the justified local continuation frame, not by a post-outcome habitat threshold"
+  },
+  "worldcover": {
+    "provider": "ESA WorldCover",
+    "release": "2021 v200 Map",
+    "crop_margin_m": 3000,
+    "land_definition": "valid WorldCover class other than permanent water class 80",
+    "component_rule": "8-neighbour connected components on WorldCover land raster",
+    "coast_distance_rule": "Euclidean raster distance to class-80 water; no fitted threshold",
+    "neighbourhood_half_width_m": 250
+  },
+  "ranking": {
+    "methods": ["STRUCTURAL_SUPPORT", "ANNULAR_NEAREST_KNOWN", "MORTON_DYADIC_COVERAGE_ORDER_V1"],
+    "same_detached_candidate_frame": true,
+    "fitted_blend": false,
+    "prefix_fractions": [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0]
+  },
+  "outcome": {
+    "period": [2021, 2025],
+    "novel_population_rule": "deterministic complete-link 0.5 km; >0.5 km from every strict historical population",
+    "recovery_radii_km": [0.25, 0.5, 1.0],
+    "primary_diagnostic": "full broad-frame reachability versus the previously frozen 5-km LOCAL frame",
+    "secondary_diagnostic": "within DETACHED_BROAD, full prefix curves for structural versus nearest versus spatial balance",
+    "report_all_novel_populations": true,
+    "report_local_unreached_subset": true
+  },
+  "forbidden": [
+    "do not change the 5-km local boundary after observing detached outcomes",
+    "do not change 250-m broad-screen spacing after observing outcomes and rerun as if prospective",
+    "do not add a fitted structural threshold or distance-structure blend",
+    "do not choose only favorable prefix/radius cells",
+    "do not relabel this opened CIR08 diagnostic as confirmation",
+    "do not modify the independently validated 2.5% / 10-km product"
+  ]
+}

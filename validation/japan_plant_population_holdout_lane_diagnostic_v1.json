@@ -1,0 +1,59 @@
+{
+  "schema_version": "japan-plant-population-holdout-lane-diagnostic-v1",
+  "protocol_id": "japan_plant_population_holdout_lane_diagnostic_v1",
+  "status": "POSTHOC_DIAGNOSTIC_FROZEN_BEFORE_RECONSTRUCTION",
+  "source_issue": 208,
+  "independent_confirmation": false,
+  "source_207": {
+    "workflow_run_id": 34670865955,
+    "artifact_id": 10290014788,
+    "artifact_name": "japan-plant-population-holdout-selector-development-v1",
+    "artifact_digest": "sha256:b1f9200b2d0069197dd53729759f9298c025f30c3997932f160875abdbab8958",
+    "folds_filename": "population_holdout_folds.csv",
+    "folds_sha256": "ea0c9e4172219639cb08192c8168d8466972adf8318ce7ef22b838dd1dbe7edb",
+    "successful_folds": 25,
+    "terminal_result_path": "validation/japan_plant_population_holdout_selector_development_result_v1.json"
+  },
+  "source_cohort": {
+    "workflow_run_id": 32335791948,
+    "artifact_id": 9394691112,
+    "artifact_name": "acsp-robust-patch-untouched-confirmation-cohort-v2",
+    "artifact_digest": "sha256:cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "sample_filename": "predeclared_taxon_region_pairs.csv",
+    "sample_sha256": "8e8eebf56b071572ad4eb84d6fe5dbe9ec12c4cd561e84dfca22abd398bede4d"
+  },
+  "reconstruction": {
+    "gbif_country": "JP",
+    "period": [2000, 2025],
+    "page_size": 300,
+    "maximum_records_per_pair": 10000,
+    "coordinate_uncertainty_m_max": 1000,
+    "exact_coordinate_deduplication": true,
+    "population_cluster_algorithm": "deterministic_complete_link_greedy",
+    "population_cluster_maximum_within_distance_km": 0.5,
+    "holdout_selection": "ascending_sha256_of_stable_cluster_fingerprint",
+    "maximum_folds_per_pair": 2,
+    "required_fold_identity": ["pair_id", "fold_number", "heldout_cluster_sha256"]
+  },
+  "lane_definition": {
+    "boundary_km": 5.0,
+    "boundary_provenance": "pre-existing LOCAL/DETACHED architecture; not estimated from #207",
+    "LOCAL": "nearest retained training population <= 5 km",
+    "DETACHED": "nearest retained training population > 5 km"
+  },
+  "recovery_radii_km": [2.0, 5.0, 10.0],
+  "primary_diagnostic_radius_km": 5.0,
+  "forbidden": {
+    "selector_rebuild": true,
+    "selector_rescoring": true,
+    "lane_boundary_tuning": true,
+    "radius_tuning": true,
+    "k_tuning": true,
+    "cluster_threshold_tuning": true,
+    "selector_weight_tuning": true,
+    "environment_distance_blending": true,
+    "source_207_rescue": true,
+    "production_selector_change": true
+  },
+  "claim_boundary": "Post-hoc diagnosis of a consumed development cohort only. The lane split may explain #207 but cannot change its terminal result or independently validate a lane-specific selector architecture."
+}

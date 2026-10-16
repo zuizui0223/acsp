@@ -1,0 +1,91 @@
+{
+  "schema_version": "cirsium-japan38-broad-frame-confirmation-result-v2",
+  "status": "TERMINAL_PREREGISTERED_RESULT",
+  "decision": "PREREGISTERED_BROAD_FRAME_GATE_FAILED",
+  "parent_issue": 198,
+  "source_contract": "validation/cirsium_japan38_broad_frame_confirmation_v2.json",
+  "provider_identity_amendment": "validation/cirsium_japan38_provider_identity_amendment_v2.json",
+  "validated_japan_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "selector_evaluated": false,
+  "same_cohort_rescue_allowed": false,
+  "execution": {
+    "historical_preflight_workflow_run_id": 34314536154,
+    "historical_preflight_artifact_id": 10089784005,
+    "historical_preflight_artifact_digest": "sha256:0bcab01f86d1927b0966dd8c0786e38b97626b326c2c38ec58bca0e4b0b8ad3d",
+    "historical_preflight_result_sha256": "22df706b08fcab8b67d76536089fe242c8e093618d28a2e376e72ee89e77ae1d",
+    "heldout_workflow_run_id": 34448939179,
+    "heldout_artifact_id": 10140926113,
+    "heldout_artifact_digest": "sha256:e43ddf0d9284ea2c418e7c30e703a18fb8c3eafb4b37931901eacf5da0579823",
+    "heldout_summary_sha256": "c78bc5204520916b6ee4b7496454a7934619d3e1d95868b9a989fe5c0293a329",
+    "heldout_ceiling_metrics_sha256": "524b006d43fe3564ba43ca8493ac927a1327ea9f0482adb1d78c2c299b157061",
+    "heldout_concept_ledger_sha256": "79836cfae29a570d51b7ee7ae7ce8854b190990d659920af92a54bf6b838dbd2"
+  },
+  "preoutcome_accounting": {
+    "declared_paper_concepts": 31,
+    "constructible_concept_rows": 13,
+    "no_historical_anchor_concept_rows": 14,
+    "provider_resolution_failure_concept_rows": 4,
+    "unique_constructible_gbif_provider_identities": 11,
+    "duplicate_provider_identity_group": {
+      "matched_usage_key": 3113139,
+      "canonical_member_id": "JPN_20",
+      "alias_member_ids": ["JPN_21", "JPN_35"]
+    }
+  },
+  "primary_endpoint": {
+    "recovery_radius_km": 1.0,
+    "temporally_evaluable_provider_identities": 5,
+    "minimum_temporally_evaluable_provider_identities": 8,
+    "evaluable_gate_passed": false,
+    "positive_provider_identities": 3,
+    "positive_fraction": 0.6,
+    "minimum_positive_fraction": 0.5,
+    "positive_fraction_gate_passed": true,
+    "novel_population_clusters": 16,
+    "broad_land_recovered_clusters": 16,
+    "broad_land_recall": 1.0,
+    "local_5km_land_recovered_clusters": 7,
+    "local_5km_land_recall": 0.4375,
+    "cluster_weighted_broad_minus_local5_added_recall": 0.5625,
+    "minimum_cluster_weighted_added_recall": 0.1,
+    "cluster_weighted_added_recall_gate_passed": true,
+    "all_preregistered_gates_passed": false
+  },
+  "secondary_pooled_ceiling": {
+    "recovery_radius_0_5km": {
+      "BROAD_LAND": {"recovered": 12, "total": 16, "recall": 0.75},
+      "LOCAL_2KM_LAND": {"recovered": 3, "total": 16, "recall": 0.1875},
+      "LOCAL_5KM_LAND": {"recovered": 4, "total": 16, "recall": 0.25},
+      "LOCAL_10KM_LAND": {"recovered": 4, "total": 16, "recall": 0.25}
+    },
+    "recovery_radius_1km": {
+      "BROAD_LAND": {"recovered": 16, "total": 16, "recall": 1.0},
+      "LOCAL_2KM_LAND": {"recovered": 5, "total": 16, "recall": 0.3125},
+      "LOCAL_5KM_LAND": {"recovered": 7, "total": 16, "recall": 0.4375},
+      "LOCAL_10KM_LAND": {"recovered": 7, "total": 16, "recall": 0.4375}
+    }
+  },
+  "evaluable_provider_identities": [
+    {"matched_usage_key": 3112645, "canonical_member_id": "JPN_23", "species": "Cirsium oligophyllum", "novel_population_clusters": 8, "broad_recall_1km": 1.0, "local5_recall_1km": 0.5, "difference": 0.5},
+    {"matched_usage_key": 3113059, "canonical_member_id": "JPN_37", "species": "Cirsium kamtschaticum", "novel_population_clusters": 2, "broad_recall_1km": 1.0, "local5_recall_1km": 0.0, "difference": 1.0},
+    {"matched_usage_key": 3113080, "canonical_member_id": "JPN_34", "species": "Cirsium microspicatum", "novel_population_clusters": 4, "broad_recall_1km": 1.0, "local5_recall_1km": 0.25, "difference": 0.75},
+    {"matched_usage_key": 3113139, "canonical_member_id": "JPN_20", "species": "Cirsium nipponicum", "novel_population_clusters": 1, "broad_recall_1km": 1.0, "local5_recall_1km": 1.0, "difference": 0.0},
+    {"matched_usage_key": 3113730, "canonical_member_id": "JPN_27", "species": "Cirsium suzukaense", "novel_population_clusters": 1, "broad_recall_1km": 1.0, "local5_recall_1km": 1.0, "difference": 0.0}
+  ],
+  "non_evaluable_constructible_provider_identities": [
+    {"matched_usage_key": 3112564, "canonical_member_id": "JPN_30", "species": "Cirsium yezoense", "reason": "NO_STRICT_2021_2025_POPULATION"},
+    {"matched_usage_key": 3112963, "canonical_member_id": "JPN_05", "species": "Cirsium aomorense", "reason": "NO_STRICT_2021_2025_POPULATION"},
+    {"matched_usage_key": 3112982, "canonical_member_id": "JPN_09", "species": "Cirsium gyojanum", "reason": "NO_STRICT_2021_2025_POPULATION"},
+    {"matched_usage_key": 3113069, "canonical_member_id": "JPN_22", "species": "Cirsium norikurense", "reason": "NO_STRICT_2021_2025_POPULATION"},
+    {"matched_usage_key": 3113477, "canonical_member_id": "JPN_03", "species": "Cirsium alpicola", "reason": "NO_STRICT_2021_2025_POPULATION"},
+    {"matched_usage_key": 3113701, "canonical_member_id": "JPN_04", "species": "Cirsium amplexifolium", "reason": "NO_STRICT_2021_2025_POPULATION"}
+  ],
+  "interpretation": {
+    "confirmed": false,
+    "reason_for_failure": "The preregistered minimum of eight temporally evaluable unique provider identities was not met (5/11), even though the positive-fraction and cluster-weighted added-recall gates passed.",
+    "directional_result": "Among the five evaluable unique provider identities, three had positive BROAD-minus-LOCAL5 differences and pooled BROAD reachability was 16/16 versus 7/16 for LOCAL5 at 1 km.",
+    "claim_boundary": "This is strong directional evidence that bounded local candidate universes can miss reachable later populations, but it is not a successful independent confirmation under the frozen design. BROAD is a superset of LOCAL, so this is candidate-universe adequacy, not selector superiority."
+  },
+  "next_action": "Do not rescue or retune this opened cohort. Any further confirmation must use a new disjoint cohort selected without 2021-2025 outcomes; selector validation must also use a separate new cohort."
+}

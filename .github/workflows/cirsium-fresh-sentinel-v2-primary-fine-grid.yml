@@ -1,0 +1,101 @@
+name: Fresh-SENTINEL v2 primary fine grids
+
+on:
+  pull_request:
+    paths:
+      - "research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_primary_fine_grid.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_primary_fine_grid_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-primary-fine-grid.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test fine-grid mechanics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_primary_fine_grid.py
+      - name: Download exact frozen coarse-source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-primary-fine/terrain /tmp/acsp-primary-fine/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-primary-fine/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-primary-fine/worldcover
+      - name: Rebuild frozen coarse evidence orders privately
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-primary-fine/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-primary-fine/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-primary-fine/orders
+      - name: Materialize and hash four primary fine grids
+        run: |
+          mkdir -p /tmp/acsp-primary-fine/grids /tmp/acsp-primary-fine/summaries
+          for unit in CIR02 CIR06 CIR12 CIR13; do
+            python research/materialize_cirsium_fresh_sentinel_v2_primary_fine_grid.py               --unit-id "$unit"               --order-csv-gz "/tmp/acsp-primary-fine/orders/${unit}_coarse_evidence_order.csv.gz"               --private-out-csv-gz "/tmp/acsp-primary-fine/grids/${unit}_primary_2km_100m.csv.gz"               --public-safe-summary-json "/tmp/acsp-primary-fine/summaries/${unit}.json"
+            rm "/tmp/acsp-primary-fine/grids/${unit}_primary_2km_100m.csv.gz"
+          done
+      - name: Build public-safe materialization receipt
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/acsp-primary-fine/summaries')
+          expected = {'CIR02':464633,'CIR06':847239,'CIR12':715103,'CIR13':715103}
+          units = {}
+          for unit in expected:
+              x = json.loads((root / f'{unit}.json').read_text())
+              assert x['status'] == 'PRIMARY_2KM_100M_FINE_GRID_MATERIALIZED_PRE_OUTCOME'
+              assert x['fine_grid_cell_count'] == expected[unit]
+              assert x['support_fraction'] == 0.025
+              assert x['primary_radius_km'] == 2.0
+              assert x['grid_spacing_m'] == 100.0
+              assert x['source_indeterminate_included'] is False
+              assert x['ecological_sources_attached'] is False
+              assert x['structural_graph_computed'] is False
+              assert x['field_outcomes_opened'] is False
+              assert x['exact_coordinates_public'] is False
+              units[unit] = {
+                  'source_ready_candidate_count': x['source_ready_candidate_count'],
+                  'retained_coarse_center_count': x['retained_coarse_center_count'],
+                  'fine_grid_cell_count': x['fine_grid_cell_count'],
+                  'raw_center_cell_memberships': x['raw_center_cell_memberships'],
+                  'overlap_memberships_removed': x['overlap_memberships_removed'],
+                  'private_grid_sha256': x['private_grid_sha256'],
+              }
+          receipt = {
+              'schema_version':'cirsium-fresh-sentinel-v2-primary-fine-grid-materialization-receipt-v1',
+              'status':'PRIMARY_FINE_GRID_MATERIALIZATION_COMPLETE_PRE_OUTCOME',
+              'support_fraction':0.025,
+              'primary_radius_km':2.0,
+              'grid_spacing_m':100.0,
+              'units':units,
+              'coordinate_bearing_grids_uploaded':False,
+              'source_indeterminate_included':False,
+              'ecological_sources_attached':False,
+              'structural_graph_computed':False,
+              'field_outcomes_opened':False,
+          }
+          Path('/tmp/acsp-primary-fine/materialization_receipt.json').write_text(
+              json.dumps(receipt, ensure_ascii=False, indent=2) + '\n'
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-primary-fine-grid-receipt
+          path: /tmp/acsp-primary-fine/materialization_receipt.json
+          if-no-files-found: error

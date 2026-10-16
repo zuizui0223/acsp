@@ -1,0 +1,92 @@
+name: Fresh-SENTINEL v2 retained source-indeterminate lanes
+
+on:
+  pull_request:
+    paths:
+      - "research/compose_cirsium_fresh_sentinel_v2_source_availability.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_source_availability.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_source_indeterminate_retention_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-source-availability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  compose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test retained-source semantics
+        run: pytest -q tests/test_cirsium_fresh_sentinel_v2_source_availability.py
+      - name: Download frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-fs-v2-source/terrain /tmp/acsp-fs-v2-source/worldcover
+          gh run download 36071510382 \
+            --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-full-coarse-terrain \
+            --dir /tmp/acsp-fs-v2-source/terrain
+          gh run download 36121342866 \
+            --repo "${{ github.repository }}" \
+            --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair \
+            --dir /tmp/acsp-fs-v2-source/worldcover
+      - name: Compose exact frozen source ledger
+        run: |
+          python research/compose_cirsium_fresh_sentinel_v2_source_availability.py \
+            --terrain-csv-gz /tmp/acsp-fs-v2-source/terrain/full_terrain.csv.gz \
+            --worldcover-csv-gz /tmp/acsp-fs-v2-source/worldcover/full_worldcover_repair.csv.gz \
+            --ledger-out-csv-gz /tmp/acsp-fs-v2-source/source_availability.csv.gz \
+            --summary-out-json /tmp/acsp-fs-v2-source/summary.json
+      - name: Guard conservative source-indeterminate boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          value = json.loads(Path('/tmp/acsp-fs-v2-source/summary.json').read_text())
+          assert value['status'] == 'SOURCE_AVAILABILITY_LEDGER_COMPOSED_PRE_OUTCOME'
+          assert value['candidate_count'] == 39200
+          assert value['candidate_rows_dropped'] == 0
+          assert value['terrain_complete_candidates'] == 33578
+          assert value['worldcover_complete_candidates'] == 35974
+          assert value['both_terrain_and_worldcover_complete_candidates'] == 32754
+          assert value['terrain_incomplete_worldcover_complete'] == 3220
+          assert value['terrain_complete_worldcover_incomplete'] == 824
+          assert value['both_incomplete'] == 2402
+          assert value['unit_source_state_counts']['CIR06']['SOURCE_READY_FOR_FAMILY_COARSE_STAGE'] == 33578
+          assert value['unit_source_state_counts']['CIR06']['SOURCE_INDETERMINATE_RETAIN'] == 5622
+          for unit in ['CIR02', 'CIR12', 'CIR13']:
+              assert value['unit_source_state_counts'][unit]['SOURCE_READY_FOR_FAMILY_COARSE_STAGE'] == 32754
+              assert value['unit_source_state_counts'][unit]['SOURCE_INDETERMINATE_RETAIN'] == 6446
+          assert value['source_indeterminate_candidates_retained'] is True
+          assert value['source_indeterminate_is_biological_negative'] is False
+          assert value['source_indeterminate_may_be_recoded_as_unsuitable'] is False
+          assert value['source_indeterminate_may_be_dropped'] is False
+          assert value['source_indeterminate_may_receive_worst_ecological_score'] is False
+          assert value['ecological_score_computed'] is False
+          assert value['habitat_threshold_applied'] is False
+          assert value['candidate_rank_added'] is False
+          assert value['candidate_selection_added'] is False
+          assert value['prospective_field_outcomes_opened'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-source-availability
+          path: |
+            /tmp/acsp-fs-v2-source/summary.json
+            /tmp/acsp-fs-v2-source/source_availability.csv.gz
+          if-no-files-found: error

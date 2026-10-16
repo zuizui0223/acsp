@@ -1,0 +1,46 @@
+{
+  "schema_version": "cirsium-structural-graph-contract-v1",
+  "status": "PRE_PRIVATE_FRAME_PRE_FIELD_FROZEN",
+  "graph_id": "G_E_LOCAL_GRID_V1",
+  "topology": "regular candidate grid, Moore 8-neighbour adjacency at radius=1 cell",
+  "thresholding": "none; continuity uses local mean or robust local similarity rather than a field-tuned membership threshold",
+  "field_outcomes_used": false,
+  "human_access_used": false,
+  "roads_or_trails_used": false,
+  "permissions_used": false,
+  "normalization": {
+    "local_similarity": "candidate-frame median/IQR standardization of predeclared terrain features followed by exp(-mean neighbour Euclidean distance)",
+    "local_mean": "arithmetic mean over self plus existing Moore neighbours",
+    "rank": "deterministic within-frame percentile rank with no tuned cut point"
+  },
+  "families": {
+    "WETLAND_MOISTURE_STRUCTURE": {
+      "terrain_continuity_score_raw": "local mean of min(inverse-rank tpi300, inverse-rank slope100)"
+    },
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": {
+      "landform_continuity_score_raw": "local similarity of elev, slope100, tpi300, rough300",
+      "ridge_valley_continuity_score_raw": "local mean of two-sided TPI rank extremeness"
+    },
+    "OPEN_GRASSLAND_STRUCTURE": {
+      "fragment_continuity_score_raw": "local mean of wc_grass_frac_250m",
+      "terrain_context_score_raw": "local similarity of slope100, tpi300, rough300"
+    },
+    "COASTAL_ISLAND_STRUCTURE": {
+      "shore_landform_continuity_score_raw": "local mean of min(exp(-coast_distance_m/1000), max(grass_frac_250m,bare_frac_250m))",
+      "island_component_score_raw": "1 only for the predeclared target ecological_component_id; 0 otherwise",
+      "fail_closed": "target_component_id and ecological_component_id are both required"
+    },
+    "FOREST_EDGE_STRUCTURE": {
+      "terrain_component_score_raw": "local similarity of slope100, tpi300, rough300"
+    }
+  },
+  "coastline_source": {
+    "source_of_record": "Geospatial Information Authority of Japan Fundamental Geospatial Data, Basic Items, coastline",
+    "snapshot_rule": "Use a downloaded private snapshot frozen before patch generation and record source release date plus SHA-256 in the private candidate-frame manifest.",
+    "current_service_release_observed_before_freeze": "2026-07-31",
+    "authentication": "GSI download requires user registration/login; do not replace it silently with an older easy-to-download coastline product.",
+    "public_repository_exact_coast_geometry": false
+  },
+  "boundary": "G_E produces ecological continuity primitives only. G_F access/permission is applied later and cannot create ecological support.",
+  "next_gate": "Build the private 13-unit candidate frames with pinned GSI DEM, ESA WorldCover, GSI coastline where needed, then run the HMAC patch freeze before field outcomes."
+}

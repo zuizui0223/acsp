@@ -1,0 +1,162 @@
+{
+  "schema_version": "cirsium-disjoint-broad-frame-replication-preflight-result-v1",
+  "status": "HISTORICAL_ONLY_PREFLIGHT_COMPLETE",
+  "source_contract": "validation/cirsium_disjoint_broad_frame_replication_v1.json",
+  "recent_outcomes_fetched": false,
+  "validated_product_changed": false,
+  "unit_count": 3,
+  "units_frozen": 2,
+  "units_no_historical_anchor": 1,
+  "units_provider_failure": 0,
+  "units": [
+    {
+      "unit_id": "DBR01",
+      "species": "Cirsium spicatum",
+      "recent_outcomes_fetched": false,
+      "region_selection_uses_recent_outcomes": false,
+      "validated_product_changed": false,
+      "status": "NO_HISTORICAL_ANCHOR",
+      "gbif_historical_audit": {
+        "requested_name": "Cirsium spicatum",
+        "matched_scientific_name": "Cirsium spicatum (Maxim.) Matsum.",
+        "matched_usage_key": 3113112,
+        "match_confidence": 99,
+        "country": "JP",
+        "year_from": 2000,
+        "year_to": 2020,
+        "raw_records_seen": 46,
+        "normalized_records": 46,
+        "pages": 1,
+        "provider_id": "GBIF",
+        "coordinate_precision_filter_applied": false,
+        "field_outcomes_used": false
+      },
+      "strict_historical_records_countrywide": 0,
+      "allowed_region_training_diagnostics": [
+        {"region_id": "shikoku", "strict_historical_records": 0, "historical_population_clusters": 0},
+        {"region_id": "northern-kyushu", "strict_historical_records": 0, "historical_population_clusters": 0},
+        {"region_id": "southern-kyushu", "strict_historical_records": 0, "historical_population_clusters": 0}
+      ]
+    },
+    {
+      "unit_id": "DBR02",
+      "species": "Cirsium maritimum",
+      "recent_outcomes_fetched": false,
+      "region_selection_uses_recent_outcomes": false,
+      "validated_product_changed": false,
+      "status": "PREOUTCOME_CANDIDATE_UNIVERSES_FROZEN",
+      "gbif_historical_audit": {
+        "requested_name": "Cirsium maritimum",
+        "matched_scientific_name": "Cirsium maritimum Makino",
+        "matched_usage_key": 8108947,
+        "match_confidence": 97,
+        "country": "JP",
+        "year_from": 2000,
+        "year_to": 2020,
+        "raw_records_seen": 42,
+        "normalized_records": 42,
+        "pages": 1,
+        "provider_id": "GBIF",
+        "coordinate_precision_filter_applied": false,
+        "field_outcomes_used": false
+      },
+      "strict_historical_records_countrywide": 13,
+      "allowed_region_training_diagnostics": [
+        {"region_id": "kanto", "strict_historical_records": 0, "historical_population_clusters": 0},
+        {"region_id": "izu", "strict_historical_records": 0, "historical_population_clusters": 0},
+        {"region_id": "kinki", "strict_historical_records": 1, "historical_population_clusters": 1},
+        {"region_id": "shikoku", "strict_historical_records": 7, "historical_population_clusters": 7},
+        {"region_id": "northern-kyushu", "strict_historical_records": 0, "historical_population_clusters": 0},
+        {"region_id": "southern-kyushu", "strict_historical_records": 0, "historical_population_clusters": 0}
+      ],
+      "selected_region": {"region_id": "shikoku", "region_name": "Shikoku", "geographic_stratum": "west", "west": 132.5, "south": 32.7, "east": 134.5, "north": 34.5},
+      "selected_region_strict_historical_records": 7,
+      "historical_population_count": 7,
+      "historical_evidence_sha256": "12131bc8a43afdf9d53c60945343909d29f054a4d2da623e397e1e87c34ac055",
+      "population_anchor_sha256": "d05130dd282de2f568b5357aa4fa8b4771b859c4c0ad248fc11d534b2cea1b95",
+      "broad_frame_audit": {"candidate_count": 37043, "grid_spacing_m": 1000.0, "bounds_wgs84": [132.5, 32.7, 134.5, 34.5], "metric_crs": "EPSG:32653", "nominal_frame_area_km2": 37047.18026165187, "field_outcomes_used": false, "human_access_used": false},
+      "worldcover_point_audit": {
+        "provider_id": "ESA_WORLDCOVER",
+        "release_id": "2021_v200",
+        "candidate_rows_input": 37037,
+        "sampled_rows": 32838,
+        "land_rows_retained": 19491,
+        "water_rows_removed": 13347,
+        "invalid_or_nodata_rows_removed": 4199,
+        "source_tile_ids": ["N30E132", "N33E132"],
+        "source_urls": ["https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E132_Map.tif", "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N33E132_Map.tif"],
+        "sample_classification_sha256": "1dd2c422f87f4224f9ff9ddc92b3779b2c02047d62b217fe4b75ee9c43cdd964",
+        "field_outcomes_used": false,
+        "human_access_used": false,
+        "component_segmentation_used": false
+      },
+      "candidate_universes": {
+        "BROAD_LAND": {"candidate_count": 19491, "candidate_id_sha256": "7e3764b1cfe8c5673aec7ad3017506c8aec5967b3221ce410b7876aad0bfc903"},
+        "LOCAL_2KM_LAND": {"candidate_count": 23, "candidate_id_sha256": "4f999f9b98b44f411984277edb12ad6267ff3b599bff5a8f93e1c7fbfcf6a04a"},
+        "LOCAL_5KM_LAND": {"candidate_count": 148, "candidate_id_sha256": "f456542714d8f558f80e5c1d1c38dc8beebf242d092ce4ec579e1201f1f500c1"},
+        "LOCAL_10KM_LAND": {"candidate_count": 640, "candidate_id_sha256": "a8b2eaa6f2f54d3fa9791f2f697d3cb514ccf470b144eac20b6d7450a909355a"}
+      }
+    },
+    {
+      "unit_id": "DBR03",
+      "species": "Cirsium ishidzuchiense",
+      "recent_outcomes_fetched": false,
+      "region_selection_uses_recent_outcomes": false,
+      "validated_product_changed": false,
+      "status": "PREOUTCOME_CANDIDATE_UNIVERSES_FROZEN",
+      "gbif_historical_audit": {
+        "requested_name": "Cirsium ishidzuchiense",
+        "matched_scientific_name": "Cirsium ishizuchiense (Kitam.) Kadota",
+        "matched_usage_key": 3112962,
+        "match_confidence": 95,
+        "country": "JP",
+        "year_from": 2000,
+        "year_to": 2020,
+        "raw_records_seen": 26,
+        "normalized_records": 26,
+        "pages": 1,
+        "provider_id": "GBIF",
+        "coordinate_precision_filter_applied": false,
+        "field_outcomes_used": false
+      },
+      "strict_historical_records_countrywide": 4,
+      "allowed_region_training_diagnostics": [{"region_id": "shikoku", "strict_historical_records": 4, "historical_population_clusters": 4}],
+      "selected_region": {"region_id": "shikoku", "region_name": "Shikoku", "geographic_stratum": "west", "west": 132.5, "south": 32.7, "east": 134.5, "north": 34.5},
+      "selected_region_strict_historical_records": 4,
+      "historical_population_count": 4,
+      "historical_evidence_sha256": "6761be610f568a5423bb1068a3f35078021fb1049b0f255d3edbe92f1a7da165",
+      "population_anchor_sha256": "90565100054eb18df9d5373500c5299c7da77d86c0c57c4fcb829db10c177e62",
+      "broad_frame_audit": {"candidate_count": 37043, "grid_spacing_m": 1000.0, "bounds_wgs84": [132.5, 32.7, 134.5, 34.5], "metric_crs": "EPSG:32653", "nominal_frame_area_km2": 37047.18026165187, "field_outcomes_used": false, "human_access_used": false},
+      "worldcover_point_audit": {
+        "provider_id": "ESA_WORLDCOVER",
+        "release_id": "2021_v200",
+        "candidate_rows_input": 37041,
+        "sampled_rows": 32842,
+        "land_rows_retained": 19490,
+        "water_rows_removed": 13352,
+        "invalid_or_nodata_rows_removed": 4199,
+        "source_tile_ids": ["N30E132", "N33E132"],
+        "source_urls": ["https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E132_Map.tif", "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N33E132_Map.tif"],
+        "sample_classification_sha256": "18e55f9cf40f1d8998a9efcd65ea2b74edc2eee1ea1328d3180208899c61ca27",
+        "field_outcomes_used": false,
+        "human_access_used": false,
+        "component_segmentation_used": false
+      },
+      "candidate_universes": {
+        "BROAD_LAND": {"candidate_count": 19490, "candidate_id_sha256": "e664766147ecbac6e57b5740b992e1e88d9db0eee8e0d3dfb65a262dcb26c3f5"},
+        "LOCAL_2KM_LAND": {"candidate_count": 36, "candidate_id_sha256": "d7500a4c1d54ea000dffadef503568643a1360c56723c45c83ad70b5386ae70e"},
+        "LOCAL_5KM_LAND": {"candidate_count": 241, "candidate_id_sha256": "6363656e04dd39dc7f32375ed1b4dc2a9a79250ae5daffdd045016d0a51ae94a"},
+        "LOCAL_10KM_LAND": {"candidate_count": 949, "candidate_id_sha256": "e422e655aa63253ea3996bfc233790678f85b6498cbd2f25624d6b030265a293"}
+      }
+    }
+  ],
+  "workflow_run_id": 34008160599,
+  "workflow_head_sha": "b3b3f26938e271b82fc58d7255adbb69fa924148",
+  "artifact_id": 9981625463,
+  "artifact_digest": "sha256:e8d2b578e29939aa2944ee9aa91d37540f6821ddff8b550656babe5362103505",
+  "reproducibility_check": {
+    "previous_preflight_run_id": 34008077371,
+    "previous_preflight_artifact_id": 9981604924,
+    "historical_anchor_worldcover_and_candidate_hashes_identical": true
+  }
+}

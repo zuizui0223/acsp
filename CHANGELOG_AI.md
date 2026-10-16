@@ -1,36 +1,430 @@
 # AI Change Log
 
-## 2026-09-15 - Codex (OpenAI) - Standalone global product release candidate
+## 2026-10-16 - ChatGPT (OpenAI) - Topology site-choice first-stage identifiability and historic workload bound
 
 Changed files:
-- acsp/global_cli.py, acsp/global_country.py, acsp/global_country_frames.py, acsp/global_gbif.py
-- acsp/global_geometry.py, acsp/global_inputs.py, acsp/global_lattice.py, acsp/global_patches.py
-- acsp/data/acsp_geoboundaries_v6_adm0_coverage_v1.json, acsp/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
-- tests/test_global_country.py, tests/test_global_country_frames.py, tests/test_global_product.py, tests/test_global_release.py
-- validation/acsp_global_release_port_manifest_v1.json
-- validation/acsp_global_availability_parity_confirmation_result_v2.json, validation/acsp_global_availability_parity_heldout_results_v2.csv
-- research/predeclare_country_frame_observability_confirmation_historical_discovery.py
-- research/test_country_frame_observability_confirmation_historical_discovery.py, research/test_geographic_framing_confirmation_v1.py
-- pyproject.toml, .github/workflows/package-checks.yml
-- README.md, VALIDATED_PRODUCT_CONTRACT.md, RESEARCH_POSITIONING.md, docs/GLOBAL_RELEASE_PROVENANCE.md, CHANGELOG_AI.md
+- research/assess_cirsium_topology_site_first_stage.py
+- tests/test_cirsium_site_first_stage_feasibility.py
+- validation/cirsium_topology_site_selection_first_stage_feasibility_v1.json
+- examples/synthetic_topology_site_preview.json
+- paper/CIRSIUM_SITE_CHOICE_FIRST_STAGE_FEASIBILITY_SECONDARY.md
+- .github/workflows/cirsium-topology-first-stage-feasibility.yml
+- CHANGELOG_AI.md
 
 Summary:
-- Extract only the global species-name command from tested integration 0357b7e onto main, without experimental discovery or its research execution workflows.
-- Verify 41 extracted function/class definitions; changes are module/resource paths and retaining only the two needed GBIF functions. Preserve complete lattice, country planning and robust mechanics.
-- Record source/release hashes, copy canonical result provenance and link the full frozen research tree and prior failures.
-- Reuse only the verified PR210 Windows path serialization fix after reproducing four existing Windows research failures.
+- Resolve a methodological blind spot in the downstream topology-vs-geometry survey-site design: internal fragmentation does NOT ensure the two declared representative-cell selection rules choose different sites. The usable pre-field first-stage variable is the count and fraction q of assigned patches for which the two frozen representative sites differ.
+- Under matched observer/season/search process for identical sites and a site-only binary potential-outcome contrast, the absolute expected causal contrast is mathematically bounded by q; this is NOT a bound on realized noisy arm-success differences nor empirical improvement. q is unknown on actual new taxon-sector frames because no original private authenticated patch memberships exist.
+- Use only original byte-pinned public PR273 component-gap, PR274 trial-design and PR276 exposure-screen JSONs (three exact Git blob SHA-1s). The four already-exposed structural configurations contain 4168 internally disconnected patches, implying 6252 active person-hours IF every such original patch were hypothetically assigned one site and all visits occurred. This is no actual sample size, budget, permission-eligible frame or field prescription.
+- Add pure standard-library unauthenticated public-design-preview gate that checks assignment balance, 90 planned person-minutes per patch, total/candidate counts, site overlap, privacy and negative field-eligibility claims. The saved original public-only example is marked SYNTHETIC; never use its q as field evidence.
+- Test-first missing-feature failure observed. New 22 tests and prior 16 synthetic field-design tests passed (38/38), plus deterministic saved public-result regeneration and Python syntax checks. PR CI repeats against actual original GitHub source files, never opening prospective field outcomes.
 
 Features preserved:
-- All main functionality and Japanese patch membership; scientific constants, no-ranking/no-planner rules, explicit country no-substitution and distinct empty/abstention/technical-failure states.
+- Validated non-ranked Japanese 2.5% float32, 100 m support/1 km same-area complete-link candidate patches unchanged. Original three-arm fresh-SENTINEL, older Cirsium 4-unit method-development results and strict PR250 full-order gate untouched; original issue #253 CPU-cause question remains unresolved.
+- No independently frozen new cohort, no real field assignment, no source-private geometry/IDs, no occurrence confirmation or detection probability is inferred.
 
 Known risks / TODO:
-- Large-country performance remains unverified. Copied results are provenance, not a full scientific replay bundle. Immutable links retain complete research dependencies and earlier failures.
-- Main release CI must pass before merge. Draft PR184 remains separate.
+- Original 4-unit theoretical full-frame workload is NOT a recommended comprehensive survey and omits access, travel, phenology, attrition and logistical feasibility. CIR12/CIR13 are not independent structural-family replications. Binary potential outcome bound assumes identical expected detection for identical cells under standardized effort, not guaranteed by the real survey without outcome-blind process controls.
+- Real new-cohort site discordance q remains unknown. Only after exact private input source, permission and independent taxon-sector SHA pins are verified may a pre-outcome first-stage report and a subsequent survey schedule be frozen.
+
+## 2026-10-16 - ChatGPT (OpenAI) - Cirsium public registry exposure and field-readiness gate
+
+Changed files:
+- research/audit_cirsium_topology_cohort_exposure_screen.py
+- tests/test_cirsium_topology_cohort_exposure_screen.py
+- validation/cirsium_topology_new_cohort_public_exposure_screen_protocol_v1.json
+- paper/CIRSIUM_TOPOLOGY_COHORT_EXPOSURE_SCREEN_SECONDARY.md
+- .github/workflows/cirsium-topology-cohort-exposure-screen.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Cross-reference the original 13-row public aza3 Cirsium cohort with frozen private-source REQUIREMENT statuses, holdout preflight, three executed development pairs, one deferred pair, three-family smoke choices, opened CIR08 coastal development results, Japan38 original CIR01 public-outcome exclusion, and the newly merged topology method design. All ten inputs are pinned to exact original Git blob SHA-1.
+- Preserve the original 4 topology development-exposed units as excluded from the remaining 9-row public registry screen. Explicit prior method DEVELOPMENT use is documented for CIR01/CIR04/CIR07, and CIR08 has a separate opened coastal method development result. Five other names have no explicit use in these ten selected public sources; they are NOT certified untouched, independent, eligible or assigned.
+- CIR11 has a general spatial baseline only, not a declared source-backed structural family. All 9 public registry slots and private frames still say NOT_BUILT. Published "outcome_opened=false" for a planned field slot is NOT evidence that earlier public temporal outcomes, method development or genomic planning never existed.
+- Create a source-only fail-closed screening CLI and 17 local tests, including original byte-level Git SHA gates, executed-versus-nominated exposure, negative-evidence restraint, and original privacy/claim boundaries. GitHub CI runs exact original-source verification and exports aggregate public JSON only; no real DEM, private sector geometry, original site membership or field outcomes are opened.
+- Separately note aza3 genomic panel and its four-unit original SENTINEL range-sector readiness registry: neither is proof that the other nine public identities are field eligible.
+
+Features preserved:
+- Independently validated Japan robust patch core (2.5% float32 support, 1km same-area complete-link), original three-arm field protocol, original CIR02/06/12/13 topology results, trial design PR274, strict PR250 structural-order replay gate, and Issue253 numeric-source uncertainty remain unchanged.
+- No cohort was frozen and no field schedule created. This screen does not select a favorable taxon, sector, or field outcome.
+
+Known risk and next gate:
+- Absence of explicit method-use evidence in ten selected source files cannot establish absence elsewhere. Review other projects and exact disjoint sectors, find authorized non-private source proofs of candidate-patch availability, and freeze new identities BEFORE actual field allocation/outcomes.
+
+## 2026-10-16 - ChatGPT (OpenAI) - Separate topology-site comparison from frozen Cirsium field allocation
+
+Changed files:
+- research/design_cirsium_patch_connectivity_field_trial_v1.py
+- tests/test_cirsium_patch_connectivity_trial_design_v1.py
+- validation/coverage_then_fine_structure_patch_connectivity_field_trial_design_v1.json
+- paper/CIRSIUM_PATCH_CONNECTIVITY_FIELD_TRIAL_DESIGN.md
+- .github/workflows/cirsium-patch-connectivity-field-trial-design.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Convert the already-frozen four-unit Cirsium topology discrepancy into an explicitly untested, source-bound NEXT biological question: at equal field effort, can a within-patch largest-connected-fragment medoid better recover verified focal-species occurrence than an all-retained-cell geometry-only medoid?
+- Implement deterministic private design-preview-only algorithms on original 100-m integer grid cells; preserve 2.5% retained support and 1-km complete-link patch membership. Select only pre-outcome disconnected patches; keep identical counterfactual sites; balance hash-assigned patch counts and 3 x 30 min x 1 observer (90 person-minutes) planned efforts within cohort. Odd remainder stays a publicly counted pre-outcome balance reserve.
+- Report all unit statuses, including fewer than two eligible patches and connected-only units, and never convert these to biological non-detections. Export only aggregate counts/one full schedule digest, not candidate IDs or coordinates. No real private geometry, original patch sources or field outcomes were read by this new script.
+- Strictly separate this posthoc-method-design line from the existing three-arm frozen fresh-SENTINEL comparison. Development-exposed CIR02/CIR06/CIR12/CIR13 cannot be relabeled as new biological confirmations. A fresh disjoint taxa/sector registry, original private source SHA, access/permission vetting, pinned candidate assignment and schedule are prerequisites to any actual field comparison.
+- Standalone design and methodology description saved as a separate paper note, not appended to the independently validated robust-patch submission manuscript. Test-first initial missing implementation, then two pre-outcome accounting failures were observed and fixed; **16/16 local synthetic tests passed** with Python 3.13.5. Dedicated GitHub CI covers source contract and original app syntax on Python 3.11.
+
+Features preserved:
+- Main independently validated Japan non-ranked robust patches, 2.5% support fraction/float32, 1-km same-area complete-link membership, original original source/prioritization, three-arm fresh-SENTINEL pre-field endpoint and PERSON_MINUTES_V1, PR250 strict rank-replay block, and unresolved Issue253 CPU cause.
+
+Known risks / TODO:
+- This is a **method DESIGN ONLY**, not a frozen prospective biological cohort, a real field schedule, an ecological outcome, or a field-efficiency estimate. The proposal's conditional resolved-denominator estimand is not automatically causal if access/phenology/permissions/effort differ by arm.
+- Do not instantiate or expose a field schedule from synthetically valid IDs alone. The required private sector geometry, independently chosen disjoint cohort IDs, complete source SHA, access permissions and actual validated effort schedule remain absent. The public preview must remain non-authoritative until all prospective pins and safety checks exist.
+
+## 2026-10-15 - ChatGPT (OpenAI) - Interpret existing frozen Cirsium patch topology as two competing graph terms
+
+Changed files:
+- research/summarize_cirsium_frozen_patch_topology_gap.py
+- tests/test_cirsium_frozen_patch_topology_gap.py
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_topology_component_gap_v1.json
+- paper/CIRSIUM_PATCH_TOPOLOGY_COMPONENT_GAP_SECONDARY.md
+- .github/workflows/cirsium-frozen-patch-topology-gap.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Perform a source-locked, post hoc mathematical synthesis of the *previously frozen* PR256 four-unit 100-m retained-support topology result and PR247 original fixed 2.5%/1km patch denominator, without re-running GSI or claiming new ecological samples.
+- Define within-patch component total S = patch_count + extra internal components; net cross-patch unions J = S - global 8-neighbour mask components; signed gap G - P = extra internal components - net cross-patch unions. J is a graph component-count reduction, not the number of physical edges, accessible routes or field visits.
+- Preserve exact original 4-unit source/patch SHA identities, counts, source flags and selected-support continuity semantics; report the sign inversion between alpine / wetland (>0) and grassland (<0) as algorithmic topology only.
+- Add 11 local regression tests plus an original frozen-file/snapshot verification path; make a separate paper-ready secondary methods/results note rather than silently appending this research result to the independently validated robust-patch submission manuscript.
+- Original four public-safe PR256 artifacts 11532064437 / 11534155745 / 11534893251 / 11536552476 had their original GitHub zip and JSON SHA256 independently checked before this derivation.
+
+Features preserved:
+- Original PR250 full structural-order replay remains blocked. No retuning of GSI source, support fraction 2.5%, grid spacing 100 m, complete-link patch diameter 1 km, or the validated Japanese float32 non-ranked robust patch output.
+- No raw private cell IDs, coordinates, original field observations, prospective outcomes or exposure of occurrence points.
+
+Known risks / TODO:
+- Secondary arithmetic does not add independent biological evidence; four units represent three declared structural families, with CIR12/CIR13 sharing a grassland policy. Identical grassland aggregate metrics and *different* frozen membership digests do not establish equal spatial geometry or independent confirmation.
+- A disconnected selected support mask is neither disconnected habitat nor inaccessible terrain; the global connected-component count is not the number of required survey visits.
+- Any connectivity-aware change to membership requires a separate frozen method and independent held-out/field validation; this study does not repair numerical slope cause or strict PR250 full-order integrity.
+
+## 2026-10-15 - ChatGPT (OpenAI) - Preserve original native X86_V4-ineligible synthetic preflight result
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_result_v1.json
+- tests/test_cir02_numpy24_v4_native_result.py
+- .github/workflows/cir02-numpy24-x86v4-preflight.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Original already-predeclared native run 38493683528 completed successfully, original single worker job 115624489337, immutable public ZIP artifact 11863436251.
+- Independently downloaded artifact SHA256 c786d07816cc22290db0f72afa4d633a3d63919b78ab1de00aeeea5941b27839 and inner JSON SHA256 1014e36c0454a586afd165f02a5a44af78341c5c3a7703d8e563e13b4816c02e. Archive unmodified original JSON as a nested source record with a separate explicit provenance and claim ceiling.
+- Actual Python 3.11.17 and NumPy 2.4.6, identical binary and synthetic input SHAs and repeated outputs; both default and X86_V4-disabled children chose baseline(X86_V2). The original native classification NATIVE_WORKER_NOT_RUNNING_X86_V4 is a failed eligibility prerequisite, NOT an arctan causal null.
+- After the missing-result tests failed as intended, seven new regression tests pass locally; the dedicated CI now runs 11 original + 7 new tests = 18, then the original synthetic-only preflight. No new original GSI source was acquired.
+
+Features preserved:
+- The prior original PR271 AVX512F trial and PR270 source-bound 72-cell arctan divergence are untouched; validated Japan unranked float32 2.5% support / 1km same-area patches, original GSI source preference, private site records and PR250 strict original order gate are unaffected.
+
+Known risks / TODO:
+- Do not schedule repeated hosted CPU workers until a favorable X86_V4 processor appears. An explicitly qualified, reproducible CPU architecture would be required for a separately frozen actual-source causal experiment.
+- In absence of that prerequisite, the physical cause of historical different-worker CIR02 arctan outputs, absolute slope errors, changed rank counts, field efficiency and occupancy all remain unproven.
+
+## 2026-10-14 - ChatGPT (OpenAI) - Native NumPy 2.4 X86_V4 CPU-only feasibility preflight
+
+Changed files:
+- research/preflight_cir02_numpy_v4_dispatch.py
+- tests/test_cir02_numpy_v4_preflight.py
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_numpy24_x86v4_preflight_v1.json
+- .github/workflows/cir02-numpy24-x86v4-preflight.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Keep the concluded original AVX512F one-worker GSI attempt immutable and separately test the NumPy v2.4 documentation's X86_V4 feature-group flag.
+- In exact Python 3.11.17 / NumPy 2.4.6 on one GitHub runner, compare two original and two X86_V4-disabled fresh subprocesses on the same synthetic float32 input. Verify identical input and NumPy binary SHA, stable within-mode repeats, and actual selected arctan loop. Archive only aggregate synthetic hashes and dispatch metadata.
+- Do not condition the hardware feasibility verdict on a favorable arctan numerical difference. If no actual X86_V4 switch occurs, mark this CPU-only preflight ineligible/inconclusive, with no real GSI acquisition.
+- Eleven pure preflight tests failed because the module was initially absent; the local complete test then passed 11/11. Run native CI and archive original output before any separate actual GSI intervention.
+
+Features preserved:
+- No production source selection, GSI provider, frozen 177 DEM world, 72 original CIR02 cells, original nine/six stage receipts, validated 2.5% float32/1 km patches, field outcomes or strict original full-order PR250 gate changed.
+
+Known risks / TODO:
+- This result is only a native CPU flag feasibility diagnostic on synthetic arrays, not actual real-CIR02 causality, error magnitude, rank movement or biological validation.
+- A NEW frozen real-GSI protocol is required after a verified actual X86_V4 loop switch, not a retrospective change of the original AVX512F experiment.
+
+## 2026-10-14 - ChatGPT (OpenAI) - Archive non-informative original CIR02 AVX512F dispatch intervention
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_avx512f_result_v1.json
+- tests/test_cir02_same_worker_null_result.py
+- .github/workflows/cir02-same-worker-arctan.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Original one-worker real GSI workflow 38423447916 completed/success; original public-only artifact 11829764004 ZIP SHA256 117b711f158d58670dea973b5be9c13cb0f3bf23716e9adc4938dcecc09c2960 verified independently.
+- Confirmed exact frozen CIR02 candidate grid, 383460 source-complete rows, selected 177 DEM content/order and 3x24 original complete cells. The parent nine/six-stage original JSON matches historic successful B byte-for-byte.
+- Original and NPY_DISABLE_CPU_FEATURES=AVX512F child both selected X86_V4 float32 arctan loops; all sampled arctan/angle hashes equal. Two within-mode repeats were stable. Record outcome as DISPATCH_INTERVENTION_NOT_DISTINGUISHABLE_ON_THIS_WORKER, not no-effect or proven CPU causality.
+- New evidence-result contract and five fail-closed regression checks (all observed red on missing frozen result, then green when result was added). Include the five checks in regular PR CI; previous 79 unaffected.
+
+Features preserved:
+- The before-run v1 AVX512F protocol and original raw GitHub artifact remain immutable. No source/CPU settings are changed in the original workflow, nor validated Japan candidate patches, 2.5% float32 support, 1 km same-area merge, original Cirsium source preference, 177-chunk selection, field outcomes or original-order PR250 gate.
+
+Known risks / TODO:
+- NumPy v2.4 docs explicitly document X86_V4 rather than AVX512F for runtime feature suppression; a future follow-up requires a separately frozen protocol and CPU-only selected-loop preflight, not retrospective relabeling of this result.
+- Historical cross-worker arctan numeric difference remains source-verified but the CPU-dispatch causal mechanism has not yet been independently demonstrated on actual original GSI.
+
+## 2026-10-14 - ChatGPT (OpenAI) - Same-worker intervention on frozen CIR02 arctan magnitude input
+
+Changed files:
+- research/audit_cir02_same_worker_arctan.py
+- research/run_cir02_angle_operators.py
+- tests/test_cir02_same_worker_arctan.py
+- tests/test_cir02_same_worker_callback.py
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_same_worker_arctan_intervention_v1.json
+- .github/workflows/cir02-same-worker-arctan.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Freeze before new actual GSI execution the original CIR02 464,633/383,460/177 source world and 3 × 24 originally complete cell sample, with a post-observation same-worker CPU-dispatch mechanism test.
+- Following the unchanged original GSI attachment and nine/six-stage parent observer, retain only three private full-float32 gradient-magnitude arrays in temporary worker memory. Reuse original selected cell IDs/raster indices and require exact agreement with the original observer.
+- On the SAME worker, serialize those magnitudes privately, run two fresh NumPy processes without flags and two with NPY_DISABLE_CPU_FEATURES=AVX512F, verify identical private source array bytes, repeated hashes, original-parent equivalence and chosen float32 arctan loops. Record that the instrument explicitly changes CPU flags in the disabled subprocess (never mislabel it as unmodified). Save only aggregate SHA values, runtime/loop metadata and explicitly limited interpretation; securely discard private array files via temporary directory.
+- Provide separate manual-only original-source workflow with 90-minute diagnostic timeout, leaving the previous real-GSI 60-minute matrix unchanged. CI runs nine new synthetic/callback tests plus the original 70 regressions (79 total). Local 79/79 passed against exact previously verified diagnostic modules. Real GSI intervention not yet executed.
+
+Features preserved:
+- No validated Japan non-ranked candidate patches, float32 support convention, 2.5% consensus, 1 km same-area patch membership, source provider preference, historical full-GSI jobs, original nine-stage observer or field outcome was modified.
+- Existing original public source world and original rank-replay PR #250 gate remain unchanged.
+
+Known risks / TODO:
+- This is a controlled POST-OBSERVATION numerical mechanism experiment, not a new biological validation or a measurement of full 177-chunk error magnitudes.
+- Hosted worker may lack an AVX512 mode; if real selected arctan loop does not switch, record an inconclusive observation, not a new CPU claim. Do not retry for favorable hardware or field outcomes.
+- One-time original-source experimental execution launched as PR-sync workflow run 38423447916, same-worker job 115386654176. Temporary PR-only activation was promptly restored to byte-identical manual-only workflow blob 74bcc4b007af58cc3aeace7de18bc3f6edfdfff8; the running job is pinned to the earlier event. Empirical result still pending at this edit, no inference yet.
+- Before any causal interpretation, verify the original selected DEM content/order, parent hashes and same-worker dispatch metadata in the actual public artifact.
+
+## 2026-10-13 - ChatGPT (OpenAI) - Record complete source-identical CIR02 six-operator real-GSI comparison
+
+Changed files:
+- validation/coverage_then_fine_structure_fresh_sentinel_v2_cir02_real_angle_operator_pair_result_v1.json
+- tests/test_cir02_angle_operator_pair_result.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Both original supplementary A and B operator jobs now have original public-safe receipts after one unchanged A source-world retry. Archived first failed A remains recorded. Provenance consists of two distinct GitHub jobs in one workflow, not two independent workflow IDs.
+- Verify exact original 464,633-cell candidate frame, 383,460 GSI source-complete cells, 177 selected DEM contents/order, 3 chunks × 24 original complete cells, source-state membership, parent observer and gradient hashes, and public-only artifact SHA values.
+- The first differing sampled elementary angle operation is arctan_radians at exact and decimal-8 precision; dx², dy², sum and sqrt agree exactly; sampled decimal-2 hashes all agree. Parent nine-stage mode of A matches historical second run; B matches historical first run.
+- NumPy 2.4.6 and its binary extension SHA match, but selected float32 arctan loop is baseline(X86_V2) for A and X86_V4 for B. This is an observed covariate across different workers and regions, NOT a controlled within-worker causal experiment.
+- Add five frozen-outcome regression tests with RED missing-result failure followed by local 70/70 GREEN including 31 angle, 11 source-world and 23 original nine-stage comparison tests; run all 70 in regular PR CI.
+
+Features preserved:
+- No production code, original nine-stage observer, GSI source selection, CPU flags, raw geographic data, field outcomes, float32 2.5% support or 1-km patches changed. PR #250 strict original structural order and draft field-selector remain gated.
+
+Known risks / TODO:
+- This is post-observation exploratory numerical evidence on 72 original CIR02 cells, not a preregistered biological replication. No actual slope error magnitude, full 177-chunk numerical agreement, cause-specific CPU proof, field efficiency, species occurrence or occupancy result established.
+- Next hypothesis test must hold the original private DEM, same cells and worker fixed and intervene on only the NumPy float32 arctan dispatch, without leaking source mosaics or changing the original validated product.
+
+## 2026-10-13 - ChatGPT (OpenAI) - Classify frozen CIR02 source-world failures without disclosing input values
+
+Changed files:
+- research/run_cir02_angle_operators.py
+- tests/test_sourceworld_gate_detail.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Preserve the exact original fail-closed candidate, source-complete and 177 selected-DEM content/count checks. Name only which of their four public safety gates failed; never disclose actual DEM hashes, coordinates, cell IDs or values in error text.
+- TDD verified 11 new regressions (including missing counts and two simultaneous failures): all 11 failed before implementation because the gate helper did not exist, then 42/42 local tests passed after implementing the smallest helper. A mistaken two-test assertion about gate-name spelling was corrected and the entire suite rerun green.
+- Extend ordinary PR CI from 54 to 65 tests (31 angle + 11 source gate + 23 original pair comparator); original-source acquisition remains manual-only.
+
+Features preserved:
+- No original terrain source sampling, parent nine-stage recorder, DEM priority, numerical CPU flags, 2.5% consensus, 1-km patches, validated Japan product, or historical public receipts are changed.
+
+Known risks / TODO:
+- This is a diagnostic improvement prompted by failed A job 114711688727; it is NOT a fix for inconsistent upstream GSI source content. The one predeclared unchanged retry 115317402801 was already running on the original workflow SHA when these files were committed.
+- Do not rerun selectively for favorable numerical results; if source conditions fail again, diagnose the original source world separately. No six-operator paired real conclusion until two independent source-identical instrumented receipts exist.
+
+## 2026-10-12 - ChatGPT (OpenAI) - Supplementary CIR02 angle-operator diagnosis
+
+Changed files:
+- research/cir02_angle_operators.py
+- research/run_cir02_angle_operators.py
+- tests/test_cir02_angle_operators.py
+- .github/workflows/cir02-angle-operators-diagnostic.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Add a standalone read-only six-operator observer after the unchanged parent nine-stage diagnosis. Preserve full float32 array arithmetic before the original 3x24 sample, and bind sampled source/gradient/angle commitments to the parent.
+- Record actual NumPy float32 loop-dispatch metadata and explicitly mark unreported functions; do not infer baseline paths or alter CPU flags.
+- Add a manual-only two-runner supplementary diagnostic with declared original runtime versions. A normal PR executes tests only, not real GSI acquisition.
+
+Features preserved:
+- No existing scientific module, source priority, primary grid, 2.5% support, 1-km patch membership, old comparison protocol, field outcome, or validated Japan path is changed.
+
+Known risks / TODO:
+- Designed after the completed angle-stage discrepancy, not an untouched preregistration. New real GSI operator capture has not yet run. Local tests exercise the new recorder and synthetic controls, not the entire upstream integration.
+- Full original source acquisition, end-to-end parent callback parity, native historical-runtime execution, and independent-runner provenance remain required before scientific use. The observed first operation is not proof of CPU causality.
+- The manual workflow has a separate 90-minute diagnostic budget; existing 60-minute workflows remain unmodified. No new production or field-selector claim.
+- Trial execution: temporarily allowed the original-source diagnostic on this PR's own synchronize event, recorded queued jobs A/B under workflow 38219363976, and immediately restored the final workflow file to manual-only before any additional edits. This trial is an exploratory post-observation experiment, not an automatic production workflow and not proof of a completed real-GSI result.
+
+## 2026-10-11 - ChatGPT (OpenAI) - Fail closed on paired CIR02 original denominators
+
+Changed files:
+- research/compare_cirsium_fresh_sentinel_v2_cir02_real_slope_stages.py
+- tests/test_cirsium_fresh_sentinel_v2_cir02_real_slope_stages_pair.py
+- CHANGELOG_AI.md
+
+Summary:
+- Strengthen the already preregistered public-only real-GSI stage comparator by requiring *each* CIR02 receipt to match the original PR #247 primary candidate and GSI source-complete counts, not merely match another independent run.
+- Cover matching-but-drifted runs, one-sided drift, and omitted counts with fail-closed regressions.
+- Additionally require both runs' selected full DEM-content sequence to equal the already frozen PR #266 CIR02 historical source identity (not only each other); compare numeric stages only in that original source world. Add matched-but-new-source and one-sided-source-change regression tests.
+- Require every original CIR02 receipt to match the independently reproduced PR #241 exact private candidate-grid SHA, not merely the original count. Prevent two matching-but-changed grids from being interpreted as a replay; add changed/missing-grid regression tests.
+- Reuse preexisting frozen denominator fields; do not inspect field outcomes or change real DEM sampling, source preference, 2.5% support, 1-km patches, or the validated Japan product.
+
+Claim boundary / follow-up:
+- This is an input-integrity guard, not the completed historical CIR02 slope cause analysis.
+- Original real-GSI PR #267 stays independently gated on its four-unit CI; two successful source-complete stage-probed receipts are still required before a numerical-stage conclusion.
+
+## 2026-09-15 - Codex (OpenAI) - Isolate global entry imports from experimental discovery
+
+Changed files:
+- acsp/discovery/__init__.py
+- acsp/discovery/providers/__init__.py
+- tests/test_global_import_boundary.py
+- .github/workflows/package-checks.yml
+- VALIDATED_PRODUCT_CONTRACT.md
+- CHANGELOG_AI.md
+
+Summary:
+- Resolve existing discovery/provider exports lazily, retaining their names and original function/class identities.
+- Global command import now needs only historical country framing and GBIF within discovery. Experimental structural, ranking and WorldCover modules are loaded only when explicitly used.
+- Add blocked-import, export-identity, wildcard-import and isolated-wheel checks.
+
+Features preserved:
+- All 66 discovery and 15 provider public exports, version/status constants, CLI behavior, scientific function bodies, candidate membership and every frozen artifact.
+
+Known risks / TODO:
+- Import errors for optional features now occur when those features are first used. This does not yet split the distribution or authorize merging draft research PR184 into main.
+- Main release selection still needs a separate source/provenance audit; post-change CI must pass before integration.
 
 Validation:
-- 40 tests/ cases passed, including offline country/patch checks and source-hash/import isolation gates. Root unittest discovery and wheel build passed.
-- All 221 main research regression cases passed after the exact PR210 repair. App/new modules compile. CI runs pytest to include function-style tests as well as unittest cases.
-- Standalone installed wheel live automatic Ficus microcarpa run selected TW and produced 85 patches; output CSV was byte-identical to the development wheel run. This is operational parity, not new scientific confirmation.
+- 295 tests/ cases and 250 research unittest cases passed, including exact global patch parity and all lazy export checks.
+- Global entry loads 5 discovery modules versus 23 before this change; all 66 + 15 public export names are preserved.
+- App/module compilation, wheel build and whitespace checks passed. Isolated installed-wheel dependency assertions added to CI.
+
+## 2026-09-15 - Codex (OpenAI) - Species-name global candidate-patch command
+
+Changed files:
+- acsp/global_cli.py
+- acsp/global_geometry.py
+- acsp/global_inputs.py
+- acsp/global_lattice.py
+- acsp/global_patches.py
+- tests/test_global_product.py
+- pyproject.toml
+- .github/workflows/package-checks.yml
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- RESEARCH_POSITIONING.md
+- CHANGELOG_AI.md
+
+Summary:
+- Connect the historical country planner to the existing pinned country geometry, complete regional lattice, terrain inputs and fixed robust patch core through acsp-global-patches.
+- Preserve the research function bodies and verify exact lattice/terrain/patch parity. Reject malformed occurrence transport before the unchanged scientific input body; do not classify malformed responses as empty evidence.
+- Record country planning, progress, output hash and scientific scope. Distinguish normal empty output, insufficient usable evidence and technical failures. Refuse existing output directories.
+- Keep global and explicit-country validation labels separate from the Japanese confirmation label.
+
+Features preserved:
+- Japan entry points and patch membership, legacy app functions, every frozen research artifact, provider pinning, historical-only inputs, complete geometry-selected lattice, fixed 2.5% rule and all prior failures/claim ceilings.
+
+Known risks / TODO:
+- One eligible country is selected, not all countries worldwide. Arbitrary explicit-country applications are not independently confirmed.
+- Large-country time/memory performance is not yet verified for this command. No tile omission or density reduction is allowed. Live provider changes can alter operational outputs.
+- Local installed-wheel checks reuse installed dependencies; truly isolated wheel tests run in Linux CI. CI integration remains pending at submission.
+
+Validation:
+- Focused parity and failure-state tests cover nonempty patches, normal empty output, explicit-country labels, malformed transport, abstention and no-overwrite behavior.
+- Research regression: 250 cases passed. Product tests/: 292 cases passed, including 11 global adapter tests.
+- Live explicit SG / Ficus microcarpa execution completed: 6 historical rows, 2 tiles / 1600 geometry points, 1575 complete terrain points, 6 prototypes, ROBUST_EMPTY / 0 patches. CSV row count and SHA-256 match summary. This was an operational smoke, not a new scientific confirmation.
+- Wheel build and outside-checkout import/help checks passed; compile and whitespace checks passed.
+
+## 2026-09-15 - Codex (OpenAI) - Species-name historical country planning entry
+
+Changed files:
+- .github/workflows/package-checks.yml
+- acsp/discovery/country_entry.py
+- acsp/discovery/cli.py
+- acsp/discovery/data/acsp_geoboundaries_v6_adm0_coverage_v1.json
+- acsp/discovery/data/iso3166_alpha2_to_alpha3_pycountry_24_6_1.json
+- pyproject.toml
+- tests/test_country_entry.py
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- CHANGELOG_AI.md
+
+Summary:
+- Add plan-country to resolve a scientific species name and return a historical-only country plan, without fetching geometry, individual occurrences, terrain, patches or heldout outcomes.
+- Package exact copies of the frozen coverage and ISO snapshots; check their semantic fingerprints before use, without relying on research files in an installed wheel.
+- Reuse the country planner with the confirmed minimum count 5 and tie-break seed 2026090701. Explicit targets cannot be substituted.
+- Preserve provider errors as errors; only verified empty evidence becomes NO_HISTORICAL_COUNTRY. Do not overwrite existing output files.
+
+Features preserved:
+- All existing commands, Japan candidate membership, frozen scientific artifacts, no-substitution policy, experimental discovery status and scientific claim ceilings.
+
+Known risks / TODO:
+- This is the country-planning first stage, not a species-only global candidate-patch generator. Geometry, terrain and exact patch generation still require integration of the existing staged procedure.
+- Arbitrary explicit-country applications are not separately confirmed. Live provider changes can alter country counts; the complete counts and query parameters are recorded in each plan.
+
+Validation:
+- 281 tests/ cases and 250 research unittest cases pass; compilation and whitespace checks pass.
+- Built and installed a wheel outside the source checkout; verified both pinned resource files are usable without research files. Added the same offline resource check to isolated-wheel CI.
+- Live GBIF smoke for Castanopsis sieboldii returned JP in automatic mode; installed-wheel explicit CN mode retained CN and returned INSUFFICIENT_HISTORICAL_EVIDENCE (2 records), without substitution. No candidate or heldout data were opened.
+
+## 2026-09-15 - Codex (OpenAI) - Portable frozen identity-path comparisons
+
+Changed files:
+- research/predeclare_country_frame_observability_confirmation_historical_discovery.py
+- research/test_country_frame_observability_confirmation_historical_discovery.py
+- research/test_geographic_framing_confirmation_v1.py
+- CHANGELOG_AI.md
+
+Summary:
+- Compare repository-relative identity paths using POSIX serialization, matching the unchanged frozen protocol on Windows and Linux.
+- Correct the geographic-framing test's path serialization without changing its identity hashes or exclusion assertions.
+- Add host-independent Windows-path coverage and rejection tests for different identity paths and altered identity bytes.
+
+Features preserved:
+- Exact frozen artifact bytes, SHA256 and protocol fingerprints; consumed-identity exclusions; heldout isolation; Japanese robust core; global adapter and experimental discovery semantics.
+
+Known risks / TODO:
+- Exact-byte artifact checks still require a checkout preserving committed LF bytes. This fix deliberately does not normalize frozen content or accept changed hashes.
+- No live research rerun or new scientific claim is part of this repair.
+
+Validation:
+- Reproduced the previous three exposure-binding errors and one geographic-framing failure on Windows before the fix.
+- All 250 research unittest cases and all 271 tests/ cases pass on Windows in an LF-preserving checkout; focused 12 cases pass, including the three new regressions.
+- App compilation and diff whitespace checks pass. No validation/, paper/, or acsp/ files changed.
+
+## 2026-09-15 - Codex (OpenAI) - Align product entry points with confirmed adapter evidence
+
+Changed files:
+- .github/workflows/package-checks.yml
+- .github/workflows/discovery-package-checks.yml
+- README.md
+- VALIDATED_PRODUCT_CONTRACT.md
+- RESEARCH_POSITIONING.md
+- docs/DISCOVERY_QUICKSTART.md
+- acsp/discovery/country_frames.py
+- tests/test_discovery_country_frames.py
+- tests/test_global_adapter_result_integrity.py
+- CHANGELOG_AI.md
+
+Summary:
+- Documented the existing Japanese command, custom extent, staged global adapter, and experimental discovery entry points.
+- Recorded the separate automatic-adapter confirmation scope and its conditional 35/44 evaluability denominator; retained earlier failures and manuscript closure as historical evidence.
+- Fixed explicit-country planning with a streamed provider inventory: missing historical records in a supported country now retain the insufficient-evidence state rather than becoming a false provider-unsupported state.
+- Added offline result integrity checks for the frozen artifact hash, 48 identities, prior-cohort disjointness, conditional denominators, valid empty output, effect/bootstrap recomputation, and information-boundary flags.
+- Fixed package CI's missing pytest dependency through the declared dev extra and ran tests/ with pytest so function-style tests execute as well as unittest cases. Updated the discovery import check to its existing 0.8.0-development API version.
+
+Features preserved:
+- Japanese species-only behavior, all frozen scientific methods/results, explicit-country no-substitution, existing CLI commands, and experimental discovery ranking semantics.
+
+Validation:
+- Four frozen-result audit tests and seven country-planning tests passed; app compilation passed.
+- All 271 tests/ checks passed in a Git-LF checkout, including the previously unexecuted pytest functions. The Japanese product/import regression passed 14 tests; the discovery import/CLI checks passed.
+
+Known risks / TODO:
+- The confirmed global end-to-end procedure still uses staged research execution; a species-only global command is not yet available.
+- PR #184 includes other experimental work and scientific workflow triggers; this focused change alone does not establish that the whole PR is ready to merge.
 
 ## 2026-08-31 - Codex (OpenAI) - Make submission alignment guard executable in ordinary CI
 

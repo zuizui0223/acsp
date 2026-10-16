@@ -1,0 +1,69 @@
+name: Fresh-SENTINEL v2 local refinement size audit
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_local_refinement_size.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_local_refinement_size_audit_v1.json"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_local_refinement_size_audit_result_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-local-refinement-size-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Download exact frozen source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/acsp-local-refine/terrain /tmp/acsp-local-refine/worldcover
+          gh run download 36071510382             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-full-coarse-terrain             --dir /tmp/acsp-local-refine/terrain
+          gh run download 36121342866             --repo "${{ github.repository }}"             --name cirsium-fresh-sentinel-v2-worldcover-pointcog-repair             --dir /tmp/acsp-local-refine/worldcover
+      - name: Rebuild frozen coarse evidence orders privately
+        run: |
+          python research/build_cirsium_fresh_sentinel_v2_coarse_evidence_orders.py             --terrain-csv-gz /tmp/acsp-local-refine/terrain/full_terrain.csv.gz             --worldcover-csv-gz /tmp/acsp-local-refine/worldcover/full_worldcover_repair.csv.gz             --out-dir /tmp/acsp-local-refine/orders
+      - name: Audit local refinement size
+        run: |
+          python research/audit_cirsium_fresh_sentinel_v2_local_refinement_size.py             --order CIR02=/tmp/acsp-local-refine/orders/CIR02_coarse_evidence_order.csv.gz             --order CIR06=/tmp/acsp-local-refine/orders/CIR06_coarse_evidence_order.csv.gz             --order CIR12=/tmp/acsp-local-refine/orders/CIR12_coarse_evidence_order.csv.gz             --order CIR13=/tmp/acsp-local-refine/orders/CIR13_coarse_evidence_order.csv.gz             --out-json /tmp/acsp-local-refine/summary.json
+      - name: Guard geometry-only audit
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/acsp-local-refine/summary.json').read_text())
+          assert x['status']=='LOCAL_REFINEMENT_SIZE_AUDIT_COMPLETE_PRE_OUTCOME'
+          assert x['support_fraction']==0.025
+          assert x['grid_spacing_m']==100.0
+          assert x['primary_radius_km']==2.0
+          assert x['sensitivity_radius_km']==5.0
+          assert x['source_indeterminate_included'] is False
+          assert x['fine_ecological_score_computed'] is False
+          assert x['patch_count_computed'] is False
+          assert x['recovery_computed'] is False
+          assert x['field_outcomes_opened'] is False
+          assert x['promotion_gate'] is False
+          for unit,r in x['unit_results'].items():
+              assert r['retained_coarse_center_count'] > 0
+              assert r['radius_results']['2km']['unioned_100m_cell_count'] > 0
+              assert r['radius_results']['5km']['unioned_100m_cell_count'] >= r['radius_results']['2km']['unioned_100m_cell_count']
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-local-refinement-size-audit
+          path: /tmp/acsp-local-refine/summary.json
+          if-no-files-found: error

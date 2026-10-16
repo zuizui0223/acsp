@@ -1,0 +1,27 @@
+name: Cirsium disconnected-patch field-trial design smoke
+on:
+  pull_request:
+    paths:
+      - 'research/design_cirsium_patch_connectivity_field_trial_v1.py'
+      - 'tests/test_cirsium_patch_connectivity_trial_design_v1.py'
+      - 'validation/coverage_then_fine_structure_patch_connectivity_field_trial_design_v1.json'
+      - 'paper/CIRSIUM_PATCH_CONNECTIVITY_FIELD_TRIAL_DESIGN.md'
+      - '.github/workflows/cirsium-patch-connectivity-field-trial-design.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-design-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest
+      - name: Verify future-trial gates without private geometry or outcomes
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest -q tests/test_cirsium_patch_connectivity_trial_design_v1.py
+          python -m py_compile research/design_cirsium_patch_connectivity_field_trial_v1.py gbif_fieldmap_builder_app.py

@@ -1,0 +1,50 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-cir02-real-slope-stage-pair-v1",
+  "status": "FROZEN_BEFORE_TWO_INDEPENDENT_REAL_CIR02_STAGE_RUNS",
+  "as_of_date": "2026-10-11",
+  "source_issue": 253,
+  "upstream_stage_pr": 267,
+  "required_taxon": "CIR02",
+  "source_run_count": 2,
+  "require_distinct_successful_original_workflow_runs": true,
+  "require_complete_source_selected_CIR02_receipts": true,
+  "required_chunk_count": 177,
+  "required_probed_chunks": 3,
+  "required_sampled_cells": 72,
+  "required_stage_order": [
+    "resampled_elevation",
+    "local_mean100",
+    "filled_elevation",
+    "gradient_dx",
+    "gradient_dy",
+    "instantaneous_slope",
+    "slope_valid_support",
+    "slope_smoothing_numerator",
+    "slope100"
+  ],
+  "decimal_precisions": [
+    "2",
+    "8"
+  ],
+  "input_identity_gates": [
+    "private_grid_sha256",
+    "source_state_digest_sha256",
+    "source_complete_rows",
+    "selected_mosaic_content_sequence_sha256",
+    "sampled_mosaics_content_order_sha256",
+    "original_frozen_patch_sha256"
+  ],
+  "interpretation": {
+    "require_selected_dem_content_equality_before_any_numeric_stage_comparison": true,
+    "require_candidate_grid_and_source_complete_membership_equality": true,
+    "full_177_chunk_slope_replay_conclusion_authorized": false,
+    "first_different_stage_only_applies_to_72_preregistered_original_complete_cells": true,
+    "real_slope_cause_identified": false,
+    "selected_source_provider_priority_changed": false,
+    "source_indeterminate_recoded_as_absence": false,
+    "private_coordinate_or_candidate_id_export": false,
+    "prospective_field_outcomes_opened": false,
+    "field_selector_or_habitat_validated": false
+  },
+  "next_gate": "Pair two independent full GSI workflow run IDs after stage probe is present in each CIR02 original receipt, compare first divergent exact/rounded slope stage only when all selected-DEM and original-grid identities match."
+}

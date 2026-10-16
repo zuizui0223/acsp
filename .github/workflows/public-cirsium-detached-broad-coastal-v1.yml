@@ -1,0 +1,81 @@
+name: Public Cirsium detached broad coastal v1
+
+on:
+  pull_request:
+    paths:
+      - "acsp/discovery/broad_frames.py"
+      - "acsp/discovery/providers/coastal_worldcover.py"
+      - "acsp/discovery/providers/worldcover.py"
+      - "acsp/discovery/providers/worldcover_land.py"
+      - "research/run_public_cirsium_detached_broad_coastal_v1.py"
+      - "validation/public_cirsium_detached_broad_coastal_development_v1.json"
+      - "validation/public_cirsium_detached_broad_coastal_component_reachability_addendum_v1.json"
+      - "validation/public_cirsium_portable_coastal_smoke_result_v1.json"
+      - ".github/workflows/public-cirsium-detached-broad-coastal-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detached-broad:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Run frozen DETACHED_BROAD development
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/public-cirsium-detached-broad-coastal-v1
+          python research/run_public_cirsium_detached_broad_coastal_v1.py \
+            --out-dir /tmp/public-cirsium-detached-broad-coastal-v1
+      - name: Guard aggregate public output
+        run: |
+          test ! -e /tmp/public-cirsium-detached-broad-coastal-v1/private_worldcover_crop.tif
+          if head -n 1 /tmp/public-cirsium-detached-broad-coastal-v1/detached_broad_prefix_curve.csv | grep -E '(^|,)(latitude|longitude|decimalLatitude|decimalLongitude|occurrence_id|gbif_key)(,|$)'; then
+            echo 'coordinate or occurrence identifier leaked into detached public artifact'
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('/tmp/public-cirsium-detached-broad-coastal-v1')
+          summary = json.loads((root / 'summary.json').read_text())
+          table = pd.read_csv(root / 'detached_broad_prefix_curve.csv')
+          assert summary['status'] == 'DEVELOPMENT_ONLY_DETACHED_BROAD_COMPLETE'
+          assert summary['cohort_unit_id'] == 'CIR08'
+          assert summary['validated_product_changed'] is False
+          assert summary['new_confirmation_claim'] is False
+          assert summary['retuning_used'] is False
+          assert summary['novel_recent_population_clusters'] == 15
+          assert summary['local_reconstruction']['prior_frozen_1km_recovered'] == 1
+          assert summary['component_reachability_is_post_opened_descriptive'] is True
+          assert set(summary['component_reachability']) == {'0.25', '0.5', '1.0'}
+          expected_component_frames = {
+              'ANCHORED_COMPONENT_FULL', 'OTHER_COMPONENTS_FULL',
+              'DETACHED_SAME_COMPONENT', 'DETACHED_OTHER_COMPONENT',
+              'BROAD_LAND_UNION'
+          }
+          for radius, payload in summary['component_reachability'].items():
+              assert set(payload) == expected_component_frames, (radius, payload.keys())
+          assert len(table) == 7 * 3
+          assert set(table['recovery_radius_km']) == {0.25, 0.5, 1.0}
+          assert set(table['prefix_fraction']) == {0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1.0}
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-cirsium-detached-broad-coastal-v1
+          path: |
+            /tmp/public-cirsium-detached-broad-coastal-v1/detached_broad_prefix_curve.csv
+            /tmp/public-cirsium-detached-broad-coastal-v1/summary.json
+          if-no-files-found: error
+          retention-days: 90

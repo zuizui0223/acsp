@@ -1,0 +1,114 @@
+{
+  "schema_version": "cirsium-structural-population-holdout-development-terminal-v1",
+  "status": "DEVELOPMENT_TERMINAL_DO_NOT_NOMINATE_COARSE_STRUCTURAL_SELECTOR",
+  "source_issue": 192,
+  "source_pr": 184,
+  "scientific_contract": "validation/cirsium_structural_population_holdout_development_v1.json",
+  "validated_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "new_confirmation_claim": false,
+  "field_outcomes_used": false,
+  "execution_receipts": {
+    "first_partial_run": {
+      "run_id": 34696675904,
+      "artifact_id": 10299905947,
+      "artifact_digest": "sha256:8e5a783057d1a92a23b5f191a27ba9ebf10d9d756940bb4ec868f474f081e974",
+      "executed_pairs": 1,
+      "executed_folds": 4,
+      "provider_failures": ["CIR04__chubu-mountains", "CIR07__tohoku"],
+      "failure_class": "transient GBIF HTTP 503 before outcome scoring"
+    },
+    "plain_repeat_after_provider_recovery": {
+      "run_id": 34759881326,
+      "artifact_id": 10319605851,
+      "artifact_digest": "sha256:aa1d2be409f4c9cd97ab4010dc75daad499273afbe4cfa368775f739a053b793",
+      "head_sha": "c042cc20737073d9d3ef8c4c13023dcdfca451db"
+    },
+    "transport_only_recovery": {
+      "run_id": 34759935163,
+      "artifact_id": 10319580867,
+      "artifact_digest": "sha256:496166c1d47145970fe3a8fd904c3250ddee11353c1694bbf2e95827c8344977",
+      "head_sha": "8668c8ab234eb8cfc5a7bdebc84ebfdddfabc83a",
+      "scientific_semantics_changed": false,
+      "retry_scope": "identical GBIF request only on HTTP 429/5xx; max five attempts; fixed deterministic backoff",
+      "observed_retry_count_in_successful_run": 0
+    }
+  },
+  "executed_scope": {
+    "executed_pairs": 3,
+    "executed_total_folds": 12,
+    "expected_total_folds": 12,
+    "source_provider_failure_pairs": 0,
+    "population_count_drift_pairs": 0,
+    "full_frame_reachability_5km": 1.0,
+    "explicitly_deferred_pair": {
+      "pair_id": "CIR08__ryukyu",
+      "species": "Cirsium brevicaule",
+      "family": "COASTAL_ISLAND_STRUCTURE",
+      "reason": "v1 broad fixed-region sparse source semantics do not reproduce the frozen native WorldCover land-component meaning; do not substitute a post-opened coarse component definition"
+    }
+  },
+  "scale_boundary": {
+    "candidate_grid_spacing_m": 5000,
+    "structural_graph_radius_cells": 1,
+    "interpretation": "This benchmark is a coarse regional structural stress test. It does not validate or falsify the existing approximately 100-m-scale local structural-continuity execution path."
+  },
+  "primary_5km_all_fold_all_prefix": {
+    "structural_mean_recovery": 0.3333333333333333,
+    "nearest_mean_recovery": 0.7619047619047619,
+    "spatial_balance_mean_recovery": 0.2976190476190476,
+    "structural_minus_nearest": -0.42857142857142855,
+    "structural_minus_spatial_balance": 0.03571428571428571,
+    "structural_vs_nearest_win_tie_loss": {"win": 2, "tie": 44, "loss": 38},
+    "structural_vs_spatial_balance_win_tie_loss": {"win": 10, "tie": 67, "loss": 7}
+  },
+  "sensitivity_10km_all_fold_all_prefix": {
+    "structural_mean_recovery": 0.5119047619047619,
+    "nearest_mean_recovery": 0.7976190476190477,
+    "spatial_balance_mean_recovery": 0.5833333333333334,
+    "structural_minus_nearest": -0.2857142857142857,
+    "structural_minus_spatial_balance": -0.07142857142857142,
+    "structural_vs_nearest_win_tie_loss": {"win": 7, "tie": 46, "loss": 31},
+    "structural_vs_spatial_balance_win_tie_loss": {"win": 5, "tie": 68, "loss": 11}
+  },
+  "family_primary_5km": {
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": {
+      "folds": 4,
+      "structural_mean_recovery": 0.21428571428571427,
+      "nearest_mean_recovery": 1.0,
+      "spatial_balance_mean_recovery": 0.21428571428571427
+    },
+    "OPEN_GRASSLAND_STRUCTURE": {
+      "folds": 4,
+      "structural_mean_recovery": 0.39285714285714285,
+      "nearest_mean_recovery": 0.6785714285714286,
+      "spatial_balance_mean_recovery": 0.32142857142857145
+    },
+    "WETLAND_MOISTURE_STRUCTURE": {
+      "folds": 4,
+      "structural_mean_recovery": 0.39285714285714285,
+      "nearest_mean_recovery": 0.6071428571428571,
+      "spatial_balance_mean_recovery": 0.35714285714285715
+    }
+  },
+  "repeatability_audit": {
+    "parent_partial_CIR01_recovery_rows_identical_to_transport_recovery": true,
+    "plain_repeat_vs_transport_recovery_all_168_recovery_boolean_cells_identical": true,
+    "plain_repeat_vs_transport_recovery_primary_and_sensitivity_aggregate_metrics_identical": true,
+    "source_complete_candidate_count_drift": {
+      "CIR01__chubu-mountains": [1490, 1491],
+      "CIR04__chubu-mountains": [1490, 1491],
+      "CIR07__tohoku": [1448, 1448]
+    },
+    "interpretation": "Public source-complete candidate counts showed a one-cell Chubu drift across independent executions, but every frozen recovery outcome for structural, nearest, spatial balance and full-frame reachability was unchanged."
+  },
+  "decision": {
+    "coarse_regional_structural_selector": "DO_NOT_NOMINATE",
+    "nearest_known": "RETAINS_STRONG_LOCAL_COMPARATOR_ROLE",
+    "spatial_balance": "CURRENT_COARSE_STRUCTURAL_LAYER_ADDS_ONLY_SMALL_5KM_INCREMENT_AND_IS_WORSE_AT_10KM",
+    "fine_scale_structural_localizer": "NOT_RESOLVED_BY_THIS_COARSE_TEST",
+    "same_cohort_retuning": false,
+    "next_architectural_question": "Separate coarse broad coverage from fine structural localization instead of asking one coarse structural graph to perform both regional exploration and local placement."
+  },
+  "claim_boundary": "Opened public-data known-truth development only. One species per executed family. Do not infer selector promotion, occupancy, field efficiency, access, route, survey days, budget, discovery rate or stopping."
+}

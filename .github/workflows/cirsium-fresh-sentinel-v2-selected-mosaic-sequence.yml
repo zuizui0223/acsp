@@ -1,0 +1,44 @@
+name: Fresh-SENTINEL v2 actual selected GSI mosaic sequence audit
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "research/attach_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_sequence_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-selected-mosaic-sequence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selected_source_sequence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install project and tests
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test chosen-source sequence hash and no-change primary GSI attachment
+        run: |
+          python -m pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_fixed_gsi_terrain.py \
+            tests/test_cirsium_fresh_sentinel_v2_selected_mosaic_sequence.py
+      - name: Assert no per-chunk source paths or biological inference
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_sequence_v1.json').read_text())
+          assert c['status']=='FROZEN_BEFORE_SELECTED_GSI_MOSAIC_INPUT_AUDIT'
+          assert c['interpretation']['matching_full_cache_inventory_does_not_prove_same_selected_mosaic_sequence'] is True
+          assert c['interpretation']['matching_selected_mosaic_sequence_does_not_prove_full_terrain_reproduction'] is True
+          assert all(c['safety'].values())
+          PY

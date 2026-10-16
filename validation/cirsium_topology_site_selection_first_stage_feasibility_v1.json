@@ -1,0 +1,87 @@
+{
+  "claims": {
+    "all_patches_should_be_visited": false,
+    "field_efficiency_established": false,
+    "field_outcomes_opened": false,
+    "full_structural_order_replay_repaired": false,
+    "retained_mask_components_equal_real_habitat": false,
+    "validated_patch_generator_changed": false
+  },
+  "future_independent_trial": {
+    "actual_new_taxon_sector_discordant_site_fraction": null,
+    "actual_new_taxon_sector_patch_count": null,
+    "effective_method_first_stage_identified": false,
+    "field_assignments_authorized": false,
+    "independent_cohort_count_confirmed": 0,
+    "next_input": "Authenticated source-complete private patch members, new disjoint taxon/sector registry and symmetrical permissions/access review, all BEFORE prospective outcomes"
+  },
+  "historical_full_frame_counterfactual_only": {
+    "all_four_units_are_independent_biological_replicates": false,
+    "any_actual_visits_authorized": false,
+    "interpretation": "Hypothetical exhaustive workload for PREVIOUSLY DEVELOPED topology configurations, NOT required sample size or an authorized schedule",
+    "survey_days_cost_travel_access_or_phenology_included": false,
+    "total_active_person_hours_if_all_assigned": 6252.0,
+    "total_internally_disconnected_patches": 4168,
+    "total_person_minutes_if_all_assigned": 375120,
+    "total_unique_sites_if_all_assigned": 4168,
+    "units": {
+      "CIR02": {
+        "actual_site_selection_discordance": null,
+        "counterfactual_even_arm_sites_each": 160,
+        "counterfactual_full_frame_assigned_patches": 320,
+        "counterfactual_odd_balance_reserve": 0,
+        "historical_all_patches": 573,
+        "historical_internally_disconnected_patches": 320,
+        "planned_person_hours": 480.0,
+        "planned_person_minutes_if_every_assigned_patch_searched": 28800,
+        "source_verified_for_new_independent_trial": false
+      },
+      "CIR06": {
+        "actual_site_selection_discordance": null,
+        "counterfactual_even_arm_sites_each": 1646,
+        "counterfactual_full_frame_assigned_patches": 3292,
+        "counterfactual_odd_balance_reserve": 0,
+        "historical_all_patches": 3883,
+        "historical_internally_disconnected_patches": 3292,
+        "planned_person_hours": 4938.0,
+        "planned_person_minutes_if_every_assigned_patch_searched": 296280,
+        "source_verified_for_new_independent_trial": false
+      },
+      "CIR12": {
+        "actual_site_selection_discordance": null,
+        "counterfactual_even_arm_sites_each": 139,
+        "counterfactual_full_frame_assigned_patches": 278,
+        "counterfactual_odd_balance_reserve": 0,
+        "historical_all_patches": 654,
+        "historical_internally_disconnected_patches": 278,
+        "planned_person_hours": 417.0,
+        "planned_person_minutes_if_every_assigned_patch_searched": 25020,
+        "source_verified_for_new_independent_trial": false
+      },
+      "CIR13": {
+        "actual_site_selection_discordance": null,
+        "counterfactual_even_arm_sites_each": 139,
+        "counterfactual_full_frame_assigned_patches": 278,
+        "counterfactual_odd_balance_reserve": 0,
+        "historical_all_patches": 654,
+        "historical_internally_disconnected_patches": 278,
+        "planned_person_hours": 417.0,
+        "planned_person_minutes_if_every_assigned_patch_searched": 25020,
+        "source_verified_for_new_independent_trial": false
+      }
+    }
+  },
+  "mathematics": {
+    "assigned_site_discordance_fraction": "q = number of assigned patches whose two pre-outcome representative cells differ / number of assigned patches",
+    "not_an_observed_field_effect": true,
+    "sampling_noise_not_bounded_by_q": true,
+    "site_only_binary_expected_effect_bound": "absolute mean(Y_topology-Y_geometry) <= q IF equal effort and identical-site detection process have the same expected response"
+  },
+  "schema_version": "cirsium-topology-site-selection-first-stage-feasibility-v1",
+  "sources": {
+    "validation/cirsium_topology_new_cohort_public_exposure_screen_result_v1.json": "9eb20404c48f6b85cffc66e4d2332dc98b169471",
+    "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_topology_component_gap_v1.json": "06b7dbd6e1152e8187a7ecd31ee6ab4b5778d0f6",
+    "validation/coverage_then_fine_structure_patch_connectivity_field_trial_design_v1.json": "ec18c79b126b994a47c9680e5098548e655f88c9"
+  },
+  "status": "PRE_FIELD_FIRST_STAGE_UNKNOWN_NO_FIELD_OUTCOMES"
+}

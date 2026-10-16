@@ -1,0 +1,68 @@
+name: Fresh-SENTINEL v2 public broad frame
+
+on:
+  pull_request:
+    paths:
+      - "acsp/global_geometry.py"
+      - "acsp/global_lattice.py"
+      - "research/build_cirsium_fresh_sentinel_public_broad_frame_v2.py"
+      - "tests/test_cirsium_fresh_sentinel_public_broad_frame_v2.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-public-broad-frame.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/research
+
+jobs:
+  broad-frame:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and pytest
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run v2 unit tests
+        run: pytest -q tests/test_cirsium_fresh_sentinel_public_broad_frame_v2.py
+      - name: Build live pinned Japan outer frame
+        run: |
+          mkdir -p /tmp/acsp-fresh-sentinel-v2
+          python research/build_cirsium_fresh_sentinel_public_broad_frame_v2.py \
+            --private-out-csv /tmp/acsp-fresh-sentinel-v2/japan_outer_frame.csv \
+            --summary-out-json /tmp/acsp-fresh-sentinel-v2/summary.json
+      - name: Guard live outer-frame boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary = json.loads(Path('/tmp/acsp-fresh-sentinel-v2/summary.json').read_text())
+          assert summary['status'] == 'PUBLIC_BROAD_OUTER_FRAME_BUILT_PRE_OUTCOME'
+          assert summary['method_identity'] == 'JP_PUBLIC_COUNTRY_BROAD_FRAME_V1'
+          assert summary['country_code'] == 'JP'
+          assert summary['cohort_unit_ids'] == ['CIR02', 'CIR06', 'CIR12', 'CIR13']
+          assert summary['candidate_count'] > 0
+          assert summary['intersecting_tile_count'] > 0
+          assert summary['points_per_tile'] == 800
+          assert summary['lattice_step_deg'] == 2.0
+          assert summary['historical_occurrence_tile_selection'] is False
+          assert summary['private_exact_site_geometry_used'] is False
+          assert summary['p02_result_used'] is False
+          assert summary['prospective_field_outcomes_opened'] is False
+          assert summary['field_outcomes_used'] is False
+          assert summary['human_access_used'] is False
+          assert Path('/tmp/acsp-fresh-sentinel-v2/japan_outer_frame.csv').is_file()
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-public-broad-frame
+          path: /tmp/acsp-fresh-sentinel-v2/summary.json
+          if-no-files-found: error

@@ -1,0 +1,177 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-field-evaluation-contract-v1",
+  "status": "FROZEN_PRE_OUTCOME_EVALUATION_SEMANTICS_ALLOCATION_SCHEDULE_PENDING",
+  "method_identity": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "source_basis": {
+    "prospective_contract": "research/CIRSIUM_AZA3_PROSPECTIVE_LOCAL_DISCOVERY.md",
+    "field_log_template": "validation/cirsium_aza3_acsp_field_log_template_v1.csv",
+    "fresh_method_freeze": "validation/coverage_then_fine_structure_fresh_sentinel_freeze_v1.json",
+    "note": "Endpoint states, minimum effort fields, matched PERSON_MINUTES_V1 effort, the candidate-level arm-specific analysis unit, repeated-visit aggregation, shared-candidate handling, and no-skip frozen-order assignment are all frozen before prospective outcomes are opened."
+  },
+  "field_endpoint": {
+    "primary_success_state": "SEARCH_COMPLETED_DETECTED_VERIFIED",
+    "resolved_completed_non_detection_state": "SEARCH_COMPLETED_NOT_DETECTED",
+    "identity_unresolved_state": "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED",
+    "non_biological_negative_states": [
+      "ACCESS_FAILED",
+      "PERMISSION_BLOCKED",
+      "PHENOLOGY_NOT_EVALUABLE",
+      "SEARCH_INCOMPLETE_OTHER"
+    ],
+    "tissue_collection_is_secondary": true,
+    "verified_occurrence_without_tissue_is_location_discovery_success": true
+  },
+  "newly_frozen_primary_binary_endpoint": {
+    "success_numerator": "count of resolved COHORT_ARM_CANDIDATE_V1 analysis units classified SEARCH_COMPLETED_DETECTED_VERIFIED under the frozen repeated-visit rule",
+    "resolved_binary_denominator_states": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED"
+    ],
+    "identity_unresolved_handling": "report separately; exclude from the resolved binary denominator until identity is resolved by the predeclared verification process; never recode as absence",
+    "non_biological_negative_handling": "report separately; exclude from the biological detection/non-detection denominator; never recode as absence",
+    "primary_between_arm_contrast": "difference in verified-current-occurrence success proportion between the frozen primary method and each frozen comparator under the same within-unit unique-candidate prefix depth and the same rank-level visit/person-minute template across all three arms",
+    "favorable_subsetting_after_outcome": false,
+    "switching_primary_endpoint_after_outcome": false
+  },
+  "frozen_method_arms": {
+    "primary": "COVERAGE_THEN_FINE_STRUCTURE_V1",
+    "coverage_only": "COVERAGE_ONLY_STABLE_WITHIN_CELL_V1",
+    "fine_spatial_balance": "MORTON_DYADIC_COVERAGE_ORDER_V1",
+    "nearest_known": "NOT_DEFINED_FOR_SENTINEL"
+  },
+  "effort_accounting": {
+    "minimum_required_fields": [
+      "search_minutes",
+      "observer_count"
+    ],
+    "record_when_defensibly_measured": [
+      "traversed_length_m",
+      "searched_area_m2"
+    ],
+    "matched_field_effort_required_for_between_arm_promotion": true,
+    "complete_visited_patch_detection_and_non_detection_logs_required": true,
+    "numeric_effort_metric_frozen_now": true,
+    "numeric_effort_metric": {
+      "identity": "PERSON_MINUTES_V1",
+      "unit": "person-minute",
+      "formula": "search_minutes * observer_count"
+    },
+    "numeric_effort_schedule_frozen_now": false,
+    "reason_pending": "The candidate-specific visit allocation and numerical person-minute schedule cannot be instantiated until the still-missing private range-sector geometry produces exact frozen candidate identities.",
+    "forbidden_inference": "Do not change PERSON_MINUTES_V1, use arm-specific prefix depths or rank-level effort patterns, choose a new effort threshold, visit count, stopping rule, or favorable subset after field outcomes are opened."
+  },
+  "schedule_selection_mechanics": {
+    "comparator_assignment_identity": "FROZEN_ORDER_PREFIX_V1",
+    "rule": "For each cohort unit and method arm, the unique scheduled candidate references must be a no-skip prefix of the exact hash-verified frozen arm order. Repeat visits may repeat a candidate already inside that prefix.",
+    "candidate_membership_in_exact_frozen_arm_order_required": true,
+    "private_unit_receipt_hash_linkage_required": true,
+    "private_order_hash_linkage_required": true,
+    "post_outcome_candidate_substitution_allowed": false,
+    "arm_symmetry_identity": "ARM_SYMMETRIC_PREFIX_EFFORT_TEMPLATE_V1",
+    "equal_unique_candidate_prefix_depth_across_arms_within_unit": true,
+    "equal_visit_count_by_rank_across_arms_within_unit": true,
+    "equal_planned_person_minute_pattern_by_rank_across_arms_within_unit": true,
+    "arm_specific_effort_reallocation_allowed": false,
+    "rationale": "The prospective comparison isolates candidate ordering/selection. Arm-specific candidate counts, repeat patterns, or rank-level planned effort would confound ranking with field-effort allocation."
+  },
+  "analysis_unit_and_repeated_visits": {
+    "field_log_row_semantics": "one logged search/visit record",
+    "primary_analysis_unit_frozen_now": true,
+    "primary_analysis_unit_identity": "COHORT_ARM_CANDIDATE_V1",
+    "primary_analysis_unit_definition": "one unique cohort_unit_id x method_arm x private_candidate_ref selected by the frozen pre-outcome schedule; all scheduled visits to that arm-specific candidate aggregate into this single primary analysis unit",
+    "analysis_unit_id_must_map_one_to_one_to_cohort_arm_candidate": true,
+    "visit_indices_must_be_contiguous_from_one_within_analysis_unit": true,
+    "repeated_visit_aggregation_frozen_now": true,
+    "repeated_visit_aggregation_identity": "ANY_VERIFIED_DETECTION_ELSE_ALL_RESOLVED_NONDETECTION_V1",
+    "repeated_visit_aggregation_rule": "Within one COHORT_ARM_CANDIDATE_V1 unit, any SEARCH_COMPLETED_DETECTED_VERIFIED visit makes the unit a verified detection success. If no verified detection occurs, classify the unit SEARCH_COMPLETED_NOT_DETECTED only when every scheduled visit is SEARCH_COMPLETED_NOT_DETECTED. Identity-unresolved or non-biological/non-evaluable visits never become absence; without a verified detection they keep the unit outside the resolved binary denominator.",
+    "shared_candidate_handling_frozen_now": true,
+    "shared_candidate_handling_identity": "RETAIN_IN_EACH_NOMINATING_ARM_WITH_SHARED_OBSERVATION_V1",
+    "shared_candidate_handling_rule": "If the same physical candidate is selected by multiple frozen arms, retain one arm-specific analysis unit in every nominating arm; do not drop, substitute, or assign exclusive ownership. A single physical search may supply the same observed biological outcome to each nominating arm-specific unit, while PERSON_MINUTES_V1 is charged to each arm's preregistered counterfactual schedule. Cross-arm candidate overlap must be reported, and summed arm effort must not be interpreted as total expedition effort.",
+    "required_next_gate": "Instantiate the candidate-specific visit/allocation and PERSON_MINUTES_V1 schedule after exact candidate identities exist, then publicly pin its hash-only receipt before opening prospective outcomes."
+  },
+  "field_log_schema_required_columns": [
+    "validation_unit_id",
+    "aza3_slot_id",
+    "species_binomial",
+    "acsp_patch_id",
+    "discovery_regime",
+    "method_arm",
+    "comparator_assignment",
+    "visit_index",
+    "analysis_unit_id",
+    "deidentified_locality_id",
+    "visit_date",
+    "phenology_status",
+    "access_evaluability_state",
+    "search_minutes",
+    "observer_count",
+    "traversed_length_m",
+    "searched_area_m2",
+    "field_outcome_state",
+    "focal_detection_count",
+    "identity_verification_status",
+    "identity_evidence_id",
+    "incomplete_search_reason",
+    "tissue_acquired_secondary",
+    "aza3_authorization_record_id",
+    "private_exact_site_record_id"
+  ],
+  "promotion_claim_ceiling": {
+    "allowed_after_all_pre_outcome_gates_and_complete_logs": "test whether the frozen structural-within-coverage order improves verified current-occurrence recovery relative to frozen comparators at matched person-minute field effort",
+    "not_authorized_by_this_contract": [
+      "optimal field days",
+      "optimal monetary budget",
+      "discoveries per hour as a validated product claim",
+      "automatic stopping threshold",
+      "structural support implies occupancy",
+      "access failure implies biological absence"
+    ]
+  },
+  "pre_outcome_gate_state": {
+    "static_evaluation_semantics_frozen": true,
+    "analysis_unit_and_repeat_semantics_frozen": true,
+    "private_candidate_and_order_freeze_completed": false,
+    "public_candidate_order_hash_receipt_pinned": false,
+    "field_allocation_and_effort_schedule_frozen": false,
+    "field_allocation_and_effort_schedule_pinned": false,
+    "prospective_outcome_opening_allowed_now": false,
+    "next_gate": "After private candidate/order freeze and immutable public hash pin, instantiate an arm-symmetric no-skip schedule with matched PERSON_MINUTES_V1 effort. Its public receipt must hash-link the canonical frozen four-taxon analysis plan, then be immutably pinned before any outcome-opening workflow.",
+    "analysis_plan_frozen": true,
+    "analysis_plan_hash_linked_in_field_schedule_receipt": false
+  },
+  "analysis_plan": {
+    "canonical_repo_path": "validation/coverage_then_fine_structure_fresh_sentinel_analysis_plan_v1.json",
+    "status_required": "FROZEN_PRE_OUTCOME_ANALYSIS_PLAN",
+    "primary_estimand_identity": "EQUAL_TAXON_MACRO_PRIMARY_MINUS_COVERAGE_ONLY_V1",
+    "equal_taxon_weights_required": true,
+    "all_four_taxa_required_for_primary": true,
+    "pooled_micro_allowed_as_primary": false,
+    "exact_hash_linkage_in_public_field_schedule_receipt_required": true,
+    "post_outcome_analysis_plan_switch_allowed": false
+  },
+  "field_log_schedule_linkage": {
+    "identity": "ANALYSIS_UNIT_VISIT_SCHEDULE_JOIN_V1",
+    "analysis_unit_id_required": true,
+    "visit_index_required": true,
+    "exact_one_field_log_row_per_scheduled_visit_required": true,
+    "unscheduled_extra_field_log_rows_allowed": false,
+    "validation_unit_id_must_equal_scheduled_cohort_unit_id": true,
+    "method_arm_must_equal_scheduled_method_arm": true,
+    "comparator_assignment_must_equal": "FROZEN_ORDER_PREFIX_V1",
+    "non_biological_or_non_evaluable_visit_effort_deviation_is_reported_not_recoded_as_absence": true,
+    "completed_search_states_must_match_planned_search_minutes_and_observer_count": true,
+    "completed_search_states": [
+      "SEARCH_COMPLETED_DETECTED_VERIFIED",
+      "SEARCH_COMPLETED_NOT_DETECTED",
+      "SEARCH_COMPLETED_DETECTED_IDENTITY_UNRESOLVED"
+    ],
+    "verified_or_unresolved_detection_requires_positive_detection_count": true,
+    "resolved_non_detection_requires_zero_detection_count": true
+  }
+}

@@ -1,0 +1,81 @@
+name: Cirsium structural population holdout transport recovery v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_structural_population_holdout_transport_recovery_amendment_v1.json"
+      - "research/recover_cirsium_structural_population_holdout_transport_v1.py"
+      - "tests/test_cirsium_structural_population_holdout_transport_recovery_v1.py"
+      - "research/run_cirsium_structural_population_holdout_development_v1.py"
+      - "validation/cirsium_structural_population_holdout_development_v1.json"
+      - "acsp/discovery/**"
+      - "acsp/structural_graph.py"
+      - "acsp/structural_raw_adapters.py"
+      - "acsp/structural_support.py"
+      - "research/build_cirsium_private_alpine_local_grid_v1.py"
+      - "research/campanula_microterrain_discovery.py"
+      - "gbif_fieldmap_builder_app.py"
+      - "pyproject.toml"
+      - ".github/workflows/cirsium-structural-population-holdout-transport-recovery-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and test dependency
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run transport-only mechanics tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          pytest -q tests/test_cirsium_structural_population_holdout_transport_recovery_v1.py
+      - name: Re-run frozen holdout with transport-only retry
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+        run: |
+          rm -rf /tmp/cirsium-structural-population-holdout-transport-recovery-v1
+          python research/recover_cirsium_structural_population_holdout_transport_v1.py \
+            --out-dir /tmp/cirsium-structural-population-holdout-transport-recovery-v1
+      - name: Guard transport-only boundary and public-safe artifact
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          root = Path('/tmp/cirsium-structural-population-holdout-transport-recovery-v1')
+          summary = json.loads((root / 'summary.json').read_text())
+          curve = pd.read_csv(root / 'population_holdout_curve.csv')
+          assert summary['transport_recovery_parent_run_id'] == 34696675904
+          assert summary['transport_recovery_parent_artifact_id'] == 10299905947
+          assert summary['transport_recovery_scientific_semantics_changed'] is False
+          assert summary['validated_product_changed'] is False
+          assert summary['automatic_global_adapter_changed'] is False
+          assert summary['new_confirmation_claim'] is False
+          assert summary['promotion_allowed'] is False
+          for entry in summary['transport_attempt_log'].values():
+              assert 1 <= int(entry['attempts']) <= 5
+              assert all(int(code) == 429 or 500 <= int(code) <= 599 for code in entry['retry_http_statuses'])
+          forbidden = {'latitude','longitude','decimalLatitude','decimalLongitude','gbif_key','occurrence_id'}
+          assert forbidden.isdisjoint(curve.columns)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-structural-population-holdout-transport-recovery-v1
+          path: |
+            /tmp/cirsium-structural-population-holdout-transport-recovery-v1/population_holdout_curve.csv
+            /tmp/cirsium-structural-population-holdout-transport-recovery-v1/summary.json
+          if-no-files-found: error
+          retention-days: 90

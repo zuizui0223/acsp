@@ -69,6 +69,38 @@ jobs:
             --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
             --out microterrain-results
 
+      - name: Evaluate occurrence-only annular land-cell baseline
+        run: |
+          python research/evaluate_campanula_annular_candidate_frame.py \
+            --universe microterrain-results/microterrain_universe.csv \
+            --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
+            --out-dir campanula-annular-candidate-frame
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('campanula-annular-candidate-frame')
+          summary = json.loads((root / 'summary.json').read_text())
+          folds = pd.read_csv(root / 'annular_candidate_frame_folds.csv')
+          aggregate = pd.read_csv(root / 'annular_candidate_frame_aggregate.csv')
+
+          assert summary['scientific_role'] == 'development_internal_candidate_frame_baseline_only'
+          assert summary['independent_validation'] is False
+          assert summary['reads_2026_field_outcomes'] is False
+          assert summary['candidate_universe_rows'] == 22784
+          assert summary['primary_cluster_policy'] == 'single_link'
+          assert summary['sensitivity_cluster_policy'] == 'complete_link'
+          assert summary['post_loco_frontier_radius_km'] == 2.5
+          assert summary['fold_rows'] == len(folds) == 140
+          assert summary['aggregate_rows'] == len(aggregate) == 32
+          assert set(summary['candidate_universe_islands']) == {
+              'oshima', 'toshima', 'niijima', 'shikinejima', 'kozushima'
+          }
+          print(aggregate.to_csv(index=False))
+          PY
+
       - name: Reproduce frozen robust support through generic core
         run: |
           python research/campanula_robust_support_patch_export.py \
@@ -187,6 +219,7 @@ jobs:
           path: |
             public-layers/ndvi_sha256.txt
             microterrain-results/microterrain_report.json
+            campanula-annular-candidate-frame/
             campanula-robust-support/
           if-no-files-found: warn
           retention-days: 90

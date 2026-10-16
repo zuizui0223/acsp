@@ -1,0 +1,154 @@
+name: Campanula coverage-constrained habitat comparison
+
+on:
+  pull_request:
+    paths:
+      - "research/evaluate_campanula_anchor_coverage_habitat.py"
+      - "research/test_campanula_anchor_coverage_habitat.py"
+      - "research/run_campanula_anchor_coverage_habitat_cached.py"
+      - "research/test_campanula_anchor_coverage_habitat_cached.py"
+      - "research/evaluate_campanula_anchor_selector_comparison.py"
+      - "research/test_campanula_anchor_selector_comparison.py"
+      - ".github/workflows/campanula-anchor-coverage-habitat.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: campanula-anchor-coverage-habitat-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/research
+
+jobs:
+  exact-matched-comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install rasterio pyproj scipy awscli
+
+      - name: Run focused selector tests
+        run: |
+          python -m unittest research.test_campanula_anchor_coverage_habitat -v
+          python -m unittest research.test_campanula_anchor_coverage_habitat_cached -v
+          python -m unittest research.test_campanula_anchor_selector_comparison -v
+          python -m unittest research.test_campanula_anchor_spatial_balance -v
+          python -m unittest research.test_campanula_anchor_ndvi_filter -v
+
+      - name: Download frozen Campanula development cache and DEM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-development-data
+          path: campanula-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 31856717236
+
+      - name: Download exact current-head spatial and NDVI baselines
+        uses: actions/download-artifact@v4
+        with:
+          name: campanula-anchor-compression-baselines
+          path: baseline-results
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: 33412591850
+
+      - name: Download pinned NDVI composite
+        run: |
+          set -euo pipefail
+          mkdir -p public-layers
+          NDVI_KEY="ndvi/2021/N34/ESA_WorldCover_10m_2021_v200_N34E139_NDVI.tif"
+          aws s3 cp "s3://esa-worldcover-s2/$NDVI_KEY" public-layers/ndvi.tif --no-sign-request
+          sha256sum public-layers/ndvi.tif | tee public-layers/ndvi_sha256.txt
+          grep -q '^641c99d0bae8ddb38f31c079b16597956e9c981ca42c20d9e13e5b8551133638 ' public-layers/ndvi_sha256.txt
+
+      - name: Rebuild outcome-blind full-island land-cell universe
+        run: |
+          python research/campanula_microterrain_discovery.py \
+            --gbif campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --detections campanula-source/field_validation/campanula_microdonta/development_data/detection_clusters.csv \
+            --dem oshima=campanula-source/dem-artifacts/gsi_02d7024d473d0b2d.tif \
+            --dem toshima=campanula-source/dem-artifacts/gsi_4867a2c26d122c44.tif \
+            --dem niijima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem shikinejima=campanula-source/dem-artifacts/gsi_8de1699745175287.tif \
+            --dem kozushima=campanula-source/dem-artifacts/gsi_4ea5609c14c17bd8.tif \
+            --out microterrain-results
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('microterrain-results/microterrain_report.json').read_text())
+          assert report['field_coordinates_used_by_generator'] is False
+          assert report['grid_cells'] == 22784
+          assert report['gbif_rows_in_islands'] == 56
+          PY
+
+      - name: Evaluate coverage-constrained habitat selector only
+        run: |
+          python research/run_campanula_anchor_coverage_habitat_cached.py \
+            --universe microterrain-results/microterrain_universe.csv \
+            --occurrences campanula-source/field_validation/campanula_microdonta/development_data/gbif_training_occurrences_through_2025.csv \
+            --manifest campanula-source/field_validation/campanula_microdonta/development_data/manifest.json \
+            --ndvi public-layers/ndvi.tif \
+            --out-dir campanula-anchor-coverage-habitat
+
+      - name: Compare against pinned exact-count baselines
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          from evaluate_campanula_anchor_selector_comparison import compare_selector_aggregates
+
+          spatial = pd.read_csv(
+              'baseline-results/campanula-anchor-spatial-balance/anchor_spatial_balance_aggregate.csv'
+          )
+          ndvi = pd.read_csv(
+              'baseline-results/campanula-anchor-ndvi-filter/anchor_ndvi_filter_aggregate.csv'
+          )
+          coverage = pd.read_csv(
+              'campanula-anchor-coverage-habitat/anchor_coverage_habitat_aggregate.csv'
+          )
+          comparison, summary = compare_selector_aggregates(spatial, ndvi, coverage)
+          summary['baseline_workflow_run_id'] = 33412591850
+          summary['baseline_artifact_id'] = 9765765509
+          summary['baseline_artifact_digest'] = 'sha256:4cb8fb3b9dbf2d7461c711f25bba91ef1bb442d3c125fe19e933875a96ed2a4f'
+          summary['baseline_head_sha'] = '55ca4f5b7552f82bf82579814d9914b60951cba9'
+          summary['runtime_only_cached_morton_order'] = True
+          out = Path('campanula-anchor-selector-comparison')
+          out.mkdir(parents=True, exist_ok=True)
+          comparison.to_csv(out / 'matched_selector_comparison.csv', index=False)
+          (out / 'summary.json').write_text(
+              json.dumps(summary, indent=2) + '\n', encoding='utf-8'
+          )
+          assert summary['scientific_role'] == 'development_internal_exact_matched_selector_comparison_only'
+          assert summary['independent_validation'] is False
+          assert summary['reads_2026_field_outcomes'] is False
+          assert summary['hidden_cluster_used_for_selector_construction'] is False
+          assert summary['configuration_rows'] == len(comparison) == 96
+          assert summary['exact_median_cell_count_match_rows'] == 96
+          print(json.dumps(summary, indent=2))
+          PY
+
+      - name: Upload selector comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: campanula-anchor-selector-comparison
+          path: |
+            public-layers/ndvi_sha256.txt
+            microterrain-results/microterrain_report.json
+            campanula-anchor-coverage-habitat/
+            campanula-anchor-selector-comparison/
+          if-no-files-found: error
+          retention-days: 90
