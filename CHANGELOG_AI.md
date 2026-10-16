@@ -1,5 +1,31 @@
 # AI Change Log
 
+## 2026-10-16 - ChatGPT (OpenAI) - Topology site-choice first-stage identifiability and historic workload bound
+
+Changed files:
+- research/assess_cirsium_topology_site_first_stage.py
+- tests/test_cirsium_site_first_stage_feasibility.py
+- validation/cirsium_topology_site_selection_first_stage_feasibility_v1.json
+- examples/synthetic_topology_site_preview.json
+- paper/CIRSIUM_SITE_CHOICE_FIRST_STAGE_FEASIBILITY_SECONDARY.md
+- .github/workflows/cirsium-topology-first-stage-feasibility.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Resolve a methodological blind spot in the downstream topology-vs-geometry survey-site design: internal fragmentation does NOT ensure the two declared representative-cell selection rules choose different sites. The usable pre-field first-stage variable is the count and fraction q of assigned patches for which the two frozen representative sites differ.
+- Under matched observer/season/search process for identical sites and a site-only binary potential-outcome contrast, the absolute expected causal contrast is mathematically bounded by q; this is NOT a bound on realized noisy arm-success differences nor empirical improvement. q is unknown on actual new taxon-sector frames because no original private authenticated patch memberships exist.
+- Use only original byte-pinned public PR273 component-gap, PR274 trial-design and PR276 exposure-screen JSONs (three exact Git blob SHA-1s). The four already-exposed structural configurations contain 4168 internally disconnected patches, implying 6252 active person-hours IF every such original patch were hypothetically assigned one site and all visits occurred. This is no actual sample size, budget, permission-eligible frame or field prescription.
+- Add pure standard-library unauthenticated public-design-preview gate that checks assignment balance, 90 planned person-minutes per patch, total/candidate counts, site overlap, privacy and negative field-eligibility claims. The saved original public-only example is marked SYNTHETIC; never use its q as field evidence.
+- Test-first missing-feature failure observed. New 22 tests and prior 16 synthetic field-design tests passed (38/38), plus deterministic saved public-result regeneration and Python syntax checks. PR CI repeats against actual original GitHub source files, never opening prospective field outcomes.
+
+Features preserved:
+- Validated non-ranked Japanese 2.5% float32, 100 m support/1 km same-area complete-link candidate patches unchanged. Original three-arm fresh-SENTINEL, older Cirsium 4-unit method-development results and strict PR250 full-order gate untouched; original issue #253 CPU-cause question remains unresolved.
+- No independently frozen new cohort, no real field assignment, no source-private geometry/IDs, no occurrence confirmation or detection probability is inferred.
+
+Known risks / TODO:
+- Original 4-unit theoretical full-frame workload is NOT a recommended comprehensive survey and omits access, travel, phenology, attrition and logistical feasibility. CIR12/CIR13 are not independent structural-family replications. Binary potential outcome bound assumes identical expected detection for identical cells under standardized effort, not guaranteed by the real survey without outcome-blind process controls.
+- Real new-cohort site discordance q remains unknown. Only after exact private input source, permission and independent taxon-sector SHA pins are verified may a pre-outcome first-stage report and a subsequent survey schedule be frozen.
+
 ## 2026-10-16 - ChatGPT (OpenAI) - Cirsium public registry exposure and field-readiness gate
 
 Changed files:
