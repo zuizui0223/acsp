@@ -1,0 +1,25 @@
+{
+  "schema_version": "acsp-connectivity-overlay-versus-geometry-site-trial-public-preview-v1",
+  "status": "DESIGN_PREVIEW_ONLY_AWAITING_PRIVATE_GEOMETRY_AND_COHORT_PIN",
+  "private_assignments_sha256": "ff3d3224a9f50b31579a108c11e4b6f652070b40478a0028fee0127ad92b5c63",
+  "by_cohort": {
+    "NEW01": {
+      "assigned_topology": 2,
+      "assigned_geometry": 2,
+      "shared_counterfactual_count": 0,
+      "planned_person_minutes_per_arm": 180,
+      "balance_reserve_count": 1,
+      "ineligible_connected_patch_count": 0,
+      "cohort_exposure": "UNREGISTERED_NEW_COHORT_CONFIRMATION_NOT_YET_AUTHORIZED"
+    }
+  },
+  "assigned_patch_count": 4,
+  "unassigned_odd_balance_reserve_count": 1,
+  "ineligible_connected_patch_count": 0,
+  "fresh_independent_biological_validation": false,
+  "field_outcomes_opened": false,
+  "field_schedule_frozen": false,
+  "real_candidate_geometry_used_now": false,
+  "actual_field_effect_estimated": false,
+  "original_three_arm_field_protocol_changed": false
+}
