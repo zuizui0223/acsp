@@ -1,0 +1,43 @@
+name: Cirsium topology trial public-source exposure screen
+on:
+  pull_request:
+    paths:
+      - 'research/audit_cirsium_topology_cohort_exposure_screen.py'
+      - 'tests/test_cirsium_topology_cohort_exposure_screen.py'
+      - 'validation/cirsium_topology_new_cohort_public_exposure_screen_protocol_v1.json'
+      - 'validation/cirsium_topology_new_cohort_public_exposure_screen_result_v1.json'
+      - 'validation/cirsium_topology_public_exposure_screen_artifact_provenance_v1.json'
+      - 'tests/test_cirsium_topology_public_exposure_original_result.py'
+      - 'validation/cirsium_topology_new_cohort_public_exposure_screen_result_v1.json'
+      - '.github/workflows/cirsium-topology-cohort-exposure-screen.yml'
+permissions:
+  contents: read
+jobs:
+  public-only-screen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install testing tools only
+        run: python -m pip install pytest
+      - name: Validate integrity and fail-closed public exposure classifier
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest -q tests/test_cirsium_topology_cohort_exposure_screen.py tests/test_cirsium_topology_public_exposure_original_result.py
+          python -m py_compile research/audit_cirsium_topology_cohort_exposure_screen.py gbif_fieldmap_builder_app.py
+      - name: Reconstruct exact pinned original ten-source public audit
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m research.audit_cirsium_topology_cohort_exposure_screen --verify-saved validation/cirsium_topology_new_cohort_public_exposure_screen_result_v1.json
+          python -m research.audit_cirsium_topology_cohort_exposure_screen --out-json "$RUNNER_TEMP/cirsium-public-exposure-screen.json"
+      - name: Preserve public-only source-locked screen
+        uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-topology-trial-public-exposure-screen
+          path: ${{ runner.temp }}/cirsium-public-exposure-screen.json
+          if-no-files-found: error
