@@ -1,0 +1,51 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fixed-gsi-cir06-result-v1",
+  "status": "CIR06_FIXED_GSI_TERRAIN_RESULT_FROZEN_PRE_OUTCOME",
+  "source_pr": 244,
+  "workflow_run_id": 37641700785,
+  "workflow_head_sha": "c2a4954c16eb7cb1fef04cba9fcf293c8047e7e0",
+  "artifact_id": 11493582277,
+  "artifact_digest": "sha256:1a8890708352853ad30f3748a8d73ba705703be3b9834fc0d8f72f816c1bbcac",
+  "cohort_unit_id": "CIR06",
+  "grid": {
+    "candidate_rows": 847239,
+    "private_grid_sha256": "db022f278dc3e8f93f4af06a536360e8a33d7515a6ade71dabb7f0f2b4aba98c"
+  },
+  "gsi": {
+    "source_complete_rows": 816364,
+    "source_complete_fraction": 0.9635580987183073,
+    "provider_unavailable_rows": 0,
+    "terrain_vector_unavailable_rows": 30875,
+    "chunk_count": 81,
+    "physical_chunk_width_m": 40000,
+    "chunk_grid_cells": 400,
+    "chunk_phase_offset_cells": [0,0],
+    "chunk_margin_degrees": 0.02,
+    "max_gsi_tiles_per_chunk": 900,
+    "attributions": [
+      "Terrain: GSI Tiles (Geospatial Information Authority of Japan); GSI DEM10B",
+      "Terrain: GSI Tiles (Geospatial Information Authority of Japan); GSI DEM5A"
+    ],
+    "terrain_feature_digest_sha256": "6a85cc71206bade4e819bb7a66cdc1d50953d2cd98a1744ef099dcca73619a42",
+    "private_gsi_frame_sha256": "06920f34f4cc6e7ee22e7b6d61be88db992cb57099e35feeedf5bb7725bbb23d"
+  },
+  "interpretation": {
+    "fixed_phase_source_policy_executed_successfully": true,
+    "terrain_source_is_current_fine_frame_bottleneck": false,
+    "terrain_vector_unavailable_fraction": 0.03644190128169271,
+    "terrain_vector_unavailable_is_biological_absence": false,
+    "provider_failure_is_biological_absence": false,
+    "source_complete_rows_may_proceed_to_frozen_structural_chain": true,
+    "source_indeterminate_rows_remain_retained_unranked": true
+  },
+  "boundary": {
+    "coordinate_bearing_artifacts_uploaded": false,
+    "structural_graph_computed": false,
+    "candidate_ranking_computed": false,
+    "field_outcomes_opened": false,
+    "human_access_used": false,
+    "exact_site_claim": false,
+    "occupancy_claim": false
+  },
+  "next_gate": "Use the identical fixed GSI policy for the remaining fresh units and run the already-frozen fine structural full-order chain on source-complete cells; do not retune phase or source policy."
+}

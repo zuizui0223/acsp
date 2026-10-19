@@ -1,0 +1,79 @@
+name: Cirsium structural population holdout preflight v1
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_structural_population_holdout_preflight_v1.json"
+      - "validation/cirsium_aza3_prospective_validation_cohort_v1.csv"
+      - "research/preflight_cirsium_structural_population_holdout_v1.py"
+      - "research/benchmark_public_japan_cirsium_temporal_anchor_v1.py"
+      - "tests/test_cirsium_structural_population_holdout_preflight_v1.py"
+      - "acsp/taxon_patches.py"
+      - ".github/workflows/cirsium-structural-population-holdout-preflight-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and test dependency
+        run: python -m pip install -e . pytest
+      - name: Run focused unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: python -m pytest -q tests/test_cirsium_structural_population_holdout_preflight_v1.py
+      - name: Run frozen 156-pair evidence preflight
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research:${{ github.workspace }}
+        run: |
+          rm -rf /tmp/cirsium-structural-population-holdout-preflight-v1
+          python research/preflight_cirsium_structural_population_holdout_v1.py \
+            --out-dir /tmp/cirsium-structural-population-holdout-preflight-v1
+      - name: Guard pair completeness and public-safe output
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path('/tmp/cirsium-structural-population-holdout-preflight-v1')
+          table = pd.read_csv(root / 'structural_population_holdout_preflight_pairs.csv')
+          summary = json.loads((root / 'summary.json').read_text())
+          forbidden = {
+              'latitude', 'longitude', 'decimalLatitude', 'decimalLongitude',
+              'gbif_key', 'occurrence_id'
+          }
+          assert not forbidden.intersection(table.columns)
+          assert len(table) == 156
+          assert table['pair_id'].nunique() == 156
+          assert table['cohort_unit_id'].nunique() == 13
+          assert table['region_id'].nunique() == 12
+          assert summary['declared_pairs'] == 156
+          assert summary['expected_declared_pairs'] == 156
+          assert summary['selector_run'] is False
+          assert summary['candidate_surface_built'] is False
+          assert summary['raw_structural_layers_built'] is False
+          assert summary['heldout_population_selected'] is False
+          assert set(table['status']).issubset({
+              'SPATIAL_HOLDOUT_ELIGIBLE',
+              'BASELINE_ONLY_NO_STRUCTURAL_FAMILY',
+              'BELOW_MIN_POPULATIONS',
+              'PROVIDER_FAILURE',
+          })
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-structural-population-holdout-preflight-v1
+          path: |
+            /tmp/cirsium-structural-population-holdout-preflight-v1/structural_population_holdout_preflight_pairs.csv
+            /tmp/cirsium-structural-population-holdout-preflight-v1/summary.json
+          if-no-files-found: error
+          retention-days: 90

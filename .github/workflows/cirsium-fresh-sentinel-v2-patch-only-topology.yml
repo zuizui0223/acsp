@@ -1,0 +1,44 @@
+name: Fresh-SENTINEL frozen patch-only topology contract
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_v2_frozen_patch_topology.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_only_topology_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-patch-only-topology.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  patch_only_contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install only test dependencies
+        run: python -m pip install pytest numpy pandas
+      - name: Test exact frozen patch identity and geometric support-mask topology
+        run: python -m pytest -q tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology.py
+      - name: Preserve interpretation boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c = json.loads(Path("validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_only_topology_v1.json").read_text())
+          assert c["status"] == "FROZEN_BEFORE_PATCH_MEMBERSHIP_ONLY_TOPOLOGY_AUDIT"
+          assert c["frozen_patch_source_pr"] == 247
+          assert c["support_fraction"] == 0.025
+          assert c["complete_link_max_distance_m"] == 1000
+          assert c["grid_spacing_m"] == 100
+          assert c["interpretation"]["existing_strict_pr250_gate_unchanged"] is True
+          assert c["interpretation"]["full_structural_order_hash_gate_waived"] is False
+          assert c["interpretation"]["source_input_integrity_evaluated"] is False
+          assert c["interpretation"]["ecological_connectivity_validated"] is False
+          assert c["interpretation"]["field_selector_validated"] is False
+          assert c["interpretation"]["prospective_field_outcomes_opened"] is False
+          PY

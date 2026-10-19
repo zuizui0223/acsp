@@ -1,0 +1,41 @@
+name: Cirsium topology site trial effort sensitivity
+on:
+  pull_request:
+    paths:
+      - 'research/cirsium_topology_trial_effort_sensitivity_v1.py'
+      - 'tests/test_cirsium_topology_trial_effort_sensitivity_v1.py'
+      - 'paper/CIRSIUM_TOPOLOGY_TRIAL_EFFORT_SENSITIVITY.md'
+      - '.github/workflows/cirsium-topology-trial-effort-sensitivity.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-effort-sensitivity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install focused synthetic test runner
+        run: python -m pip install pytest
+      - name: Verify scenario assumptions and zero-empirical-evidence guards
+        run: |
+          python -m pytest -q tests/test_cirsium_topology_trial_effort_sensitivity_v1.py
+          python research/cirsium_topology_trial_effort_sensitivity_v1.py > /tmp/cirsium_topology_trial_effort_scenarios.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/tmp/cirsium_topology_trial_effort_scenarios.json").read_text())
+          assert d["actual_q_known"] is False
+          assert d["new_independent_field_cohort_ready"] is False
+          assert all(s["real_new_cohort_q"] is None for s in d["scenarios"])
+          assert all(s["historical_cirsium_patch_outcomes_used"] is False for s in d["scenarios"])
+          assert d["scenarios"][1]["required_per_arm"] == 1377
+          assert d["scenarios"][2]["required_per_arm"] == 356
+          assert d["scenarios"][3]["required_per_arm"] == 93
+          assert d["scenarios"][4]["required_per_arm"] is None
+          PY
+          python -m py_compile research/cirsium_topology_trial_effort_sensitivity_v1.py gbif_fieldmap_builder_app.py

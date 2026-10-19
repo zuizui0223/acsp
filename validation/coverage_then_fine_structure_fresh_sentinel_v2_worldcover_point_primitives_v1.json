@@ -1,0 +1,44 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-worldcover-point-primitives-v1",
+  "status": "FROZEN_BEFORE_WORLDCOVER_POINT_ATTACHMENT",
+  "source_outer_frame_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2.json",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "provider": {
+    "identity": "ESA_WORLDCOVER_2021_V200_MAP",
+    "adapter": "acsp.discovery.providers.worldcover.build_worldcover_2021_map_crop",
+    "sampling": "point class at each frozen geometry-only candidate coordinate",
+    "neighborhood_fraction_used": false,
+    "reason_neighborhood_deferred": "existing Campanula neighborhood helper uses an Izu-specific latitude approximation; nationwide neighborhood semantics will be frozen only after coarse screening and fine-frame expansion"
+  },
+  "candidate_identity_rule": {
+    "candidate_rows_must_be_preserved": true,
+    "candidate_id_order_must_be_preserved": true,
+    "candidate_drop_on_missing_class_allowed": false,
+    "tile_drop_on_provider_failure_allowed": false,
+    "candidate_ranking_added": false,
+    "candidate_selection_added": false
+  },
+  "status_vocabulary": [
+    "COMPLETE",
+    "INDETERMINATE_WORLDCOVER_MISSING",
+    "INDETERMINATE_PROVIDER_FAILURE"
+  ],
+  "missingness_semantics": {
+    "missing_or_provider_failure_is_biological_negative": false,
+    "missing_or_provider_failure_may_be_recoded_as_unsuitable": false
+  },
+  "family_use_boundary": {
+    "CIR02": "future coarse wetland/water composition may use WorldCover class frequencies",
+    "CIR06": "WorldCover class is attached for shared-source execution only and is not authorized as alpine structural support",
+    "CIR12": "future coarse grassland composition may use WorldCover class frequencies",
+    "CIR13": "future coarse grassland composition may use WorldCover class frequencies"
+  },
+  "forbidden": [
+    "do not drop points based on WorldCover class",
+    "do not define a habitat threshold at this stage",
+    "do not use focal occurrences or exact sites to select tiles",
+    "do not use field outcomes",
+    "do not treat shared attachment as authorization for CIR06 to use WorldCover in alpine scoring"
+  ],
+  "next_gate": "Execute all 49 tiles, freeze point-class coverage, then define any tile-level habitat-composition screening rule prospectively before applying it."
+}

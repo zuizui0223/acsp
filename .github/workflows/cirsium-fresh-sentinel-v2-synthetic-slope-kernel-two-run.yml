@@ -1,0 +1,90 @@
+name: Fresh-SENTINEL synthetic slope kernel two independent runners
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_slope_kernel_synthetic_two_run.py"
+      - "research/compare_cirsium_synthetic_slope_kernel_runs.py"
+      - "tests/test_cirsium_slope_kernel_synthetic_two_run.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_synthetic_slope_kernel_two_run_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-synthetic-slope-kernel-two-run.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run_synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - slot: A
+            python: "3.11.16"
+          - slot: B
+            python: "3.11.17"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install exact project dependency group and regression tests
+        run: |
+          python -m pip install -e .
+          python -m pip install pytest
+          python -m pytest -q tests/test_cirsium_slope_kernel_synthetic_two_run.py
+      - name: Run actual terrain_surface kernel and staged independent synthetic replay
+        run: |
+          python -m research.audit_cirsium_slope_kernel_synthetic_two_run \
+            --synthetic-dem /tmp/acsp-synthetic-slope/source.tif \
+            --out-json /tmp/acsp-synthetic-slope/receipt.json
+      - name: Upload public synthetic hashes only, not DEM tiles or private field inputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-synthetic-slope-kernel-${{ matrix.slot }}
+          path: /tmp/acsp-synthetic-slope/receipt.json
+          if-no-files-found: error
+
+  compare_independent_synthetic_runners:
+    needs: run_synthetic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          name: cirsium-synthetic-slope-kernel-A
+          path: /tmp/acsp-synthetic-paired/A
+      - uses: actions/download-artifact@v4
+        with:
+          name: cirsium-synthetic-slope-kernel-B
+          path: /tmp/acsp-synthetic-paired/B
+      - name: Enforce exact Python patch-version A/B identities
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("/tmp/acsp-synthetic-paired/A/receipt.json").read_text())
+          b=json.loads(Path("/tmp/acsp-synthetic-paired/B/receipt.json").read_text())
+          assert a["native_versions"]["python"] == "3.11.16"
+          assert b["native_versions"]["python"] == "3.11.17"
+          assert a["native_versions"]["python"] != b["native_versions"]["python"]
+          PY
+      - name: Refuse different synthetic source bytes, report first divergent stage
+        run: |
+          python -m research.compare_cirsium_synthetic_slope_kernel_runs \
+            --first-json /tmp/acsp-synthetic-paired/A/receipt.json \
+            --second-json /tmp/acsp-synthetic-paired/B/receipt.json \
+            --result-json /tmp/acsp-synthetic-paired/comparison.json
+      - name: Preserve coordinate-free numerical diagnostic receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-synthetic-slope-kernel-independent-comparison
+          path: /tmp/acsp-synthetic-paired/comparison.json
+          if-no-files-found: error

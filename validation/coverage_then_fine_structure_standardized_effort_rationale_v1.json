@@ -1,0 +1,44 @@
+{
+  "schema_version": "cirsium-fresh-sentinel-standardized-effort-rationale-v1",
+  "status": "FROZEN_PRE_OUTCOME_METHOD_DEFAULT_NOT_OPTIMALITY_CLAIM",
+  "protocol_source_identity": "ACSP_CIRSIUM_FIXED_TIMED_SEARCH_3X30MIN_1OBSERVER_V1",
+  "frozen_values": {
+    "visits_per_candidate": 3,
+    "search_minutes_per_visit": 30,
+    "observer_count": 1,
+    "planned_person_minutes_per_candidate": 90
+  },
+  "internal_precedent": [
+    {
+      "source": "legacy/docs/FIELD_VALIDATION_IZU.md",
+      "relevant_detail": "Practical standardized field-validation starting protocol: 100 m search radius and 30 minutes active searching per site; actual effort recorded."
+    },
+    {
+      "source": "acsp_discover.py",
+      "relevant_detail": "Existing broad vascular-plant reconnaissance default: 90 search minutes per candidate cell and one minimum repeat visit; explicitly not species-specific."
+    }
+  ],
+  "external_method_context": [
+    {
+      "citation": "MacKenzie & Royle 2005, Journal of Applied Ecology, DOI 10.1111/j.1365-2664.2005.01098.x",
+      "relevant_detail": "General occupancy-design guidance recommends at least three repeat surveys when per-survey detection is high; this is not a Cirsium-specific validation."
+    },
+    {
+      "citation": "Zhang et al. 2014, PLOS ONE, DOI 10.1371/journal.pone.0095334",
+      "relevant_detail": "Vascular-plant surveys showed substantial missed richness at 20 minutes and continued rare-plant detections after 20 minutes; this is not a focal-Cirsium protocol calibration."
+    },
+    {
+      "citation": "Rimgailė-Voicik & Naujalis 2022, Applications in Plant Sciences, DOI 10.1002/aps3.11458",
+      "relevant_detail": "Timed-meander focal-plant searches may use 30-60 minute search durations depending on area; about 30 minutes was given as a general estimate for a 0.5-ha club-moss site."
+    }
+  ],
+  "synthesis": "Use three equal 30-minute one-observer searches. This preserves the existing ACSP 30-minute timed-search precedent while retaining 90 total person-minutes per candidate, equal to the repository's broad vascular-plant reconnaissance time budget, and adds repeat visits without introducing arm-, candidate-, movement-, outcome-, day-, or monetary-budget tuning.",
+  "claim_boundary": [
+    "This is a preregistered common comparison protocol, not an empirically optimal Cirsium search duration.",
+    "It does not estimate occupancy or detection probability.",
+    "It does not imply that a completed non-detection is biological absence.",
+    "The same effort values apply to all four taxa and all three frozen method arms.",
+    "Prospective outcomes cannot be used to change these values."
+  ],
+  "outcome_opened": false
+}

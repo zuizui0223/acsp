@@ -1,0 +1,105 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-worldcover-pointcog-repair-result-v1",
+  "status": "POINT_BEARING_COG_REPAIR_COVERAGE_AUDIT_FROZEN",
+  "parent_failure_result": "validation/coverage_then_fine_structure_fresh_sentinel_v2_full_worldcover_result_v1.json",
+  "repair_execution_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_pointcog_repair_execution_v1.json",
+  "repair_identity": "POINT_BEARING_WORLDCOVER_COG_ONLY_V1",
+  "source_pr": 227,
+  "workflow_run_id": 36121342866,
+  "workflow_head_sha": "39c1c7c540760a90fa626f5ece00e901cb013135",
+  "artifact_id": 10857382952,
+  "artifact_digest": "sha256:d9938b34518a17cd9081d17ab7ac9e734e1ff3b44839f7121fdc86e8f07e05e2",
+  "summary_sha256": "dbfef74c932e65451aaacaed81336b0b19bbab184988db0afb38902c10ca190f",
+  "full_worldcover_repair_csv_gz_sha256": "83870f3e6d9aca417811d463260c819eceb8c216f93d9b8e8b3ab857ac1cda8b",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "intersecting_tile_count": 49,
+  "points_per_tile": 800,
+  "input_candidate_count": 39200,
+  "output_candidate_count": 39200,
+  "candidate_rows_dropped": 0,
+  "exact_candidate_id_set_match": true,
+  "exact_candidate_id_order_match": true,
+  "complete_candidate_count": 35974,
+  "worldcover_missing_candidate_count": 26,
+  "provider_failure_candidate_count": 3200,
+  "provider_failure_tile_count": 4,
+  "complete_fraction": 0.917704081632653,
+  "status_counts": {
+    "COMPLETE": 35974,
+    "INDETERMINATE_PROVIDER_FAILURE": 3200,
+    "INDETERMINATE_WORLDCOVER_MISSING": 26
+  },
+  "provider_failure_regional_tile_ids": [
+    "x160_y57",
+    "x160_y58",
+    "x161_y58",
+    "x166_y57"
+  ],
+  "remaining_required_worldcover_cog_failures": {
+    "N24E141": {
+      "candidate_count": 1063,
+      "regional_tile_ids": ["x160_y57", "x161_y58"],
+      "error_class": "RasterioIOError"
+    },
+    "N24E153": {
+      "candidate_count": 800,
+      "regional_tile_ids": ["x166_y57"],
+      "error_class": "RasterioIOError"
+    },
+    "N27E138": {
+      "candidate_count": 800,
+      "regional_tile_ids": ["x160_y58"],
+      "error_class": "RasterioIOError"
+    },
+    "N27E141": {
+      "candidate_count": 537,
+      "regional_tile_ids": ["x161_y58"],
+      "error_class": "RasterioIOError"
+    }
+  },
+  "remaining_worldcover_missing_class": {
+    "source_cog_id": "N24E129",
+    "candidate_count": 26,
+    "regional_tile_ids": ["x155_y57"],
+    "status": "INDETERMINATE_WORLDCOVER_MISSING"
+  },
+  "worldcover_class_counts_complete_rows": {
+    "10": 25857,
+    "20": 13,
+    "30": 2494,
+    "40": 2766,
+    "50": 1921,
+    "60": 178,
+    "80": 2655,
+    "90": 71,
+    "95": 18,
+    "100": 1
+  },
+  "source_gate_complete": false,
+  "diagnostic_interpretation": {
+    "bounds_overfetch_repair_effective": true,
+    "complete_fraction_before_repair": 0.4489795918367347,
+    "complete_fraction_after_repair": 0.917704081632653,
+    "provider_failure_tile_count_before_repair": 27,
+    "provider_failure_tile_count_after_repair": 4,
+    "remaining_failure_scope": "four required point-bearing official WorldCover 3-degree COG IDs",
+    "ecological_rule_changed": false,
+    "candidate_denominator_changed": false,
+    "worldcover_release_changed": false
+  },
+  "scientific_boundary": {
+    "provider_failure_is_biological_negative": false,
+    "worldcover_missing_is_biological_negative": false,
+    "candidate_selection_added": false,
+    "candidate_ranking_added": false,
+    "habitat_threshold_added": false,
+    "neighborhood_fraction_used": false,
+    "focal_occurrence_prototypes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "prospective_field_outcomes_opened": false,
+    "field_outcomes_used": false,
+    "human_access_used": false
+  },
+  "next_gate": "Before any ecological screening, diagnose HTTP object availability for exactly N24E141, N24E153, N27E138 and N27E141 at the unchanged ESA WorldCover 2021 v200 provider URL; do not substitute another provider or release."
+}

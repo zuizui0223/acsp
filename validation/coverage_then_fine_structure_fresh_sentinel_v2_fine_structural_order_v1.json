@@ -1,0 +1,75 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-fine-structural-order-v1",
+  "status": "FROZEN_BEFORE_FINE_STRUCTURAL_ORDER_EXECUTION",
+  "scientific_role": "full response-independent structural order on source-complete primary fine cells; not field allocation",
+  "cohort_unit_ids": ["CIR02", "CIR06", "CIR12", "CIR13"],
+  "unit_families": {
+    "CIR02": "WETLAND_MOISTURE_STRUCTURE",
+    "CIR06": "ALPINE_TOPOGRAPHIC_STRUCTURE",
+    "CIR12": "OPEN_GRASSLAND_STRUCTURE",
+    "CIR13": "OPEN_GRASSLAND_STRUCTURE"
+  },
+  "required_source_states": {
+    "terrain": "SOURCE_COMPLETE",
+    "worldcover": {
+      "CIR02": "SOURCE_COMPLETE",
+      "CIR06": "NOT_REQUIRED",
+      "CIR12": "SOURCE_COMPLETE",
+      "CIR13": "SOURCE_COMPLETE"
+    }
+  },
+  "source_intersection_rule": {
+    "CIR02": "terrain SOURCE_COMPLETE AND worldcover SOURCE_COMPLETE",
+    "CIR06": "terrain SOURCE_COMPLETE",
+    "CIR12": "terrain SOURCE_COMPLETE AND worldcover SOURCE_COMPLETE",
+    "CIR13": "terrain SOURCE_COMPLETE AND worldcover SOURCE_COMPLETE",
+    "source_indeterminate_cells_retained_outside_graph": true,
+    "source_indeterminate_is_biological_absence": false,
+    "source_indeterminate_is_zero_support": false
+  },
+  "structural_chain": {
+    "graph": "acsp.structural_graph.build_structural_graph_primitives",
+    "graph_identity": "G_E_LOCAL_GRID_V1",
+    "graph_type": "REGULAR_GRID_MOORE_8_NEIGHBOUR",
+    "graph_radius_cells": 1,
+    "graph_input": "source-complete subframe only",
+    "raw_adapter": "acsp.structural_raw_adapters.adapt_structural_components",
+    "support": "acsp.structural_support.compose_structural_support",
+    "composition_rule": "ROW_MIN_CONJUNCTIVE_SUPPORT",
+    "fitted_feature_weights": false,
+    "family_formula_retuning_allowed": false
+  },
+  "order": {
+    "scope": "all source-complete fine cells",
+    "primary_sort": "structural_support descending",
+    "tie_break": "candidate_cell_id ascending",
+    "rank": "complete 1..N deterministic order",
+    "top_k_applied": false,
+    "support_threshold_applied": false,
+    "patch_count_applied": false,
+    "survey_budget_applied": false
+  },
+  "graph_boundary_interpretation": {
+    "missing_source_cells_are_not_inserted_as_zero_nodes": true,
+    "graph_uses_existing_source_complete_grid_neighbours_only": true,
+    "source_gaps_may_reduce_available_neighbour_count": true,
+    "do_not_interpret_source_gap_edges_as_biological_barriers": true
+  },
+  "output_boundary": {
+    "coordinate_bearing_order_private": true,
+    "public_output": "counts, source-complete fraction, support/order digest, source-indeterminate count and source provenance only",
+    "exact_site_claim": false,
+    "occupancy_claim": false,
+    "field_efficiency_claim": false,
+    "compact_patch_count_claim": false
+  },
+  "forbidden": [
+    "do not rank source-indeterminate cells below source-complete cells",
+    "do not assign zero structural support to source-indeterminate cells",
+    "do not add Top-k, threshold, patch count, survey-day or monetary-budget stopping",
+    "do not change graph radius, family formula or ROW_MIN composition after seeing this execution",
+    "do not use field outcomes, private exact sites, P02 results, access or routes"
+  ],
+  "prospective_field_outcomes_opened": false,
+  "next_gate": "Execute and hash full fine structural orders after all required fixed-policy source layers are available. Any compact patch or field-allocation rule remains a separate validation problem."
+}

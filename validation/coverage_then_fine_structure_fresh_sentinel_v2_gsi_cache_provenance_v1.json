@@ -1,0 +1,40 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-gsi-cache-provenance-v1",
+  "status": "FROZEN_BEFORE_READ_ONLY_GSI_CACHE_CONTENT_AUDIT",
+  "as_of_date": "2026-10-08",
+  "source_issue": 253,
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "source_policy": "FROZEN_FIXED_GSI_CHUNK_PHASE_0_0",
+  "read_only": true,
+  "scan_categories": {
+    "gsi_png_tiles": "gsi_dem_tiles/**/*.png",
+    "constructed_gsi_mosaics": "app_layers/gsi_*.tif"
+  },
+  "digest_definition": "SHA256 of sorted private relative path, TAB, SHA256 of file bytes, LF; file paths and individual tile hashes not published",
+  "public_fields": [
+    "tile_file_count",
+    "tile_total_bytes",
+    "tile_inventory_sha256",
+    "mosaic_file_count",
+    "mosaic_total_bytes",
+    "mosaic_inventory_sha256",
+    "files_read_only",
+    "coordinate_bearing_filenames_exported",
+    "field_outcomes_opened"
+  ],
+  "no_source_priority_change": true,
+  "no_gsi_mosaic_rebuild": true,
+  "no_terrain_feature_recomputation": true,
+  "no_habitat_or_support_threshold_change": true,
+  "source_missing_becomes_biological_absence": false,
+  "private_tile_paths_exported": false,
+  "coordinates_or_candidate_rows_exported": false,
+  "field_outcomes_opened": false,
+  "interpretation": "Inventory-level raw-cache fingerprints permit a later audit to distinguish changed upstream GSI cache bytes from downstream terrain sampling differences. Hash mismatch alone does not identify changed biological conditions, and matching inventory hashes alone does not validate a field selector.",
+  "promotion_authorized": false
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "cirsium-disjoint-broad-frame-replication-execution-gate-v1",
+  "status": "PREOUTCOME_FRAMES_FROZEN_OUTCOME_EXECUTION_AUTHORIZED",
+  "source_contract": "validation/cirsium_disjoint_broad_frame_replication_v1.json",
+  "preflight_result": "validation/cirsium_disjoint_broad_frame_replication_preflight_result_v1.json",
+  "recent_outcomes_fetched_at_gate_creation": false,
+  "validated_product_changed": false,
+  "preflight_workflow": {
+    "run_id": 34008160599,
+    "head_sha": "b3b3f26938e271b82fc58d7255adbb69fa924148",
+    "artifact_id": 9981625463,
+    "artifact_digest": "sha256:e8d2b578e29939aa2944ee9aa91d37540f6821ddff8b550656babe5362103505"
+  },
+  "unit_execution": [
+    {
+      "unit_id": "DBR01",
+      "species": "Cirsium spicatum",
+      "preflight_status": "NO_HISTORICAL_ANCHOR",
+      "recent_fetch_authorized": false,
+      "required_outcome_status": "NOT_EVALUABLE_NO_HISTORICAL_ANCHOR"
+    },
+    {
+      "unit_id": "DBR02",
+      "species": "Cirsium maritimum",
+      "preflight_status": "PREOUTCOME_CANDIDATE_UNIVERSES_FROZEN",
+      "selected_region": "shikoku",
+      "historical_evidence_sha256": "12131bc8a43afdf9d53c60945343909d29f054a4d2da623e397e1e87c34ac055",
+      "population_anchor_sha256": "d05130dd282de2f568b5357aa4fa8b4771b859c4c0ad248fc11d534b2cea1b95",
+      "worldcover_sample_sha256": "1dd2c422f87f4224f9ff9ddc92b3779b2c02047d62b217fe4b75ee9c43cdd964",
+      "recent_fetch_authorized": true
+    },
+    {
+      "unit_id": "DBR03",
+      "species": "Cirsium ishidzuchiense",
+      "preflight_status": "PREOUTCOME_CANDIDATE_UNIVERSES_FROZEN",
+      "selected_region": "shikoku",
+      "historical_evidence_sha256": "6761be610f568a5423bb1068a3f35078021fb1049b0f255d3edbe92f1a7da165",
+      "population_anchor_sha256": "90565100054eb18df9d5373500c5299c7da77d86c0c57c4fcb829db10c177e62",
+      "worldcover_sample_sha256": "18e55f9cf40f1d8998a9efcd65ea2b74edc2eee1ea1328d3180208899c61ca27",
+      "recent_fetch_authorized": true
+    }
+  ],
+  "execution_order": [
+    "reconstruct DBR02 and DBR03 historical evidence and candidate universes",
+    "verify region, evidence, anchor, WorldCover and candidate-universe hashes against the committed preflight result and this gate",
+    "abort before any recent fetch if any frozen fingerprint drifts",
+    "only after every authorized unit verifies, fetch strict 2021-2025 GBIF evidence",
+    "score aggregate full-frame ceilings and apply the preregistered unit-level sign gate"
+  ],
+  "forbidden": [
+    "do not fetch recent outcomes for DBR01",
+    "do not replace DBR01 after its no-historical-anchor result",
+    "do not change taxa, regions, radii, grid spacing, coordinate-uncertainty limits or WorldCover semantics after this gate",
+    "do not proceed to recent fetch if any preflight fingerprint drifts",
+    "do not add structural ranking or field-access information to this replication"
+  ]
+}

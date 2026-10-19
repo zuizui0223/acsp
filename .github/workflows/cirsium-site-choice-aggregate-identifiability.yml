@@ -1,0 +1,29 @@
+name: Cirsium aggregate topology versus site-choice identifiability
+on:
+  pull_request:
+    paths:
+      - 'research/prove_cirsium_site_choice_nonidentifiability.py'
+      - 'tests/test_cirsium_site_choice_identifiability_v1.py'
+      - 'validation/cirsium_site_choice_aggregate_nonidentifiability_result_v1.json'
+      - '.github/workflows/cirsium-site-choice-aggregate-identifiability.yml'
+      - 'paper/CIRSIUM_SITE_CHOICE_AGGREGATE_NONIDENTIFIABILITY.md'
+permissions:
+  contents: read
+jobs:
+  aggregate-identifiability-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.17'
+      - name: Install focused synthetic test tooling
+        run: python -m pip install pytest
+      - name: Check source-locked counterexamples, effect envelope and canonical saved bytes
+        run: |
+          python -m pytest -q tests/test_cirsium_site_choice_identifiability_v1.py
+          python -m research.prove_cirsium_site_choice_nonidentifiability --verify-saved validation/cirsium_site_choice_aggregate_nonidentifiability_result_v1.json
+          python -m py_compile research/prove_cirsium_site_choice_nonidentifiability.py research/design_cirsium_patch_connectivity_field_trial_v1.py gbif_fieldmap_builder_app.py

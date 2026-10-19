@@ -1,0 +1,41 @@
+name: Fresh-SENTINEL cross-unit structural policy alias audit
+
+on:
+  pull_request:
+    paths:
+      - "research/audit_cirsium_fresh_sentinel_cross_unit_policy_alias.py"
+      - "tests/test_cirsium_fresh_sentinel_cross_unit_policy_alias.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_cross_unit_policy_alias_result_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-cross-unit-alias-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  alias_audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test policy identity and fail-closed source changes
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_cirsium_fresh_sentinel_cross_unit_policy_alias.py
+      - name: Reproduce public-safe alias receipt
+        run: |
+          python research/audit_cirsium_fresh_sentinel_cross_unit_policy_alias.py --out-json /tmp/alias-audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          actual=json.loads(Path('/tmp/alias-audit.json').read_text())
+          frozen=json.loads(Path('validation/coverage_then_fine_structure_fresh_sentinel_v2_cross_unit_policy_alias_result_v1.json').read_text())
+          assert actual == frozen
+          assert actual['distinct_frozen_structural_family_count'] == 3
+          assert actual['private_coordinate_set_equality_verified'] is False
+          assert actual['private_patch_membership_equality_verified'] is False
+          assert actual['species_specific_model_generality_claim_authorized'] is False
+          assert actual['prospective_field_outcomes_opened'] is False
+          PY

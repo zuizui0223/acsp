@@ -1,0 +1,77 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-source-replay-gate-v1",
+  "status": "FREEZE_REPLAY_DIAGNOSIS_NOT_SELECTOR_PROMOTION",
+  "as_of_date": "2026-10-08",
+  "source_issue": 253,
+  "source_pr": 247,
+  "replay_pr": 249,
+  "source_workflow_run": 37647225829,
+  "replay_workflow_run": 37705751756,
+  "source_artifacts": {
+    "CIR02": 11498811685,
+    "CIR06": 11499228027,
+    "CIR12": 11502445722,
+    "CIR13": 11503379024
+  },
+  "replay_artifacts": {
+    "CIR02": 11520542549,
+    "CIR06": 11521147049,
+    "CIR12": 11522430829,
+    "CIR13": 11523154568
+  },
+  "required_status": "UPSTREAM_GSI_REPLAY_DRIFT_FINAL_PATCHES_IDENTICAL",
+  "expected": {
+    "gsi_terrain_feature_digest_matching_units": [
+      "CIR02",
+      "CIR12"
+    ],
+    "structural_full_order_sha_matching_units": [
+      "CIR02",
+      "CIR12"
+    ],
+    "final_patch_csv_sha_matching_units": [
+      "CIR02",
+      "CIR06",
+      "CIR12",
+      "CIR13"
+    ],
+    "all_four_patch_representations_byte_identical": true,
+    "upstream_gsi_content_reproducible_all_units": false,
+    "structural_full_order_reproducible_all_units": false,
+    "upstream_drift_cause_identified": false
+  },
+  "claim_boundary": {
+    "only_public_safe_unit_receipts_used": true,
+    "private_coordinates_opened": false,
+    "prospective_field_outcomes_opened": false,
+    "known_mechanism_of_source_drift": false,
+    "selector_promotion_authorized": false,
+    "change_gsi_chunk_phase_after_observing_drift": false,
+    "patch_hash_identity_does_not_waive_structural_order_hash": true
+  },
+  "next_gate": "Pin source-world identifiers and diagnose per-chunk terrain/provider differences without coordinates or outcomes. Do not bypass PR250's frozen structural-order SHA check.",
+  "chunk_log_verification": {
+    "expected_original_job_ids": {
+      "CIR06": 112881046494,
+      "CIR13": 112881046755
+    },
+    "expected_replay_job_ids": {
+      "CIR06": 113079588295,
+      "CIR13": 113079588247
+    },
+    "expected_chunk_counts": {
+      "CIR06": 81,
+      "CIR13": 237
+    },
+    "expected_matching_chunk_counts": {
+      "CIR06": 81,
+      "CIR13": 237
+    },
+    "expected_installed_package_token_count": 59,
+    "expected_runner_image": "ubuntu-24.04",
+    "expected_runner_image_version": "20261004.327.1",
+    "matching_source_classes_and_counts_proves_tile_content_identity": false,
+    "source_tile_and_mosaic_content_hashes_available": false,
+    "private_coordinates_opened": false
+  }
+}

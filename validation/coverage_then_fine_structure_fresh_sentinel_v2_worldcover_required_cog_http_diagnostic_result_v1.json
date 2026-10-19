@@ -1,0 +1,74 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-worldcover-required-cog-http-diagnostic-result-v1",
+  "status": "REQUIRED_COG_HTTP_DIAGNOSTIC_FROZEN",
+  "source_diagnostic_contract": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_required_cog_http_diagnostic_v1.json",
+  "source_repair_result": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_pointcog_repair_result_v1.json",
+  "workflow_run_id": 36286682290,
+  "workflow_head_sha": "897d2c58e500d9a8afa2ee799ea2c89b1de4dd8f",
+  "artifact_id": 10919884450,
+  "artifact_digest": "sha256:904fb9222af046fe6fa71f312672d982d0ee6811b5053f0b19d16c96d736e236",
+  "diagnostic_result_sha256": "e717020a86b13c49da54e3d755784e57427cfbcc173b7ca5adc9bca03fcb16b1",
+  "provider_identity": "ESA_WORLDCOVER",
+  "provider_release": "2021_v200",
+  "diagnostic_request_method": "GET_RANGE_BYTES_0_0",
+  "required_cog_ids": [
+    "N24E141",
+    "N24E153",
+    "N27E138",
+    "N27E141"
+  ],
+  "results": [
+    {
+      "worldcover_cog_id": "N24E141",
+      "http_status": 404,
+      "classification": "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL",
+      "candidate_count_affected": 1063
+    },
+    {
+      "worldcover_cog_id": "N24E153",
+      "http_status": 404,
+      "classification": "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL",
+      "candidate_count_affected": 800
+    },
+    {
+      "worldcover_cog_id": "N27E138",
+      "http_status": 404,
+      "classification": "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL",
+      "candidate_count_affected": 800
+    },
+    {
+      "worldcover_cog_id": "N27E141",
+      "http_status": 404,
+      "classification": "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL",
+      "candidate_count_affected": 537
+    }
+  ],
+  "classification_counts": {
+    "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL": 4
+  },
+  "affected_candidate_count": 3200,
+  "affected_candidate_fraction": 0.08163265306122448,
+  "source_gap_interpretation": {
+    "transport_failure": false,
+    "frozen_provider_object_missing": true,
+    "biological_negative": false,
+    "habitat_unsuitable": false,
+    "candidate_denominator_error": false,
+    "repair_can_use_alternate_provider": false,
+    "repair_can_use_alternate_release": false
+  },
+  "diagnostic_boundary": {
+    "full_cog_downloaded": false,
+    "worldcover_class_read": false,
+    "candidate_membership_changed": false,
+    "candidate_order_changed": false,
+    "candidate_coordinates_changed": false,
+    "prospective_field_outcomes_opened": false,
+    "field_outcomes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "human_access_used": false
+  },
+  "source_gate_complete": false,
+  "next_gate": "Before ecological screening, freeze conservative source-indeterminate handling that retains every unpublished-COG candidate in the candidate universe and forbids missing WorldCover evidence from acting as negative ecological evidence or exclusion."
+}

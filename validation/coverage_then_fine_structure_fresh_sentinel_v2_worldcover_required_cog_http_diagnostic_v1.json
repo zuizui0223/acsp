@@ -1,0 +1,59 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-worldcover-required-cog-http-diagnostic-v1",
+  "status": "FROZEN_BEFORE_REQUIRED_COG_HTTP_DIAGNOSTIC",
+  "source_repair_result": "validation/coverage_then_fine_structure_fresh_sentinel_v2_worldcover_pointcog_repair_result_v1.json",
+  "provider": {
+    "identity": "ESA_WORLDCOVER",
+    "release": "2021_v200",
+    "base_url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map",
+    "alternate_provider_allowed": false,
+    "alternate_release_allowed": false
+  },
+  "required_cog_ids": [
+    "N24E141",
+    "N24E153",
+    "N27E138",
+    "N27E141"
+  ],
+  "diagnostic_request": {
+    "method": "GET",
+    "range_header": "bytes=0-0",
+    "follow_redirects": true,
+    "timeout_seconds": 30,
+    "max_attempts": 3,
+    "retry_only_for": [
+      "network_exception",
+      "http_429",
+      "http_5xx"
+    ],
+    "retry_backoff_seconds": [1, 2]
+  },
+  "classification": {
+    "http_200_or_206": "OBJECT_ACCESSIBLE",
+    "http_404": "OBJECT_NOT_PUBLISHED_AT_FROZEN_URL",
+    "http_403": "OBJECT_ACCESS_DENIED_OR_UNAVAILABLE",
+    "http_429_or_5xx_after_retries": "TRANSIENT_PROVIDER_FAILURE",
+    "other_http_4xx": "OTHER_PROVIDER_HTTP_ERROR",
+    "network_exception_after_retries": "TRANSIENT_PROVIDER_FAILURE"
+  },
+  "execution_boundary": {
+    "download_full_cog": false,
+    "read_worldcover_class": false,
+    "change_candidate_membership": false,
+    "change_candidate_order": false,
+    "change_candidate_coordinates": false,
+    "change_worldcover_release": false,
+    "use_alternate_provider": false,
+    "use_field_outcomes": false,
+    "use_private_exact_sites": false,
+    "use_p02_results": false,
+    "use_access_or_budget": false
+  },
+  "interpretation_boundary": {
+    "object_not_published_is_biological_negative": false,
+    "transient_provider_failure_is_biological_negative": false,
+    "diagnostic_can_authorize_ecological_screening": false,
+    "diagnostic_role": "source transport/object availability only"
+  },
+  "next_gate": "Freeze the four-object HTTP diagnostic result before deciding whether the remaining source gap is a transport problem or a frozen-provider coverage gap."
+}

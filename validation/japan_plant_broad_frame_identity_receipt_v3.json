@@ -1,0 +1,21 @@
+{
+  "schema_version": "japan-plant-broad-frame-identity-receipt-v3",
+  "status": "IDENTITY_CANDIDATES_PINNED_PRE_FOCAL_HISTORICAL_QUERY",
+  "parent_issue": 202,
+  "workflow_run_id": 34556591022,
+  "workflow_head_sha": "aed3c7d317d3c15787ffe2af2f9ffb8062fd67ba",
+  "artifact_id": 10182829338,
+  "artifact_name": "japan-plant-broad-frame-identity-candidates-v3",
+  "artifact_digest": "sha256:ff6a32f0af3ebec946a68997872e289a6961a5596f6512e6197389b47f0ce522",
+  "identity_candidates_path": "validation/japan_plant_broad_frame_identity_candidates_v3.csv",
+  "identity_candidates_sha256": "6cde4966374c049c3ed55c4a1aa836a668fd52795ea60f8572a9aa8ac4963b1d",
+  "identity_audit_path": "validation/japan_plant_broad_frame_identity_candidates_audit_v3.json",
+  "identity_audit_sha256": "c1b8f06b9f83856c8c29faecf4b2cbe2f8cc8f80005ca6112b1006bac2024143",
+  "candidate_identity_canonical_sha256": "3f6369dfebb1550393e81450df9c8f67f91758fa9fd7c7f8b4b1a8e9ffdf1694",
+  "candidate_count": 48,
+  "focal_2000_2020_occurrences_opened": false,
+  "heldout_2021_2025_opened": false,
+  "candidate_frames_built": false,
+  "selector_evaluated": false,
+  "taxon_replacement_after_freeze_allowed": false
+}

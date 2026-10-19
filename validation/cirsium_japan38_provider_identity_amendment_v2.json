@@ -1,0 +1,91 @@
+{
+  "schema_version": "cirsium-japan38-provider-identity-amendment-v2",
+  "status": "FROZEN_AFTER_HISTORICAL_PREFLIGHT_BEFORE_2021_2025_OUTCOME_OPENING",
+  "parent_issue": 198,
+  "parent_contract": "validation/cirsium_japan38_broad_frame_confirmation_v2.json",
+  "scientific_role": "pre-outcome measurement-unit correction preventing pseudoreplication when multiple paper taxon concepts resolve to one GBIF provider identity",
+  "recent_outcomes_opened_before_amendment": false,
+  "validated_japan_product_changed": false,
+  "automatic_global_adapter_changed": false,
+  "source_preflight": {
+    "workflow_run_id": 34314536154,
+    "workflow_head_sha": "4ae2bcff6ed2dc61632a455dd1e72c5587201171",
+    "artifact_id": 10089784005,
+    "artifact_name": "cirsium-japan38-broad-frame-preflight-v2",
+    "artifact_digest": "sha256:0bcab01f86d1927b0966dd8c0786e38b97626b326c2c38ec58bca0e4b0b8ad3d",
+    "preflight_result_sha256": "22df706b08fcab8b67d76536089fe242c8e093618d28a2e376e72ee89e77ae1d",
+    "declared_paper_concepts": 31,
+    "constructible_concept_rows": 13,
+    "no_historical_anchor_concept_rows": 14,
+    "provider_resolution_failure_concept_rows": 4
+  },
+  "provider_identity_audit": {
+    "resolved_concept_rows": 27,
+    "unique_resolved_gbif_usage_keys": 25,
+    "constructible_concept_rows": 13,
+    "unique_constructible_gbif_usage_keys": 11,
+    "duplicate_usage_key_groups": [
+      {
+        "matched_usage_key": 3113139,
+        "matched_scientific_name": "Cirsium nipponicum (Maxim.) Makino",
+        "member_ids": ["JPN_20", "JPN_21", "JPN_35"],
+        "requested_names": [
+          "Cirsium nipponicum var. incomptum",
+          "Cirsium nipponicum var. yoshinoi",
+          "Cirsium nipponicum"
+        ],
+        "canonical_representative_member_id": "JPN_20",
+        "representative_rule": "lexicographically smallest member_id within a shared matched_usage_key group",
+        "historical_population_count": 46,
+        "selected_region": "shikoku",
+        "candidate_counts_identical_across_concepts": true,
+        "note": "These concept rows are labels for one provider identity, not independent primary replicates."
+      }
+    ],
+    "all_other_resolved_usage_keys_unique": true
+  },
+  "primary_analysis_unit": {
+    "definition": "unique GBIF matched_usage_key among preoutcome constructible rows",
+    "paper_concepts_retained": true,
+    "paper_concepts_dropped_or_replaced": false,
+    "recent_fetches_per_provider_identity": 1,
+    "duplicate_group_primary_count": 1,
+    "duplicate_group_secondary_reporting": "retain all paper concept labels as aliases of the same provider-identity result",
+    "canonical_representative_rule": "lexicographically smallest member_id within each matched_usage_key group"
+  },
+  "constructible_provider_identities": [
+    {"matched_usage_key": 3113477, "canonical_member_id": "JPN_03"},
+    {"matched_usage_key": 3113701, "canonical_member_id": "JPN_04"},
+    {"matched_usage_key": 3112963, "canonical_member_id": "JPN_05"},
+    {"matched_usage_key": 3112982, "canonical_member_id": "JPN_09"},
+    {"matched_usage_key": 3113139, "canonical_member_id": "JPN_20", "alias_member_ids": ["JPN_21", "JPN_35"]},
+    {"matched_usage_key": 3113069, "canonical_member_id": "JPN_22"},
+    {"matched_usage_key": 3112645, "canonical_member_id": "JPN_23"},
+    {"matched_usage_key": 3113730, "canonical_member_id": "JPN_27"},
+    {"matched_usage_key": 3112564, "canonical_member_id": "JPN_30"},
+    {"matched_usage_key": 3113080, "canonical_member_id": "JPN_34"},
+    {"matched_usage_key": 3113059, "canonical_member_id": "JPN_37"}
+  ],
+  "primary_gate_interpretation": {
+    "original_numeric_thresholds_changed": false,
+    "minimum_temporally_evaluable_units": 8,
+    "minimum_positive_fraction": 0.5,
+    "minimum_cluster_weighted_broad_minus_local5_recall": 0.10,
+    "unit_for_first_two_thresholds": "unique constructible GBIF matched_usage_key",
+    "reason": "counting three paper concepts that resolve to one identical GBIF occurrence identity as three independent taxa would create pseudoreplication",
+    "same_cohort_rescue": false
+  },
+  "provider_resolution_failures": [
+    {"member_id": "JPN_10", "requested_name": "Cirsium ishidatense", "reason": "GBIF resolved GENUS, not species rank"},
+    {"member_id": "JPN_12", "requested_name": "Cirsium japonicum var. horridum", "reason": "GBIF resolved VARIETY; current species-only adapter rejects it"},
+    {"member_id": "JPN_14", "requested_name": "Cirsium kiotoense", "reason": "GBIF resolved GENUS, not species rank"},
+    {"member_id": "JPN_18", "requested_name": "Cirsium matsumurae var. dubium", "reason": "GBIF resolved VARIETY; current species-only adapter rejects it"}
+  ],
+  "forbidden_after_amendment": [
+    "do not replace or rename declared paper concepts to improve evaluability",
+    "do not relax the declared uncertainty <=1 km rule",
+    "do not count aliases sharing one matched_usage_key as independent primary units",
+    "do not alter the >=8, >=50%, or >=0.10 primary thresholds after heldout opening",
+    "do not open 2021-2025 outcomes before the preflight artifact and this amendment are verified"
+  ]
+}

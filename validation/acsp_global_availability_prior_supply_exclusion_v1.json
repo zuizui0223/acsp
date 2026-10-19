@@ -1,0 +1,35 @@
+{
+  "schema_version": "acsp-global-availability-prior-supply-exclusion-v1",
+  "status": "FROZEN_BEFORE_NEW_GLOBAL_AVAILABILITY_IDENTITY_SELECTION",
+  "scientific_role": "Exclude identities whose historical provider-supply process was already opened during the aborted issue-169 provider-eligible observability activation; no heldout or predictive outcome from those identities was opened.",
+  "source": {
+    "terminal_record": "validation/acsp_provider_eligible_observability_first_activation_terminal_v1.json",
+    "source_workflow_run_id": 33031292325,
+    "source_artifact_name": "provider-eligible-observability-stage1-candidate-snapshot",
+    "source_artifact_id": 9630421872,
+    "source_artifact_digest": "sha256:a3745c060dae360172b8a707d075997e6ee86153784f0f76bfb1322000f59f88",
+    "candidate_snapshot_file": "candidate_snapshot.csv",
+    "candidate_snapshot_sha256": "a3ef9ed1ad1dc49f63702511297c56dc0c68f02a7cc0c3805906fcd4291dbe41",
+    "candidate_rows": 6147,
+    "unique_species_keys": 3161,
+    "unique_scientific_names": 3161
+  },
+  "exclusion_rule": "Deduplicate source candidate_snapshot.csv by speciesKey/scientific_name and exclude all 3161 identities from the new availability-parity cohort before any new focal historical-country query.",
+  "prior_opening_boundary": {
+    "fresh_candidate_identities_opened": true,
+    "historical_unique_species_queries_attempted": 3161,
+    "historical_provider_success_count": 3132,
+    "historical_provider_error_count": 29,
+    "heldout_2021_2025_opened": false,
+    "candidate_generation_run": false,
+    "robust_support_run": false,
+    "random_baseline_run": false,
+    "recall_or_lift_read": false
+  },
+  "new_confirmation_policy": {
+    "reuse_for_identity_selection": false,
+    "reuse_for_availability_validation": false,
+    "taxon_replacement_after_new_identity_freeze": false,
+    "validated_japan_core_changed": false
+  }
+}

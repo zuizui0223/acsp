@@ -1,0 +1,59 @@
+name: Fresh-SENTINEL four-unit actual selected DEM replay freeze
+
+on:
+  pull_request:
+    paths:
+      - "research/verify_cirsium_fresh_sentinel_v2_complete_selected_mosaic_replay.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_complete_selected_mosaic_replay.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_selected_mosaic_complete_cross_run_result_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-four-unit-selected-mosaic-replay-freeze.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  verify_original_eight_public_GSI_receipts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test noncausal frozen source identities and fail-closed source-state requirements
+        run: |
+          python -m pip install pytest
+          python -m pytest -q \
+            tests/test_cirsium_fresh_sentinel_v2_public_gsi_precision_runs.py \
+            tests/test_cirsium_fresh_sentinel_v2_complete_selected_mosaic_replay.py
+          python -m research.verify_cirsium_fresh_sentinel_v2_complete_selected_mosaic_replay
+      - name: Download only public-safe original GSI unit receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for unit in CIR02 CIR06 CIR12 CIR13; do
+            for run in 37785966356 38058577057; do
+              mkdir -p "/tmp/acsp-eight-source-replay/$run/$unit"
+              gh run download "$run" --repo "${{ github.repository }}" \
+                --name "cirsium-fresh-sentinel-v2-fixed-gsi-${unit}-receipt" \
+                --dir "/tmp/acsp-eight-source-replay/$run/$unit"
+            done
+          done
+      - name: Recompute actual selected DEM source and terrain fingerprint comparisons
+        run: |
+          python -m research.verify_cirsium_fresh_sentinel_v2_complete_selected_mosaic_replay \
+            --first /tmp/acsp-eight-source-replay/37785966356 \
+            --second /tmp/acsp-eight-source-replay/38058577057 \
+            | tee /tmp/acsp-four-unit-source-replay-validation.json
+      - name: Publish only coordinate-free original source verification status
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-eight-original-selected-dem-source-receipts-verified
+          path: /tmp/acsp-four-unit-source-replay-validation.json
+          if-no-files-found: error

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cirsium-fresh-sentinel-standardized-effort-protocol-v1",
+  "title": "Fresh-SENTINEL standardized per-candidate effort protocol",
+  "description": "Pre-outcome biological observation protocol. It fixes repeat count, active search minutes, and observer count independently of candidate identity, arm, movement topology, and prospective outcomes. It is not a survey-day or monetary-budget input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "cohort_unit_ids",
+    "protocol_source_identity",
+    "unit_effort",
+    "prospective_field_outcomes_opened",
+    "field_outcomes_used_to_set_effort",
+    "candidate_identity_used_to_set_effort",
+    "arm_specific_effort_allowed",
+    "movement_constraint_used_to_set_effort",
+    "post_outcome_effort_edits_allowed"
+  ],
+  "properties": {
+    "schema_version": {"const": "cirsium-fresh-sentinel-standardized-effort-protocol-v1"},
+    "status": {"const": "PRE_OUTCOME_STANDARDIZED_EFFORT_PROTOCOL_FROZEN"},
+    "cohort_unit_ids": {"const": ["CIR02", "CIR06", "CIR12", "CIR13"]},
+    "protocol_source_identity": {"type": "string", "minLength": 1},
+    "unit_effort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["CIR02", "CIR06", "CIR12", "CIR13"],
+      "properties": {
+        "CIR02": {"$ref": "#/$defs/unitEffort"},
+        "CIR06": {"$ref": "#/$defs/unitEffort"},
+        "CIR12": {"$ref": "#/$defs/unitEffort"},
+        "CIR13": {"$ref": "#/$defs/unitEffort"}
+      }
+    },
+    "prospective_field_outcomes_opened": {"const": false},
+    "field_outcomes_used_to_set_effort": {"const": false},
+    "candidate_identity_used_to_set_effort": {"const": false},
+    "arm_specific_effort_allowed": {"const": false},
+    "movement_constraint_used_to_set_effort": {"const": false},
+    "post_outcome_effort_edits_allowed": {"const": false}
+  },
+  "$defs": {
+    "unitEffort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visits_per_candidate", "search_minutes_per_visit", "observer_count"],
+      "properties": {
+        "visits_per_candidate": {"type": "integer", "minimum": 1},
+        "search_minutes_per_visit": {"type": "number", "exclusiveMinimum": 0},
+        "observer_count": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

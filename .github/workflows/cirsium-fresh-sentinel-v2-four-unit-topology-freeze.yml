@@ -1,0 +1,51 @@
+name: Fresh-SENTINEL frozen four-unit topology receipt audit
+
+on:
+  pull_request:
+    paths:
+      - "research/verify_cirsium_fresh_sentinel_v2_frozen_patch_topology_result.py"
+      - "tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology_result.py"
+      - "validation/coverage_then_fine_structure_fresh_sentinel_v2_frozen_patch_topology_result_v1.json"
+      - ".github/workflows/cirsium-fresh-sentinel-v2-four-unit-topology-freeze.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit_frozen_public_receipts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify frozen topology result and fail-closed synthetic receipts
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_cirsium_fresh_sentinel_v2_frozen_patch_topology_result.py
+          python research/verify_cirsium_fresh_sentinel_v2_frozen_patch_topology_result.py
+      - name: Download only the four original public-safe unit receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for unit in CIR02 CIR06 CIR12 CIR13; do
+            mkdir -p "/tmp/acsp-frozen-topology-receipts/${unit}"
+            gh run download 37732320419 --repo "${{ github.repository }}" \
+              --name "cirsium-fresh-sentinel-v2-fixed-gsi-${unit}-receipt" \
+              --dir "/tmp/acsp-frozen-topology-receipts/${unit}"
+          done
+      - name: Verify original receipt SHA-256, frozen patch SHA-256, topology and privacy
+        run: |
+          python research/verify_cirsium_fresh_sentinel_v2_frozen_patch_topology_result.py \
+            --receipt-root /tmp/acsp-frozen-topology-receipts \
+            | tee /tmp/acsp-four-unit-topology-audit.json
+      - name: Upload only the verification status, never private source rows
+        uses: actions/upload-artifact@v4
+        with:
+          name: cirsium-fresh-sentinel-v2-four-unit-topology-verification
+          path: /tmp/acsp-four-unit-topology-audit.json
+          if-no-files-found: error

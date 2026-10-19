@@ -1,0 +1,39 @@
+member_id,paper_taxon_concept,provider_query_name,include_v2,exclusion_reason
+JPN_01,Cirsium abukumense Kadota,Cirsium abukumense,true,
+JPN_02,Cirsium aidzuense i,Cirsium aidzuense,true,
+JPN_03,Cirsium alpicola Nakai,Cirsium alpicola,true,
+JPN_04,Cirsium amplexifolium (Nakai) Kitam.,Cirsium amplexifolium,true,
+JPN_05,Cirsium aomorense Nakai,Cirsium aomorense,true,
+JPN_06,Cirsium dipsacolepis Matsum.,Cirsium dipsacolepis,false,ACSP prospective CIR12 retained for field validation
+JPN_07,Cirsium domonii Kadota,Cirsium domonii,true,
+JPN_08,Cirsium funagataense Kadota,Cirsium funagataense,true,
+JPN_09,Cirsium gyojanum Kitam.,Cirsium gyojanum,true,
+JPN_10,"Cirsium ishidatense (Horiuchi) Kadota et Horiuchi, comb. ined.",Cirsium ishidatense,true,
+JPN_11,Cirsium ishizuchiense (Kitam.) Kadota,Cirsium ishizuchiense,false,DBR03 v1 outcome window opened
+JPN_12,Cirsium japonicum Fisch. ex DC. var. horridum Nakai,Cirsium japonicum var. horridum,true,
+JPN_13,Cirsium kasaianum Kadota,Cirsium kasaianum,true,
+JPN_14,Cirsium kiotoense (Kitam.) Kadota,Cirsium kiotoense,true,
+JPN_15,Cirsium lineare (Thunb.) Sch.Bip.,Cirsium lineare,false,ACSP prospective CIR13 retained for field validation
+JPN_16,Cirsium magofukui Kitam.,Cirsium magofukui,true,
+JPN_17,Cirsium maritimum Makino,Cirsium maritimum,false,DBR02 v1 outcome used
+JPN_18,Cirsium matsumurae Nakai var. dubium Kitam.,Cirsium matsumurae var. dubium,true,
+JPN_19,Cirsium nippoense Kadota,Cirsium nippoense,true,
+JPN_20,Cirsium nipponicum var. incomptum (Maxim.) Kadota,Cirsium nipponicum var. incomptum,true,
+JPN_21,Cirsium nipponicum var. yoshinoi (Nakai) Kitam.,Cirsium nipponicum var. yoshinoi,true,
+JPN_22,Cirsium norikurense Nakai,Cirsium norikurense,true,
+JPN_23,Cirsium oligophyllum Matsum.,Cirsium oligophyllum,true,
+JPN_24,Cirsium pseudosuffultum Kadota,Cirsium pseudosuffultum,true,
+JPN_25,Cirsium shidokimontanum Kadota,Cirsium shidokimontanum,true,
+JPN_26,Cirsium spicatum Matsum.,Cirsium spicatum,false,DBR01 v1 frozen cohort consumed even though recent was not fetched
+JPN_27,Cirsium suzukaense Kitam.,Cirsium suzukaense,true,
+JPN_28,Cirsium uzenense Kadota,Cirsium uzenense,true,
+JPN_29,Cirsium verutum (D.Don) Spreng.,Cirsium verutum,true,
+JPN_30,Cirsium yezoense (Maxim.) Makino,Cirsium yezoense,true,
+JPN_31,Cirsium yuki-uenoanum Kadota,Cirsium yuki-uenoanum,true,
+JPN_32,Cirsium buergeri Miq.,Cirsium buergeri,true,
+JPN_33,Cirsium effusum Matsm.,Cirsium effusum,true,
+JPN_34,Cirsium microspicatum Nakai,Cirsium microspicatum,true,
+JPN_35,Cirsium nipponicum Makino,Cirsium nipponicum,true,
+JPN_36,Cirsium sieboldii Miq.,Cirsium sieboldii,false,ACSP CIR01 public outcome opened and prospective cohort consumed
+JPN_37,Cirsium kamtschaticum Ledeb. ex DC.,Cirsium kamtschaticum,true,
+JPN_38,Cirsium pendulum Fisch. ex. DC.,Cirsium pendulum,false,ACSP prospective CIR07 retained for field validation

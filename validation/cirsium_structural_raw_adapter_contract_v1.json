@@ -1,0 +1,72 @@
+{
+  "schema_version": "cirsium-structural-raw-adapter-contract-v1",
+  "status": "PRE_PRIVATE_FRAME_PRE_FIELD_FROZEN",
+  "scientific_role": "raw public-layer primitive to unit-interval structural component adapter",
+  "field_outcomes_used": false,
+  "fitted_feature_weights": false,
+  "post_outcome_formula_switch_allowed": false,
+  "general_rules": {
+    "unit_interval_inputs": "WorldCover fractions and precomputed graph-support columns must already lie in [0,1].",
+    "terrain_rank_rule": "Where a monotone terrain direction is source-justified, use deterministic within-declared-frame percentile ranks; no fitted cut point.",
+    "graph_rule": "Ecological continuity/component scores are not reconstructed from convenient rasters in this adapter. They come from the separately frozen G_E_LOCAL_GRID_V1 ecological graph builder.",
+    "human_access_rule": "Roads, trails, permissions and accessibility cannot enter structural raw adapters; they belong to G_F after ecological candidate construction.",
+    "outcome_columns": "Field outcome, detection, tissue and identity-result columns fail closed."
+  },
+  "families": {
+    "WETLAND_MOISTURE_STRUCTURE": {
+      "wetland_water_adjacent_score": "clip(wc_water_frac_250m + wc_wetland_frac_250m, 0, 1)",
+      "topographic_moisture_score": "min(inverse percentile rank of tpi300, inverse percentile rank of slope100)",
+      "terrain_continuity_score": "validated pass-through of terrain_continuity_score_raw from ecological graph builder"
+    },
+    "ALPINE_TOPOGRAPHIC_STRUCTURE": {
+      "relative_relief_score": "percentile rank of elevation within the declared candidate frame; high values support alpine-relative relief",
+      "landform_continuity_score": "validated pass-through of landform_continuity_score_raw",
+      "ridge_valley_continuity_score": "validated pass-through of ridge_valley_continuity_score_raw"
+    },
+    "OPEN_GRASSLAND_STRUCTURE": {
+      "open_land_score": "wc_grass_frac_250m",
+      "fragment_continuity_score": "validated pass-through of fragment_continuity_score_raw",
+      "terrain_context_score": "validated pass-through of terrain_context_score_raw"
+    },
+    "COASTAL_ISLAND_STRUCTURE": {
+      "shore_position_score": "exp(-coast_distance_m / 1000 m); fixed monotone transform, not field-fitted",
+      "shore_landform_continuity_score": "validated pass-through of shore_landform_continuity_score_raw",
+      "island_component_score": "validated pass-through of island_component_score_raw"
+    },
+    "FOREST_EDGE_STRUCTURE": {
+      "forest_edge_score": "4 * tree_fraction_250m * (1 - tree_fraction_250m)",
+      "canopy_opening_transition_score": "wc_edge_mix_250m",
+      "terrain_component_score": "validated pass-through of terrain_component_score_raw"
+    },
+    "GENERAL_SPATIAL_BASELINE_ONLY": {
+      "structural_adapter": "none",
+      "rule": "No ecological component may be added after field outcome."
+    }
+  },
+  "source_layer_mapping": {
+    "terrain_primitives": "reuse the outcome-blind GSI DEM extraction semantics already implemented in research/campanula_microterrain_discovery.py (elev, slope100, tpi300 and related diagnostics), generalized to the declared Cirsium private frame",
+    "worldcover_primitives": "reuse the outcome-blind ESA WorldCover neighborhood-fraction semantics already implemented in research/campanula_worldcover_discovery.py at 250 m",
+    "coast_distance": "use the pinned GSI Fundamental Geospatial Data Basic Items coastline snapshot and record its private SHA-256 before coastal private-frame freeze",
+    "sentinel_uncertainty_support": "use only declared >1 km coordinate-uncertainty footprints under UNCERTAINTY_FOOTPRINT; do not convert legacy/coarse/unknown uncertainty into pseudo-exact kernels",
+    "graph_support": "produced by frozen G_E_LOCAL_GRID_V1; not inferred by fitted weights or access layers"
+  },
+  "execution_adapters": {
+    "private_source_manifest_builder": "research/build_cirsium_private_source_manifest_v1.py",
+    "alpine_local_raw_grid_builder": "research/build_cirsium_private_alpine_local_grid_v1.py",
+    "coastal_local_raw_grid_builder": "research/build_cirsium_private_coastal_local_grid_v1.py",
+    "uncertainty_sentinel_raw_grid_builder": "research/build_cirsium_private_uncertainty_sentinel_grid_v1.py",
+    "private_candidate_frame_builder": "research/prepare_cirsium_private_candidate_frame_v1.py"
+  },
+  "first_execution_archetypes": {
+    "CIR03": "ALPINE local single-anchor path",
+    "CIR08": "COASTAL_ISLAND local multiple-anchor path",
+    "CIR02": "WETLAND uncertainty-footprint sentinel path"
+  },
+  "current_blockers_before_real_patch_tokens": [
+    "download/freeze the required private source snapshots and record SHA-256/provenance",
+    "execute the frozen raw-grid/private-frame adapters on the real 13 validation units",
+    "run the subregime-specific full-ranking HMAC freeze before opening any field outcome",
+    "declare equal field prefixes before outcomes"
+  ],
+  "claim_boundary": "These transforms operationalize predeclared structural evidence. They do not estimate occupancy, adaptation, causal habitat effects or field yield."
+}

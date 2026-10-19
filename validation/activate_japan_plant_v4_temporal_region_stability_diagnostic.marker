@@ -1,0 +1,6 @@
+issue=204
+source_confirmation_issue=203
+mode=posthoc_diagnostic_only
+same_cohort_retuning=false
+candidate_frame_rescoring=false
+terminal_203_decision_changed=false

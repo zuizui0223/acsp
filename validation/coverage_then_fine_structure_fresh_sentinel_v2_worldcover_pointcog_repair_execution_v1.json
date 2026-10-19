@@ -1,0 +1,48 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-worldcover-pointcog-repair-execution-v1",
+  "status": "FROZEN_BEFORE_POINT_BEARING_COG_REPAIR_EXECUTION",
+  "source_failure_result": "validation/coverage_then_fine_structure_fresh_sentinel_v2_full_worldcover_result_v1.json",
+  "repair_identity": "POINT_BEARING_WORLDCOVER_COG_ONLY_V1",
+  "outer_frame_identity": "JP_PUBLIC_COUNTRY_BROAD_FRAME_V1",
+  "expected_intersecting_tile_count": 49,
+  "expected_points_per_tile": 800,
+  "expected_candidate_count": 39200,
+  "execution": {
+    "shard_count": 7,
+    "tile_assignment_rule": "sorted regional_tile_id ordinal modulo 7",
+    "each_tile_executed_exactly_once": true,
+    "source_cog_rule": "request only official WorldCover 3-degree COG IDs containing at least one already-frozen candidate point",
+    "candidate_row_drop_allowed": false,
+    "candidate_reordering_allowed": false,
+    "coordinate_change_allowed": false,
+    "worldcover_release_change_allowed": false,
+    "alternate_provider_allowed": false,
+    "failed_point_bearing_cog_semantics": "only candidates belonging to that failed required COG are INDETERMINATE_PROVIDER_FAILURE"
+  },
+  "assembly_gate": {
+    "exact_candidate_id_set_required": true,
+    "exact_candidate_id_order_required": true,
+    "exact_39200_rows_required": true,
+    "exact_49_tile_coverage_required": true,
+    "status_vocabulary": [
+      "COMPLETE",
+      "INDETERMINATE_WORLDCOVER_MISSING",
+      "INDETERMINATE_PROVIDER_FAILURE"
+    ],
+    "provider_failure_is_biological_negative": false,
+    "worldcover_missing_is_biological_negative": false
+  },
+  "scientific_boundary": {
+    "candidate_selection_added": false,
+    "candidate_ranking_added": false,
+    "habitat_threshold_added": false,
+    "class_recoding_added": false,
+    "neighborhood_fraction_used": false,
+    "focal_occurrence_prototypes_used": false,
+    "private_exact_site_geometry_used": false,
+    "p02_result_used": false,
+    "prospective_field_outcomes_opened": false,
+    "human_access_used": false
+  },
+  "next_gate": "Freeze the repaired source-coverage result. Only if the required point-bearing COG source gate is adequate may an ecological screening rule be defined in a later independent pre-outcome contract."
+}

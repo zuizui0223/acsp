@@ -1,0 +1,49 @@
+{
+  "schema_version": "fresh-sentinel-v2-synthetic-slope-kernel-two-run-contract-v1",
+  "status": "FROZEN_BEFORE_TWO_INDEPENDENT_SYNTHETIC_RUNNER_JOBS",
+  "source_issue": 253,
+  "date": "2026-10-11",
+  "synthetic_input": {
+    "private_locations_used": false,
+    "public_synthetic_mosaic_only": true,
+    "width": 288,
+    "height": 288,
+    "resolution_m": 25,
+    "coordinate_system": "EPSG:3857",
+    "pixel_values": "deterministic integer arithmetic converted to float32 with small fixed nodata gaps",
+    "seed_or_randomness_used": false
+  },
+  "mode": "read-only reproduction of current research.campanula_microterrain_discovery.terrain_surface stage formulas, assert reconstructed slope100 equals production function output with equal_nan",
+  "stages": [
+    "resampled_elevation",
+    "local_mean100",
+    "filled_elevation",
+    "gradient_dx",
+    "gradient_dy",
+    "instantaneous_slope",
+    "slope_valid_support",
+    "slope_smoothing_numerator",
+    "slope100"
+  ],
+  "precision_decimals": 8,
+  "run_count": 2,
+  "runner_label": "ubuntu-24.04",
+  "python_version": "paired exact patch versions: 3.11.16 and 3.11.17",
+  "no_private_dem_or_coords_exported": true,
+  "no_field_outcomes_opened": true,
+  "no_change_to_original_GSI_pipeline": true,
+  "no_change_to_structural_selector": true,
+  "no_2p5pct_or_1km_rule_changed": true,
+  "interpretation": {
+    "same_synthetic_kernel_reproduces_proves_real_input_reproducibility": false,
+    "synthetic_disagreement_proves_real_CIR02_cause": false,
+    "original_source_input_comparison_kept_separate": true,
+    "full_field_selector_validation": false,
+    "reported_changes_restricted_to_synthetic_output_hashes_and_versions": true
+  },
+  "next_gate": "Compare the same deterministic synthetic slope stages across Python 3.11.16 and 3.11.17. A match only rules out a universal synthetic-kernel effect of that version difference; the real source-matched CIR02 discrepancy still needs native runner/hardware/stage-controlled verification.",
+  "python_exact_version_pairs": {
+    "A": "3.11.16",
+    "B": "3.11.17"
+  }
+}

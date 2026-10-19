@@ -1,0 +1,243 @@
+{
+  "schema_version": "coverage-then-fine-structure-fresh-sentinel-v2-selected-mosaic-cross-run-result-v1",
+  "status": "ORIGINAL_SHA_PINNED_CROSS_RUN_DIAGNOSTIC_SELECTED_INPUT_EQUIVALENCE_UNVERIFIED",
+  "date": "2026-10-10",
+  "source_issue": 253,
+  "cohort_unit_ids": [
+    "CIR02",
+    "CIR06",
+    "CIR12",
+    "CIR13"
+  ],
+  "first_source": {
+    "pr": 260,
+    "run_id": 37765932839,
+    "head_sha": "84b3bc8590a1a253a37d3b45cf57da16734227b3"
+  },
+  "second_source": {
+    "pr": 263,
+    "run_id": 37785966356,
+    "head_sha": "66267116b7b17745ac0c22b7880ca4e87e1b53fc"
+  },
+  "independent_partial_confirmation": {
+    "pr": 262,
+    "run_id": 37777351033,
+    "unit": "CIR02",
+    "artifact_id": 11552480775,
+    "public_receipt_sha256": "6f0c854b47f76f8a635cbed5d9d0767c8ad531b80e1514c3e9733cd902612347",
+    "selected_mosaic_sequence_equal_to_second": true,
+    "all_four_feature_fingerprints_equal_to_second": true,
+    "full_terrain_digest_equal_to_second": true,
+    "patch_digest_equal_to_second": true
+  },
+  "units": {
+    "CIR02": {
+      "original_patch_sha256": "181e5c4de86d18d7c6a86215d9a1ece41bac7ff81170ae4092f60a55956995f4",
+      "first_artifact_id": 11546805863,
+      "first_receipt_sha256": "b8df490ccb2c796644bf1b10098524f48c6ccb2f2dd84fb956f394c0d780bb64",
+      "second_artifact_id": 11556325188,
+      "second_receipt_sha256": "51482917fc6f44b6fa790ea3263a5543f65dd3ed30fb070a420e0119c48182a4",
+      "second_selected_mosaic_sequence_sha256": "7ef762da0577e94d4f94bf1f171cfe1aa6f8fc9046cd6c03ee364cd334a43ddf",
+      "second_chunk_count": 177,
+      "second_selected_dem_chunk_count": 177,
+      "gsi_source_complete_count": 383460,
+      "candidate_grid_sha_equal": true,
+      "source_state_sha_equal": true,
+      "cache_png_inventory_sha_equal": true,
+      "cache_dem_mosaic_inventory_sha_equal": true,
+      "selected_dem_sequence_equality_between_first_and_second": null,
+      "aggregate_terrain_feature_digest_equal": false,
+      "full_structural_order_sha_equal": false,
+      "exact_original_patch_sha_equal": true,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": false,
+          "4": false,
+          "6": false,
+          "8": false
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      }
+    },
+    "CIR06": {
+      "original_patch_sha256": "3f932c0a0b0af7d2217980cc8f332f589187de5efffa66e474a20dea31ccca89",
+      "first_artifact_id": 11546804968,
+      "first_receipt_sha256": "9caf88cfa2f8c6cf581fd652ee1ce8e7a6827fd28a4658044f973a4d079c95af",
+      "second_artifact_id": 11556452407,
+      "second_receipt_sha256": "63cf3265946a5736b334fd58b9be7fc0216a010daaad48bf8fdd96c8a1e1a0b4",
+      "second_selected_mosaic_sequence_sha256": "dbf2e55726e29604c80dc418efbad457f66317abf71ef6c3d96145592de51ce6",
+      "second_chunk_count": 81,
+      "second_selected_dem_chunk_count": 81,
+      "gsi_source_complete_count": 816364,
+      "candidate_grid_sha_equal": true,
+      "source_state_sha_equal": true,
+      "cache_png_inventory_sha_equal": true,
+      "cache_dem_mosaic_inventory_sha_equal": true,
+      "selected_dem_sequence_equality_between_first_and_second": null,
+      "aggregate_terrain_feature_digest_equal": true,
+      "full_structural_order_sha_equal": true,
+      "exact_original_patch_sha_equal": true,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      }
+    },
+    "CIR12": {
+      "original_patch_sha256": "094f2e8092a2893dfac92fb65887cf95ddcbc5acbf50e6c4288993156c66fd51",
+      "first_artifact_id": 11548987341,
+      "first_receipt_sha256": "2f7fc8f8b3bafe1f3cc15473047110113af6c922a4693d0f9fbdefcde506d1c4",
+      "second_artifact_id": 11558915747,
+      "second_receipt_sha256": "ff55ff43357476396848f470131d2842cff9e1defb18e1dd013b934a636fcf9d",
+      "second_selected_mosaic_sequence_sha256": "cd0f6d5d8626984544dcb125d108278bd213d504c53a7e68dae4e2a39e259e09",
+      "second_chunk_count": 237,
+      "second_selected_dem_chunk_count": 237,
+      "gsi_source_complete_count": 610592,
+      "candidate_grid_sha_equal": true,
+      "source_state_sha_equal": true,
+      "cache_png_inventory_sha_equal": true,
+      "cache_dem_mosaic_inventory_sha_equal": true,
+      "selected_dem_sequence_equality_between_first_and_second": null,
+      "aggregate_terrain_feature_digest_equal": true,
+      "full_structural_order_sha_equal": true,
+      "exact_original_patch_sha_equal": true,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      }
+    },
+    "CIR13": {
+      "original_patch_sha256": "18100899f9d39e1db0452fccb87fa268d1775d01943fb6f05bc982a3d89a4fe1",
+      "first_artifact_id": 11550672711,
+      "first_receipt_sha256": "be3e67c286a3ec4f1af1618453fd5a6a822718f02217c21d02c841a28811f8d6",
+      "second_artifact_id": 11561050683,
+      "second_receipt_sha256": "bdecde37ed009987c037bacca6fa330808b9f1934fd0161c9c5fdc216c39427e",
+      "second_selected_mosaic_sequence_sha256": "cd0f6d5d8626984544dcb125d108278bd213d504c53a7e68dae4e2a39e259e09",
+      "second_chunk_count": 237,
+      "second_selected_dem_chunk_count": 237,
+      "gsi_source_complete_count": 610592,
+      "candidate_grid_sha_equal": true,
+      "source_state_sha_equal": true,
+      "cache_png_inventory_sha_equal": true,
+      "cache_dem_mosaic_inventory_sha_equal": true,
+      "selected_dem_sequence_equality_between_first_and_second": null,
+      "aggregate_terrain_feature_digest_equal": true,
+      "full_structural_order_sha_equal": true,
+      "exact_original_patch_sha_equal": true,
+      "feature_precision_equal": {
+        "elev": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "slope100": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "tpi300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        },
+        "rough300": {
+          "0": true,
+          "2": true,
+          "4": true,
+          "6": true,
+          "8": true
+        }
+      }
+    }
+  },
+  "limits": {
+    "whole_cache_inventory_not_actual_selected_source_identity": true,
+    "actual_selected_dem_comparison_to_first_source_available": false,
+    "source_counts_are_not_biological_absence": true,
+    "per_feature_rounded_digest_differences_do_not_bound_numeric_error": true,
+    "full_source_order_reproducibility_proven": false,
+    "field_selector_validated": false,
+    "prospective_field_outcomes_opened": false,
+    "no_private_site_ids_or_coordinates_public": true,
+    "original_frozen_2p5pct_and_1km_patch_unchanged": true
+  },
+  "next_gate": "Repeat complete four-unit GSI attachment under the same frozen policy on a new independent run that records selected-mosaic sequence and feature-precision fingerprints, then compare actual selected inputs before diagnosing slope100 numerical divergence."
+}
