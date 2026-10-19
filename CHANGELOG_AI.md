@@ -1,5 +1,25 @@
 # AI Change Log
 
+## 2026-10-19 - ChatGPT (OpenAI) - Bound hypothetical Cirsium topology-site trial effort without opening field outcomes
+
+Changed files:
+- research/cirsium_topology_trial_effort_sensitivity_v1.py
+- tests/test_cirsium_topology_trial_effort_sensitivity_v1.py
+- paper/CIRSIUM_TOPOLOGY_TRIAL_EFFORT_SENSITIVITY.md
+- CHANGELOG_AI.md
+
+Summary:
+- Use only the already fixed two-medoid site interpretation and planned 90 person-minutes per patch. The actual new-cohort site-choice discordance q is still unknown; the prior disconnected-patch percentages cannot identify q.
+- Add a transparent patch-level two-sided normal-approximation sample-size sensitivity under explicit invented assumptions (p0=0.30, 80% target power, alpha=0.05, equal-arm q and no clustering or attrition), with delta=q*theta. Example: q=0.25 and conditional site-only risk difference theta=0.20 implies n=1,377 per arm and 4,131 **hypothetical active** person-hours. This is NOT measured recovery, a field prescription, or an approved/pre-registered sample size.
+- Tests check deterministic sensitivity values, zero-first-stage behavior, impossible probabilities and private/field-evidence flags. Never access actual field outcomes or private source data; no publication claim expansion.
+
+Features preserved:
+- Frozen validated 2.5% float32/1-km Japanese robust patches, original CIR02/CIR06/CIR12/CIR13 structural data, the original three-arm SENTINEL protocol, fixed PR274 site-selection and hash-allocation methods, and all protected Cirsium source receipts.
+
+Known risks / next gate:
+- Real q and eligible new taxon-sector sample sizes remain NULL/zero. Equal-arm patch count does not ensure q balance; taxon/sector effects, non-evaluability, travel, access and phenology can substantially raise effort. Actual private source authentication, disjoint registration and symmetric pre-outcome permissions are required before any real trial is authorized. The saved scenarios are not empirical or final power analyses.
+
+
 ## 2026-10-19 - ChatGPT (OpenAI) - Show why frozen Cirsium patch topology cannot identify actual site-choice discordance
 
 Changed files:
