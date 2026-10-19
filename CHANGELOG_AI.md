@@ -1,5 +1,28 @@
 # AI Change Log
 
+## 2026-10-19 - ChatGPT (OpenAI) - Show why frozen Cirsium patch topology cannot identify actual site-choice discordance
+
+Changed files:
+- research/prove_cirsium_site_choice_nonidentifiability.py
+- tests/test_cirsium_site_choice_identifiability_v1.py
+- validation/cirsium_site_choice_aggregate_nonidentifiability_result_v1.json
+- paper/CIRSIUM_SITE_CHOICE_AGGREGATE_NONIDENTIFIABILITY.md
+- .github/workflows/cirsium-site-choice-aggregate-identifiability.yml
+- CHANGELOG_AI.md
+
+Summary:
+- In one-patch synthetic 100m Moore-8 grids, keep exactly the same four retained cells, one 1-km-bounded patch, two fragments (sizes 3+1) and the same aggregate component-count signature, yet demonstrate q=0 or q=1 for the two PR274 original medoid-selection rules. This is a constructive non-identifiability result, NOT an ecological/site observation.
+- Use the exact existing frozen Cirsium site-selection function, source-guard its Git blob, guard the original PR274 design JSON and the existing PR273 topology aggregate JSON, and assert saved-result equivalence. Nine test cases passed locally (red missing-module check before implementation, then green) with no private source opening.
+- For a hypothetically all-patch site-design frame, disconnected patch fraction D/P is a conservative mathematical upper bound on the fraction of changed representative sites: <=55.85% wetland, <=84.78% alpine, <=42.51% each grassland. There is NO positive lower bound. For the existing PR274 disconnected-only trial frame, public aggregates allow only [0,1]; actual source-authenticated q remains unknown.
+- Explicitly separate this purely mathematical all-patch envelope from PR277's site-only expected binary potential-response bound; do not claim a realized treatment effect, field detection, access, ecology, spatial membership equality or causal response.
+- Keep proposed separate post-observation field trial ineligible: independently frozen new cohort=0, authenticated new private patch membership absent, person-minute schedule not sealed, outcomes unopened.
+
+Features preserved:
+- No changes to validated Japanese 2.5% float32 / 1km same-area robust candidate generator; no change to original 3-arm field protocol, historical CIR02/06/12/13 patch membership, original source priorities, original PR250 structural-order gate, or PR277 historical hypothetical 6252-person-hour calculation.
+
+Known risks / TODO:
+- Exact 100m grid values in the synthetic proof are invented. The full prior aggregate metrics cannot determine actual q; only authorized private patch member identities from a NEW, source-verified and independently frozen cohort would allow q to be measured before field outcomes. No new original GSI acquisition or branch-to-main promotion is permitted.
+
 ## 2026-10-16 - ChatGPT (OpenAI) - Topology site-choice first-stage identifiability and historic workload bound
 
 Changed files:
