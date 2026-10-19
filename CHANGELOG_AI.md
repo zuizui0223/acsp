@@ -6,12 +6,13 @@ Changed files:
 - research/cirsium_topology_trial_effort_sensitivity_v1.py
 - tests/test_cirsium_topology_trial_effort_sensitivity_v1.py
 - paper/CIRSIUM_TOPOLOGY_TRIAL_EFFORT_SENSITIVITY.md
+- .github/workflows/cirsium-topology-trial-effort-sensitivity.yml
 - CHANGELOG_AI.md
 
 Summary:
 - Use only the already fixed two-medoid site interpretation and planned 90 person-minutes per patch. The actual new-cohort site-choice discordance q is still unknown; the prior disconnected-patch percentages cannot identify q.
 - Add a transparent patch-level two-sided normal-approximation sample-size sensitivity under explicit invented assumptions (p0=0.30, 80% target power, alpha=0.05, equal-arm q and no clustering or attrition), with delta=q*theta. Example: q=0.25 and conditional site-only risk difference theta=0.20 implies n=1,377 per arm and 4,131 **hypothetical active** person-hours. This is NOT measured recovery, a field prescription, or an approved/pre-registered sample size.
-- Tests check deterministic sensitivity values, zero-first-stage behavior, impossible probabilities and private/field-evidence flags. Never access actual field outcomes or private source data; no publication claim expansion.
+- Tests check deterministic sensitivity values, zero-first-stage behavior, impossible probabilities and private/field-evidence flags. A focused GitHub Actions workflow repeats these tests, validates the scenario JSON and compiles the research module plus Streamlit app. Never access actual field outcomes or private source data; no publication claim expansion.
 
 Features preserved:
 - Frozen validated 2.5% float32/1-km Japanese robust patches, original CIR02/CIR06/CIR12/CIR13 structural data, the original three-arm SENTINEL protocol, fixed PR274 site-selection and hash-allocation methods, and all protected Cirsium source receipts.
