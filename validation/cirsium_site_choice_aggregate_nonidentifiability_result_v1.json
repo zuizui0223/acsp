@@ -1,0 +1,116 @@
+{
+  "future_independent_trial": {
+    "actual_new_cohort_q": null,
+    "field_eligibility_authorized": false,
+    "prospective_outcomes_opened": false,
+    "source_complete_private_patch_memberships_verified": false
+  },
+  "mathematical_readout": {
+    "all_patch_population_bound": "0 <= q_all_patches <= fraction(internally disconnected original patches)",
+    "bounds_are_not_measured_q": true,
+    "disconnected_only_population_bound": "if any disconnected patches exist: 0 <= q_eligible_only <= 1",
+    "full_historical_four_unit_q_inferred": false,
+    "nonidentification": "published component/patch counts alone cannot generally recover medoid-site discordance q",
+    "real_new_cohort_q_inferred": false,
+    "why": "connected patches yield identical two medoids, but disconnected patch topology counts do not determine representative cell identity"
+  },
+  "original_development_aggregate_envelopes": {
+    "CIR02": {
+      "actual_site_choice_discordance_q": null,
+      "eligible_disconnected_only_q_interval": [
+        0.0,
+        1.0
+      ],
+      "internally_disconnected_patch_count": 320,
+      "original_patch_count": 573,
+      "original_units_are_method_development_not_new_independent_confirmation": true,
+      "unconditional_q_lower_bound": 0.0,
+      "unconditional_q_upper_bound": 0.5584642233856894
+    },
+    "CIR06": {
+      "actual_site_choice_discordance_q": null,
+      "eligible_disconnected_only_q_interval": [
+        0.0,
+        1.0
+      ],
+      "internally_disconnected_patch_count": 3292,
+      "original_patch_count": 3883,
+      "original_units_are_method_development_not_new_independent_confirmation": true,
+      "unconditional_q_lower_bound": 0.0,
+      "unconditional_q_upper_bound": 0.8477980942570178
+    },
+    "CIR12": {
+      "actual_site_choice_discordance_q": null,
+      "eligible_disconnected_only_q_interval": [
+        0.0,
+        1.0
+      ],
+      "internally_disconnected_patch_count": 278,
+      "original_patch_count": 654,
+      "original_units_are_method_development_not_new_independent_confirmation": true,
+      "unconditional_q_lower_bound": 0.0,
+      "unconditional_q_upper_bound": 0.42507645259938837
+    },
+    "CIR13": {
+      "actual_site_choice_discordance_q": null,
+      "eligible_disconnected_only_q_interval": [
+        0.0,
+        1.0
+      ],
+      "internally_disconnected_patch_count": 278,
+      "original_patch_count": 654,
+      "original_units_are_method_development_not_new_independent_confirmation": true,
+      "unconditional_q_lower_bound": 0.0,
+      "unconditional_q_upper_bound": 0.42507645259938837
+    }
+  },
+  "original_source_blobs": {
+    "research/design_cirsium_patch_connectivity_field_trial_v1.py": "7a010f45b7ab0802611389fd0f584f300eabe0ee",
+    "validation/coverage_then_fine_structure_fresh_sentinel_v2_patch_topology_component_gap_v1.json": "06b7dbd6e1152e8187a7ecd31ee6ab4b5778d0f6",
+    "validation/coverage_then_fine_structure_patch_connectivity_field_trial_design_v1.json": "ec18c79b126b994a47c9680e5098548e655f88c9"
+  },
+  "proof_scope": "two fabricated 100m lattice patches; same 1km complete-link bound and same graph summaries but q=0 vs q=1",
+  "schema_version": "cirsium-site-choice-aggregate-nonidentifiability-v1",
+  "scientific_limits": {
+    "frozen_three_arm_field_protocol_changed": false,
+    "new_independent_biological_confirmation": false,
+    "real_field_discovery_effect_estimated": false,
+    "sampled_original_private_candidate_geometry": false,
+    "validated_2p5percent_1km_robust_core_changed": false
+  },
+  "status": "SOURCE_BOUND_SYNTHETIC_SITE_CHOICE_NOT_IDENTIFIED",
+  "synthetic_counterexamples": [
+    {
+      "actual_field_outcome_used": false,
+      "site_choice_discordance_q": 0,
+      "synthetic_example_label": "IDENTICAL_SITE_CHOICE",
+      "synthetic_topology_signature": {
+        "complete_link_patch_count": 1,
+        "disconnected_patch_count": 1,
+        "extra_within_patch_components": 1,
+        "global_mask_component_count": 2,
+        "largest_component_size": 3,
+        "maximum_components_per_patch": 2,
+        "retained_support_cells": 4,
+        "singleton_patch_count": 0,
+        "within_patch_component_total": 2
+      }
+    },
+    {
+      "actual_field_outcome_used": false,
+      "site_choice_discordance_q": 1,
+      "synthetic_example_label": "DISTINCT_SITE_CHOICE",
+      "synthetic_topology_signature": {
+        "complete_link_patch_count": 1,
+        "disconnected_patch_count": 1,
+        "extra_within_patch_components": 1,
+        "global_mask_component_count": 2,
+        "largest_component_size": 3,
+        "maximum_components_per_patch": 2,
+        "retained_support_cells": 4,
+        "singleton_patch_count": 0,
+        "within_patch_component_total": 2
+      }
+    }
+  ]
+}
