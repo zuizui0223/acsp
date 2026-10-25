@@ -20,6 +20,9 @@ Summary:
 - Add network-free audit and regressions checking result-table numeric parity, positive versus failed claims, Highlights length, cover-letter provenance and missing author signoff.
 - Leave authoritative manuscript, tables, frozen result manifests, software scientific constants, historical Top-5 manuscript and experimental Cirsium development untouched.
 
+Validation / repair:
+- The first focused CI failed solely because the draft cover-letter quote included a comma inside the frozen manuscript title. Moved punctuation outside the quotation, preserving the source title verbatim; rerun required before any merge.
+
 Risks / remaining author actions:
 - Journal-specific Guide for Authors was unavailable programmatically; alternate abstract word bound is editorial, not a verified journal limit. The preliminary materials are not a journal submission and do not certify article type, coauthor consent, originality declarations, bibliography, conflicts, DOI archiving or accepted publication.
 
