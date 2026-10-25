@@ -2,7 +2,7 @@
 
 Dear Editor,
 
-Please consider our manuscript, “Occurrence-conditioned robust candidate patches for biodiversity field surveys: cross-taxon confirmation and limits to geographic transfer,” for consideration as a research article in *Ecological Informatics*.
+Please consider our manuscript, “Occurrence-conditioned robust candidate patches for biodiversity field surveys: cross-taxon confirmation and limits to geographic transfer”, for consideration as a research article in *Ecological Informatics*.
 
 Ecologists increasingly rely on opportunistic species-occurrence data to plan field surveys, but the translation from recorded points to defensible search areas remains a distinct computational problem. We present an occurrence-conditioned method that reconstructs robust environmental support and produces bounded, non-ranked candidate patches without treating the resulting support as occupancy probability or a priority score.
 
