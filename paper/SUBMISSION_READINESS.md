@@ -78,6 +78,25 @@ Repository CI runs the same alignment test as part of the ordinary test suite.
 - `paper/validate_submission_alignment.py`
 - `tests/test_robust_patch_submission_alignment.py`
 
+## Provisional editorial packet prepared (2026-10-25)
+
+The new optional [editorial handoff](SUBMISSION_EDITORIAL_HANDOFF.md)
+includes five ≤85-character candidate Highlights, a shorter alternative
+abstract, a draft cover letter, a claim-boundary audit and six network-free
+regression tests. These are **review materials, not an actual journal
+submission or replacement of this validated manuscript**.
+
+```bash
+python paper/validate_submission_alignment.py
+python paper/validate_submission_packet.py
+python -m unittest discover -s tests -p 'test_submission_packet.py' -v
+```
+
+The draft packet always reports `author_submission_ready=false`. The
+journal-specific Guide for Authors still requires live author verification,
+and the repository has no confirmed final DOI, approved coauthor CRediT
+roles or completed competing-interest declarations.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
