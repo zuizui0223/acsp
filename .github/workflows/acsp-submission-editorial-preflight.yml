@@ -1,0 +1,47 @@
+name: ACSP editorial submission packet preflight
+
+on:
+  pull_request:
+    paths:
+      - 'paper/SUBMISSION_HIGHLIGHTS.md'
+      - 'paper/SUBMISSION_ABSTRACT_SHORT.md'
+      - 'paper/SUBMISSION_COVER_LETTER_DRAFT.md'
+      - 'paper/SUBMISSION_EDITORIAL_HANDOFF.md'
+      - 'paper/validate_submission_packet.py'
+      - 'paper/SUBMISSION_READINESS.md'
+      - 'paper/README.md'
+      - 'tests/test_submission_packet.py'
+      - '.github/workflows/acsp-submission-editorial-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  editorial-packet:
+    name: Provisional editorial packet audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check authoritative frozen paper and provisional materials
+        run: |
+          python paper/validate_submission_alignment.py
+          python paper/validate_submission_packet.py > /tmp/acsp-editorial-preflight.json
+          python -m unittest discover -s tests -p 'test_submission_packet.py' -v
+          python -m unittest discover -s tests -p 'test_robust_patch_submission_alignment.py' -v
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("/tmp/acsp-editorial-preflight.json").read_text())
+          assert report["status"] == "editorial_draft_consistency_passed"
+          assert report["highlight_count"] == 5
+          assert report["short_abstract_words"] <= 250
+          assert report["primary_confirmatory_pairs"] == 96
+          assert report["primary_confirmatory_folds"] == 480
+          assert report["author_submission_ready"] is False
+          assert report["journal_specific_requirements_verified"] is False
+          PY
+          python -m py_compile paper/validate_submission_packet.py paper/validate_submission_alignment.py
