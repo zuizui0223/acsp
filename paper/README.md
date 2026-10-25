@@ -20,6 +20,18 @@ python paper/validate_submission_alignment.py
 
 The current paper supports independently validated enrichment over same-size random candidate-patch sets in the fixed Japanese 12-region frame. It does not promote a global product, occupancy probability, exact-site prediction, ranking, routing, field-efficiency, or superiority over SDM/GRTS/biosurvey. *Campanula microdonta* remains development and freeze-regression evidence.
 
+## Editorial packet (provisional, not submitted)
+
+For `Ecological Informatics` editorial preparation, see
+[`SUBMISSION_EDITORIAL_HANDOFF.md`](SUBMISSION_EDITORIAL_HANDOFF.md),
+[`SUBMISSION_HIGHLIGHTS.md`](SUBMISSION_HIGHLIGHTS.md),
+[`SUBMISSION_ABSTRACT_SHORT.md`](SUBMISSION_ABSTRACT_SHORT.md), and
+[`SUBMISSION_COVER_LETTER_DRAFT.md`](SUBMISSION_COVER_LETTER_DRAFT.md).
+They are guarded by `paper/validate_submission_packet.py` and targeted
+tests. They **do not change the authoritative 96-pair robust-patch
+manuscript**; authorship, declarations, journal-specific formatting and
+immutable data/software citations remain pending author verification.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:
