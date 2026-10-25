@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-10-25 - ChatGPT (OpenAI) - Prepare draft Ecological Informatics editorial packet without scientific revision
+
+Changed files:
+- paper/SUBMISSION_HIGHLIGHTS.md
+- paper/SUBMISSION_ABSTRACT_SHORT.md
+- paper/SUBMISSION_COVER_LETTER_DRAFT.md
+- paper/SUBMISSION_EDITORIAL_HANDOFF.md
+- paper/validate_submission_packet.py
+- tests/test_submission_packet.py
+- .github/workflows/acsp-submission-editorial-preflight.yml
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Prepare five concise Highlights, a provisional short abstract and a factual cover-letter draft for editorial review. All keep the independently confirmed 12-Japan-region/96 taxon-region/480-fold 2.5% robust-patch claim, same-size-random comparator, failed country-framed gates and provider STOP.
+- Separate publisher-generic guidance from unverified Ecological Informatics-specific article rules; explicitly leave author names/CRediT/conflicts, release DOI and GBIF snapshot DOIs unresolved.
+- Add network-free audit and regressions checking result-table numeric parity, positive versus failed claims, Highlights length, cover-letter provenance and missing author signoff.
+- Leave authoritative manuscript, tables, frozen result manifests, software scientific constants, historical Top-5 manuscript and experimental Cirsium development untouched.
+
+Risks / remaining author actions:
+- Journal-specific Guide for Authors was unavailable programmatically; alternate abstract word bound is editorial, not a verified journal limit. The preliminary materials are not a journal submission and do not certify article type, coauthor consent, originality declarations, bibliography, conflicts, DOI archiving or accepted publication.
+
+
 ## 2026-09-15 - Codex (OpenAI) - Standalone global product release candidate
 
 Changed files:
