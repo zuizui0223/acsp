@@ -57,6 +57,36 @@ the exploratory Cirsium field-design branch are unchanged.
   graphical-abstract requirement, anonymization and file types must be
   checked on the live journal submission page before author submission.
 
+## 2026-10-26 GBIF source-record citation audit
+
+The new [original-input provenance note](GBIF_CITATION_AND_INPUT_PROVENANCE.md)
+and offline `audit_gbif_citation_provenance.py` establish a more precise
+gap than the former generic citation TODO:
+
+- The frozen **96-pair / 480-fold** primary input was obtained through
+  **GBIF Occurrence Search API**, which did not assign a download DOI.
+- The original converter carried `gbifID` into temporary cleaned rows
+  but **did not carry `datasetKey`**.
+- GitHub Actions uploaded the fold export status and derived result files,
+  **not the underlying original train/held-out occurrence CSV files**.
+- The authentic original GBIF record-ID set or a verified matching GBIF
+  dataset/download DOI has **not** been recovered from the checked
+  public repository. A new download cannot retroactively stand in
+  for those historical records.
+- The manuscript's Data and code availability paragraph has been
+  corrected to reflect this boundary without changing the ecological
+  result or any fixed method constants.
+
+```bash
+python paper/audit_gbif_citation_provenance.py
+python -m unittest discover -s tests -p 'test_gbif_citation_provenance.py' -v
+```
+
+These tests can pass while `journal_submission_ready=false`; they
+verify truthful reporting, **not the creation of a DOI or exact historical
+input archive**. Recover an authenticated original fold archive, if
+available, before any GBIF-derived-dataset citation is claimed.
+
 ## Editorial blocks that cannot be filled from current records
 
 1. **Authors and signoff:** Full author roster/order, corresponding author's

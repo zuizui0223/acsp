@@ -1,5 +1,31 @@
 # AI Change Log
 
+## 2026-10-26 - ChatGPT (OpenAI) - Source-audit GBIF input citation and correct archival overclaim
+
+Changed files:
+- paper/audit_gbif_citation_provenance.py
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/MANUSCRIPT_ROBUST_PATCH_DRAFT.md (Data and code availability only)
+- paper/SUBMISSION_EDITORIAL_HANDOFF.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- tests/test_gbif_citation_provenance.py
+- .github/workflows/acsp-gbif-citation-provenance.yml
+- CHANGELOG_AI.md
+
+Summary:
+- Source-locked reconstruction shows the primary 96-pair/480-fold input used the live GBIF occurrence/search API (up to 150 records per pair). It did NOT automatically generate a GBIF download DOI. Original row converter retained gbifID but not datasetKey.
+- The original frozen GitHub workflow wrote temporary per-fold training/heldout occurrence CSVs but its declared result artifact uploaded only export summary/status and derived result files, not all original fold inputs. The preexisting manuscript data-availability claim of fully identified exact occurrence snapshots was therefore too broad and is corrected.
+- Add network-free Git SHA-linked checks and a public citation/recovery plan that preserves the original scientific claims, does not reopen data/outcomes, does not export sensitive localities and never substitutes an unrelated October GBIF DOI or current API response for the frozen input.
+- Distinguish fixed source code/protocol/identity/result provenance from still-unverified exact input-record provenance. Release DOI and author CRediT/conflicts remain unverified.
+
+Preserved:
+- Frozen validated 2.5% support, float32 worlds, 1-km patch aggregation, 96 taxon-region pairs/480 folds, reported 10-km lift, failed international generalization, provider STOP, old Top-5 files and Cirsium experimental development all unchanged.
+
+Remaining:
+- Recover original authenticated occurrence-fold data or record-ID inventory if available, then map source datasets/citations without posthoc replacement; resolve owner-approved software release DOI and all author declarations. This audit cannot certify journal submission readiness.
+
+
 ## 2026-10-25 - ChatGPT (OpenAI) - Prepare draft Ecological Informatics editorial packet without scientific revision
 
 Changed files:

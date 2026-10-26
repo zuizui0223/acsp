@@ -32,6 +32,21 @@ tests. They **do not change the authoritative 96-pair robust-patch
 manuscript**; authorship, declarations, journal-specific formatting and
 immutable data/software citations remain pending author verification.
 
+## Original input citation limitation (2026-10-26)
+
+The [source-locked GBIF provenance audit](GBIF_CITATION_AND_INPUT_PROVENANCE.md)
+reconstructs the frozen **live search API → 96 pairs → temporary folds
+→ derived results** chain. It confirms that the original fold CSVs
+were not in the named published Actions upload and the converter did
+not retain GBIF `datasetKey`. Exact frozen source-record citations
+therefore remain unresolved even though historical result artifacts
+and protocols are pinned. The manuscript availability paragraph now
+discloses this precisely; no primary results were rewritten.
+
+Run `python paper/audit_gbif_citation_provenance.py`; passing the
+audit documents the unresolved citation gate and **does not**
+authorize submission or substitute a fresh GBIF snapshot.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:

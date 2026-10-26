@@ -1,0 +1,47 @@
+name: GBIF citation and original input provenance preflight
+
+on:
+  pull_request:
+    paths:
+      - 'paper/audit_gbif_citation_provenance.py'
+      - 'paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md'
+      - 'paper/MANUSCRIPT_ROBUST_PATCH_DRAFT.md'
+      - 'paper/SUBMISSION_EDITORIAL_HANDOFF.md'
+      - 'paper/SUBMISSION_READINESS.md'
+      - 'paper/README.md'
+      - 'tests/test_gbif_citation_provenance.py'
+      - '.github/workflows/acsp-gbif-citation-provenance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  citation-provenance:
+    name: Frozen GBIF source and manuscript provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Guard source-linked GBIF input and correct manuscript caveat
+        run: |
+          python paper/audit_gbif_citation_provenance.py > /tmp/acsp-gbif-citation-audit.json
+          python -m unittest discover -s tests -p 'test_gbif_citation_provenance.py' -v
+          python paper/validate_submission_alignment.py
+          python paper/validate_submission_packet.py
+          python -m unittest discover -s tests -p 'test_robust_patch_submission_alignment.py' -v
+          python -m unittest discover -s tests -p 'test_submission_packet.py' -v
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          record = json.loads(Path('/tmp/acsp-gbif-citation-audit.json').read_text())
+          assert record['status'] == 'ORIGINAL_INPUT_CITATION_NOT_YET_RECOVERED'
+          assert record['journal_submission_ready'] is False
+          assert record['frozen_GBIF_download_DOI_verified'] is False
+          assert record['raw_fold_occurrence_csv_in_declared_upload'] is False
+          assert record['counts']['declared_spatial_folds'] == 480
+          assert record['retuned_historic_confirmation'] is False
+          PY
+          python -m py_compile paper/audit_gbif_citation_provenance.py gbif_fieldmap_builder_app.py

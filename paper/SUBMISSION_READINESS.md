@@ -97,6 +97,29 @@ journal-specific Guide for Authors still requires live author verification,
 and the repository has no confirmed final DOI, approved coauthor CRediT
 roles or completed competing-interest declarations.
 
+## Exact-input citation gap audited (2026-10-26)
+
+[`GBIF_CITATION_AND_INPUT_PROVENANCE.md`](GBIF_CITATION_AND_INPUT_PROVENANCE.md)
+documents that the primary 96-pair validation used GBIF's live
+`occurrence/search` API (no automatic download DOI), retained
+`gbifID` but not the source `datasetKey`, and did not include the
+original per-fold occurrence CSV files in the specified public
+GitHub Actions artifact upload. The previous manuscript claim of
+fully identified external occurrence snapshots has been corrected.
+
+The author-side next input is an authenticated copy of the **original**
+fold data/record-ID inventory, not an arbitrary fresh GBIF query.
+Original validation and all its statistics remain frozen.
+
+```bash
+python paper/audit_gbif_citation_provenance.py
+```
+
+A passing audit means only that this known provenance problem is
+reproducibly disclosed. It is **not** evidence of complete raw-data
+archiving or DOI attribution; submission remains blocked on the
+honest publication-data decision and author declarations.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
