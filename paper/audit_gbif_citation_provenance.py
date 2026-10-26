@@ -123,7 +123,7 @@ def audit(root: Path = ROOT) -> dict[str, object]:
     # "pair_export_status.csv" is only aggregate status, not a pair_NNN/fold_NNN
     # occurrence-input directory. Do not confuse the similar filename prefix.
     _require("confirmation-folds" not in paths
-             and not any(re.match(r"^confirmation-folds/pair_\\d{3}(/|$)", x) for x in paths),
+             and not any(re.match(r"^confirmation-folds/pair_\d{3}(/|$)", x) for x in paths),
              "original raw fold input now appears in declared upload")
     with (root / "paper/generated/table_1_robust_patch_confirmation.csv").open(newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
