@@ -1,0 +1,107 @@
+{
+  "schema_version": "acsp-original-v2-results-byte-recovery-2026-10-28",
+  "status": "ORIGINAL_RESULTS_RECOVERED_AND_STATISTICS_REPRODUCED_INPUT_ROWS_STILL_MISSING",
+  "verified_on": "2026-10-28",
+  "source_repository": "zuizui0223/acsp",
+  "source_runs": {
+    "cohort": 32335791948,
+    "confirmation": 32337884576
+  },
+  "artifacts": {
+    "cohort": {
+      "id": 9394691112,
+      "name": "acsp-robust-patch-untouched-confirmation-cohort-v2",
+      "archive_sha256": "cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+      "expires_at": "2026-11-18T05:29:31Z",
+      "member_sha256": {
+        "cohort_manifest.json": "8fdc03b94d10e9448c2fe7515e5dbdaf4e5a26f1b6784d7a9bf947cea406f809",
+        "predeclared_taxon_region_pairs.csv": "8e8eebf56b071572ad4eb84d6fe5dbe9ec12c4cd561e84dfca22abd398bede4d",
+        "excluded_taxa.csv": "25476fb57991714094a8bdaec8cb568e5ba685ae62017804c57cbe4d709ae67e",
+        "sampling_frame_audit.csv": "83d9c6d052efaaa836a7c61237ae21ea32bef1e9c0aac8236a4ece3e61ff5050"
+      }
+    },
+    "confirmation": {
+      "id": 9396133154,
+      "name": "acsp-robust-patch-untouched-confirmation-v2-results",
+      "archive_sha256": "f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f",
+      "expires_at": "2026-11-18T06:01:40Z",
+      "member_sha256": {
+        "confirmation-folds/export_manifest.json": "b9e89cb8de1969ea0531c8106d3f82750aa4791bfbf7658429855b1dd1f637fd",
+        "confirmation-folds/pair_export_status.csv": "55f66ba821cba0eafdcc149f04e082e0c66ecf4a51d9456c94319e158a81b7bf",
+        "confirmation-results/confirmation_fold_results.csv": "170cba40f9471777e0993e01deb2f7e4012c425e2caa9af7086461e073b49b94",
+        "confirmation-results/confirmation_pair_results.csv": "25b81af84d74ed0a7f01fad04a205bb8bea8d6af7181bfa9be04ee015d5bc1f6",
+        "confirmation-results/confirmation_radius_summary.csv": "bd40e86a058e7ef76e72d1a1967f70b9957b69af3a457e3c4c88f04d9d6f42dd",
+        "confirmation-results/confirmation_summary.json": "bc6d23c1c24189ca1f609ea8b790b2d47a13f1179759e489730e5a2eff575bd3"
+      }
+    }
+  },
+  "archive_contents": {
+    "cohort_identity_rows": 96,
+    "pair_results": 96,
+    "fold_rows_all_radii": 1920,
+    "declared_folds_per_radius": 480,
+    "radii_km": [
+      1,
+      2,
+      5,
+      10
+    ],
+    "original_pair_fetch_status": {
+      "complete": 94,
+      "failed_retained_as_zero": 2
+    },
+    "pairs_with_any_failed_fold": 23,
+    "unmodified_original_training_occurrences_csv_present": false,
+    "unmodified_original_held_out_occurrences_csv_present": false
+  },
+  "independent_recomputation": {
+    "mean_lift_10km": 0.08558708102617191,
+    "pair_bootstrap_95_ci": [
+      0.051186296271122624,
+      0.12165096941745603
+    ],
+    "one_sided_signflip_p": 0.00003333222225925803,
+    "plant_mean_lift": 0.057023839246432256,
+    "animal_mean_lift": 0.11415032280591153,
+    "bootstrap_seed": 20260823,
+    "signflip_seed": 20260824,
+    "bootstrap_draws": 30000,
+    "signflip_draws": 30000,
+    "radius_means_descriptive": [
+      {
+        "radius_km": 1,
+        "recall": 0.009350081964931171,
+        "random_mean_recall": 0.003158784521576074,
+        "lift_over_random": 0.006191297443355095
+      },
+      {
+        "radius_km": 2,
+        "recall": 0.02981472609192475,
+        "random_mean_recall": 0.013041558570832279,
+        "lift_over_random": 0.016773167521092473
+      },
+      {
+        "radius_km": 5,
+        "recall": 0.09094005556803861,
+        "random_mean_recall": 0.058799341328771765,
+        "lift_over_random": 0.032140714239266836
+      },
+      {
+        "radius_km": 10,
+        "recall": 0.25860078569751677,
+        "random_mean_recall": 0.1730137046713449,
+        "lift_over_random": 0.08558708102617191
+      }
+    ]
+  },
+  "scientific_claims": {
+    "frozen_confirmation_replayed_from_original_result_tables": true,
+    "original_occurrence_inputs_recovered": false,
+    "fresh_provider_queries_run": false,
+    "new_biological_validation": false,
+    "primary_statistical_conclusion_changed": false,
+    "global_product_superiority_proven": false,
+    "original_GBIF_download_DOI_verified": false,
+    "publication_author_declarations_completed": false
+  }
+}
