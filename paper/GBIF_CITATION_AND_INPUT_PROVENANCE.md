@@ -47,6 +47,30 @@ GBIF occurrence records no longer exist anywhere, or a public release.
    limitation**, not a new statistical null or license to retune the
    original cohort.
 
+## Verified recovery of original **results**, not source records (2026-10-28)
+
+The original historical GitHub Actions ZIPs were retrieved on 2026-10-28,
+with GitHub-reported and locally computed SHA-256 digests matching
+**byte-for-byte**. The frozen identity cohort is from
+[run #32335791948](https://github.com/zuizui0223/acsp/actions/runs/32335791948)
+(artifact 9394691112); the independent result archive is from
+[run #32337884576](https://github.com/zuizui0223/acsp/actions/runs/32337884576)
+(artifact 9396133154). The latter contains 96 pair summaries and 1,920
+fold-by-radius output rows. Recomputing the original 30,000-draw
+pair-bootstrap and one-sided sign-flip test with the **frozen seeds**
+exactly reproduced the published primary effect, CI and p-value.
+
+**This resolves result-table provenance, not original observation
+provenance.** Neither recovered ZIP includes the original
+`training_occurrences.csv`, `held_out_occurrences.csv` or the exact
+historical GBIF ID/datasetKey inventory. The GBIF citation gate above
+therefore remains **OPEN**. The separate
+[replay note](ORIGINAL_V2_RESULT_ARCHIVE_REPLAY.md) and
+[byte-level receipt](../validation/acsp_original_v2_archival_reconciliation_20261028.json)
+provide exact hashes and replay instructions. GitHub lists both original
+artifact ZIPs as scheduled to expire on **2026-11-18 (UTC)**; do not rely
+on those links as permanent data archives.
+
 ## What is and is not established
 
 | Object | Status | Meaning |
