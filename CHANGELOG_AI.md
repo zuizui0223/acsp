@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-10-28 - ChatGPT (OpenAI) - Recover and independently replay byte-original ACSP v2 confirmatory results
+
+Changed files:
+- validation/acsp_original_v2_archival_reconciliation_20261028.json
+- research/replay_original_robust_patch_v2_artifacts.py
+- tests/test_original_v2_result_archive_replay.py
+- .github/workflows/acsp-original-v2-artifact-replay.yml
+- paper/ORIGINAL_V2_RESULT_ARCHIVE_REPLAY.md
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Retrieved the historical 2026-08-20 original GitHub artifacts: cohort run 32335791948 / artifact 9394691112 (SHA256 cc0f9496...), confirmation run 32337884576 / artifact 9396133154 (SHA256 f23c23af...). Their exact ZIP bytes and all 10 original member files passed SHA-256 verification.
+- Confirmed 96 unique pair summaries, 1,920 fold-by-radius rows (480 folds at each of 1/2/5/10 km), original 94 complete and two failed-retained-as-zero pair exports, and 23 pair summaries with at least one failed fold.
+- Independently recomputed frozen 30,000-draw bootstrap, sign-flip, plant/animal means and descriptive radius averages: mean 10-km lift +0.0855870810, CI [0.0511862963, 0.1216509694], p=3.333222e-5, exactly matching historical result ZIP and paper table.
+- Add source-bounded offline replay script, CI for authentic GitHub ZIPs while artifacts remain accessible, and a permanent lightweight digest/results receipt. No frozen ecological algorithm, cohort, validation outcome or original summary row is altered.
+
+Strict limitations:
+- Original raw train/heldout GBIF occurrence records and source datasetKey values are **not** in either archive. The original GBIF download DOI remains unverified. This is a result-table statistical replay, not the same analysis refit from original observations, nor new field confirmation or global superiority.
+- GitHub artifact retention is to 2026-11-18 UTC; maintain copies of ZIPs outside transient Actions storage. No software release DOI or author declarations are manufactured.
+
+
 ## 2026-10-26 - ChatGPT (OpenAI) - Source-audit GBIF input citation and correct archival overclaim
 
 Changed files:
