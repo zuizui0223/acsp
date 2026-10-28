@@ -62,6 +62,22 @@ the preregistered overall effect, inferential status and fixed failures
 are unchanged. Regional differences are **not** causal ecological
 comparisons or new confirmatory hypotheses.
 
+## Two original executions and the effective random-seed offset
+
+The [source-locked comparison](ORIGINAL_V2_RANDOM_BASELINE_PARITY.md)
+checks the authentic prior successful run **32336724090** against the
+official corrected run **32337884576**. Source history shows an
+offset-991 random-baseline implementation correction, not a change to
+the validated patch-selection rule. All 1,920 fold-by-radius
+deterministic support/held-out fields are unchanged; only
+same-size random-reference means and derived lift differ. The original
+10-km mean lift was +0.084753 before and +0.085587 after correction,
+with positive confidence interval and frozen gate PASS in both runs.
+
+These are *related executions of the same 96-pair cohort*, not a
+new independent replication or a controlled fixed-input RNG experiment,
+because no original full GBIF occurrence rows were archived.
+
 ## Explicit boundary that has not been resolved
 
 The original results ZIP contains exactly these six data files:
