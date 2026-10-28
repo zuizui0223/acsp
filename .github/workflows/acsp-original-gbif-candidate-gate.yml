@@ -1,0 +1,45 @@
+name: Candidate original GBIF input structural gate (synthetic only)
+
+on:
+  pull_request:
+    paths:
+      - 'research/audit_candidate_original_gbif_folds.py'
+      - 'tests/test_candidate_original_gbif_folds.py'
+      - 'paper/ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md'
+      - 'paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md'
+      - 'paper/SUBMISSION_READINESS.md'
+      - '.github/workflows/acsp-original-gbif-candidate-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-original-input-structure:
+    name: Offline synthetic fold-structure contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install offline deterministic RNG dependency
+        run: python -m pip install numpy
+      - name: Verify no actual GBIF inputs are claimed recovered
+        run: |
+          python -m unittest discover -s tests -p 'test_candidate_original_gbif_folds.py' -v
+          python -m unittest discover -s tests -p 'test_original_gbif_archive_inventory.py' -v
+          python paper/validate_submission_alignment.py
+          python paper/validate_submission_packet.py
+          python -m py_compile research/audit_candidate_original_gbif_folds.py
+          python - <<'PY'
+          from pathlib import Path
+          doc=Path('paper/ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md').read_text()
+          assert 'PROVENANCE_UNAUTHENTICATED' in doc
+          assert 'No original historical GBIF record list has been recovered' in doc
+          assert 'synthetic' in Path('tests/test_candidate_original_gbif_folds.py').read_text().lower()
+          print('Synthetic contract passed; real original GBIF input authenticity remains unknown.')
+          PY
