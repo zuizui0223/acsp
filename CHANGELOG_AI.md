@@ -1,5 +1,27 @@
 # AI Change Log
 
+## 2026-10-28 - ChatGPT (OpenAI) - Prepare strict private candidate-backup structural gate for missing GBIF folds
+
+Changed files:
+- research/audit_candidate_original_gbif_folds.py
+- tests/test_candidate_original_gbif_folds.py
+- .github/workflows/acsp-original-gbif-candidate-gate.yml
+- paper/ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- A source-original 96-pair/480-fold GBIF input archive remains missing after six audited historical GitHub Actions ZIPs. Avoid repeated dynamic GBIF refetches or pretending newer records were the August source.
+- Implement an offline candidate-backup structure validator that requires byte-verified original cohort and results ZIPs, verifies 96 identities, all 5 manifests and train/test CSVs per pair, original 94/2 complete/failed export statuses, original record counts, row ordinal completeness and fold pool equality, 0.1-degree blocks and the frozen seeded 20% heldout block choices.
+- Public output contains only aggregate counts of row/GBIF-ID/datasetKey availability; all precise coordinates, ID lists and species names remain private. Synthetic tests reject source tampering and deliberately confirm that structural agreement does NOT prove the candidate folder was historically obtained in 2026.
+- No original source records, historical datasetKey citation mapping, historical GBIF DOI, new ecological confirmation, source download, field outcome or main scientifically validated algorithm has been produced or changed.
+
+Further gate:
+- Only an independently authenticated original raw-fold backup and contemporaneous source lineage can support exact historical data citation. A structurally plausible replacement remains unverified and does not authorize an original-dataset DOI. The primary Japanese +0.085587 confirmation and earlier country/global STOP endpoints remain untouched.
+
+
 ## 2026-10-28 - ChatGPT (OpenAI) - Verify six original Actions archives lack frozen focal GBIF input rows
 
 Changed files:
