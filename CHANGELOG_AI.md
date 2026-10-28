@@ -1,5 +1,28 @@
 # AI Change Log
 
+## 2026-10-28 - ChatGPT (OpenAI) - Verify six original Actions archives lack frozen focal GBIF input rows
+
+Changed files:
+- research/audit_original_gbif_archive_inventory.py
+- validation/acsp_original_gbif_archive_inventory_20261028.json
+- tests/test_original_gbif_archive_inventory.py
+- .github/workflows/acsp-original-gbif-archive-inventory.yml
+- paper/ORIGINAL_GBIF_ARCHIVE_INVENTORY.md
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Retrieved byte-original August 20 robust-patch results and August 22/23 geographic framing v1/v2/v3 ZIPs; verified full archive SHA-256 and enumerated members without exposing any raw or taxon-level coordinates. The six-archive source chain contains the original identity cohort, prior and official robust results, and three geographic development outputs; none includes the original focal training/held-out occurrence CSVs.
+- Four original/re-exported 96-pair status CSVs and export manifests match exactly by SHA-256: 94/96 completed, two failed-retained-as-zero. This verifies aggregate operational-status consistency but NOT byte equality of distinct live GBIF record retrievals.
+- Geographic v2 has 7,895 higher-taxon GENUS/FAMILY **nonfocal** prior coordinate rows; its 96-pair audit excludes focal training and held-out coordinates for all 94 completed pairs. These reference points cannot be substituted for the missing focal source records and are never published in the new aggregate receipt.
+- Add strict SHA-pinned offline six-artifact scanner and dedicated CI using only original GitHub artifacts, privacy-safe aggregate status JSON and mutation tests. Keep main validated ACSP generator and historical confirmatory estimates unchanged.
+
+Unresolved:
+- The search covers six specific GitHub Actions original ZIPs, not every possible historical/private backup. No original complete GBIF record-ID / datasetKey inventory or DOI matching the August focal inputs was recovered. The GBIF Derived Dataset route requires source dataset identities and persistent data representation; do not substitute unrelated October download DOIs or current live records.
+
+
 ## 2026-10-28 - ChatGPT (OpenAI) - Reconcile two original v2 confirmation runs and seed-offset implementation parity
 
 Changed files:
