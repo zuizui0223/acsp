@@ -79,6 +79,17 @@ mean after an effective-seed offset correction. This is
 **execution-level reproducibility**, not independent confirmation,
 controlled same-input RNG sensitivity or original GBIF input recovery.
 
+## Input-source archive audit (not a GBIF refetch)
+
+The [six historical Actions archive inventory](ORIGINAL_GBIF_ARCHIVE_INVENTORY.md)
+checks the exact 2026 original cohort/results and related
+geographic-framing artifacts. Their repeated aggregate status
+files match byte-for-byte, but none contains the focal
+training/held-out occurrence rows. A geographic v2
+higher-taxon reference file is **not** the missing focal
+GBIF source data. See the document's exact SHA inventory,
+privacy boundary and unresolved derived-dataset citation gate.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:
