@@ -68,6 +68,17 @@ primary 10-km statistical analysis. Original results are authenticated
 against the SHA-256-pinned August 2026 ZIP, and the public receipt
 contains no GBIF IDs, taxon names or exact locations.
 
+## Original v2 repeated execution and random-reference seed audit
+
+The [historical paired-run audit](ORIGINAL_V2_RANDOM_BASELINE_PARITY.md)
+compares two authentic successful 2026-08-20 runs of the same frozen
+96-pair cohort. Its exact ZIP hash and aggregate source checks
+show stable ecological support/held-out outputs across all 1,920
+rows and a small difference confined to the random-comparator
+mean after an effective-seed offset correction. This is
+**execution-level reproducibility**, not independent confirmation,
+controlled same-input RNG sensitivity or original GBIF input recovery.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:

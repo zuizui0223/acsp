@@ -1,0 +1,85 @@
+{
+  "schema_version": "acsp-v2-20260820-original-comparison-baseline-offset-v1",
+  "status": "HISTORICAL_NONINDEPENDENT_SEED_IMPLEMENTATION_COMPARISON",
+  "provenance": {
+    "prior_successful_run": 32336724090,
+    "prior_artifact_id": 9395679418,
+    "prior_head_sha": "df6277f4d9e8b3e36a5dad1730affb8db69da48a",
+    "prior_zip_sha256": "7b7bc3dd069c948bb7c63254b3e50e2822d3a8bbe51bd3a4f245dd04aad297f3",
+    "final_official_run": 32337884576,
+    "final_artifact_id": 9396133154,
+    "final_head_sha": "39c9e6853f8d8aeffe42acd1258fe4f8f936f009",
+    "final_zip_sha256": "f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f",
+    "same_original_export_manifest_bytes": true,
+    "same_original_pair_export_status_bytes": true,
+    "same_protocol_and_execution_fingerprints": true
+  },
+  "frozen_geometry_and_recovery_outputs": {
+    "original_fold_by_radius_rows": 1920,
+    "unaltered_nonlinear_support_fields_and_recall_in_all_rows": true,
+    "only_random_mean_recall_and_lift_differ": true,
+    "changed_random_baseline_fold_by_radius_rows": 1287,
+    "changed_pair_mean_lift_rows": 78
+  },
+  "primary_10km": {
+    "prior_mean_lift": 0.08475326801107608,
+    "final_mean_lift": 0.08558708102617191,
+    "mean_lift_difference_final_minus_prior": 0.000833813015095833,
+    "prior_ci95": [
+      0.05045934934609443,
+      0.12056993161986386
+    ],
+    "final_ci95": [
+      0.051186296271122624,
+      0.12165096941745603
+    ],
+    "prior_signflip_p": 0.00003333222225925803,
+    "final_signflip_p": 0.00003333222225925803,
+    "both_passed_frozen_gates": true,
+    "official_final_result_unchanged": true
+  },
+  "by_radius_descriptive_only": {
+    "1": {
+      "declared_folds": 480,
+      "changed_random_baseline_folds": 225,
+      "changed_lift_folds": 225,
+      "prior_mean_lift": 0.006266024405587997,
+      "final_mean_lift": 0.006191297443355095,
+      "mean_lift_difference_final_minus_prior": -0.00007472696223288541
+    },
+    "2": {
+      "declared_folds": 480,
+      "changed_random_baseline_folds": 324,
+      "changed_lift_folds": 324,
+      "prior_mean_lift": 0.016811617132284025,
+      "final_mean_lift": 0.016773167521092473,
+      "mean_lift_difference_final_minus_prior": -0.00003844961119153547
+    },
+    "5": {
+      "declared_folds": 480,
+      "changed_random_baseline_folds": 369,
+      "changed_lift_folds": 369,
+      "prior_mean_lift": 0.03230910213694637,
+      "final_mean_lift": 0.032140714239266836,
+      "mean_lift_difference_final_minus_prior": -0.0001683878976795242
+    },
+    "10": {
+      "declared_folds": 480,
+      "changed_random_baseline_folds": 369,
+      "changed_lift_folds": 369,
+      "prior_mean_lift": 0.08475326801107608,
+      "final_mean_lift": 0.08558708102617191,
+      "mean_lift_difference_final_minus_prior": 0.0008338130150958333
+    }
+  },
+  "scientific_limits": {
+    "independent_new_taxa_or_cohort": false,
+    "historical_input_GBIF_rows_byte_verified_equal": false,
+    "comparison_is_controlled_fixed_input_RNG_experiment": false,
+    "causal_attribution_only_to_seed_proven": false,
+    "original_source_occurence_rows_recovered": false,
+    "new_biological_or_field_effect": false,
+    "original_frozen_method_parameters_retuned": false,
+    "new_confirmatory_statistical_test": false
+  }
+}

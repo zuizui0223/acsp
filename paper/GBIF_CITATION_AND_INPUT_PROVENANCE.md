@@ -71,6 +71,25 @@ provide exact hashes and replay instructions. GitHub lists both original
 artifact ZIPs as scheduled to expire on **2026-11-18 (UTC)**; do not rely
 on those links as permanent data archives.
 
+## Second original successful run does not restore original input rows
+
+A separate original successful 2026-08-20 execution ([run
+#32336724090](https://github.com/zuizui0223/acsp/actions/runs/32336724090),
+artifact **9395679418**, verified ZIP SHA-256
+`7b7bc3dd069c948bb7c63254b3e50e2822d3a8bbe51bd3a4f245dd04aad297f3`)
+was also recovered. Its cohort/fold export status files are
+byte-identical to the later official archive; all 1,920
+deterministic support and held-out recovery values are identical.
+The GitHub source diff is consistent with an effective random-seed
+offset correction between the two runs, explained in
+[`ORIGINAL_V2_RANDOM_BASELINE_PARITY.md`](ORIGINAL_V2_RANDOM_BASELINE_PARITY.md).
+
+**Neither ZIP contains the original GBIF training/held-out occurrence
+rows or `datasetKey` provenance.** The identical reported
+deterministic values do not prove byte identity of the earlier and
+later raw GBIF searches. Original occurrence IDs and a matching
+historical data citation still remain unrecovered.
+
 ## What is and is not established
 
 | Object | Status | Meaning |

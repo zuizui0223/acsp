@@ -1,5 +1,31 @@
 # AI Change Log
 
+## 2026-10-28 - ChatGPT (OpenAI) - Reconcile two original v2 confirmation runs and seed-offset implementation parity
+
+Changed files:
+- research/audit_original_v2_seed_offset_parity.py
+- validation/acsp_original_v2_rng_seed_parity_20261028.json
+- tests/test_original_v2_seed_offset_parity.py
+- .github/workflows/acsp-original-v2-seed-parity.yml
+- paper/ORIGINAL_V2_RANDOM_BASELINE_PARITY.md
+- paper/ORIGINAL_V2_RESULT_ARCHIVE_REPLAY.md
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Recovered and SHA-256 authenticated the **earlier** successful Aug-20 original results ZIP (run 32336724090, artifact 9395679418, sha256 7b7bc3dd...) alongside the officially corrected Aug-20 ZIP (run 32337884576, artifact 9396133154, sha256 f23c23af...). Archived original earlier ZIP separately for long-term retention in the connected Library.
+- Inspected immutable commit ancestry: df6277f4 (prior run) passed the frozen random seed expression directly to an evaluator that internally adds 991; 39c9e685 (official run) subtracts 991 in the wrapper to match the unchanged frozen effective-seed expression. Fix committed after the earlier run started and before it completed. No claim about whether anyone viewed prior held-out results before the correction.
+- Two original ZIPs preserve identical manifest/export-status bytes and all 1,920 source-verified non-random fold-by-radius fields (support cells, patches, prototype count, held-out recall, failure reason, nearest distances). Only random_mean_recall and derived lift differ (1,287 fold×radius rows; 78 of 96 pair mean lifts).
+- The prior 10-km mean lift +0.084753268, CI [0.050459349, 0.120569932] and official +0.085587081, CI [0.051186296, 0.121650969], both with one-sided signflip p 3.333222e-05 and frozen confirmation gate PASS. No replacement/averaging of the official primary result.
+- New offline SHA/member-authenticated comparison, pinned public aggregate receipt, CI, mutation tests and publication-safe report. No new GBIF queries, sample retuning, candidate generation changes or new inferential tests.
+
+Strict limits:
+- The two runs share the same declared cohort and are not independent confirmations. Their original GBIF records were fetched separately and not archived in either ZIP, so exact original input equality and exclusive causal attribution to RNG cannot be proven. Original GBIF occurrence IDs, datasetKey attribution and a matching historical GBIF DOI remain unresolved.
+- Validated main 2.5%/float32/1-km set-valued method, 96-pair/480-fold original inference, failed global promotion and unapproved author or release DOI remain unchanged.
+
+
 ## 2026-10-28 - ChatGPT (OpenAI) - Quantify descriptive pair and geographic heterogeneity in source-original ACSP v2 results
 
 Changed files:
