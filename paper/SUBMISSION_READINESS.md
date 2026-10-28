@@ -151,6 +151,23 @@ document does not promote the 1/2/5-km descriptive effects or regional
 contrasts to independent evidence, and does not repair the still-missing
 GBIF original occurrence rows or attribution DOI.
 
+## Original run-level random-baseline parity audit (2026-10-28)
+
+The [two-source execution comparison](ORIGINAL_V2_RANDOM_BASELINE_PARITY.md)
+documents an original prior successful run (mean +0.084753) and the
+official corrected run (mean +0.085587). Exact source comparison
+shows the frozen evaluator added 991 internally to the random draw
+seed, and the corrected runner subtracted 991. Across 1,920 output
+rows, ecological support, candidate patch counts, held-out recall,
+failures and other deterministic fields were unchanged; only the
+same-size random baseline and derived lift differed. **Both frozen
+confirmation gates passed.**
+
+This is not a second independent cohort or a new hypothesis test,
+and original GBIF input rows are absent from both result archives.
+Only the official corrected estimate is used in the submitted
+manuscript; no effect estimate or confidence interval was rewritten.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
