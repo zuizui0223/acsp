@@ -1,5 +1,28 @@
 # AI Change Log
 
+## 2026-10-28 - ChatGPT (OpenAI) - Quantify descriptive pair and geographic heterogeneity in source-original ACSP v2 results
+
+Changed files:
+- research/describe_original_v2_patch_heterogeneity.py
+- validation/acsp_original_v2_descriptive_heterogeneity_20261028.json
+- tests/test_original_v2_descriptive_heterogeneity.py
+- .github/workflows/acsp-original-v2-heterogeneity.yml
+- paper/ORIGINAL_V2_HETEROGENEITY_DESCRIPTIVE.md
+- paper/ORIGINAL_V2_RESULT_ARCHIVE_REPLAY.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- From the exact SHA-256-authenticated 2026-08-20 original results ZIP alone, describe 96 frozen pair means: 54 positive, 17 zero, 25 negative, median +0.028380 vs original all-pair mean +0.085587.
+- Reveal failure-inclusive interpretation: of 480 primary 10-km folds, 375 had no failure, 55 insufficient environmental prototypes, 39 empty support, 10 insufficient spatial blocks and 1 insufficient training coordinates. Twenty-three pairs had one or more failed fold; 17 had all five fail. The intended primary 96-pair all-declared mean is not replaced with a biased complete-case mean.
+- Describe 48 plants / 48 animals, 12 frozen regions (10 positive mean, two negative including Izu/Ryukyu), and original 1/2/5/10 km distance-scale recall/lift without any new inferential test or mechanistic interpretation.
+- Add fail-closed source ZIP + original frozen-result consistency script, privacy-safe saved aggregate JSON, tests and dedicated GitHub Actions original-artifact replay. Preserve current validated scientific product and manuscript main claim unchanged.
+
+Strict boundaries:
+- Analysis is exploratory post hoc description of already-opened original result tables, not a new independent confirmation, effect of island environment, verified microhabitat occupancy, or an estimate of field utility. No current GBIF records were queried; original input GBIF IDs/datasetKeys and exact matching download DOI remain missing.
+
+
 ## 2026-10-28 - ChatGPT (OpenAI) - Recover and independently replay byte-original ACSP v2 confirmatory results
 
 Changed files:
