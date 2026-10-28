@@ -247,12 +247,42 @@ def compare(prior_zip: Path, final_zip: Path) -> dict[str, object]:
     }
 
 
+
+def verify_saved_receipt(actual: object, saved_path: Path) -> None:
+    """Require the saved no-coordinate report to match source-authenticated ZIPs."""
+    expected = json.loads(Path(saved_path).read_text(encoding="utf-8"))
+
+    def equal(x: object, y: object, where: str = "root") -> None:
+        if isinstance(x, dict) and isinstance(y, dict):
+            _require(x.keys() == y.keys(), f"saved receipt keys changed at {where}")
+            for key in x:
+                equal(x[key], y[key], f"{where}.{key}")
+        elif isinstance(x, list) and isinstance(y, list):
+            _require(len(x) == len(y), f"saved receipt list length changed at {where}")
+            for i, (left, right) in enumerate(zip(x, y)):
+                equal(left, right, f"{where}[{i}]")
+        elif (isinstance(x, (int, float)) and not isinstance(x, bool)
+              and isinstance(y, (int, float)) and not isinstance(y, bool)):
+            _require(math.isfinite(x) and math.isfinite(y)
+                     and math.isclose(x, y, rel_tol=0.0, abs_tol=1e-12),
+                     f"saved receipt numerical change at {where}")
+        else:
+            _require(type(x) is type(y) and x == y,
+                     f"saved receipt value change at {where}")
+
+    equal(actual, expected)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prior-zip", type=Path, required=True)
     parser.add_argument("--final-zip", type=Path, required=True)
+    parser.add_argument("--verify-saved", type=Path)
     args = parser.parse_args()
-    print(json.dumps(compare(args.prior_zip, args.final_zip), indent=2, sort_keys=True))
+    report = compare(args.prior_zip, args.final_zip)
+    if args.verify_saved is not None:
+        verify_saved_receipt(report, args.verify_saved)
+    print(json.dumps(report, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
