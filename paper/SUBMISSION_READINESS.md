@@ -168,6 +168,25 @@ and original GBIF input rows are absent from both result archives.
 Only the official corrected estimate is used in the submitted
 manuscript; no effect estimate or confidence interval was rewritten.
 
+## Original GBIF input archival search — source-limited negative (2026-10-28)
+
+The [six-archive inventory](ORIGINAL_GBIF_ARCHIVE_INVENTORY.md)
+examined SHA-256 authenticated historical cohort, two
+confirmation and three geographic-framing source ZIPs. It found
+**no** original focal-species train/held-out CSVs or a matching
+historical GBIF DOI. The four common 96-pair export-status
+files and manifests are byte-identical, but do not prove
+original input record identity. Geographic v2's 7,895
+coordinate-bearing rows are **nonfocal prior data**, not
+recoverable primary occurrence inputs.
+
+This clarifies the outstanding source-record provenance gate:
+an authenticated private backup of the actual August 2026
+focal input (or an equivalent immutable historical record-ID
+inventory) is still required for exact dataset attribution.
+It does **not** modify the independently recomputed result
+inference or the existing statistical manuscript claim.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
