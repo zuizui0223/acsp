@@ -52,6 +52,16 @@ radii are not a newly preregistered collection of independent significance
 tests. All five-fold pair-level inferences must retain declared failures
 rather than selecting only successfully evaluated pairs.
 
+## Optional post hoc heterogeneity audit
+
+The source-identical [descriptive heterogeneity report](ORIGINAL_V2_HETEROGENEITY_DESCRIPTIVE.md)
+gives the 54/17/25 positive/zero/negative distribution of the original
+96 pair means, regional summary, failure pathways and four distance
+scales. These are exploratory descriptions of the already-opened cohort;
+the preregistered overall effect, inferential status and fixed failures
+are unchanged. Regional differences are **not** causal ecological
+comparisons or new confirmatory hypotheses.
+
 ## Explicit boundary that has not been resolved
 
 The original results ZIP contains exactly these six data files:
