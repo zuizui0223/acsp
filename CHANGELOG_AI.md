@@ -19,6 +19,9 @@ Summary:
 - Describe 48 plants / 48 animals, 12 frozen regions (10 positive mean, two negative including Izu/Ryukyu), and original 1/2/5/10 km distance-scale recall/lift without any new inferential test or mechanistic interpretation.
 - Add fail-closed source ZIP + original frozen-result consistency script, privacy-safe saved aggregate JSON, tests and dedicated GitHub Actions original-artifact replay. Preserve current validated scientific product and manuscript main claim unchanged.
 
+CI verification and bounded repair:
+- First source-byte CI found a provenance receipt column-name mismatch: the original saved radius rows use `lift_over_random`, not `mean_lift`. Corrected only the lookup in the new descriptive script and re-ran CI; the original result ZIP, saved data, and frozen confirmation were not modified.
+
 Strict boundaries:
 - Analysis is exploratory post hoc description of already-opened original result tables, not a new independent confirmation, effect of island environment, verified microhabitat occupancy, or an estimate of field utility. No current GBIF records were queried; original input GBIF IDs/datasetKeys and exact matching download DOI remain missing.
 
