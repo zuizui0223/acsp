@@ -1,0 +1,73 @@
+{
+  "schema_version": "acsp-original-gbif-input-artifact-inventory-20261028",
+  "status": "EXACT_ORIGINAL_GBIF_INPUT_RECORDS_NOT_IN_SIX_CHECKED_ARCHIVES",
+  "checked_artifacts": {
+    "cohort": {
+      "run_id": 32335791948,
+      "artifact_id": 9394691112,
+      "zip_sha256": "cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+      "member_count": 4,
+      "actual_original_training_or_heldout_csv_present": false
+    },
+    "prior_confirmation": {
+      "run_id": 32336724090,
+      "artifact_id": 9395679418,
+      "zip_sha256": "7b7bc3dd069c948bb7c63254b3e50e2822d3a8bbe51bd3a4f245dd04aad297f3",
+      "member_count": 6,
+      "actual_original_training_or_heldout_csv_present": false
+    },
+    "official_confirmation": {
+      "run_id": 32337884576,
+      "artifact_id": 9396133154,
+      "zip_sha256": "f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f",
+      "member_count": 6,
+      "actual_original_training_or_heldout_csv_present": false
+    },
+    "geographic_v1": {
+      "run_id": 32574305976,
+      "artifact_id": 9476173948,
+      "zip_sha256": "54ed1ccaaebc22c768fb3eb06af2cf647ac8174f07638c582e2577a58676d972",
+      "member_count": 7,
+      "actual_original_training_or_heldout_csv_present": false
+    },
+    "geographic_v2": {
+      "run_id": 32613853356,
+      "artifact_id": 9486388476,
+      "zip_sha256": "907b9c83e49b84e9681fa9e7561345929ba655adabd6dfce58204102edbc9313",
+      "member_count": 7,
+      "actual_original_training_or_heldout_csv_present": false
+    },
+    "geographic_v3": {
+      "run_id": 32615062909,
+      "artifact_id": 9486693473,
+      "zip_sha256": "92f48e8a91388d98acc152b13fe3d4ed5cb74d6454b6aa1f4f6735f7ee412ec3",
+      "member_count": 2,
+      "actual_original_training_or_heldout_csv_present": false
+    }
+  },
+  "checked_artifact_count": 6,
+  "cross_execution_pair_export_status_sha256": "55f66ba821cba0eafdcc149f04e082e0c66ecf4a51d9456c94319e158a81b7bf",
+  "cross_execution_fold_manifest_sha256": "b9e89cb8de1969ea0531c8106d3f82750aa4791bfbf7658429855b1dd1f637fd",
+  "pair_status_summary": {
+    "complete": 94,
+    "failed_retained_as_zero": 2
+  },
+  "four_execution_status_files_byte_identical": true,
+  "four_execution_fold_manifests_byte_identical": true,
+  "original_confirmatory_pair_rows": 96,
+  "original_confirmatory_fold_by_radius_rows": 1920,
+  "geographic_v2_nonfocal_reference_point_rows": 7895,
+  "geographic_v2_prior_excludes_focal_coordinates": true,
+  "geographic_v3_only_countries_and_counts": true,
+  "scientific_boundaries": {
+    "original_GBIF_input_rows_recovered": false,
+    "original_GBIF_ID_inventory_recovered": false,
+    "original_datasetKey_mapping_recovered": false,
+    "original_GBIF_citation_DOI_verified": false,
+    "byte_identical_pair_status_proves_byte_identical_GBIF_inputs": false,
+    "new_GBIF_queries_executed": false,
+    "all_other_backup_locations_exhaustively_searched": false,
+    "new_ecological_confirmation_or_adjustment": false,
+    "protected_coordinates_in_output": false
+  }
+}
