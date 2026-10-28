@@ -131,6 +131,25 @@ class OriginalFoldCandidateStructuralTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "pool differs"):
             self._audit()
 
+    def test_preserved_record_pool_but_wrong_spatial_split_is_rejected(self):
+        d = self.root / "pair_001" / "fold_002"
+        train_path, held_path = (d / "training_occurrences.csv",
+                                  d / "held_out_occurrences.csv")
+        def read(path):
+            with path.open(encoding="utf-8", newline="") as f:
+                return list(csv.DictReader(f))
+        tr = read(train_path)
+        ho = read(held_path)
+        self.assertTrue(tr and ho)
+        # Change allocation only. Union, counts, IDs and CSV columns stay
+        # identical, so only checking structural counts would miss this.
+        tr[0], ho[0] = ho[0], tr[0]
+        fields = ("_row_id", "_latitude", "_longitude", "_gbif_id")
+        self._csv(train_path, tr, fields)
+        self._csv(held_path, ho, fields)
+        with self.assertRaisesRegex(ValueError, "split does not match"):
+            self._audit()
+
     def test_missing_one_fold_fails(self):
         p = self.root / "pair_001" / "fold_005" / "fold_manifest.json"
         p.unlink()
