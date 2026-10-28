@@ -1,0 +1,77 @@
+{
+  "all_declared_fold_by_radius_rows": 1920,
+  "declared_pair_count": 96,
+  "distance_scales_descriptive_only": [
+    {"declared_folds":480,"mean_heldout_recall":0.009350081964931171,"mean_lift":0.006191297443355095,"mean_same_size_random_recall":0.003158784521576074,"radius_km":1},
+    {"declared_folds":480,"mean_heldout_recall":0.02981472609192475,"mean_lift":0.016773167521092473,"mean_same_size_random_recall":0.013041558570832279,"radius_km":2},
+    {"declared_folds":480,"mean_heldout_recall":0.09094005556803861,"mean_lift":0.032140714239266836,"mean_same_size_random_recall":0.058799341328771765,"radius_km":5},
+    {"declared_folds":480,"mean_heldout_recall":0.25860078569751677,"mean_lift":0.08558708102617191,"mean_same_size_random_recall":0.1730137046713449,"radius_km":10}
+  ],
+  "leave_one_region_out_descriptive_range": [0.07944236180662909,0.10070718011023062],
+  "original_artifact_id":9396133154,
+  "original_source_run":32337884576,
+  "original_zip_sha256":"f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f",
+  "pair_failure_strata_descriptive_only":{
+    "five_failed_folds_count":17,
+    "no_failed_fold":{
+      "mean_lift":0.10951147337383947,
+      "median_lift":0.08463005773350603,
+      "n_pairs":73,
+      "sign_counts":{"negative":23,"positive":50,"zero":0}
+    },
+    "not_for_complete_case_reestimation":true,
+    "one_or_more_failed_folds":{
+      "mean_lift":0.009653140096618353,
+      "median_lift":0.0,
+      "n_pairs":23,
+      "sign_counts":{"negative":2,"positive":4,"zero":17}
+    }
+  },
+  "primary_10km":{
+    "failure_inclusive_primary_confirmatory_mean_unchanged":true,
+    "mean_lift":0.08558708102617191,
+    "median_lift":0.028380327555444118,
+    "n_pairs":96,
+    "pair_lift_q1_median_q3":[-0.002738358035333851,0.028380327555444118,0.15920859384868008],
+    "sign_counts":{"negative":25,"positive":54,"zero":17},
+    "zero_is_not_biological_nondetection":true
+  },
+  "primary_10km_failure_reasons":{
+    "empty_robust_support":39,"insufficient_environment_prototypes":55,
+    "insufficient_spatial_blocks":10,"insufficient_training_coordinates":1,
+    "no_failure":375
+  },
+  "regional_means_negative":2,
+  "regional_means_positive":10,
+  "regions_descriptive_only":{
+    "Chubu mountains":{"mean_lift":0.1531789924411429,"median_lift":0.10328327923405058,"n_pairs":8,"pairs_with_failed_folds":0,"sign_counts":{"negative":1,"positive":7,"zero":0}},
+    "Chugoku":{"mean_lift":0.13759550937562035,"median_lift":0.0625796979078713,"n_pairs":8,"pairs_with_failed_folds":2,"sign_counts":{"negative":2,"positive":4,"zero":2}},
+    "Hokkaido east":{"mean_lift":0.12498982823484811,"median_lift":-0.012728424775707375,"n_pairs":8,"pairs_with_failed_folds":1,"sign_counts":{"negative":4,"positive":3,"zero":1}},
+    "Hokkaido west":{"mean_lift":0.015551601890756295,"median_lift":0.0,"n_pairs":8,"pairs_with_failed_folds":3,"sign_counts":{"negative":2,"positive":3,"zero":3}},
+    "Izu":{"mean_lift":-0.01108055555555557,"median_lift":0.0,"n_pairs":8,"pairs_with_failed_folds":8,"sign_counts":{"negative":1,"positive":2,"zero":5}},
+    "Kanto":{"mean_lift":0.13126208545890966,"median_lift":0.12506940706994407,"n_pairs":8,"pairs_with_failed_folds":0,"sign_counts":{"negative":2,"positive":6,"zero":0}},
+    "Kinki":{"mean_lift":0.15041155930739766,"median_lift":0.142731818459541,"n_pairs":8,"pairs_with_failed_folds":1,"sign_counts":{"negative":0,"positive":7,"zero":1}},
+    "Northern Kyushu":{"mean_lift":0.078544346895974,"median_lift":0.00018452380952380934,"n_pairs":8,"pairs_with_failed_folds":2,"sign_counts":{"negative":4,"positive":4,"zero":0}},
+    "Ryukyu":{"mean_lift":-0.08073400889847403,"median_lift":0.0,"n_pairs":8,"pairs_with_failed_folds":4,"sign_counts":{"negative":3,"positive":1,"zero":4}},
+    "Shikoku":{"mean_lift":0.14458418193554806,"median_lift":0.15856472236897404,"n_pairs":8,"pairs_with_failed_folds":1,"sign_counts":{"negative":2,"positive":5,"zero":1}},
+    "Southern Kyushu":{"mean_lift":0.12534823800662337,"median_lift":0.06232911725955205,"n_pairs":8,"pairs_with_failed_folds":1,"sign_counts":{"negative":1,"positive":7,"zero":0}},
+    "Tohoku":{"mean_lift":0.05739319322127204,"median_lift":0.026202910661740644,"n_pairs":8,"pairs_with_failed_folds":0,"sign_counts":{"negative":3,"positive":5,"zero":0}}
+  },
+  "schema_version":"acsp-original-v2-descriptive-heterogeneity-20261028",
+  "science_boundary":{
+    "geographic_global_product_validated_by_this":false,
+    "new_gbif_queries_or_field_outcomes_used":false,
+    "only_original_2026_08_20_historical_result_rows_used":true,
+    "primary_frozen_inference_or_denominator_changed":false,
+    "raw_original_gbif_occurrence_inputs_recovered":false,
+    "regional_differences_causal_or_confirmatory":false,
+    "secondary_radii_new_confirmatory_endpoints":false,
+    "taxon_group_posthoc_sign_counts_new_tests":false
+  },
+  "status":"POSTHOC_DESCRIPTION_OF_FROZEN_VALIDATION_NOT_INDEPENDENT_CONFIRMATION",
+  "taxon_groups":{
+    "animal":{"mean_lift":0.11415032280591153,"median_lift":0.046677777777777776,"n_pairs":48,"sign_counts":{"negative":9,"positive":29,"zero":10}},
+    "plant":{"mean_lift":0.057023839246432256,"median_lift":0.018397943265757333,"n_pairs":48,"sign_counts":{"negative":16,"positive":25,"zero":7}}
+  },
+  "unit":"taxon_region_pair_with_all_five_folds_retained"
+}
