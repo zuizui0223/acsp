@@ -1,0 +1,82 @@
+name: Audit original ACSP GBIF input archive inventory
+
+on:
+  pull_request:
+    paths:
+      - 'research/audit_original_gbif_archive_inventory.py'
+      - 'validation/acsp_original_gbif_archive_inventory_20261028.json'
+      - 'tests/test_original_gbif_archive_inventory.py'
+      - 'paper/ORIGINAL_GBIF_ARCHIVE_INVENTORY.md'
+      - '.github/workflows/acsp-original-gbif-archive-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-archive-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify offline source bounds and freeze guards
+        run: |
+          python -m unittest discover -s tests -p 'test_original_gbif_archive_inventory.py' -v
+          python -m py_compile research/audit_original_gbif_archive_inventory.py
+          python paper/validate_submission_alignment.py
+          python paper/validate_submission_packet.py
+      - name: Retrieve six original source archives, never current GBIF records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/acsp-gbif-input-inventory
+          while read -r label artifact_id; do
+            test -n "$label" || continue
+            curl --fail --location --silent --show-error --retry 2 \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" \
+              --output "/tmp/acsp-gbif-input-inventory/$label.zip"
+          done <<'END_ARCHIVES'
+          cohort 9394691112
+          prior_confirmation 9395679418
+          official_confirmation 9396133154
+          geographic_v1 9476173948
+          geographic_v2 9486388476
+          geographic_v3 9486693473
+          END_ARCHIVES
+      - name: Verify actual ZIP bytes, repeated statuses, and nonfocal prior exclusion
+        run: |
+          python research/audit_original_gbif_archive_inventory.py \
+            --cohort /tmp/acsp-gbif-input-inventory/cohort.zip \
+            --prior-confirmation /tmp/acsp-gbif-input-inventory/prior_confirmation.zip \
+            --official-confirmation /tmp/acsp-gbif-input-inventory/official_confirmation.zip \
+            --geographic-v1 /tmp/acsp-gbif-input-inventory/geographic_v1.zip \
+            --geographic-v2 /tmp/acsp-gbif-input-inventory/geographic_v2.zip \
+            --geographic-v3 /tmp/acsp-gbif-input-inventory/geographic_v3.zip \
+            --verify-saved validation/acsp_original_gbif_archive_inventory_20261028.json \
+            > /tmp/acsp-gbif-input-inventory/aggregate.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          j=json.loads(Path("/tmp/acsp-gbif-input-inventory/aggregate.json").read_text())
+          assert j["checked_artifact_count"] == 6
+          assert j["four_execution_status_files_byte_identical"] is True
+          assert j["geographic_v2_nonfocal_reference_point_rows"] == 7895
+          assert j["scientific_boundaries"]["original_GBIF_input_rows_recovered"] is False
+          assert j["scientific_boundaries"]["new_GBIF_queries_executed"] is False
+          print("Six exact source ZIPs audited. Original focal GBIF records are NOT recovered.")
+          PY
+      - name: Upload ONLY coordinate-free audit receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-six-archives-original-gbif-input-availability
+          path: /tmp/acsp-gbif-input-inventory/aggregate.json
+          retention-days: 90
+          if-no-files-found: error

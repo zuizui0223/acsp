@@ -90,6 +90,23 @@ deterministic values do not prove byte identity of the earlier and
 later raw GBIF searches. Original occurrence IDs and a matching
 historical data citation still remain unrecovered.
 
+## Six original-archive search outcome (2026-10-28)
+
+The [SHA-256-verified six-archive inventory](ORIGINAL_GBIF_ARCHIVE_INVENTORY.md)
+extends the original-input search to the cohort archive, both
+robust-v2 success archives and geographic-framing v1/v2/v3 outputs.
+**None** contains the original focal-species training/held-out
+occurrence CSVs. The four original and re-exported 96-pair status
+and export-manifest files are *byte-identical*, but this does not
+verify that distinct live GBIF requests returned the same records.
+
+Geographic v2 includes 7,895 genus/family-level **nonfocal** prior
+locations that must not be substituted for the focal validation
+input or published as part of this coordinate-free audit.
+Exact GBIF record IDs/datasetKeys and a matching historical DOI
+remain **unrecovered**. These results narrow the search within
+GitHub Actions; they do not exhaust private backups.
+
 ## What is and is not established
 
 | Object | Status | Meaning |
