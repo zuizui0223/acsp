@@ -151,7 +151,7 @@ def build_report(result_zip: Path) -> dict:
             "mean_lift": float(np.mean([float(x["lift_over_random"]) for x in subset])),
         }
         _check(np.isclose(scale["mean_lift"],
-                          next(x["mean_lift"] for x in
+                          next(x["lift_over_random"] for x in
                                receipt["independent_recomputation"]["radius_means_descriptive"]
                                if int(x["radius_km"]) == radius),
                           rtol=0, atol=1e-14), "descriptive radius lift drift")
