@@ -58,6 +58,16 @@ members and reconstructs the reported statistics. No raw GBIF
 occurrence inputs were recovered; the dataset-DOI citation problem
 remains separately open.
 
+## Original-pair heterogeneity and applicability diagnostics
+
+The [source-locked descriptive report](ORIGINAL_V2_HETEROGENEITY_DESCRIPTIVE.md)
+quantifies the **non-universality of the original positive mean** and
+where failure/empty-support zeros were retained. It is not a new study,
+a new field result, a novel global claim or a revision to the frozen
+primary 10-km statistical analysis. Original results are authenticated
+against the SHA-256-pinned August 2026 ZIP, and the public receipt
+contains no GBIF IDs, taxon names or exact locations.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:
