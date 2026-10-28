@@ -47,6 +47,17 @@ Run `python paper/audit_gbif_citation_provenance.py`; passing the
 audit documents the unresolved citation gate and **does not**
 authorize submission or substitute a fresh GBIF snapshot.
 
+## Original August 2026 confirmation statistics — byte-level replay
+
+[Original-v2 archived-result reconciliation](ORIGINAL_V2_RESULT_ARCHIVE_REPLAY.md)
+records both authentic GitHub Actions ZIP SHA-256 hashes and a fresh
+recalculation of the original 96-pair effect, bootstrap CI and sign-flip p.
+The companion `research/replay_original_robust_patch_v2_artifacts.py`
+accepts only the authentic historical ZIPs, verifies their internal
+members and reconstructs the reported statistics. No raw GBIF
+occurrence inputs were recovered; the dataset-DOI citation problem
+remains separately open.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:

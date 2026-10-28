@@ -120,6 +120,22 @@ reproducibly disclosed. It is **not** evidence of complete raw-data
 archiving or DOI attribution; submission remains blocked on the
 honest publication-data decision and author declarations.
 
+## Original confirmation result archive recovered (2026-10-28)
+
+Both original 2026-08-20 GitHub Actions archives have been recovered
+and independently verified against original SHA-256 digests. From
+the original 96 pair summaries and 1,920 fold-by-radius output rows,
+the frozen +0.085587 10-km mean lift, 95% CI and sign-flip p were
+recomputed **exactly**, including failures retained in the denominator.
+The [source-verified replay note](ORIGINAL_V2_RESULT_ARCHIVE_REPLAY.md)
+records original run IDs, ZIP/member hashes and the offline replay method.
+
+**Important remaining blocker:** The results ZIP does **not** contain
+the original GBIF occurrence training/held-out rows. No matching
+historical GBIF download DOI or original record-ID list has been recovered.
+This is not a completed raw-data or software archive and does not satisfy
+the unresolved author-approval and dataset-citation gates.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
