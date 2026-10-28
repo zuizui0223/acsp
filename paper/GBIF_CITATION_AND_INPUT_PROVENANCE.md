@@ -107,6 +107,22 @@ Exact GBIF record IDs/datasetKeys and a matching historical DOI
 remain **unrecovered**. These results narrow the search within
 GitHub Actions; they do not exhaust private backups.
 
+## Prepared private candidate-backup integrity gate (2026-10-28)
+
+The [offline structural validator](ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md)
+can inspect any subsequently located `confirmation-folds`
+backup against the authenticated original cohort/results ZIPs:
+96 taxon–region identities, 480 manifest/CSV sets, archived
+94-complete/2-failed counts, preserved `_row_id` record pools,
+and the frozen 0.1-degree block-splitting RNG rule.
+
+**This does not recover the original records or prove authenticity.**
+No contemporaneous per-fold raw CSV hashes were retained in the
+checked result ZIPs. Therefore a structurally compatible folder
+cannot be relabeled the August 2026 input merely by passing these
+checks. The tool reports *safe aggregate counts only*; no GBIF IDs,
+taxon names or precise locations are published.
+
 ## What is and is not established
 
 | Object | Status | Meaning |

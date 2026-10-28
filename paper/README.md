@@ -90,6 +90,20 @@ higher-taxon reference file is **not** the missing focal
 GBIF source data. See the document's exact SHA inventory,
 privacy boundary and unresolved derived-dataset citation gate.
 
+## Private original GBIF input recovery candidate gate
+
+The [offline candidate-fold source checker](ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md)
+is prepared for an **authentic backup found in the future**. It
+checks all 480 expected fold input files against the original
+source SHA-pinned 96-pair cohort and results archive and the
+frozen hold-out RNG specification. CI uses synthetic records only.
+
+A structurally valid folder is still **not authenticated 2026
+GBIF source data** without independently anchored original
+source hashes or other trusted contemporaneous provenance.
+No old GBIF input has been recovered and no inferred DOI has
+been issued.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:

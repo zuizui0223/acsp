@@ -187,6 +187,23 @@ inventory) is still required for exact dataset attribution.
 It does **not** modify the independently recomputed result
 inference or the existing statistical manuscript claim.
 
+## Offline original-input candidate verification prepared (2026-10-28)
+
+The [private 480-fold structural gate](ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md)
+now validates the expected candidate backup directory and frozen
+cohort/result identities without using the network. It checks original
+94/2 pair export status, 96×5 paired CSVs, cleaned record ordinals,
+five-fold record-pool equality, deterministic spatial block partitions,
+and `gbifID` / `datasetKey` **counts**, never raw identifiers in
+the public report. Only synthetic test data enter CI.
+
+The resulting state, even if a candidate passes, is
+`STRUCTURALLY_CONSISTENT_CANDIDATE_BACKUP_PROVENANCE_UNAUTHENTICATED`.
+External contemporaneous evidence is still required to establish that
+the candidate rows were actually obtained in August 2026 and to
+assemble a true GBIF-derived citation. No original source backup was
+found or promoted by preparing this tool.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
