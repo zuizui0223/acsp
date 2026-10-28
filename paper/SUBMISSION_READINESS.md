@@ -136,6 +136,21 @@ historical GBIF download DOI or original record-ID list has been recovered.
 This is not a completed raw-data or software archive and does not satisfy
 the unresolved author-approval and dataset-citation gates.
 
+## Failure-inclusive descriptive heterogeneity supplement (2026-10-28)
+
+An optional [original-v2 descriptive report](ORIGINAL_V2_HETEROGENEITY_DESCRIPTIVE.md)
+documents that the **96-pair mean** improvement is not identical across
+taxa (54 positive, 17 zero, 25 negative pair means). Among 480 primary
+10-km fold results, 105 had explicit failure/empty support recorded as
+zero. The report describes 12 regional frames and four radii without
+additional hypotheses or significance tests.
+
+The source-bounded script and fixed public aggregate receipt must agree
+exactly on the original byte-authenticated GitHub results ZIP. This
+document does not promote the 1/2/5-km descriptive effects or regional
+contrasts to independent evidence, and does not repair the still-missing
+GBIF original occurrence rows or attribution DOI.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
