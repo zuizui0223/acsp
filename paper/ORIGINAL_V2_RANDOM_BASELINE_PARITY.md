@@ -14,9 +14,9 @@ country/global transfer endpoints remain unchanged.
 | GitHub Actions | [32336724090](https://github.com/zuizui0223/acsp/actions/runs/32336724090) | [32337884576](https://github.com/zuizui0223/acsp/actions/runs/32337884576) |
 | Start (UTC) | 2026-08-20 05:44:04 | 2026-08-20 06:01:40 |
 | Completed (UTC) | 2026-08-20 06:19:10 | 2026-08-20 06:38:08 |
-| Head commit | [\`df6277f4d9e8b3e36a5dad1730affb8db69da48a\`](https://github.com/zuizui0223/acsp/commit/df6277f4d9e8b3e36a5dad1730affb8db69da48a) | [\`39c9e6853f8d8aeffe42acd1258fe4f8f936f009\`](https://github.com/zuizui0223/acsp/commit/39c9e6853f8d8aeffe42acd1258fe4f8f936f009) |
+| Head commit | [`df6277f4d9e8b3e36a5dad1730affb8db69da48a`](https://github.com/zuizui0223/acsp/commit/df6277f4d9e8b3e36a5dad1730affb8db69da48a) | [`39c9e6853f8d8aeffe42acd1258fe4f8f936f009`](https://github.com/zuizui0223/acsp/commit/39c9e6853f8d8aeffe42acd1258fe4f8f936f009) |
 | Original artifact ID | **9395679418** | **9396133154** |
-| SHA-256 of source ZIP | \`7b7bc3dd069c948bb7c63254b3e50e2822d3a8bbe51bd3a4f245dd04aad297f3\` | \`f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f\` |
+| SHA-256 of source ZIP | `7b7bc3dd069c948bb7c63254b3e50e2822d3a8bbe51bd3a4f245dd04aad297f3` | `f23c23afe4863f816f2b3a0780d9a39d6eddb383512188a0bf572dcdf055936f` |
 | GitHub result | success | success |
 | Frozen statistical/guardrail gates | passed | passed |
 
@@ -32,20 +32,20 @@ retention. The earlier GitHub artifact is scheduled to expire on
 
 The immutable frozen execution describes effective random draw seeds as:
 
-\`\`\`text
+```text
 random_seed_base + pair_id * 10000 + repeat * 1009
-\`\`\`
+```
 
 The reused dense-evaluator function
-\`research/evaluate_robust_patches_on_dense_surface.py\` contains
-\`np.random.default_rng(int(random_seed) + 991)\`.
+`research/evaluate_robust_patches_on_dense_surface.py` contains
+`np.random.default_rng(int(random_seed) + 991)`.
 
-The earlier runner at \`df6277f4\` passed the expression above
+The earlier runner at `df6277f4` passed the expression above
 directly into the evaluator, giving the RNG an effective seed
 **991 larger** than that described by the frozen execution JSON.
 The code-only correction in commit
-[\`39c9e685\`](https://github.com/zuizui0223/acsp/commit/39c9e6853f8d8aeffe42acd1258fe4f8f936f009)
-passed \`frozen_effective_seed - 991\` to that evaluator, restoring
+[`39c9e685`](https://github.com/zuizui0223/acsp/commit/39c9e6853f8d8aeffe42acd1258fe4f8f936f009)
+passed `frozen_effective_seed - 991` to that evaluator, restoring
 the effective seed value in the execution contract. The *validated
 ecological patch-selection implementation*, support threshold, fold
 denominator, region definitions, and inference criterion were not
@@ -63,15 +63,15 @@ and source changes are the directly observed evidence.
 ## Exact historical output comparison
 
 The two original ZIPs each contain the same six output paths. Their
-\`confirmation-folds/export_manifest.json\` and
-\`confirmation-folds/pair_export_status.csv\` are **byte-identical**.
+`confirmation-folds/export_manifest.json` and
+`confirmation-folds/pair_export_status.csv` are **byte-identical**.
 Pair identity, fold state, selected-cell counts, patch counts,
 prototype counts, held-out counts, held-out recall, nearest-distance
 diagnostics and failure reasons are **identical in all 1,920**
 pair × repeat × radius rows.
 
-Only \`random_mean_recall\` (same-size random comparison) and
-\`lift_over_random\` differ. The random comparison differs in
+Only `random_mean_recall` (same-size random comparison) and
+`lift_over_random` differ. The random comparison differs in
 **1,287 of 1,920** output rows, including **369 of 480** primary
 10-km fold rows. At the pair level, **78 of 96** five-fold mean lifts
 differ. Across the four original distance scales, the number of
@@ -110,17 +110,17 @@ verified in the frozen official archive.
 This comparison is not a new ecological effect, fresh test, additional
 significance test, prospective observation, biological interpretation
 of islands, patch membership change, or verified global generality.
-The original input-record \`gbifID\` inventory and any matching GBIF
+The original input-record `gbifID` inventory and any matching GBIF
 citation DOI remain unresolved in the
 [original-input provenance audit](GBIF_CITATION_AND_INPUT_PROVENANCE.md).
 
 ## Exact-source offline replay
 
-\`\`\`bash
+```bash
 python research/audit_original_v2_seed_offset_parity.py \
   --prior-zip path/to/robust_v2_preceding_run_aug20_archive.zip \
   --final-zip path/to/acsp_original_confirmation_results_20260820.zip
-\`\`\`
+```
 
 Run against the exact historical source ZIPs, not new GBIF data.
 The script first fails closed on any ZIP/member SHA mismatch; it
