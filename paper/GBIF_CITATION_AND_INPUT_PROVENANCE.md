@@ -123,6 +123,22 @@ cannot be relabeled the August 2026 input merely by passing these
 checks. The tool reports *safe aggregate counts only*; no GBIF IDs,
 taxon names or precise locations are published.
 
+## Prospective prevention — a different source problem (2026-10-29)
+
+For **new, separately frozen independent cohorts only**, the offline
+[GBIF raw-source capture utility](PROSPECTIVE_GBIF_SOURCE_CAPTURE.md)
+now preserves unmodified Search API response bytes, exact `gbifID`,
+contributor `datasetKey` UUIDs, source license counts and optional
+pre-outcome analysis-used IDs inside a **private ZIP**. Its public
+receipt contains hashes and aggregate counts, no coordinates or
+record IDs, and cannot be described as a historical original.
+
+This makes subsequent dataset attribution possible *if* a genuinely
+new source capture and used-ID freeze occur. It does **not** recover
+the missing 2026-08-20 96-pair raw inputs, authenticate
+caller-supplied provider response time, assign a DOI, satisfy a
+persistent data URL, or turn old results into a new independent trial.
+
 ## What is and is not established
 
 | Object | Status | Meaning |
