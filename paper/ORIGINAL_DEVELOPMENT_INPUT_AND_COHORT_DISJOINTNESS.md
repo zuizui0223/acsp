@@ -28,7 +28,9 @@ values; neither list is published.
   original Actions artifact **9394691112**.
 - **Zero overlap** between 16 development taxa and 96 confirmation taxa
   by *both* scientific name and GBIF `speciesKey`; no new taxa were
-  retrospectively selected, and no outcome observations were opened.
+  retrospectively selected. Historical development training/held-out
+record identities were inspected for archival integrity only; no
+new held-out recovery scores were calculated or used to select taxa.
 - The original 80 development folds each contained
   `fold_manifest.json`, `training_occurrences.csv`,
   `held_out_occurrences.csv` and a `candidates.csv`.
