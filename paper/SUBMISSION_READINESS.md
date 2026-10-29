@@ -204,6 +204,23 @@ the candidate rows were actually obtained in August 2026 and to
 assemble a true GBIF-derived citation. No original source backup was
 found or promoted by preparing this tool.
 
+## Future GBIF source archiving, separate from this manuscript (2026-10-29)
+
+The [prospective GBIF source snapshot procedure](PROSPECTIVE_GBIF_SOURCE_CAPTURE.md)
+provides a source ID/`datasetKey`/license-preserving **private**
+raw-response archive and coordinate-free **public** receipt for a
+**future** independently predeclared ACSP study. It can additionally
+verify a separately supplied exact analysis-used GBIF ID list against
+the frozen fetched IDs. No current GBIF API queries are run by it;
+only synthetic input records are used for CI.
+
+**Current paper status is unchanged:** the original August 2026 raw
+occurrence rows and matching historical GBIF DOI are still not
+verified, and co-author contributions/competing interests still
+require approval. A future raw snapshot must not be substituted
+for the historical 96-pair confirmation input, nor should a passing
+synthetic test be called an ecological result.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
