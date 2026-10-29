@@ -118,6 +118,7 @@ def audit(development_zip: Path, confirmation_cohort_zip: Path) -> dict[str, obj
         all_expected_paths |= {
             f"results/{scope}/robust_patch_development_manifest.json",
             f"results/{scope}/robust_patch_development_summary.csv",
+            f"results/{scope}/robust_patch_fold_results.csv",
         }
 
         for pair in declarations:
