@@ -1,5 +1,29 @@
 # AI Change Log
 
+## 2026-10-29 - ChatGPT (OpenAI) - Recover real 80-fold development source and audit 16-vs-96 taxon disjointness
+
+Changed files:
+- research/audit_original_development_input_disjointness.py
+- validation/acsp_20260819_original_development_fold_source_audit_20261029.json
+- tests/test_original_development_input_disjointness.py
+- .github/workflows/acsp-original-development-taxonomy-disjointness.yml
+- paper/ORIGINAL_DEVELOPMENT_INPUT_AND_COHORT_DISJOINTNESS.md
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- Recovered and byte-verified original 2026-08-19 development source ZIP from GitHub Actions run 32258117404 / artifact 9367472075 (SHA256 46ca48bf...). This 368-member ZIP has 80 authentic training/held-out GBIF CSV fold pairs, source manifest and per-file SHA digests for 16 development taxa (12 plant, 4 animal).
+- Compared against the original frozen 2026-08-20 independent taxon identities (run 32335791948 / artifact 9394691112), with zero shared scientific names and zero shared GBIF speciesKey values. This is taxon-cohort separation evidence only, not proof of all forms of ecological/data independence.
+- Source manifests verify 240 training/heldout/candidate hashes. Development folds reuse 2,325 summed per-taxon source-record rows across five repeats; 9,660 training and 1,965 heldout row appearances are not independent record units.
+- Source includes private GBIF IDs and exact coordinates; original ZIP saved in restricted personal Library, not copied into public Git. Public receipt includes hashes, safe aggregate counts and explicit unresolved GBIF citation flags.
+- No new GBIF query, reconstruction of August-20 raw 96-pair input, biological inference, field observation, author declarations, ranking/SDM changes or modification to validated frozen 2.5%/float32/1-km method.
+
+Limit:
+- Development inputs cannot be substituted for historical confirmation inputs, and their missing contributor datasetKey fields cannot establish the correct original August-20 GBIF dataset DOI. Original validation result remains +0.085587 at 10-km 96-pair mean.
+
+
 ## 2026-10-29 - ChatGPT (OpenAI) - Bridge prospective raw GBIF source to exact cleaned analysis-used rows
 
 Changed files:
