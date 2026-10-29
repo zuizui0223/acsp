@@ -68,6 +68,17 @@ records only, and does not modify the fixed robust-patch
 confirmation or recover the missing 2026-08-20 original input.
 See [the source-capture note](../paper/PROSPECTIVE_GBIF_SOURCE_CAPTURE.md).
 
+## Source-to-used rows, for new cohorts only
+
+[`verify_prospective_gbif_used_rows_v1.py`](verify_prospective_gbif_used_rows_v1.py)
+checks that the actual private, cleaned analysis input contains
+**exactly** the GBIF IDs previously recorded in the frozen
+private future-source inventory. It verifies original coordinates,
+source dataset keys/licenses where provided, and reports a safe
+hash-only receipt. It does not certify source collection date,
+pre-outcome signoff or old August 2026 inputs.
+See [the bridge protocol](../paper/PROSPECTIVE_GBIF_USED_ROW_BRIDGE.md).
+
 ## Reports
 
 - [`HIERARCHICAL_VALIDATION_REPORT.md`](HIERARCHICAL_VALIDATION_REPORT.md) — the supported 10 km regional-zone claim
