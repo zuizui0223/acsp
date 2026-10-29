@@ -1,0 +1,75 @@
+name: Source-verified ACSP development versus confirmation taxon disjointness
+
+on:
+  pull_request:
+    paths:
+      - 'research/audit_original_development_input_disjointness.py'
+      - 'tests/test_original_development_input_disjointness.py'
+      - 'validation/acsp_20260819_original_development_fold_source_audit_20261029.json'
+      - 'paper/ORIGINAL_DEVELOPMENT_INPUT_AND_COHORT_DISJOINTNESS.md'
+      - '.github/workflows/acsp-original-development-taxonomy-disjointness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  original-development-source:
+    name: Authentic source and 16-versus-96 taxon disjointness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify original source boundary and historical paper
+        run: |
+          python -m unittest discover -s tests -p 'test_original_development_input_disjointness.py' -v
+          python paper/validate_submission_alignment.py
+          python -m py_compile research/audit_original_development_input_disjointness.py
+      - name: Download byte-original 2026-08-19 development and 08-20 identity cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/acsp-dev-identity-audit
+          curl --fail --location --silent --show-error --retry 2 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/9367472075/zip" \
+            --output /tmp/acsp-dev-identity-audit/development.zip
+          curl --fail --location --silent --show-error --retry 2 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/9394691112/zip" \
+            --output /tmp/acsp-dev-identity-audit/confirmation-identities.zip
+      - name: Verify actual raw development folds with no source coordinates published
+        run: |
+          python research/audit_original_development_input_disjointness.py \
+            --development-zip /tmp/acsp-dev-identity-audit/development.zip \
+            --confirmation-cohort-zip /tmp/acsp-dev-identity-audit/confirmation-identities.zip \
+            --verify-saved validation/acsp_20260819_original_development_fold_source_audit_20261029.json \
+            > /tmp/acsp-dev-identity-audit/aggregate_receipt.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          j=json.loads(Path('/tmp/acsp-dev-identity-audit/aggregate_receipt.json').read_text())
+          assert j["development_taxa"] == 16 and j["development_folds"] == 80
+          assert j["development_and_independent_confirmation_species_key_overlap"] == 0
+          assert j["boundaries"]["confirms_original_2026_08_20_independent_confirmation_inputs_recovered"] is False
+          assert j["boundaries"]["raw_record_IDs_or_coordinates_disclosed"] is False
+          print('Exact original development inputs verified; 96 confirmatory taxa separate, raw confirmation inputs still unrecovered.')
+          PY
+      - name: Preserve ONLY coordinate-free audit receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: acsp-20260819-real-development-input-disjointness-receipt
+          path: /tmp/acsp-dev-identity-audit/aggregate_receipt.json
+          retention-days: 90
+          if-no-files-found: error

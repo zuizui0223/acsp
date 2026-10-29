@@ -125,6 +125,18 @@ coordinates, publishes aggregate hashes only, and makes **no**
 provider queries or new ecological claims. The historical
 August 2026 original raw input and DOI remain unrecovered.
 
+## Original development source and held-out taxon separation
+
+The [2026-08-19 development archive audit](ORIGINAL_DEVELOPMENT_INPUT_AND_COHORT_DISJOINTNESS.md)
+verifies a **real historical source archive** with 80 original
+development train/held-out folds for 16 taxa. The later
+96-taxon frozen confirmation cohort has **zero** speciesKey
+or scientific-name overlap with those development taxa.
+The audit publishes no identifiers or coordinates; its
+source archive is retained privately. **This is not**
+August-20 confirmatory raw-input restoration or a new
+ecological validation experiment.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:

@@ -1,0 +1,40 @@
+{
+  "schema_version": "acsp-original-development-input-vs-confirmation-cohort-20261029",
+  "status": "DEVELOPMENT_INPUTS_RECOVERED_TAXON_DISJOINT_FROM_96_CONFIRMATION",
+  "original_development_source": {
+    "run_id": 32258117404,
+    "artifact_id": 9367472075,
+    "whole_zip_sha256": "46ca48bfa6be30e7302f1671b824e4a4f73da5040fb738fe44512b58806ba76a",
+    "original_archive_member_count": 368
+  },
+  "independent_confirmation_source": {
+    "run_id": 32335791948,
+    "artifact_id": 9394691112,
+    "whole_zip_sha256": "cc0f949649491439f91e1b90d01d48acbd3f7fffc6833a75105a3bc175a5faf3",
+    "independent_taxa": 96
+  },
+  "development_taxa": 16,
+  "development_taxon_groups": {
+    "animal": 4,
+    "plant": 12
+  },
+  "development_folds": 80,
+  "source_fold_csv_hashes_and_candidate_hashes_verified": 240,
+  "stable_source_record_pools_across_folds": 16,
+  "training_row_instances_across_all_folds": 9660,
+  "heldout_row_instances_across_all_folds": 1965,
+  "development_distinct_pair_pool_rows_summed": 2325,
+  "development_and_independent_confirmation_taxon_name_overlap": 0,
+  "development_and_independent_confirmation_species_key_overlap": 0,
+  "used_gbif_id_aliases_present_in_development_fold_CSVs": true,
+  "source_datasetKeys_in_original_development_CSVs": false,
+  "boundaries": {
+    "confirms_original_2026_08_20_independent_confirmation_inputs_recovered": false,
+    "taxon_disjointness_proves_outcome_independence_in_all_other_senses": false,
+    "contemporaneous_GBIF_datasetKeys_restored": false,
+    "original_confirmation_GBIF_data_DOI_verified": false,
+    "new_GBIF_queries_or_biological_tests_run": false,
+    "raw_record_IDs_or_coordinates_disclosed": false,
+    "historical_confirmation_or_algorithm_modified": false
+  }
+}
