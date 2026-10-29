@@ -1,5 +1,28 @@
 # AI Change Log
 
+## 2026-10-29 - ChatGPT (OpenAI) - Prevent future GBIF source loss with private raw-page snapshots
+
+Changed files:
+- research/freeze_prospective_gbif_search_source_v1.py
+- tests/test_prospective_gbif_search_source_v1.py
+- .github/workflows/acsp-prospective-gbif-source-capture.yml
+- paper/PROSPECTIVE_GBIF_SOURCE_CAPTURE.md
+- paper/GBIF_CITATION_AND_INPUT_PROVENANCE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- research/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- The original August 2026 ACSP 96-pair source record list is not present in the six original SHA-verified historical Actions archives. PR #286 has already added a structural gate for a later *candidate old* private backup; do not duplicate it or relabel a fresh provider query as the August original.
+- Implement a distinct **new-cohort-only** offline GBIF Search API capture path: verify complete raw response JSON against original request cap/offset, source IDs, datasetKey UUID, licenses, coordinates and uniqueness, and optionally freeze exact pre-outcome analysis-used IDs.
+- Private ZIP stores original response bytes, request metadata and contributor datasetKey/license counts outside public repository; public receipt contains SHA-256 and safe aggregate counts only. Neither object claims a provider-authenticated timestamp, GBIF Derived Dataset DOI, published data URL, old source recovery or new ecological validation.
+- Add fail-closed synthetic regression tests (duplicates, wrong offsets, invalid provider source fields, used-ID subset, overwrite refusal, historical relabeling, private ZIP placement, ZIP tampering) and isolated source-safe CI; no change to the frozen validated ACSP method or scientific manuscript.
+
+Limitations:
+- Source pages must actually be captured at original fetch time, and raw provider origin still requires a separate trusted audit trail. GBIF Derived Dataset registration needs an authenticated account, actual contributor datasets, source-license checks and a persistent accessible data URL. The old original input and manuscript author declarations remain unresolved.
+
+
 ## 2026-10-28 - ChatGPT (OpenAI) - Prepare strict private candidate-backup structural gate for missing GBIF folds
 
 Changed files:
