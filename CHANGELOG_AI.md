@@ -1,5 +1,28 @@
 # AI Change Log
 
+## 2026-10-29 - ChatGPT (OpenAI) - Bridge prospective raw GBIF source to exact cleaned analysis-used rows
+
+Changed files:
+- research/verify_prospective_gbif_used_rows_v1.py
+- tests/test_prospective_gbif_used_rows_v1.py
+- .github/workflows/acsp-prospective-used-row-bridge.yml
+- paper/PROSPECTIVE_GBIF_USED_ROW_BRIDGE.md
+- paper/PROSPECTIVE_GBIF_SOURCE_CAPTURE.md
+- paper/SUBMISSION_READINESS.md
+- paper/README.md
+- research/README.md
+- CHANGELOG_AI.md
+
+Summary:
+- PR #287 added a future-cohort-only offline source-byte snapshot with original GBIF IDs, datasetKey and optional explicit used-ID list. The actual cleaned analysis input may be a strict subset after QC; fetched records must not be equated to analyzed rows.
+- Add a separate fail-closed bridge requiring the source ZIP already contain the exact private used-ID list, matching every privately cleaned used row to raw GBIF source ID, original coordinate (1e-9 degree tolerance), optional datasetKey/license and source identity fields, row ordinal uniqueness and per-used-dataset attribution counts.
+- Publish only safe SHA-256 and aggregate totals; refuse mismatches, unknown IDs, moved locations, no pre-frozen used list and public receipt overwrite. Test end-to-end with synthetic GBIF JSON, synthetic cleaned CSV, 16 new source-bridge tests and existing 16+9 source/backup tests.
+- Source ZIP and used cleaned CSV remain PRIVATE. No actual GBIF request, held-out biological outcome, new independent validation, GBIF DOI issuance, historical input replay or change to the frozen validated 96-pair result/method.
+
+Scientific limit:
+- This verifies consistency of supplied files, not provider authenticity, original retrieval time, pre-outcome freeze, used-row QC suitability or new taxon-cohort independence. It cannot recover the lost 2026-08-20 GBIF inputs, and the manuscript attribution/author signoff blockers remain.
+
+
 ## 2026-10-29 - ChatGPT (OpenAI) - Prevent future GBIF source loss with private raw-page snapshots
 
 Changed files:

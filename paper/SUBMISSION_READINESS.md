@@ -221,6 +221,23 @@ require approval. A future raw snapshot must not be substituted
 for the historical 96-pair confirmation input, nor should a passing
 synthetic test be called an ecological result.
 
+## Prospective raw-to-used GBIF input bridge (2026-10-29)
+
+The [offline used-row provenance bridge](PROSPECTIVE_GBIF_USED_ROW_BRIDGE.md)
+now requires an already frozen *future-cohort* raw GBIF response
+ZIP, its **private exact used-ID list**, and the actual private
+cleaned-used CSV. It fails when IDs, coordinates, contributor
+datasetKeys or licenses disagree and produces a coordinate-free
+public hash/aggregate receipt. Software tests use invented
+records only.
+
+**No retroactive repair:** this does not recover the 2026-08-20
+original 96-pair occurrence input records, provide an original
+GBIF download DOI, establish source age or independent
+pre-outcome authentication, or add a biological confirmation.
+The existing manuscript data-availability limitation and
+author approval gates remain open.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
