@@ -67,6 +67,22 @@ python research/freeze_prospective_gbif_search_source_v1.py \
 
 A frozen raw fetch inventory is **not automatically the same as the exact records used after QC**. Even when the used-ID file is supplied, an authentic signed timestamp or trusted storage lineage is required to attest when the input was collected. No original provider identity is authenticated by a self-computed checksum alone.
 
+## Exact source-to-cleaned input parity (separate offline gate)
+
+The [cleaned used-record bridge](PROSPECTIVE_GBIF_USED_ROW_BRIDGE.md)
+checks a **new** independently frozen GBIF source ZIP with its exact
+private analysis-used ID list against a separate cleaned occurrence
+CSV. It verifies GBIF ID identity, original location coordinates
+and contributing datasetKey/license attribution. Fetched IDs are
+**not** silently treated as used IDs after QC, thinning or
+held-out partition construction.
+
+The audit publishes only file hashes and aggregate counts. It does
+not attest that the used-ID list was prepared before outcomes,
+prove provider origin or recover August 2026 raw inputs. Both steps
+are synthetic-only in CI; a later live new study requires its own
+preregistered cohort and private source snapshots.
+
 ## GBIF dataset citation and release boundary
 
 GBIF's [citation guidelines](https://www.gbif.org/citation-guidelines) say that Search API calls do not automatically receive a Download DOI. Its [Derived Dataset guidance](https://www.gbif.org/derived-dataset/about) requires contributing dataset DOI/datasetKey information (ideally counts), a persistent URL of the extracted dataset, its preparation description, and account-authenticated registration.
