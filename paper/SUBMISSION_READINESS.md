@@ -238,6 +238,28 @@ pre-outcome authentication, or add a biological confirmation.
 The existing manuscript data-availability limitation and
 author approval gates remain open.
 
+## Original development fold-source archive recovered (2026-10-29)
+
+A separate [real historical development-input audit](ORIGINAL_DEVELOPMENT_INPUT_AND_COHORT_DISJOINTNESS.md)
+recovered the August-19 **16-taxon / 80-fold** original
+training/held-out GBIF CSVs and compared the authenticated
+development identities against the August-20 independently
+declared 96-taxon confirmation identity ZIP. **No taxon
+overlap** by name or GBIF speciesKey. This strengthens
+development-versus-confirmation cohort separation evidence.
+
+The development archive holds **2,325 distinct per-taxon
+record-pool rows summed across 16 taxa**, represented in
+9,660 training and 1,965 heldout row appearances across 80
+folds. Because each original record is reused across
+folds, the latter are **not** 11,625 independent records.
+
+The positive **96-pair, 480-fold** confirmatory result and
+manuscript are unchanged. August-20 full original occurrence
+source files and their exact GBIF attribution **remain missing**,
+so these recovered development records cannot close the
+submission data citation gap.
+
 ## Remaining editorial work
 
 These tasks do not authorize new scientific tuning or reopening consumed cohorts:
