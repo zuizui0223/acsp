@@ -139,6 +139,23 @@ the missing 2026-08-20 96-pair raw inputs, authenticate
 caller-supplied provider response time, assign a DOI, satisfy a
 persistent data URL, or turn old results into a new independent trial.
 
+## Recovered pre-confirmation development inputs — separate data source (2026-10-29)
+
+The [byte-original development source audit](ORIGINAL_DEVELOPMENT_INPUT_AND_COHORT_DISJOINTNESS.md)
+identified a 2026-08-19 Actions artifact **9367472075** containing the
+actual training and held-out GBIF CSVs for **16 development taxa /
+80 folds**. All original input/candidate CSV hashes in the fold
+manifests were verified; the 16 development taxa overlap with the
+later 96-taxon independent cohort in **zero** scientific names
+and **zero** GBIF `speciesKey` identities.
+
+**This is development-source recovery, NOT recovery of August-20
+untouched-confirmation source rows.** Development CSVs retain
+`gbifID` but not contributor `datasetKey`; their identities are
+different from the frozen 96. The old source-to-dataset citation
+gap remains OPEN, and development data are not substituted for
+confirmation input or pooled into the positive 96-pair estimate.
+
 ## What is and is not established
 
 | Object | Status | Meaning |
