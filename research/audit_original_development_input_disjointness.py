@@ -132,6 +132,8 @@ def audit(development_zip: Path, confirmation_cohort_zip: Path) -> dict[str, obj
             group_counts[group] += 1
             source_pair_id = int(pair["pair_id"])
             _require(source_pair_id >= 1, "invalid declared pair ID")
+            all_expected_paths.add(f"{root}/pair_{source_pair_id:03d}/pair_manifest.json")
+            all_expected_paths.add(f"{root}/pair_{source_pair_id:03d}/fold_export_status.csv")
             pools: list[frozenset[str]] = []
             for repeat in range(1, 6):
                 directory = f"{root}/pair_{source_pair_id:03d}/fold_{repeat:03d}"
