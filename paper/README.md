@@ -104,6 +104,17 @@ source hashes or other trusted contemporaneous provenance.
 No old GBIF input has been recovered and no inferred DOI has
 been issued.
 
+## Prevention for a separately frozen new GBIF cohort
+
+The [new-cohort raw-source procedure](PROSPECTIVE_GBIF_SOURCE_CAPTURE.md)
+preserves exact original GBIF Search API JSON pages and source
+datasetKey attribution as a private archive, with a public
+aggregate-only receipt. It does not fetch data, create a DOI,
+authenticate source age, restore the original Japanese
+96-pair dataset or change the validated ACSP method.
+Existing [historical candidate backup verification](ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md)
+has a separate scope and remains the appropriate historical gate.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:
