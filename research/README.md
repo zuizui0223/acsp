@@ -54,6 +54,20 @@ Do not inspect cohort outcomes and then retune. The guardrail contract sets
 `no_retuning_after_outcome: true`, and every inspected cohort permanently
 stops being independent confirmation data.
 
+## Future-source GBIF integrity (not historical input reconstruction)
+
+[`freeze_prospective_gbif_search_source_v1.py`](freeze_prospective_gbif_search_source_v1.py)
+freezes *already obtained* raw GBIF Search API JSON pages with their
+source record IDs and `datasetKey` attribution into a private ZIP
+outside the public Git tree, and emits a coordinate-free public
+receipt. It optionally validates the exact pre-outcome
+analysis-used GBIF ID inventory.
+
+The utility makes **no GBIF network calls**, is tested on synthetic
+records only, and does not modify the fixed robust-patch
+confirmation or recover the missing 2026-08-20 original input.
+See [the source-capture note](../paper/PROSPECTIVE_GBIF_SOURCE_CAPTURE.md).
+
 ## Reports
 
 - [`HIERARCHICAL_VALIDATION_REPORT.md`](HIERARCHICAL_VALIDATION_REPORT.md) — the supported 10 km regional-zone claim
