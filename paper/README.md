@@ -115,6 +115,16 @@ authenticate source age, restore the original Japanese
 Existing [historical candidate backup verification](ORIGINAL_GBIF_INPUT_CANDIDATE_GATE.md)
 has a separate scope and remains the appropriate historical gate.
 
+## Future-cohort raw-to-used GBIF source bridge
+
+The [prospective exact used-row audit](PROSPECTIVE_GBIF_USED_ROW_BRIDGE.md)
+links a separately frozen **private** GBIF raw response snapshot,
+its pre-specified used-ID inventory and the privately cleaned
+analysis-used row CSV. It fails on wrong identities or shifted
+coordinates, publishes aggregate hashes only, and makes **no**
+provider queries or new ecological claims. The historical
+August 2026 original raw input and DOI remain unrecovered.
+
 ## Historical finite Top-5 package — preserved provenance
 
 The files below are preserved provenance for the earlier finite Top-5 decision-policy paper and its matched-pool comparator analyses. They must not be silently presented as the definition of the current authoritative candidate-patch product, but they remain scientifically useful historical evidence and are not deleted or rewritten:
