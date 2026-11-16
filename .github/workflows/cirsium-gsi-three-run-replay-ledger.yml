@@ -1,0 +1,30 @@
+name: Cirsium historical GSI three-run replay ledger
+
+on:
+  pull_request:
+    paths:
+      - "validation/cirsium_gsi_three_run_log_ledger_20261116.json"
+      - "research/audit_cirsium_gsi_three_run_ledger.py"
+      - "tests/test_cirsium_gsi_three_run_ledger.py"
+      - "paper/CIRSIUM_THREE_RUN_GSI_REPLAY_DIAGNOSTIC.md"
+      - ".github/workflows/cirsium-gsi-three-run-replay-ledger.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-ledger:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install offline test dependency
+        run: python -m pip install pytest
+      - name: Recompute summary from frozen public receipts
+        run: python research/audit_cirsium_gsi_three_run_ledger.py
+      - name: Fail-closed provenance regression tests
+        run: python -m pytest -q tests/test_cirsium_gsi_three_run_ledger.py
