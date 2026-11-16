@@ -41,7 +41,7 @@ jobs:
             '37726204623 113144829922' '37726204623 113144830101' \
             '37726204623 113144830083' '37726204623 113144830064'; do
             read -r run job <<< "$pair"
-            gh api -H 'Accept: application/vnd.github+json' \
+            gh api --allow-escape-sequences -H 'Accept: application/vnd.github+json' \
               "/repos/$GITHUB_REPOSITORY/actions/jobs/$job/logs" > "$root/$run/$job.log"
             test -s "$root/$run/$job.log"
           done
