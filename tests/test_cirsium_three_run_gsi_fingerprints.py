@@ -123,7 +123,7 @@ def test_unrelated_raw_stdout_is_ignored():
     ("source_state", "fixed metadata or final patch drift"),
     ("chunk_rows", "GSI per-chunk audit drift"),
     ("original_rank", "original rank SHA"),
-    ("candidate_count", "candidate count changed"),
+    ("candidate_count", "GSI denominator not preserved"),
     ("opened_field", "field-outcome gate"),
     ("missing_stage", "missing complete source stage"),
     ("wrong_threshold", "frozen 2.5%/1-km"),
