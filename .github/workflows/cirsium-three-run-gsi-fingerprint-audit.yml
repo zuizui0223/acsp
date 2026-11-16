@@ -1,0 +1,67 @@
+name: Cirsium three-run original GSI fingerprint audit
+
+on:
+  pull_request:
+    paths:
+      - 'research/audit_cirsium_three_run_gsi_fingerprints.py'
+      - 'tests/test_cirsium_three_run_gsi_fingerprints.py'
+      - 'validation/cirsium_three_run_gsi_fingerprints_20261116.json'
+      - '.github/workflows/cirsium-three-run-gsi-fingerprint-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-bound-three-run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Synthetic-source and frozen-receipt regression tests
+        run: |
+          python -m pip install pytest
+          PYTHONPATH="$GITHUB_WORKSPACE" pytest -q tests/test_cirsium_three_run_gsi_fingerprints.py
+      - name: Download only twelve immutable historical job logs into temporary private storage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/acsp-three-run-original-logs"
+          mkdir -p "$root/37647225829" "$root/37705751756" "$root/37726204623"
+          for pair in \
+            '37647225829 112881046241' '37647225829 112881046494' \
+            '37647225829 112881046402' '37647225829 112881046755' \
+            '37705751756 113079588230' '37705751756 113079588295' \
+            '37705751756 113079588079' '37705751756 113079588247' \
+            '37726204623 113144829922' '37726204623 113144830101' \
+            '37726204623 113144830083' '37726204623 113144830064'; do
+            read -r run job <<< "$pair"
+            # The CLI log endpoint returned HTTP 503 on 2026-11-16.
+            # Follow GitHub's redirect explicitly, with bounded transient-error
+            # retries. Do not skip missing logs or print log contents to CI.
+            curl --fail --silent --show-error --location \
+              --retry 2 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 10 --max-time 40 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/jobs/$job/logs" \
+              --output "$root/$run/$job.log"
+            test -s "$root/$run/$job.log"
+          done
+      - name: Verify exact historical-source fingerprint receipt (no rerun of GSI)
+        run: |
+          python research/audit_cirsium_three_run_gsi_fingerprints.py \
+            --logs-root "$RUNNER_TEMP/acsp-three-run-original-logs" \
+            --verify-saved validation/cirsium_three_run_gsi_fingerprints_20261116.json
+      - name: Remove all temporary raw job logs, even after failure
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/acsp-three-run-original-logs"
+
+# Logs may contain upstream output; they are never uploaded as artifacts.
+# Scientific statuses/field outcomes/validated main code are unchanged.
