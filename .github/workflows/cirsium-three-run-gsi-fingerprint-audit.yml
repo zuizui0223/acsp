@@ -25,7 +25,7 @@ jobs:
       - name: Synthetic-source and frozen-receipt regression tests
         run: |
           python -m pip install pytest
-          pytest -q tests/test_cirsium_three_run_gsi_fingerprints.py
+          PYTHONPATH="$GITHUB_WORKSPACE" pytest -q tests/test_cirsium_three_run_gsi_fingerprints.py
       - name: Download only twelve immutable historical job logs into temporary private storage
         env:
           GH_TOKEN: ${{ github.token }}
