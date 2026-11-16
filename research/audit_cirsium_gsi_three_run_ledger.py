@@ -33,6 +33,32 @@ EXPECTED_JOB_IDS = {
 }
 
 
+# Exact SHA triples copied from the named, original GitHub job logs. This
+# independent code-side freeze detects a changed digest even if "different
+# from source" stays true in the derived summary. It is not proof that these
+# GitHub logs or private DEMs have been archived as a complete raw dataset.
+EXPECTED_STAGE_SHA_TRIPLES = {
+    "37647225829": {
+        "CIR02": ("931300eae97dc777f3391f28345493d9209110b8c3e9ca257bf65b8c66dc0127", "27eebb7c4cdf4a2826cbc1b750388f5846bf2376516df67cd21828d163f17a94", "8d5693e2fdc39b7474e76b39fb94a1758c49768d77c013fbe8536f88cc7118f4"),
+        "CIR06": ("6a85cc71206bade4e819bb7a66cdc1d50953d2cd98a1744ef099dcca73619a42", "06920f34f4cc6e7ee22e7b6d61be88db992cb57099e35feeedf5bb7725bbb23d", "1d974681d6586fbe3b99cd26ecddf98bd53fe734c0c26d31c461b7cfdd25bd26"),
+        "CIR12": ("b7cf4328af2ad10da1c591ca6d9cdd94dd8ebe13d68cc4f65b89a3c442ded907", "77121ef910780434b6a9a04d642f170a707721025c40ea6a6ef9c973cc7c2818", "47273b8f0261726f61b4d7e3a1b110c961195645db5ce1531515c0976f0b62d7"),
+        "CIR13": ("105e3c7164d20d346488bdd2cd34f6d7fdcb8eb1b293358f1094b00148e6290c", "4696647fd4066e66cefe8991b91c0d8960cb8a991ed8452fe1a1834e2fabc2e2", "394b36742dc2b7cf5078ffa8244eae799fefeb89f5b0ef3df73586d89275d38b"),
+    },
+    "37705751756": {
+        "CIR02": ("931300eae97dc777f3391f28345493d9209110b8c3e9ca257bf65b8c66dc0127", "27eebb7c4cdf4a2826cbc1b750388f5846bf2376516df67cd21828d163f17a94", "8d5693e2fdc39b7474e76b39fb94a1758c49768d77c013fbe8536f88cc7118f4"),
+        "CIR06": ("876b877c5784d8d6f1707b4ae5546505d222d4990c147cbb0b84c1b8cd815870", "194208d1f921d212d450c11575a54a068322ee1ab646099e22da701a956aacfb", "94438a45c4ca25a9d6a136b88b3f9a9dd4dadd90c37f2cd7b25c32f8522400f9"),
+        "CIR12": ("b7cf4328af2ad10da1c591ca6d9cdd94dd8ebe13d68cc4f65b89a3c442ded907", "77121ef910780434b6a9a04d642f170a707721025c40ea6a6ef9c973cc7c2818", "47273b8f0261726f61b4d7e3a1b110c961195645db5ce1531515c0976f0b62d7"),
+        "CIR13": ("3e305121983267ba3265750ad2c06d29bb2a0c370c2f2025cd20320acf3198bc", "99070dd322d7421d85410a8a9c361b232a7cbcf8bbc17929c5ea18580ea6f75c", "c29bf7e40182afda68df73719a509d26fa7bfd7bd25707771880b1ba4b0f796d"),
+    },
+    "37726204623": {
+        "CIR02": ("e2ae43320f586323ebded54955b8cec1e43a35e3e0cd70313334b6e99848aa49", "46fe181d7cd182b83b139b85cf676df947bf960399074d578ea259e1f98ef8e3", "2d1bd9554b7aea9a7bd54bdb7e91ead5e40f813b9100f71aa061546777cd9b2b"),
+        "CIR06": ("6a85cc71206bade4e819bb7a66cdc1d50953d2cd98a1744ef099dcca73619a42", "06920f34f4cc6e7ee22e7b6d61be88db992cb57099e35feeedf5bb7725bbb23d", "1d974681d6586fbe3b99cd26ecddf98bd53fe734c0c26d31c461b7cfdd25bd26"),
+        "CIR12": ("14190d958f738beddecfd6ac545c61ab8e2360da24c7509e1216882a2bbb63a9", "0f64d5a742ede1bea530872c40d4a7772fbd85d89e8c363576f7120a3e6a62cb", "20ac1ea9aee35bb34b88a467423f7f72d575558186c44e4e03dbfe2532eb9f6b"),
+        "CIR13": ("3e305121983267ba3265750ad2c06d29bb2a0c370c2f2025cd20320acf3198bc", "99070dd322d7421d85410a8a9c361b232a7cbcf8bbc17929c5ea18580ea6f75c", "c29bf7e40182afda68df73719a509d26fa7bfd7bd25707771880b1ba4b0f796d"),
+    },
+}
+
+
 def read_json(path: Path) -> dict:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -117,9 +143,17 @@ def verify(ledger: dict, frozen: dict, logs_root: Path | None = None) -> dict:
                 failure += 1
             else:
                 success += 1
+            expected_stages = EXPECTED_STAGE_SHA_TRIPLES[str(run)][unit]
+            actual_stages = (
+                row["terrain_feature_digest_sha256"],
+                row["private_gsi_frame_sha256"],
+                row["private_structural_order_sha256"],
+            )
             if i == 0:
                 if row["private_structural_order_sha256"] != frozen["units"][unit]["structural_order_sha256"]:
                     raise ValueError("original full-order SHA differs from frozen PR247")
+            if actual_stages != expected_stages:
+                raise ValueError("historical stage SHA does not match original job-log record")
             if row["private_patch_sha256"] != frozen["units"][unit]["private_patch_sha256"]:
                 raise ValueError("patch SHA differs from original frozen PR247")
             flags = {
