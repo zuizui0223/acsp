@@ -73,7 +73,7 @@ def _hex_sha(value: object) -> bool:
 def extract_logged_hashes(log: str) -> dict[str, str]:
     result: dict[str, str] = {}
     for field in STAGES:
-        pattern = r'"' + re.escape(field) + r'"\\s*:\\s*"([0-9a-f]{64})"'
+        pattern = r'"' + re.escape(field) + r'"\s*:\s*"([0-9a-f]{64})"'
         matches = re.findall(pattern, log)
         if not matches:
             raise ValueError("missing logged digest " + field)
@@ -176,7 +176,7 @@ def verify(ledger: dict, frozen: dict, logs_root: Path | None = None) -> dict:
                 logfile = logs_root / str(run) / (unit + ".log")
                 raw = logfile.read_text(encoding="utf-8-sig")
                 for field in STAGES:
-                    pattern = r'"' + re.escape(field) + r'"\\s*:\\s*"([0-9a-f]{64})"'
+                    pattern = r'"' + re.escape(field) + r'"\s*:\s*"([0-9a-f]{64})"'
                     found = re.findall(pattern, raw)
                     if not found or found[-1] != row[field]:
                         raise ValueError("supplied log hash differs: " + field)
