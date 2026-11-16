@@ -44,7 +44,7 @@ EXPECTED_STATUSES = {
     "structural": "FINE_STRUCTURAL_FULL_ORDER_BUILT_PRE_OUTCOME",
     "patch": "FINE_PATCH_TRANSFER_REPRESENTATION_FEASIBILITY_COMPLETE",
 }
-TIMESTAMP = re.compile(r"^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d:\d\d\.\d+Z ?", re.M)
+TIMESTAMP = re.compile(r"^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+Z ?", re.M)
 BLOCK_START = re.compile(r'\{\s*"schema_version"\s*:')
 HEX64 = re.compile(r"^[a-f0-9]{64}$")
 FAIL_TEXT = "fine structural order hash differs from frozen source"
