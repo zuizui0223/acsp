@@ -1,6 +1,9 @@
 name: Cirsium historical GSI three-run replay ledger
 
 on:
+  push:
+    branches:
+      - "research/gsi-three-run-immutable-replay-ledger-20261116"
   pull_request:
     paths:
       - "validation/cirsium_gsi_three_run_log_ledger_20261116.json"
